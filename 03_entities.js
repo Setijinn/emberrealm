@@ -3,6 +3,7 @@ const player={x:0,y:0,r:14,hp:100,maxhp:100,spd:180,dmg:12,fireRate:0.22,fireT:0
 let curRoom=null, enemies=[], pShots=[], eShots=[], particles=[], embers=[];
 let rpg=null, texts=[], respawnT=1, shopNear=false, loots=[];
 let allies=[], zones=[], fx=[], res=0, lastShotT=99, abT=0, portalLock=false, curRegionN='';
+let arenaActive=false, arenaWave=0, arenaCd=0;
 // ---- world bosses + dungeons ----
 const GBOSS=[
  {n:'The Tideworn Colossus',dn:'The Drowned Hollow',col:'#4a90a8',pat:'aimed3',pat2:'nova',
@@ -128,10 +129,10 @@ function enterDungeon(ring){
 }
 
 const SHOPNPCS=[
- {id:'maren',name:'Maren',title:"MAREN'S PROVISIONS",x:24.5*TILE,y:9.5*TILE},
- {id:'bram',name:'Bram',title:"BRAM'S WEAPONWORKS",x:15.5*TILE,y:9.5*TILE},
- {id:'sella',name:'Sella',title:"SELLA'S ARMORY",x:15.5*TILE,y:12.5*TILE},
- {id:'odo',name:'Odo',title:"ODO'S MENAGERIE",x:24.5*TILE,y:12.5*TILE},
+ {id:'bram', name:'Bram', role:'WEAPONS', title:"BRAM'S WEAPONWORKS", awn:'#b5482f', x:19*TILE,   y:26.5*TILE},
+ {id:'sella',name:'Sella',role:'ARMOR',   title:"SELLA'S ARMORY",     awn:'#e07a2e', x:23.5*TILE, y:26.5*TILE},
+ {id:'maren',name:'Maren',role:'POTIONS', title:"MAREN'S PROVISIONS", awn:'#4f9a3f', x:28*TILE,   y:26.5*TILE},
+ {id:'odo',  name:'Odo',  role:'PETS',    title:"ODO'S MENAGERIE",    awn:'#7ab8d4', x:32.5*TILE, y:26.5*TILE},
 ];
 let curShopNear=null;
 function makeEnemy(sp){
@@ -192,3 +193,38 @@ function enterRoom(key, px, py){
 function msg(t,sub=''){ const m=document.getElementById('msg');
   m.innerHTML=t+(sub?`<small>${sub}</small>`:''); m.classList.add('show');
   clearTimeout(msg.t); msg.t=setTimeout(()=>m.classList.remove('show'),1500); }
+
+// ---- portal routing: every portal carries a destination `to` ----
+function usePortal(to){
+  if(curRoom&&curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
+  if(to==='G'){ const gv=rooms['G']; if(!gv) return;
+    let ax=gv.w*TILE/2, ay=gv.h*TILE/2;
+    if(gv.arrivals&&gv.arrivals.length){ const ar=gv.arrivals[Math.floor(Math.random()*gv.arrivals.length)];
+      ax=(ar[0]+.5)*TILE; ay=(ar[1]+.5)*TILE; }
+    const sp=safeSpot(gv,ax,ay); enterRoom('G',sp.x,sp.y);
+    msg('WASHED ASHORE','somewhere on the Landing Sands'); return; }
+  const dst=rooms[to]; if(!dst) return;
+  const sp=safeSpot(dst,(dst.px+.5)*TILE,(dst.py+.5)*TILE);
+  enterRoom(to,sp.x,sp.y);
+  if(dst.arena) startArena();
+}
+// ---- Arena: endless escalating waves ----
+function recordArenaBest(){ if(!rpg) return; const survived=Math.max(0,arenaWave-1);
+  if(survived>(rpg.arenaBest||0)){ rpg.arenaBest=survived; msg('NEW RECORD','wave '+survived+' survived'); }
+  if(typeof saveRPG==='function') saveRPG(); }
+function startArena(){ arenaActive=true; arenaWave=0; arenaCd=1.6; enemies=[]; eShots=[];
+  msg('THE PROVING GROUNDS', (rpg&&rpg.arenaBest)?'best: wave '+rpg.arenaBest:'survive as long as you can'); }
+function arenaSpawnWave(){ const a=rooms['ARENA']; if(!a) return;
+  arenaWave++;
+  a.lv=Math.min(150, 2+arenaWave*4);
+  const boss=(arenaWave%5===0);
+  const n=boss?1:Math.min(22, 3+Math.floor(arenaWave*1.6));
+  for(let i=0;i<n;i++){
+    let x,y,tries=0;
+    do{ x=(2+Math.random()*(a.w-4))*TILE; y=(2+Math.random()*(a.h-4))*TILE; tries++; }
+    while(tries<30 && (solid(x,y) || Math.hypot(x-player.x,y-player.y)<170));
+    const t=boss?'B':(arenaWave>2 && i%4===0)?'s':'c';
+    enemies.push(makeEnemy({t:t,x:Math.floor(x/TILE),y:Math.floor(y/TILE)}));
+  }
+  msg('WAVE '+arenaWave, boss?'a champion approaches':n+' foes');
+}

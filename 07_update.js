@@ -141,6 +141,13 @@ function update(dt){
     ringBossCd[cb]=(ringBossCd[cb]||0)-dt;
     if(ringBossCd[cb]<=0){ ringBossCd[cb]=14+Math.random()*12;
       if(!ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } }
+  // release the portal lock once we've stepped clear of every portal.
+  // (dungeons have no fixed curRoom.portals, so without this the lock set on
+  //  entry never cleared and the return-home portal could never fire.)
+  if(portalLock){ let nearAny=false;
+    if(curRoom.portals) for(const pt of curRoom.portals){ if(Math.hypot(pt.x-player.x,pt.y-player.y)<90){nearAny=true;break;} }
+    if(!nearAny) for(const gp of groundPortals){ if(Math.hypot(gp.x-player.x,gp.y-player.y)<90){nearAny=true;break;} }
+    if(!nearAny) portalLock=false; }
   // ground dungeon portals from slain world bosses
   for(let i=groundPortals.length-1;i>=0;i--){ const gp=groundPortals[i];
     gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; }
@@ -164,27 +171,14 @@ function update(dt){
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
       if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.band); } }
   }
-  // portals
+  // destination portals (release of portalLock handled above)
   if(curRoom.portals&&curRoom.portals.length){
-    let nearP=null;
-    for(const pt of curRoom.portals){ if(Math.hypot(pt.x-player.x,pt.y-player.y)<34){nearP=pt;break;} }
-    if(nearP&&!portalLock){ portalLock=true;
-      if(curRoom.key==='G'){ const tw=rooms['0,0'];
-        const sp2=safeSpot(tw,20.5*TILE,8.4*TILE);
-        enterRoom('0,0',sp2.x,sp2.y); msg('EMBERHEARTH','home again'); }
-      else { const gv=rooms['G']; if(gv){
-        let ax=gv.portals.length?gv.portals[0].x:gv.w*TILE/2,
-            ay=gv.portals.length?gv.portals[0].y+TILE*1.6:gv.h*TILE/2;
-        if(gv.arrivals&&gv.arrivals.length){
-          const ar=gv.arrivals[Math.floor(Math.random()*gv.arrivals.length)];
-          ax=(ar[0]+.5)*TILE; ay=(ar[1]+.5)*TILE; }
-        const sp2=safeSpot(gv,ax,ay);
-        enterRoom('G',sp2.x,sp2.y);
-        msg('WASHED ASHORE','somewhere on the Landing Sands'); } } }
-    else if(!nearP&&portalLock){ let any=false;
-      for(const pt of curRoom.portals){ if(Math.hypot(pt.x-player.x,pt.y-player.y)<90){any=true;break;} }
-      if(!any) portalLock=false; }
+    for(const pt of curRoom.portals){
+      if(!portalLock && Math.hypot(pt.x-player.x,pt.y-player.y)<34){ portalLock=true; usePortal(pt.to||'0,0'); break; } }
   }
+  // arena wave director
+  if(curRoom.arena && arenaActive && enemies.length===0){
+    arenaCd-=dt; if(arenaCd<=0){ arenaCd=2.0; arenaSpawnWave(); } }
   // vendor proximity
   if(curRoom.town){
     let nn=null,nd=1e9;
@@ -242,6 +236,7 @@ function update(dt){
   // death
   if(typeof dev!=='undefined'&&dev.god&&player.hp<player.maxhp) player.hp=player.maxhp;
   if(player.hp<=0){ recordBest(player.kills); saveRPG();
+    if(curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;

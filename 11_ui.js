@@ -450,7 +450,8 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.pets===undefined)rpg.pets=[]; if(rpg.pet===undefined)rpg.pet=null;
  if(rpg.legends===undefined)rpg.legends=[]; if(rpg.wpnL===undefined)rpg.wpnL=null;
  if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[];
- if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null; }
+ if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null;
+ if(rpg.arenaBest===undefined) rpg.arenaBest=0; }
 function xpNeed(l){return Math.floor(50*Math.pow(l,1.5));}
 function eqAffArr(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.a:null; }
 function eqRar(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.r:0; }
@@ -516,49 +517,71 @@ $s('potBtn').addEventListener('click',usePotion);
 function legendRows(slot,out){ for(const L of LEGENDS){ if(L.slot!==slot) continue;
  const owned=rpg.legends&&rpg.legends.indexOf(L.id)>=0;
  const eq=(slot==='wpn'?rpg.wpnL:rpg.armL)===L.id;
- if(owned) out.push({l:'★ '+L.n+(eq?' — in use, tap to set aside':' — owned, tap to use'),c:0,
+ if(owned) out.push({l:L.n, desc:(eq?'in use · tap to set aside':'owned · tap to equip'), legend:true, c:0,
    f:function(){ if(slot==='wpn') rpg.wpnL=(eq?null:L.id); else rpg.armL=(eq?null:L.id); }});
- else out.push({l:'★ '+L.n+' · '+L.d,c:L.price,
+ else out.push({l:L.n, desc:L.d, legend:true, c:L.price,
    f:function(){ if(!rpg.legends)rpg.legends=[]; rpg.legends.push(L.id);
      if(slot==='wpn') rpg.wpnL=L.id; else rpg.armL=L.id; }});
 } }
-function shopRowsFor(id){ const ch=curChar(); const out=[];
+function shopRowsFor(id){ const ch=curChar(); const out=[]; const cls=ch.cls;
  if(id==='bram'){ const nt=(rpg.wpn||0)+1;
-  if(nt<3){ const w=weaponAt(ch.cls,nt);
-   out.push({l:'T'+(nt+1)+' '+w.n+' (+'+w.add+' dmg)',c:w.cost,f:function(){rpg.wpn=nt; rpg.wpnL=null; if(rpg.eqAff)rpg.eqAff.wpn=null;}}); }
-  else out.push({l:'Bram stocks up to T3 — finer steel is won in the field',c:-1});
+  if(nt<3){ const w=weaponAt(cls,nt);
+   out.push({l:'T'+(nt+1)+' '+w.n, desc:'+'+w.add+' ATTACK', ic:{k:'wpn',wt:CWEAP[cls],t:nt}, c:w.cost,
+    f:function(){rpg.wpn=nt; rpg.wpnL=null; if(rpg.eqAff)rpg.eqAff.wpn=null;}}); }
+  else out.push({note:'Bram stocks up to T3 — finer steel is won in the field.'});
   legendRows('wpn',out); }
- if(id==='sella'){ const na=(rpg.arm||0)+1;
-  if(na<3) out.push({l:'T'+(na+1)+' '+MATN[CARMOR[ch.cls]]+' Armor',c:Math.round(tierCost(na)*0.8),f:function(){rpg.arm=na; rpg.armL=null; if(rpg.eqAff)rpg.eqAff.arm=null;}});
-  else out.push({l:'Armor above T3 must be found, not bought',c:-1});
+ if(id==='sella'){ const mt=CARMOR[cls]; const na=(rpg.arm||0)+1;
+  if(na<3){ const s=gearBaseStats('arm',na,mt);
+   out.push({l:'T'+(na+1)+' '+MATN[mt]+' Armor', desc:'+'+s.def+' DEF · +'+s.hp+' HP', ic:{k:'arm',mt:mt,t:na},
+    c:Math.round(tierCost(na)*0.8), f:function(){rpg.arm=na; rpg.armL=null; if(rpg.eqAff)rpg.eqAff.arm=null;}}); }
+  else out.push({note:'Armor above T3 must be found, not bought.'});
   const nh=(rpg.helm===undefined||rpg.helm<0)?0:rpg.helm+1;
-  if(nh<3) out.push({l:'T'+(nh+1)+' '+MATN[CARMOR[ch.cls]]+' Helm',c:Math.round(tierCost(Math.max(1,nh))*0.6),f:function(){rpg.helm=nh; if(rpg.eqAff)rpg.eqAff.helm=null;}});
-  else out.push({l:'Helms above T3 drop in the field',c:-1});
+  if(nh<3){ const s=gearBaseStats('helm',nh,mt);
+   out.push({l:'T'+(nh+1)+' '+MATN[mt]+' Helm', desc:'+'+s.wis+' WIS · +'+s.mp+' MP', ic:{k:'helm',mt:mt,t:nh},
+    c:Math.round(tierCost(Math.max(1,nh))*0.6), f:function(){rpg.helm=nh; if(rpg.eqAff)rpg.eqAff.helm=null;}}); }
+  else out.push({note:'Helms above T3 drop in the field.'});
   legendRows('arm',out); }
- if(id==='odo'){ const pets=[['wolf','Grey Wolf',500],['skel','Bone Servant',1500],['wisp','Ember Wisp',4000]];
+ if(id==='odo'){ const pets=[['wolf','Grey Wolf',500,'a loyal hunter'],['skel','Bone Servant',1500,'tireless and grim'],['wisp','Ember Wisp',4000,'burns for you']];
   if(!rpg.pets)rpg.pets=[];
   for(const p of pets){ const pid=p[0],nm=p[1],cost=p[2];
    if(rpg.pets.indexOf(pid)>=0)
-    out.push({l:nm+(rpg.pet===pid?' — following you':' — owned, tap to summon'),c:0,
+    out.push({l:nm, desc:(rpg.pet===pid?'✦ following you':'owned · tap to summon'), pet:pid, c:0,
      f:function(){rpg.pet=(rpg.pet===pid?null:pid); spawnPet();}});
-   else out.push({l:nm,c:cost,f:function(){rpg.pets.push(pid); rpg.pet=pid; spawnPet();}}); } }
- if(id==='maren'){ out.push({l:'Ember Tonic (+60 HP)',c:15,f:function(){rpg.pots++;}}); }
+   else out.push({l:nm, desc:p[3], pet:pid, c:cost, f:function(){rpg.pets.push(pid); rpg.pet=pid; spawnPet();}}); } }
+ if(id==='maren'){ out.push({l:'Ember Tonic', desc:'restores +60 HP', ic:{k:'pot'}, c:15, f:function(){rpg.pots++;}});
+  out.push({note:'Carrying '+rpg.pots+' tonic'+(rpg.pots===1?'':'s')+'.'}); }
  return out; }
 function openShop2(id){ const n=SHOPNPCS.filter(function(x){return x.id===id;})[0]||SHOPNPCS[0];
  $s('shopTitle').textContent=n.title;
  $s('shopScr').style.display='flex'; paintShop2(n.id); }
 function paintShop2(id){ if(!rpg) return;
- $s('shopGold').textContent='Purse: '+rpg.gold+'g';
+ const np=SHOPNPCS.filter(x=>x.id===id)[0];
+ $s('shopGold').innerHTML='<span class="purse">🪙 '+rpg.gold+' gold</span>';
  const box=$s('shopRows'); box.innerHTML='';
  for(const it of shopRowsFor(id)){
-  if(it.c===-1){ const d=document.createElement('div'); d.className='mnote'; d.textContent=it.l; box.appendChild(d); continue; }
-  const b=document.createElement('button'); b.className='mbtn';
-  b.textContent=it.l+(it.c>0?' — '+it.c+'g':'');
-  if(it.c>0&&rpg.gold<it.c) b.style.opacity='0.45';
-  b.onclick=function(){ if(it.c>0&&rpg.gold<it.c) return;
+  if(it.note){ const d=document.createElement('div'); d.className='shopnote'; d.textContent=it.note; box.appendChild(d); continue; }
+  const afford=!(it.c>0&&rpg.gold<it.c);
+  const card=document.createElement('div'); card.className='shopcard'+(afford?'':' broke')+(it.legend?' legend':'');
+  const ico=document.createElement('div'); ico.className='shopico';
+  const sp = it.ic?itemSprite(it.ic) : (it.pet?petSprite(it.pet) : null);
+  if(sp){ const cv=document.createElement('canvas'); cv.width=42; cv.height=36; cv.className='isprite';
+   const cc=cv.getContext('2d'); cc.imageSmoothingEnabled=false;
+   const sc=Math.max(1,Math.floor(Math.min(38/sp.width,32/sp.height)));
+   cc.drawImage(sp,Math.round((42-sp.width*sc)/2),Math.round((36-sp.height*sc)/2),sp.width*sc,sp.height*sc);
+   ico.appendChild(cv);
+  } else { ico.classList.add('emoji'); ico.textContent=it.legend?'★':'🛒'; }
+  card.appendChild(ico);
+  const txt=document.createElement('div'); txt.className='shoptext';
+  txt.innerHTML='<div class="shopname">'+it.l+'</div><div class="shopdesc">'+(it.desc||'')+'</div>';
+  card.appendChild(txt);
+  const pr=document.createElement('div'); pr.className='shopprice'+(it.c>0?'':' free');
+  pr.textContent = it.c>0 ? it.c+'g' : (it.c===0?'✓':'');
+  card.appendChild(pr);
+  card.onclick=function(){ if(it.c>0&&rpg.gold<it.c){ navigator.vibrate&&navigator.vibrate(20); return; }
    if(it.c>0) rpg.gold-=it.c;
-   if(it.f) it.f(); recalcStats(); saveRPG(); hudRPG(); paintShop2(id); };
-  box.appendChild(b); }
+   if(it.f) it.f(); recalcStats(); saveRPG(); hudRPG(); paintShop2(id);
+   navigator.vibrate&&navigator.vibrate(15); };
+  box.appendChild(card); }
 }
 function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allies.splice(i,1);
  if(!rpg||!rpg.pet) return;
