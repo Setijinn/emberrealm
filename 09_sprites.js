@@ -138,17 +138,10 @@ const sprWolf=makeSprite(HOUND,{O:'#101418',R:'#8d97a3',r:'#5d6670',E:'#d8f0fa',
 const sprSkel=makeSprite(CULT,{O:'#141414',P:'#d8d2c8',p:'#a39d94',E:'#7dc47a',K:'#2a2a2a'});
 const WSPR={
  sword:["...T........","GGTWWWWWWWWW","...T........"],
- dagger:["..T.....","GGWWWWW.","..T....."],
  bow:["..WWWW....",".W....W...","T......G..",".W....W...","..WWWW...."],
  xbow:["..W..W....","GGWWWWWWT.","..W..W...."],
  staff:["..........T.","GGGGGGGGGGTT","..........T."],
  wand:["GGWWWWT."],
- tome:["GTTTTT","GWWWWW","GWWWWW","GWWWWW","GWWWWW","GTTTTT"],
- axe:["....WW..","GGGGWWWT","....WWW.","....WW.."],
- hammer:["....WWWW","GGGGWTTW","....WWWW"],
- spear:["............W.","GGGGGGGGGGWWT.",".............."],
- harp:["TWWWT","W...W","W.W.W","W...W","TWWWT"],
- totem:["TTTT","WWWW","GWWG","WWWW","GGGG"],
 };
 const wpnCache={};
 function wpnSpr(type,tier){ const k=type+'_'+tier;
@@ -260,12 +253,12 @@ function drawEShot(s){
 }
 
 const CTHEME={
- squire:{p:'#5a7a9c',s:'#3c5570'}, ranger:{p:'#4f7d45',s:'#37592f'},
+ ranger:{p:'#4f7d45',s:'#37592f'},
  pyro:{p:'#d4622a',s:'#96421c'}, knight:{p:'#7d8a99',s:'#565f6b'},
  rogue:{p:'#4a3d5c',s:'#322a40'}, cleric:{p:'#d8cfb8',s:'#a89c7f'},
  berserker:{p:'#a83232',s:'#742020'}, warlock:{p:'#6b3d99',s:'#482968'},
  frost:{p:'#6fb8d4',s:'#4a8aa8'}, storm:{p:'#c9b23c',s:'#8f7d24'},
- hunter:{p:'#8a6a3a',s:'#64491f'}, arbalest:{p:'#6b6b3f',s:'#4a4a28'},
+ hunter:{p:'#8a6a3a',s:'#64491f'},
  monk:{p:'#d49a3a',s:'#a06f1f'}, paladin:{p:'#d4b96a',s:'#a08a42'},
  necro:{p:'#5f8a4f',s:'#3f6134'}, bard:{p:'#9c4a6b',s:'#6f3049'},
  shaman:{p:'#3f8a7d',s:'#2a6157'}, dragoon:{p:'#b5652f',s:'#82461e'},
@@ -279,17 +272,16 @@ function mixc(a,b,t){
 }
 // ---------- detailed, animated hero models ----------
 // per-class headgear + attack style give every class a distinct, animated look
-const HEADGEAR={ squire:'helm', knight:'ghelm', paladin:'circlet', cleric:'circlet',
+const HEADGEAR={ knight:'ghelm', paladin:'circlet', cleric:'circlet',
  berserker:'horns', dragoon:'crest', ranger:'hood', hunter:'hood', rogue:'hood',
- warlock:'skull', necro:'skull', arbalest:'cap', monk:'topknot', bard:'feather',
+ warlock:'skull', necro:'skull', monk:'topknot', bard:'feather',
  pyro:'wizhat', frost:'wizhat', storm:'wizhat', shaman:'mask' };
-const ATK_STYLE={ sword:'swing',axe:'swing',hammer:'swing', spear:'thrust',dagger:'thrust',
- bow:'draw',xbow:'draw', staff:'cast',wand:'cast',tome:'cast',harp:'cast',totem:'cast' };
+const ATK_STYLE={ sword:'swing', bow:'draw',xbow:'draw', staff:'cast',wand:'cast', fists:'thrust' };
 const heroCache={};
 function buildHero(cls,frame,armT){
  const CW=26, CH=34, cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;
  const c=cv.getContext('2d'); c.imageSmoothingEnabled=false;
- const th=CTHEME[cls]||CTHEME.squire, arch=(CARMOR[cls]||'robe');
+ const th=CTHEME[cls]||CTHEME.knight, arch=(CARMOR[cls]||'robe');
  const OL='#140f1a', SK='#ecc795', SKH='#f6dbac', SKD='#c2925f';
  let base=th.p, dark=th.s;
  if(arch==='plate'){ base=mixc(th.p,'#aab2bb',0.42); dark=mixc(th.s,'#5a626c',0.42); }
@@ -337,7 +329,7 @@ function buildHero(cls,frame,armT){
  return cv;
 }
 function heroSprite(look,frame){
- const cls=look.cls||'squire', at=look.armT|0, k=cls+'_'+frame+'_'+at;
+ const cls=look.cls||'knight', at=look.armT|0, k=cls+'_'+frame+'_'+at;
  if(!heroCache[k]) heroCache[k]=buildHero(cls,frame,at);
  return heroCache[k];
 }
@@ -524,15 +516,15 @@ function render(){
   ctx.globalAlpha = player.inv>0 ? (Math.sin(performance.now()/40)>0?0.45:1) : 1;
   const hframe = moving ? (1+(Math.floor(pn*8)%2)) : 0;
   const _es = (typeof emberSprite==='function')
-    ? emberSprite(player.look||{cls:'squire'}, {aim:aa, moving, attacking:player.atkT>0, atkPhase:phase, clock:pn})
+    ? emberSprite(player.look||{cls:'knight'}, {aim:aa, moving, attacking:player.atkT>0, atkPhase:phase, clock:pn})
     : null;
   if(_es){
     // real PixelLab art: 92px sprite, scaled down; already holds its weapon
     blit(_es.img, player.x+lx, player.y-8+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
   } else {
-    blit(heroSprite(player.look||{cls:'squire'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(aa)<0);
+    blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(aa)<0);
   }
-  if(!_es && chW&&rpg){
+  if(!_es && chW&&rpg && wtype!=='fists'){
     const tier=rpg.wpnL?11:(rpg.wpn||0);
     let reach=player.r+2, wang=aa, glow=0;
     if(style==='swing'){ wang=aa+(phase-0.5)*1.7; reach+=swng*3; }
@@ -542,7 +534,7 @@ function render(){
     const wx=player.x+lx+Math.cos(wang)*reach, wy=player.y+ly+Math.sin(wang)*reach;
     if(glow>0){ const gx=wx+Math.cos(aa)*9, gy=wy+Math.sin(aa)*9;
       const gg=ctx.createRadialGradient(gx,gy,1,gx,gy,9*glow+4);
-      gg.addColorStop(0,(CTHEME[chW.cls]||CTHEME.squire).p); gg.addColorStop(1,'rgba(0,0,0,0)');
+      gg.addColorStop(0,(CTHEME[chW.cls]||CTHEME.knight).p); gg.addColorStop(1,'rgba(0,0,0,0)');
       ctx.globalAlpha=0.6*glow; ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(gx,gy,9*glow+4,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
     blitRot(wpnSpr(wtype,tier), wx,wy, 2.0, wang);
   }

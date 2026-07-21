@@ -17,9 +17,11 @@
 // On-screen scale for the 92px PixelLab sprites (tune to match world scale).
 const EMBER_SC = 0.85;
 
+// Populated as each class's animations are generated + vendored to assets/<class>/.
+// Empty => every class falls back to the procedural heroSprite() until wired.
 const EMBER_CLASSES = {
   // maxN = upper bound of frames to probe per animation (walk=4, attack up to 8)
-  squire: { anims: { walk: 4, attack: 8 } }
+  // e.g. knight: { anims: { walk: 4, attack: 8 } }
 };
 const EMBER_DIRS = ['s','e','n','w'];
 
@@ -89,7 +91,7 @@ function _emberIdle(cls, dir){ return _emberImg['assets/'+cls+'/idle_'+dir+'.png
 
 // Returns {img, flip} or null (=> procedural fallback in renderer)
 function emberSprite(look, state){
-  const cls = (look && look.cls) || 'squire';
+  const cls = (look && look.cls) || 'knight';
   if(!EMBER_CLASSES[cls] || !_emberReady[cls]) return null;
   const {dir, flip} = _emberDir(state.aim||0);
   let flp = flip;

@@ -10,7 +10,6 @@ let curUser=null;
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('emberrealm\u00b7'+s));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const CLASSES=[
- {id:'squire',n:'Squire',ic:'🛡️',d:'Balanced in all things.',hp:130,spd:170,dmg:12,fr:0.24},
  {id:'ranger',n:'Ranger',ic:'🏹',d:'Fast hands, thin armor.',hp:90,spd:205,dmg:9,fr:0.14},
  {id:'pyro',n:'Pyromancer',ic:'🔥',d:'Bolts that hit like a forge.',hp:80,spd:160,dmg:26,fr:0.38},
  {id:'knight',n:'Knight',ic:'⚔️',d:'A walking wall of iron.',hp:190,spd:145,dmg:14,fr:0.30},
@@ -21,7 +20,6 @@ const CLASSES=[
  {id:'frost',n:'Frostweaver',ic:'❄️',d:'Her bolts freeze the blood.',hp:100,spd:170,dmg:13,fr:0.26,slow:true},
  {id:'storm',n:'Stormcaller',ic:'⚡',d:'Lightning stops for no one.',hp:95,spd:180,dmg:12,fr:0.26,pierce:2},
  {id:'hunter',n:'Hunter',ic:'🐺',d:'Two arrows, one breath.',hp:105,spd:195,dmg:8,fr:0.22,shots:2,spread:0.10},
- {id:'arbalest',n:'Arbalest',ic:'🎯',d:'One bolt. One answer.',hp:100,spd:165,dmg:36,fr:0.55},
  {id:'monk',n:'Monk',ic:'🥋',d:'Speed is its own armor.',hp:105,spd:215,dmg:9,fr:0.18},
  {id:'paladin',n:'Paladin',ic:'✨',d:'Faith holds the line.',hp:165,spd:155,dmg:12,fr:0.28,regen:2},
  {id:'necro',n:'Necromancer',ic:'🧟',d:'Death pays him tribute.',hp:90,spd:165,dmg:17,fr:0.30,ls:0.15},
@@ -32,24 +30,21 @@ const CLASSES=[
 const $s=id=>document.getElementById(id);
 const WTYPE={
  sword:{n:'Sword',shots:3,spread:0.35,spd:380,life:0.28,size:6,dm:1.0,rof:1.0},
- dagger:{n:'Dagger',shots:1,spd:540,life:0.32,size:4,dm:0.75,rof:0.62},
  bow:{n:'Bow',shots:1,spd:640,life:1.2,size:5,dm:1.0,rof:1.0},
  xbow:{n:'Crossbow',shots:1,spd:760,life:1.3,size:6,dm:1.7,rof:1.7,pierce:1},
  staff:{n:'Staff',shots:2,par:11,spd:480,life:0.9,size:6,dm:0.85,rof:1.0},
  wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:0.9,rof:0.85},
- tome:{n:'Tome',shots:1,spd:330,life:1.1,size:10,dm:1.6,rof:1.5},
- axe:{n:'Axe',shots:2,spread:0.3,spd:400,life:0.35,size:7,dm:1.25,rof:1.25},
- hammer:{n:'Hammer',shots:1,spd:340,life:0.3,size:11,dm:2.2,rof:1.9},
- spear:{n:'Spear',shots:1,spd:700,life:0.55,size:5,dm:1.15,rof:1.1,pierce:2},
- harp:{n:'Harp',shots:3,par:14,spd:430,life:0.8,size:5,dm:0.6,rof:0.8},
- totem:{n:'Totem',shots:5,spread:0.5,spd:380,life:0.5,size:5,dm:0.5,rof:1.0},
+ fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.7,rof:0.5},
 };
-const CWEAP={squire:'sword',rogue:'dagger',monk:'dagger',ranger:'bow',hunter:'bow',
- arbalest:'xbow',pyro:'staff',frost:'staff',cleric:'wand',storm:'wand',
- warlock:'tome',necro:'tome',berserker:'axe',knight:'hammer',paladin:'hammer',
- dragoon:'spear',bard:'harp',shaman:'totem'};
-const CARMOR={squire:'plate',knight:'plate',paladin:'plate',berserker:'plate',dragoon:'plate',
- ranger:'leather',hunter:'leather',rogue:'leather',monk:'leather',arbalest:'leather',bard:'leather',
+// Melee -> sword; ranger/hunter -> bow (can swap to xbow, see WSWAP); monk -> fists.
+const CWEAP={rogue:'sword',monk:'fists',ranger:'bow',hunter:'bow',
+ pyro:'staff',frost:'staff',cleric:'wand',storm:'wand',
+ warlock:'wand',necro:'wand',berserker:'sword',knight:'sword',paladin:'sword',
+ dragoon:'sword',bard:'wand',shaman:'staff'};
+// Classes that can toggle between two ranged weapons (bow <-> crossbow).
+const WSWAP={ranger:['bow','xbow'],hunter:['bow','xbow']};
+const CARMOR={knight:'plate',paladin:'plate',berserker:'plate',dragoon:'plate',
+ ranger:'leather',hunter:'leather',rogue:'leather',monk:'leather',bard:'leather',
  pyro:'robe',frost:'robe',cleric:'robe',storm:'robe',warlock:'robe',necro:'robe',shaman:'robe'};
 const MATN={plate:'Plate',leather:'Leather',robe:'Robe'};
 const RINGN={hp:'Ring of Vigor',dmg:'Ring of Fury',spd:'Ring of Haste'};
@@ -190,7 +185,6 @@ function rollLoot(e){
  else if(r<0.12*fmul) loots.push(bagAt(e,{k:'pot'}));
 }
 const ABIL={
- squire:{res:'Valor',col:'#ffc94d',rule:'time',d:'Rally: heal 25% + 50% dmg for 5s'},
  ranger:{res:'Focus',col:'#7dc47a',rule:'hit',d:'Volley: 12-arrow fan'},
  pyro:{res:'Heat',col:'#ff7a3d',rule:'shot',d:'Detonate: fiery blast around you'},
  knight:{res:'Defiance',col:'#c9d2da',rule:'hurt',d:'Bulwark: 4s invulnerable'},
@@ -201,7 +195,6 @@ const ABIL={
  frost:{res:'Rime',col:'#9ad4ef',rule:'hit',d:'Winter Nova: freeze everything near'},
  storm:{res:'Charge',col:'#ffe9b0',rule:'time2',d:'Chain Storm: lightning hits 6 foes'},
  hunter:{res:'Instinct',col:'#7dc47a',rule:'kill',d:'Wolfpack: 2 wolves fight for you'},
- arbalest:{res:'Deadeye',col:'#e8b34b',rule:'still',d:'Deadeye: 3 volleys at 3x, pierce all'},
  monk:{res:'Flow',col:'#7ab8d4',rule:'move',d:'Zephyr: +80% speed, brief dodge'},
  paladin:{res:'Faith',col:'#ffd07a',rule:'time',d:'Consecrate: holy ground, 6s'},
  necro:{res:'Souls',col:'#8fd48c',rule:'kill',d:'Raise Dead: 2 skeletons, 12s'},
@@ -226,8 +219,7 @@ function doAbility(){
    navigator.vibrate&&navigator.vibrate(20); return; }
  player.mp-=cost;
  const AP=player.abilPow||1, cls=ch.cls;
- if(cls==='squire'){ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*0.25*AP); player.bDmgT=5; player.bDmgM=1.5; }
- else if(cls==='ranger'){ const a0=player.aim||0;
+ if(cls==='ranger'){ const a0=player.aim||0;
    for(let i=0;i<12;i++){ const sa=a0+(i-5.5)*0.12;
      pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*640,vy:Math.sin(sa)*640,r:5,life:1.1,dmg:Math.round(player.dmg*AP),pierce:0,lastHit:null}); } }
  else if(cls==='pyro'){ aoe(player.x,player.y,170,Math.round(player.dmg*3*AP),'#ff7a3d'); }
@@ -250,7 +242,6 @@ function doAbility(){
      texts.push({x:e.x,y:e.y-e.r,txt:d2,col:'#ffe9b0',life:0.6}); }
    if(pts.length>1) fx.push({t:'bolt',pts:pts,life:0.3,col:'#ffe9b0'}); }
  else if(cls==='hunter'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.8*AP),life:10,cd:0,spr:'wolf'}); }
- else if(cls==='arbalest'){ player.deadeye=3; }
  else if(cls==='monk'){ player.bSpdT=5; player.bSpdM=1.8; player.inv=1.5; }
  else if(cls==='paladin'){ zones.push({x:player.x,y:player.y,r:95,life:6,tick:0,ap:AP}); }
  else if(cls==='necro'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.9*AP),life:12,cd:0,spr:'skel'}); }
@@ -380,7 +371,7 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  const dc=$s('dollCv'), d2=dc.getContext('2d'); d2.imageSmoothingEnabled=false;
  const bg=d2.createLinearGradient(0,0,0,dc.height); bg.addColorStop(0,'#241b33'); bg.addColorStop(1,'#120e18');
  d2.fillStyle=bg; d2.fillRect(0,0,dc.width,dc.height);
- const th=CTHEME[ch.cls]||CTHEME.squire;
+ const th=CTHEME[ch.cls]||CTHEME.knight;
  const glow=d2.createRadialGradient(dc.width/2,dc.height*0.5,3,dc.width/2,dc.height*0.5,48);
  glow.addColorStop(0,th.p+'3c'); glow.addColorStop(1,'rgba(0,0,0,0)');
  d2.fillStyle=glow; d2.fillRect(0,0,dc.width,dc.height);
@@ -494,7 +485,7 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  player.fortune=st.fort;                              // FORTUNE -> loot
  player.shots=c.shots||1; player.pierce=c.pierce||0;
  player.ls=c.ls||0; player.slowShot=!!c.slow;
- player.resDef=ABIL[ch.cls]||ABIL.squire;
+ player.resDef=ABIL[ch.cls]||ABIL.knight;
  player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht};
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }
