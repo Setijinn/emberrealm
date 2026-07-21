@@ -17,6 +17,7 @@ function fire(dt){
   const wt=player.wt||WTYPE.sword;
   player.fireT=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
   player.aim=ang;
+  player.atkT=0.2;                     // trigger the attack animation
   const de3=player.deadeye>0;
   const crit=Math.random()<(player.crit||0);          // LUCK -> crit chance
   let dm=player.dmg*(wt.dm||1)*(player.bDmgT>0?(player.bDmgM||1.5):1);

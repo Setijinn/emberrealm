@@ -8,6 +8,7 @@ function update(dt){
     moveCircle(player,(m.dx/d)*sp*dt*Math.min(1,d/28),(m.dy/d)*sp*dt*Math.min(1,d/28));
   }
   player.inv=Math.max(0,player.inv-dt);
+  if(player.atkT>0) player.atkT-=dt;                                       // attack animation timer
   if(player.hp<player.maxhp) player.hp+=(player.regen||1)*dt;               // VIT -> regen
   if(player.mp<player.maxmp) player.mp=Math.min(player.maxmp,player.mp+(player.mpregen||2)*dt); // WIS -> mana
 

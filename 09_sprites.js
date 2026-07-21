@@ -277,22 +277,70 @@ function mixc(a,b,t){
  const bl=Math.round((pa&255)*(1-t)+(pb&255)*t);
  return '#'+((1<<24)|(r<<16)|(g<<8)|bl).toString(16).slice(1);
 }
+// ---------- detailed, animated hero models ----------
+// per-class headgear + attack style give every class a distinct, animated look
+const HEADGEAR={ squire:'helm', knight:'ghelm', paladin:'circlet', cleric:'circlet',
+ berserker:'horns', dragoon:'crest', ranger:'hood', hunter:'hood', rogue:'hood',
+ warlock:'skull', necro:'skull', arbalest:'cap', monk:'topknot', bard:'feather',
+ pyro:'wizhat', frost:'wizhat', storm:'wizhat', shaman:'mask' };
+const ATK_STYLE={ sword:'swing',axe:'swing',hammer:'swing', spear:'thrust',dagger:'thrust',
+ bow:'draw',xbow:'draw', staff:'cast',wand:'cast',tome:'cast',harp:'cast',totem:'cast' };
 const heroCache={};
+function buildHero(cls,frame,armT){
+ const CW=26, CH=34, cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;
+ const c=cv.getContext('2d'); c.imageSmoothingEnabled=false;
+ const th=CTHEME[cls]||CTHEME.squire, arch=(CARMOR[cls]||'robe');
+ const OL='#140f1a', SK='#ecc795', SKH='#f6dbac', SKD='#c2925f';
+ let base=th.p, dark=th.s;
+ if(arch==='plate'){ base=mixc(th.p,'#aab2bb',0.42); dark=mixc(th.s,'#5a626c',0.42); }
+ else if(arch==='leather'){ base=mixc(th.p,'#8a6a3c',0.30); dark=mixc(th.s,'#4a3620',0.42); }
+ const hi=mixc(base,'#ffffff',0.30), sh=mixc(dark,'#000000',0.18);
+ const trim=(armT>=0?tierCol(armT):'#caa15a'), BOOT='#5c3826', BOOTD='#3f2718';
+ const M='#c9d2da', Md='#7a828c', Mh='#eaeff4';
+ function shp(col,x,y,w,h,h1,s1){ c.fillStyle=OL; c.fillRect(x-1,y-1,w+2,h+2);
+   c.fillStyle=col; c.fillRect(x,y,w,h);
+   if(h1){c.fillStyle=h1; c.fillRect(x,y,w,1); c.fillRect(x,y,1,h);}
+   if(s1){c.fillStyle=s1; c.fillRect(x,y+h-1,w,1); c.fillRect(x+w-1,y,1,h);} }
+ function px(col,x,y,w,h){ c.fillStyle=col; c.fillRect(x,y,w,h); }
+ const lF=frame===1?1:0, rF=frame===2?1:0;
+ // legs / robe
+ if(arch==='robe'){ shp(dark,6,22,14,9,hi,sh); px(mixc(dark,'#000',0.25),6,29,14,2);
+   px(trim,6,23,14,1); shp(BOOT,9,29+lF,3,3,null,BOOTD); shp(BOOT,14,29+rF,3,3,null,BOOTD); }
+ else { shp(dark,8,24,4,6,hi,sh); shp(BOOT,8,29+lF,4,3,null,BOOTD);
+   shp(dark,14,24,4,6,hi,sh); shp(BOOT,14,29+rF,4,3,null,BOOTD); }
+ // arms + hands
+ shp(base,4,16,3,7,hi,sh); px(SK,4,22,3,2);
+ shp(base,19,16,3,7,hi,sh); px(SK,19,22,3,2);
+ // torso
+ shp(base,7,15,12,10,hi,sh); px(trim,12,16,2,7); px(sh,7,24,12,1);
+ if(arch==='plate'){ shp(hi,3,14,5,4,mixc(hi,'#fff',0.3),sh); shp(hi,18,14,5,4,mixc(hi,'#fff',0.3),sh); px(trim,10,16,6,1); }
+ else if(arch==='leather'){ px(BOOTD,8,16,10,1); px(BOOTD,9,17,8,1); px(trim,7,23,12,1); }
+ else { px(trim,7,20,12,1); shp(base,3,16,3,6,hi,sh); shp(base,20,16,3,6,hi,sh); }
+ px(trim,12,18,2,2); px(mixc(trim,'#fff',0.4),12,18,1,1);
+ // neck + head + eyes
+ px(SKD,11,13,4,2); shp(SK,9,7,8,7,SKH,SKD); px('#140f1a',11,10,1,2); px('#140f1a',14,10,1,2); px(SKD,9,12,8,1);
+ // headgear
+ const hg=HEADGEAR[cls]||'helm';
+ if(hg==='helm'){ shp(M,9,5,8,4,Mh,Md); px(Md,12,8,2,4); }
+ else if(hg==='ghelm'){ shp(M,9,4,8,9,Mh,Md); px('#0c0a12',10,9,6,1); px(Md,9,4,8,1); }
+ else if(hg==='circlet'){ px(trim,9,7,8,1); shp(trim,11,5,4,2,mixc(trim,'#fff',0.4),null);
+   if(cls==='paladin'){ px('#ffe9b0',9,3,8,1); px('#ffe9b0',10,2,6,1); } }
+ else if(hg==='horns'){ shp(M,9,6,8,4,Mh,Md); shp('#e8e0d0',6,2,3,5,'#fff',Md); shp('#e8e0d0',17,2,3,5,'#fff',Md); }
+ else if(hg==='crest'){ shp(M,9,6,8,4,Mh,Md); shp(base,12,1,2,6,hi,sh); px(trim,12,1,2,2); }
+ else if(hg==='hood'){ shp(dark,7,4,12,8,mixc(dark,'#fff',0.18),mixc(dark,'#000',0.2)); px(base,9,6,8,3); px('#0c0a12',10,10,6,2); }
+ else if(hg==='cap'){ shp(dark,8,6,10,3,hi,sh); px(dark,9,5,8,1); }
+ else if(hg==='topknot'){ px(SKD,9,6,8,2); shp(dark,11,2,4,4,hi,sh); }
+ else if(hg==='feather'){ shp(dark,8,6,10,3,hi,sh); shp(trim,17,1,2,6,mixc(trim,'#fff',0.3),sh); }
+ else if(hg==='wizhat'){ shp(dark,5,9,16,2,mixc(dark,'#fff',0.2),sh); shp(base,9,4,8,6,hi,sh); shp(base,10,1,5,4,hi,sh); px(trim,10,3,5,1); px(trim,11,0,3,2); }
+ else if(hg==='skull'){ shp(dark,7,4,12,8,mixc(dark,'#fff',0.15),mixc(dark,'#000',0.2)); px('#e8e0d0',10,8,6,4); px('#140f1a',11,9,1,2); px('#140f1a',14,9,1,2); }
+ else if(hg==='mask'){ shp('#8a5a34',9,6,8,7,'#a8794a','#5c3a1e'); px(trim,10,8,2,3); px(trim,14,8,2,3); px('#e8e0d0',12,7,2,1); }
+ return cv;
+}
 function heroSprite(look,frame){
- const cls=look.cls||'squire', mt=look.mt||'robe', at=look.armT|0;
- const ht=(look.helmT===undefined)?-1:look.helmT;
- const th=CTHEME[cls]||CTHEME.squire;
- const k=[cls,mt,at,ht,frame].join('_');
- if(!heroCache[k]){
-  let B=th.p, D=th.s;
-  if(mt==='plate'){ B=mixc(th.p,'#9aa3ad',0.45); D=mixc(th.s,'#6d7680',0.45); }
-  else if(mt==='leather'){ B=mixc(th.p,'#7a5a30',0.35); D=mixc(th.s,'#5a411f',0.35); }
-  const pal={O:'#14101b',
-   M:ht>=0?'#c9d2da':'#6a4a2a', m:ht>=0?tierCol(ht):'#4f3620',
-   S:'#ecc795',E:'#14101b',B:B,D:D,L:'#5c3826',l:'#45291c',
-   G:tierCol(at)};
-  heroCache[k]=makeSprite(frame?HERO_B:HERO_A,pal);
- } return heroCache[k]; }
+ const cls=look.cls||'squire', at=look.armT|0, k=cls+'_'+frame+'_'+at;
+ if(!heroCache[k]) heroCache[k]=buildHero(cls,frame,at);
+ return heroCache[k];
+}
 function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
  if(e.type==='c') blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip);
@@ -462,16 +510,34 @@ function render(){
   for(const t2 of texts){ ctx.globalAlpha=Math.min(1,t2.life*1.4); ctx.fillStyle=t2.col;
     ctx.fillText(t2.txt,t2.x,t2.y); }
   ctx.globalAlpha=1; ctx.textAlign='left';
+  const aa=player.aim||0;
+  const chW=curChar();
+  const wtype=chW?(CWEAP[chW.cls]||'sword'):'sword', style=ATK_STYLE[wtype]||'swing';
+  const ATK_DUR=0.2;
+  const phase = player.atkT>0 ? 1-Math.min(1,player.atkT/ATK_DUR) : 0;
+  const swng = phase>0 ? Math.sin(phase*Math.PI) : 0;
+  const lunge=(style==='thrust'?5:style==='swing'?3:2)*swng;
+  const lx=Math.cos(aa)*lunge, ly=Math.sin(aa)*lunge;
   shadow(player.x,player.y+player.r*0.85,player.r*1.05);
   const moving=stick.move.id!==null;
   const bob=Math.sin(pn*11)*(moving?1.8:0.5);
   ctx.globalAlpha = player.inv>0 ? (Math.sin(performance.now()/40)>0?0.45:1) : 1;
-  const hframe = moving ? (Math.floor(pn*8)%2) : 0;
-  blit(heroSprite(player.look||{hue:player.hue||30,helmT:-1},hframe), player.x, player.y-4+bob*0.4, 2.2, Math.cos(player.aim||0)<0);
-  const aa=player.aim||0;
-  const chW=curChar();
-  if(chW&&rpg) blitRot(wpnSpr(CWEAP[chW.cls]||'sword',rpg.wpnL?11:(rpg.wpn||0)),
-    player.x+Math.cos(aa)*(player.r+2), player.y+Math.sin(aa)*(player.r+2), 2.0, aa);
+  const hframe = moving ? (1+(Math.floor(pn*8)%2)) : 0;
+  blit(heroSprite(player.look||{cls:'squire'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(aa)<0);
+  if(chW&&rpg){
+    const tier=rpg.wpnL?11:(rpg.wpn||0);
+    let reach=player.r+2, wang=aa, glow=0;
+    if(style==='swing'){ wang=aa+(phase-0.5)*1.7; reach+=swng*3; }
+    else if(style==='thrust'){ reach+=swng*9; }
+    else if(style==='draw'){ reach+=swng*4; }
+    else if(style==='cast'){ wang=aa-swng*0.35; glow=swng; }
+    const wx=player.x+lx+Math.cos(wang)*reach, wy=player.y+ly+Math.sin(wang)*reach;
+    if(glow>0){ const gx=wx+Math.cos(aa)*9, gy=wy+Math.sin(aa)*9;
+      const gg=ctx.createRadialGradient(gx,gy,1,gx,gy,9*glow+4);
+      gg.addColorStop(0,(CTHEME[chW.cls]||CTHEME.squire).p); gg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.globalAlpha=0.6*glow; ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(gx,gy,9*glow+4,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
+    blitRot(wpnSpr(wtype,tier), wx,wy, 2.0, wang);
+  }
   ctx.globalAlpha=1;
   ctx.font='11px monospace'; ctx.textAlign='center'; ctx.fillStyle='#ffd07a';
   ctx.fillText((player.cname||'Hero')+(rpg?' · Lv '+rpg.lvl:''),player.x,player.y-player.r-11);
