@@ -523,8 +523,16 @@ function render(){
   const bob=Math.sin(pn*11)*(moving?1.8:0.5);
   ctx.globalAlpha = player.inv>0 ? (Math.sin(performance.now()/40)>0?0.45:1) : 1;
   const hframe = moving ? (1+(Math.floor(pn*8)%2)) : 0;
-  blit(heroSprite(player.look||{cls:'squire'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(aa)<0);
-  if(chW&&rpg){
+  const _es = (typeof emberSprite==='function')
+    ? emberSprite(player.look||{cls:'squire'}, {aim:aa, moving, attacking:player.atkT>0, atkPhase:phase, clock:pn})
+    : null;
+  if(_es){
+    // real PixelLab art: 92px sprite, scaled down; already holds its weapon
+    blit(_es.img, player.x+lx, player.y-8+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
+  } else {
+    blit(heroSprite(player.look||{cls:'squire'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(aa)<0);
+  }
+  if(!_es && chW&&rpg){
     const tier=rpg.wpnL?11:(rpg.wpn||0);
     let reach=player.r+2, wang=aa, glow=0;
     if(style==='swing'){ wang=aa+(phase-0.5)*1.7; reach+=swng*3; }
