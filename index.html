@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Emberrealm</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0a10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Emberrealm">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="rotate"><div class="ic">📱</div><div style="font-size:20px;">Turn your phone sideways</div>
+<div style="font-size:13px;color:#8a8494;">Emberrealm is played in landscape</div></div>
+<canvas id="cv"></canvas>
+<div class="scr" id="loginScr">
+ <div class="mtitle">EMBERREALM</div>
+ <div class="msub">SIGN THE LEDGER</div>
+ <div id="userList" class="ulist"></div>
+ <input id="loginName" class="minput" placeholder="hero name" autocomplete="username">
+ <input id="loginPass" class="minput" type="password" placeholder="password" autocomplete="current-password">
+ <div id="loginErr" class="merr"></div>
+ <button id="loginBtn" class="mbtn go">ENTER THE REALM</button>
+ <div class="mnote">A new name + password creates a hero.<br>Logins are remembered on this device.</div>
+</div>
+<div class="scr" id="menuScr">
+ <div class="mtitle">EMBERREALM</div>
+ <div class="msub" id="menuWho"></div>
+ <div class="mnote" id="menuChar"></div>
+ <div class="mnote" id="menuBest"></div>
+ <button id="playBtn" class="mbtn go">PLAY</button>
+ <button id="charBtn" class="mbtn">CHARACTERS</button>
+ <button id="switchBtn" class="mbtn">SWITCH USER</button>
+ <button id="devMenuBtn" class="mbtn" style="display:none;border-color:#7a4a1e;">🛠 DEV PANEL</button>
+</div>
+<div class="scr" id="charScr">
+ <div class="mtitle" style="font-size:26px;">YOUR CHARACTERS</div>
+ <div id="charList" class="clist"></div>
+ <button class="mbtn go" id="newCharBtn">+ NEW CHARACTER</button>
+ <button id="backBtn" class="mbtn">BACK</button>
+</div>
+<div class="scr" id="classScr">
+ <div class="mtitle" style="font-size:24px;">FORGE A HERO</div>
+ <input id="charName" class="minput" placeholder="character name" maxlength="14">
+ <div class="mnote">name them, then choose a calling</div>
+ <div id="classList" class="clist"></div>
+ <button class="mbtn" id="classBack">BACK</button>
+</div>
+<button id="mapBtn">🗺️</button>
+<div id="mapScr">
+ <div id="mapCard">
+  <div id="shHead"><span>EMBERGROVE</span><button id="mapClose">✕</button></div>
+  <canvas id="mapCv" width="620" height="430" style="image-rendering:pixelated;border:1px solid #39323f;border-radius:8px;display:block;margin:0 auto;max-width:94vw;max-height:74vh;width:auto;height:auto;"></canvas>
+  <button class="mbtn go" id="mapClose2" style="width:100%;margin-top:8px;">CLOSE MAP</button>
+ </div>
+</div>
+<div id="menuBtn">☰</div>
+<div id="devBtn2">🛠</div>
+<div class="scr" id="devScr">
+ <div class="mtitle" style="font-size:26px;">DEV PANEL</div>
+ <div class="dgrid">
+  <button class="mbtn dev" id="dGod">God mode: OFF</button>
+  <button class="mbtn dev" id="dDmg">Damage ×1</button>
+  <button class="mbtn dev" id="dSpd">Speed ×1</button>
+  <button class="mbtn dev" id="dFps">FPS: OFF</button>
+  <button class="mbtn dev" id="dHeal">Full heal</button>
+  <button class="mbtn dev" id="dKill">Kill room</button>
+  <button class="mbtn dev" id="dClear">Clear all rooms</button>
+  <button class="mbtn dev" id="dReset">Reset all rooms</button>
+  <button class="mbtn dev" id="dSpawnC">Spawn chaser</button>
+  <button class="mbtn dev" id="dSpawnS">Spawn shooter</button>
+  <button class="mbtn dev" id="dSpawnB">Spawn boss</button>
+  <button class="mbtn dev" id="dWipe">Wipe all users</button>
+ </div>
+ <div class="msub">TELEPORT</div>
+ <div id="devRooms" class="ulist"></div>
+ <button class="mbtn go" id="dResume">RESUME GAME</button>
+ <button class="mbtn" id="dBack">MAIN MENU</button>
+</div>
+<div class="scr" id="shopScr" style="background:rgba(9,7,12,.85);">
+ <div class="mtitle" style="font-size:22px;" id="shopTitle"></div>
+ <div class="mnote" id="shopGold"></div>
+ <div id="shopRows" style="display:flex;flex-direction:column;gap:8px;width:min(86vw,340px);"></div>
+ <button class="mbtn go" id="shopClose">DONE</button>
+</div>
+<button id="potBtn">🧪 0</button>
+<button id="shopBtn">🏪 SHOP</button>
+<button id="invBtn">🎒</button>
+<button id="abBtn">—</button>
+<div class="scr" id="invScr" style="background:rgba(9,7,12,.9);"><div id="invCard">
+ <div class="mtitle" style="font-size:22px;">EQUIPMENT</div>
+ <div id="eqTop">
+  <div id="eqPortrait"><canvas id="dollCv" width="96" height="120"></canvas></div>
+  <div id="eqSlots"></div>
+ </div>
+ <div id="eqStats"></div>
+ <div class="mnote" id="invSel" style="min-height:26px;color:#d8d2c8;margin-top:8px;">Tap an item</div>
+ <div style="display:flex;gap:8px;">
+  <button class="mbtn dev" id="invEquip">Equip</button>
+  <button class="mbtn dev" id="invSell">Sell</button>
+  <button class="mbtn dev" id="invDrop">Discard</button>
+ </div>
+ <div class="mnote" id="invInfo" style="margin-top:6px;"></div>
+ <div id="invGrid" class="igrid"></div>
+ <button class="mbtn go" id="invClose">CLOSE</button>
+</div></div>
+<div id="hud"><span id="lvlTxt">Lv 1</span><span>·</span><span id="hpTxt">HP 100</span><span>·</span><span id="goldTxt">0g</span><span>·</span><span id="roomTxt">Emberhearth</span><span>·</span><span id="killTxt">Kills 0</span></div>
+<div id="msg"></div>
+
+<script src="boot.js"></script>
+
+<script src="00_data.js"></script>
+<script src="01_constants.js"></script>
+<script src="02_worldbuild.js"></script>
+<script src="03_entities.js"></script>
+<script src="04_collision.js"></script>
+<script src="05_controls.js"></script>
+<script src="06_combat.js"></script>
+<script src="07_update.js"></script>
+<script src="08_render.js"></script>
+<script src="09_sprites.js"></script>
+<script src="10_loop.js"></script>
+<script src="11_ui.js"></script>
+<script src="12_devpanel.js"></script>
+
+</body>
+</html>
