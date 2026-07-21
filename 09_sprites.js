@@ -138,6 +138,7 @@ const sprWolf=makeSprite(HOUND,{O:'#101418',R:'#8d97a3',r:'#5d6670',E:'#d8f0fa',
 const sprSkel=makeSprite(CULT,{O:'#141414',P:'#d8d2c8',p:'#a39d94',E:'#7dc47a',K:'#2a2a2a'});
 const WSPR={
  sword:["...T........","GGTWWWWWWWWW","...T........"],
+ dagger:["..T.....","GGWWWWW.","..T....."],
  bow:["..WWWW....",".W....W...","T......G..",".W....W...","..WWWW...."],
  xbow:["..W..W....","GGWWWWWWT.","..W..W...."],
  staff:["..........T.","GGGGGGGGGGTT","..........T."],
@@ -255,7 +256,7 @@ function drawEShot(s){
 const CTHEME={
  ranger:{p:'#4f7d45',s:'#37592f'},
  pyro:{p:'#d4622a',s:'#96421c'}, knight:{p:'#7d8a99',s:'#565f6b'},
- rogue:{p:'#4a3d5c',s:'#322a40'}, cleric:{p:'#d8cfb8',s:'#a89c7f'},
+ rogue:{p:'#4a3d5c',s:'#322a40'}, assassin:{p:'#8a3548',s:'#5a2130'}, cleric:{p:'#d8cfb8',s:'#a89c7f'},
  berserker:{p:'#a83232',s:'#742020'}, warlock:{p:'#6b3d99',s:'#482968'},
  frost:{p:'#6fb8d4',s:'#4a8aa8'}, storm:{p:'#c9b23c',s:'#8f7d24'},
  hunter:{p:'#8a6a3a',s:'#64491f'},
@@ -274,9 +275,9 @@ function mixc(a,b,t){
 // per-class headgear + attack style give every class a distinct, animated look
 const HEADGEAR={ knight:'ghelm', paladin:'circlet', cleric:'circlet',
  berserker:'horns', dragoon:'crest', ranger:'hood', hunter:'hood', rogue:'hood',
- warlock:'skull', necro:'skull', monk:'topknot', bard:'feather',
+ warlock:'skull', necro:'skull', monk:'topknot', bard:'feather', assassin:'hood',
  pyro:'wizhat', frost:'wizhat', storm:'wizhat', shaman:'mask' };
-const ATK_STYLE={ sword:'swing', bow:'draw',xbow:'draw', staff:'cast',wand:'cast', fists:'thrust' };
+const ATK_STYLE={ sword:'swing',dagger:'thrust', bow:'draw',xbow:'draw', staff:'cast',wand:'cast', fists:'thrust' };
 const heroCache={};
 function buildHero(cls,frame,armT){
  const CW=26, CH=34, cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;

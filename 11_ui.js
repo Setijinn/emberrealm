@@ -14,6 +14,7 @@ const CLASSES=[
  {id:'pyro',n:'Pyromancer',ic:'🔥',d:'Bolts that hit like a forge.',hp:80,spd:160,dmg:26,fr:0.38},
  {id:'knight',n:'Knight',ic:'⚔️',d:'A walking wall of iron.',hp:190,spd:145,dmg:14,fr:0.30},
  {id:'rogue',n:'Rogue',ic:'🗡️',d:'Never where the blade lands.',hp:85,spd:230,dmg:8,fr:0.16},
+ {id:'assassin',n:'Assassin',ic:'🔪',d:'One breath, one kill.',hp:88,spd:220,dmg:14,fr:0.20},
  {id:'cleric',n:'Cleric',ic:'⛑️',d:'Wounds close as fast as they open.',hp:115,spd:170,dmg:10,fr:0.24,regen:3},
  {id:'berserker',n:'Berserker',ic:'🪓',d:'Anger, weaponized.',hp:125,spd:185,dmg:19,fr:0.30},
  {id:'warlock',n:'Warlock',ic:'💀',d:'Every wound he deals feeds him.',hp:95,spd:170,dmg:16,fr:0.28,ls:0.12},
@@ -30,21 +31,22 @@ const CLASSES=[
 const $s=id=>document.getElementById(id);
 const WTYPE={
  sword:{n:'Sword',shots:3,spread:0.35,spd:380,life:0.28,size:6,dm:1.0,rof:1.0},
+ dagger:{n:'Dagger',shots:2,spread:0.12,spd:560,life:0.28,size:4,dm:0.6,rof:0.6},
  bow:{n:'Bow',shots:1,spd:640,life:1.2,size:5,dm:1.0,rof:1.0},
  xbow:{n:'Crossbow',shots:1,spd:760,life:1.3,size:6,dm:1.7,rof:1.7,pierce:1},
  staff:{n:'Staff',shots:2,par:11,spd:480,life:0.9,size:6,dm:0.85,rof:1.0},
  wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:0.9,rof:0.85},
  fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.7,rof:0.5},
 };
-// Melee -> sword; ranger/hunter -> bow (can swap to xbow, see WSWAP); monk -> fists.
-const CWEAP={rogue:'sword',monk:'fists',ranger:'bow',hunter:'bow',
+// Melee -> sword; rogue/assassin -> dagger; ranger/hunter/bard -> bow (swap to xbow, see WSWAP); monk -> fists.
+const CWEAP={rogue:'dagger',assassin:'dagger',monk:'fists',ranger:'bow',hunter:'bow',bard:'bow',
  pyro:'staff',frost:'staff',cleric:'wand',storm:'wand',
- warlock:'wand',necro:'wand',berserker:'sword',knight:'sword',paladin:'sword',
- dragoon:'sword',bard:'wand',shaman:'staff'};
+ warlock:'wand',necro:'staff',berserker:'sword',knight:'sword',paladin:'sword',
+ dragoon:'sword',shaman:'staff'};
 // Classes that can toggle between two ranged weapons (bow <-> crossbow).
-const WSWAP={ranger:['bow','xbow'],hunter:['bow','xbow']};
+const WSWAP={ranger:['bow','xbow'],hunter:['bow','xbow'],bard:['bow','xbow']};
 const CARMOR={knight:'plate',paladin:'plate',berserker:'plate',dragoon:'plate',
- ranger:'leather',hunter:'leather',rogue:'leather',monk:'leather',bard:'leather',
+ ranger:'leather',hunter:'leather',rogue:'leather',assassin:'leather',monk:'leather',bard:'leather',
  pyro:'robe',frost:'robe',cleric:'robe',storm:'robe',warlock:'robe',necro:'robe',shaman:'robe'};
 const MATN={plate:'Plate',leather:'Leather',robe:'Robe'};
 const RINGN={hp:'Ring of Vigor',dmg:'Ring of Fury',spd:'Ring of Haste'};
@@ -161,7 +163,7 @@ function canEquip(it,ch){ if(!it||it.k==='pot')return false;
  return it.k==='ring'; }
 function itemValue(it){ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4)); }
 function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
- if(r<0.5){ const keys=Object.keys(WTYPE);
+ if(r<0.5){ const keys=Object.keys(WTYPE).filter(k=>k!=='fists');
   it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
  else { const mats=['plate','leather','robe'];
   if(r<0.7) it={k:'arm',mt:mats[Math.floor(Math.random()*3)],t:t};
@@ -189,6 +191,7 @@ const ABIL={
  pyro:{res:'Heat',col:'#ff7a3d',rule:'shot',d:'Detonate: fiery blast around you'},
  knight:{res:'Defiance',col:'#c9d2da',rule:'hurt',d:'Bulwark: 4s invulnerable'},
  rogue:{res:'Combo',col:'#c07ad4',rule:'hit',d:'Shadowstep: blink forward, untouchable'},
+ assassin:{res:'Malice',col:'#c0304a',rule:'hit',d:'Deathmark: +120% dmg + evade, 4s'},
  cleric:{res:'Grace',col:'#fff0c0',rule:'calm',d:'Sanctuary: full heal'},
  berserker:{res:'Rage',col:'#e2604c',rule:'hurt',d:'Whirlwind: 16-blade ring'},
  warlock:{res:'Essence',col:'#8a5ac0',rule:'hit',d:'Soulburst: drain all nearby foes'},
@@ -227,6 +230,7 @@ function doAbility(){
  else if(cls==='rogue'){ const a0=player.aim||0;
    const nx=player.x+Math.cos(a0)*150, ny=player.y+Math.sin(a0)*150;
    if(!solid(nx,ny)){player.x=nx;player.y=ny;} player.inv=1.2; boom(player.x,player.y,'#c07ad4',14); }
+ else if(cls==='assassin'){ player.bDmgT=4; player.bDmgM=2.2; player.inv=0.8; boom(player.x,player.y,'#c0304a',14); }
  else if(cls==='cleric'){ player.hp=player.maxhp; boom(player.x,player.y,'#fff0c0',16); }
  else if(cls==='berserker'){ for(let i=0;i<16;i++){ const sa=i*Math.PI/8;
    pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*420,vy:Math.sin(sa)*420,r:7,life:0.5,dmg:Math.round(player.dmg*1.2*AP),pierce:0,lastHit:null}); } }
