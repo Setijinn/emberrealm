@@ -15,7 +15,7 @@
 //   attack_<d>_<n>.png      (n = 0..)
 
 // On-screen scale for the 92px PixelLab sprites (tune to match world scale).
-const EMBER_SC = 0.72;
+const EMBER_SC = 0.85;
 
 const EMBER_CLASSES = {
   // maxN = upper bound of frames to probe per animation (walk=4, attack up to 8)
