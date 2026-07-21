@@ -68,37 +68,126 @@ function weaponAt(cls,t){ t=Math.max(0,Math.min(MAXT-1,t)); const wt=classWT(cls
   cost:t===0?0:Math.round(30*Math.pow(1.9,t)), tier:t+1}; }
 function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
 function tierCol(t){ return t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
-function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
+
+// ============================================================
+//  10-STAT SYSTEM
+//  atk def hp mp vit wis dex spd luck fort
+//  luck -> crit chance + hit   ·   fort -> loot bonus
+// ============================================================
+const STATS=['atk','def','hp','mp','vit','wis','dex','spd','luck','fort'];
+const STAT_META={
+ atk :{n:'Attack',  s:'ATK', col:'#e2604c'},
+ def :{n:'Defense', s:'DEF', col:'#c9d2da'},
+ hp  :{n:'Health',  s:'HP',  col:'#8fd48c'},
+ mp  :{n:'Mana',    s:'MP',  col:'#7ab8d4'},
+ vit :{n:'Vitality',s:'VIT', col:'#7dc47a'},
+ wis :{n:'Wisdom',  s:'WIS', col:'#c07ad4'},
+ dex :{n:'Dexterity',s:'DEX',col:'#e8b34b'},
+ spd :{n:'Speed',   s:'SPD', col:'#9ad4ef'},
+ luck:{n:'Luck',    s:'LCK', col:'#8fd48c'},
+ fort:{n:'Fortune', s:'FRT', col:'#ffc94d'},
+};
+function newStats(){ const s={}; for(const k of STATS) s[k]=0; return s; }
+function addStats(a,b){ for(const k of STATS) a[k]+=(b[k]||0); return a; }
+function classBaseStats(c){
+ const mt=CARMOR[c.id]||'plate';
+ const cast=mt==='robe', agile=mt==='leather';
+ return { atk:c.dmg, def:cast?2:agile?3:6, hp:c.hp,
+  mp:cast?60:agile?36:26, vit:Math.round((c.regen||1)*4),
+  wis:cast?14:agile?7:5,
+  dex:Math.round(Math.max(4,Math.min(24,(0.30/c.fr)*8))),
+  spd:c.spd, luck:(c.id==='rogue'||c.id==='hunter')?9:5, fort:5 };
+}
+function levelStats(c,lvl){ const L=Math.max(0,lvl-1); const mt=CARMOR[c.id]||'plate';
+ const cast=mt==='robe', agile=mt==='leather';
+ return { atk:Math.round(L*1.6), def:Math.round(L*0.35), hp:Math.round(L*10),
+  mp:Math.round(L*(cast?1.4:0.7)), vit:Math.round(L*0.5),
+  wis:Math.round(L*(cast?0.6:0.3)), dex:Math.round(L*(agile?0.4:0.2)),
+  spd:Math.round(L*0.6), luck:Math.round(L*0.15), fort:Math.round(L*0.12) };
+}
+// fixed base stats for a gear piece by slot + tier (+ material / ring type)
+function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
+ if(slot==='wpn'){ s.atk=Math.round(t*t*1.35+t*2); s.dex=Math.round(t*0.8); }
+ else if(slot==='arm'){ const mt=extra||'plate'; const dm={plate:1.5,leather:1.0,robe:0.7}[mt]||1;
+  s.def=Math.round((t+1)*dm*1.4); s.hp=t*6+8; s.vit=Math.round(t*0.6);
+  if(mt==='leather'){ s.dex=Math.round(t*0.8); s.spd=Math.round(t*1.4); }
+  else if(mt==='robe'){ s.wis=Math.round(t*1.1); s.mp=t*4; }
+  else { s.def+=Math.round(t*0.6); s.hp+=t*3; } }
+ else if(slot==='helm'){ s.wis=Math.round((t+1)*1.1); s.mp=(t+1)*4;
+  s.def=Math.round((t+1)*0.6); s.vit=Math.round(t*0.4); }
+ else if(slot==='ring'){ s.luck=t+3; s.fort=t+3;
+  if(extra==='hp') s.hp=t*8+10; else if(extra==='dmg') s.atk=Math.round(t*1.5)+2; else if(extra==='spd') s.spd=t*2+4; }
+ return s;
+}
+// rarity + rolled prefix affixes on tier-7+ (index >=6) gear
+const RAR_NAMES=['','Uncommon','Rare','Epic','Legendary'];
+const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#c07ad4','#ff9c50'];
+const AFFIX_PREFIX={ atk:'Vicious', def:'Sturdy', hp:'Vital', mp:'Arcane',
+ vit:'Hearty', wis:"Sage's", dex:'Nimble', spd:'Swift', luck:'Lucky', fort:'Prosperous' };
+function rollRarity(t,fortune){ if((t|0)<6) return 0;
+ let r=Math.random()-(fortune||0)*0.0035;
+ if(r<0.02) return 4; if(r<0.09) return 3; if(r<0.25) return 2; if(r<0.55) return 1; return 0; }
+function affixValue(k,t,rar){ const mag=(t-3)*(1+rar*0.4);
+ if(k==='hp'||k==='mp') return Math.max(2,Math.round(mag*3+4));
+ if(k==='atk'||k==='spd') return Math.max(1,Math.round(mag*1.5+2));
+ return Math.max(1,Math.round(mag*0.8+1)); }
+function rollAffixes(it,fortune){ it.rar=rollRarity(it.t,fortune); it.aff=[];
+ if(!it.rar) return it;
+ const keys=Object.keys(AFFIX_PREFIX), used={};
+ for(let i=0;i<it.rar;i++){ let k,g=0; do{ k=keys[Math.floor(Math.random()*keys.length)]; }while(used[k]&&g++<12); used[k]=1;
+  it.aff.push({s:k,v:affixValue(k,it.t,it.rar)}); }
+ return it; }
+function affStats(aff){ const s=newStats(); if(aff) for(const a of aff) s[a.s]=(s[a.s]||0)+a.v; return s; }
+// full stat block an item contributes (base + its own affixes)
+function itemStats(it,cls){ if(!it||it.k==='pot') return newStats();
+ let base;
+ if(it.k==='wpn') base=gearBaseStats('wpn',it.t);
+ else if(it.k==='arm') base=gearBaseStats('arm',it.t,it.mt);
+ else if(it.k==='helm') base=gearBaseStats('helm',it.t,it.mt);
+ else if(it.k==='ring') base=gearBaseStats('ring',it.t,it.st);
+ else base=newStats();
+ return addStats(base,affStats(it.aff));
+}
+function itemBaseName(it){
  const p='T'+(it.t+1)+' '+TIER_NAMES[it.t]+' ';
  if(it.k==='wpn')return p+WTYPE[it.wt].n;
  if(it.k==='arm')return p+MATN[it.mt]+' Armor';
  if(it.k==='helm')return p+MATN[it.mt]+' Helm';
  if(it.k==='ring')return 'T'+(it.t+1)+' '+RINGN[it.st];
  return p; }
+function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
+ let nm=itemBaseName(it);
+ if(it.rar && it.aff && it.aff.length) nm=AFFIX_PREFIX[it.aff[0].s]+' '+nm;
+ return nm; }
+function itemRarCol(it){ return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
 function canEquip(it,ch){ if(!it||it.k==='pot')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
 function itemValue(it){ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4)); }
-function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random();
+function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
  if(r<0.5){ const keys=Object.keys(WTYPE);
-  return {k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
- const mats=['plate','leather','robe'];
- if(r<0.7) return {k:'arm',mt:mats[Math.floor(Math.random()*3)],t:t};
- if(r<0.85) return {k:'helm',mt:mats[Math.floor(Math.random()*3)],t:t};
- return {k:'ring',st:['hp','dmg','spd'][Math.floor(Math.random()*3)],t:t}; }
+  it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
+ else { const mats=['plate','leather','robe'];
+  if(r<0.7) it={k:'arm',mt:mats[Math.floor(Math.random()*3)],t:t};
+  else if(r<0.85) it={k:'helm',mt:mats[Math.floor(Math.random()*3)],t:t};
+  else it={k:'ring',st:['hp','dmg','spd'][Math.floor(Math.random()*3)],t:t}; }
+ return rollAffixes(it,(typeof player!=='undefined'&&player.fortune)||0); }
 function bagAt(e,item){ return {x:e.x+(Math.random()*22-11),y:e.y+(Math.random()*22-11),item:item,life:60}; }
 function rollLoot(e){
  const lv=e.lv||1;
+ const F=(typeof player!=='undefined'&&player.fortune)||0;
+ const fmul=1+F*0.012;                 // fortune: more drops
  const tb=Math.max(0,Math.min(11,Math.round(lv/12.5)));
- const tier=Math.max(0,Math.min(11,tb+Math.floor(Math.random()*3)-1));
+ let tier=Math.max(0,Math.min(11,tb+Math.floor(Math.random()*3)-1));
+ if(Math.random()<F*0.004) tier=Math.min(11,tier+1);  // fortune: better tier
  const r=Math.random();
  if(e.type==='B'){ loots.push(bagAt(e,mkDrop(Math.min(11,tb+1))));
    if(Math.random()<0.4) loots.push(bagAt(e,{k:'pot'})); return; }
- if(e.type==='s'){ if(r<0.10) loots.push(bagAt(e,mkDrop(tier)));
-   else if(r<0.18) loots.push(bagAt(e,{k:'pot'})); return; }
- if(r<0.06) loots.push(bagAt(e,mkDrop(tier)));
- else if(r<0.12) loots.push(bagAt(e,{k:'pot'}));
+ if(e.type==='s'){ if(r<0.10*fmul) loots.push(bagAt(e,mkDrop(tier)));
+   else if(r<0.18*fmul) loots.push(bagAt(e,{k:'pot'})); return; }
+ if(r<0.06*fmul) loots.push(bagAt(e,mkDrop(tier)));
+ else if(r<0.12*fmul) loots.push(bagAt(e,{k:'pot'}));
 }
 const ABIL={
  squire:{res:'Valor',col:'#ffc94d',rule:'time',d:'Rally: heal 25% + 50% dmg for 5s'},
@@ -129,53 +218,59 @@ function chargeRes(kind){ const rd=player.resDef; if(!rd) return;
 function aoe(x,y,r,dmg,col){ fx.push({t:'ring',x:x,y:y,r:r,life:0.35,col:col});
  for(const e of enemies){ if(Math.hypot(e.x-x,e.y-y)<r){ e.hp-=dmg; e.flash=0.15;
   texts.push({x:e.x,y:e.y-e.r,txt:dmg,col:col,life:0.6}); } } boom(x,y,col,20); }
+function abilityCost(){ return Math.max(18, Math.round((player.maxmp||40)*0.5)); }
 function doAbility(){
- if(res<100||!rpg||!inGame) return; const ch=curChar(); if(!ch)return;
- const cls=ch.cls; res=0;
- if(cls==='squire'){ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*0.25); player.bDmgT=5; player.bDmgM=1.5; }
+ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)return;
+ const cost=abilityCost();
+ if((player.mp||0)<cost){ texts.push({x:player.x,y:player.y-30,txt:'◇ low mana',col:'#7ab8d4',life:0.7});
+   navigator.vibrate&&navigator.vibrate(20); return; }
+ player.mp-=cost;
+ const AP=player.abilPow||1, cls=ch.cls;
+ if(cls==='squire'){ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*0.25*AP); player.bDmgT=5; player.bDmgM=1.5; }
  else if(cls==='ranger'){ const a0=player.aim||0;
    for(let i=0;i<12;i++){ const sa=a0+(i-5.5)*0.12;
-     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*640,vy:Math.sin(sa)*640,r:5,life:1.1,dmg:player.dmg,pierce:0,lastHit:null}); } }
- else if(cls==='pyro'){ aoe(player.x,player.y,170,Math.round(player.dmg*3),'#ff7a3d'); }
+     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*640,vy:Math.sin(sa)*640,r:5,life:1.1,dmg:Math.round(player.dmg*AP),pierce:0,lastHit:null}); } }
+ else if(cls==='pyro'){ aoe(player.x,player.y,170,Math.round(player.dmg*3*AP),'#ff7a3d'); }
  else if(cls==='knight'){ player.inv=4; }
  else if(cls==='rogue'){ const a0=player.aim||0;
    const nx=player.x+Math.cos(a0)*150, ny=player.y+Math.sin(a0)*150;
    if(!solid(nx,ny)){player.x=nx;player.y=ny;} player.inv=1.2; boom(player.x,player.y,'#c07ad4',14); }
  else if(cls==='cleric'){ player.hp=player.maxhp; boom(player.x,player.y,'#fff0c0',16); }
  else if(cls==='berserker'){ for(let i=0;i<16;i++){ const sa=i*Math.PI/8;
-   pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*420,vy:Math.sin(sa)*420,r:7,life:0.5,dmg:Math.round(player.dmg*1.2),pierce:0,lastHit:null}); } }
+   pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*420,vy:Math.sin(sa)*420,r:7,life:0.5,dmg:Math.round(player.dmg*1.2*AP),pierce:0,lastHit:null}); } }
  else if(cls==='warlock'){ let n=0;
-   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<200){ e.hp-=Math.round(player.dmg*2); e.flash=0.15; n++; } }
-   player.hp=Math.min(player.maxhp,player.hp+n*15);
+   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<200){ e.hp-=Math.round(player.dmg*2*AP); e.flash=0.15; n++; } }
+   player.hp=Math.min(player.maxhp,player.hp+n*15*AP);
    fx.push({t:'ring',x:player.x,y:player.y,r:200,life:0.35,col:'#8a5ac0'}); }
- else if(cls==='frost'){ for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<220){ e.slowT=3; e.hp-=player.dmg; e.flash=0.1; } }
+ else if(cls==='frost'){ for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<220){ e.slowT=3; e.hp-=Math.round(player.dmg*AP); e.flash=0.1; } }
    fx.push({t:'ring',x:player.x,y:player.y,r:220,life:0.4,col:'#9ad4ef'}); }
  else if(cls==='storm'){ const sorted=enemies.slice().sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y)).slice(0,6);
    const pts=[{x:player.x,y:player.y}];
-   for(const e of sorted){ const d2=Math.round(player.dmg*2.5); e.hp-=d2; e.flash=0.15; pts.push({x:e.x,y:e.y});
+   for(const e of sorted){ const d2=Math.round(player.dmg*2.5*AP); e.hp-=d2; e.flash=0.15; pts.push({x:e.x,y:e.y});
      texts.push({x:e.x,y:e.y-e.r,txt:d2,col:'#ffe9b0',life:0.6}); }
    if(pts.length>1) fx.push({t:'bolt',pts:pts,life:0.3,col:'#ffe9b0'}); }
- else if(cls==='hunter'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.8),life:10,cd:0,spr:'wolf'}); }
+ else if(cls==='hunter'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.8*AP),life:10,cd:0,spr:'wolf'}); }
  else if(cls==='arbalest'){ player.deadeye=3; }
  else if(cls==='monk'){ player.bSpdT=5; player.bSpdM=1.8; player.inv=1.5; }
- else if(cls==='paladin'){ zones.push({x:player.x,y:player.y,r:95,life:6,tick:0}); }
- else if(cls==='necro'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.9),life:12,cd:0,spr:'skel'}); }
+ else if(cls==='paladin'){ zones.push({x:player.x,y:player.y,r:95,life:6,tick:0,ap:AP}); }
+ else if(cls==='necro'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.9*AP),life:12,cd:0,spr:'skel'}); }
  else if(cls==='bard'){ player.bRofT=6; player.bRofM=1.5; }
- else if(cls==='shaman'){ player.spiritT=8; }
+ else if(cls==='shaman'){ player.spiritT=8; player.spiritAP=AP; }
  else if(cls==='dragoon'){ const a0=player.aim||0;
    const nx=player.x+Math.cos(a0)*160, ny=player.y+Math.sin(a0)*160;
    if(!solid(nx,ny)){player.x=nx;player.y=ny;}
-   aoe(player.x,player.y,130,Math.round(player.dmg*2.2),'#e07a2e'); }
+   aoe(player.x,player.y,130,Math.round(player.dmg*2.2*AP),'#e07a2e'); }
  navigator.vibrate&&navigator.vibrate(60);
 }
 $s('abBtn').addEventListener('pointerdown',function(ev){ ev.stopPropagation(); doAbility(); });
+function eqPrefix(slot){ const a=eqAffArr(slot); return (a&&a.length)?AFFIX_PREFIX[a[0].s]+' ':''; }
 function slotLabel(kind){ const ch=curChar(); if(!ch||!rpg)return '—';
  if(kind==='wpn'){ if(rpg.wpnL){const L=legById(rpg.wpnL); return '★ '+(L?L.n:'');}
-  return 'T'+((rpg.wpn||0)+1)+' '+weaponAt(ch.cls,rpg.wpn||0).n; }
+  return eqPrefix('wpn')+'T'+((rpg.wpn||0)+1)+' '+weaponAt(ch.cls,rpg.wpn||0).n; }
  if(kind==='arm'){ if(rpg.armL){const L=legById(rpg.armL); return '★ '+(L?L.n:'');}
-  return 'T'+((rpg.arm||0)+1)+' '+TIER_NAMES[rpg.arm||0]+' '+MATN[CARMOR[ch.cls]]; }
- if(kind==='helm') return rpg.helm>=0 ? 'T'+(rpg.helm+1)+' '+TIER_NAMES[rpg.helm]+' Helm' : 'No helm';
- if(kind==='ring') return rpg.ring ? 'T'+(rpg.ring.t+1)+' '+RINGN[rpg.ring.st] : 'No ring';
+  return eqPrefix('arm')+'T'+((rpg.arm||0)+1)+' '+TIER_NAMES[rpg.arm||0]+' '+MATN[CARMOR[ch.cls]]; }
+ if(kind==='helm') return rpg.helm>=0 ? eqPrefix('helm')+'T'+(rpg.helm+1)+' '+TIER_NAMES[rpg.helm]+' Helm' : 'No helm';
+ if(kind==='ring') return rpg.ring ? eqPrefix('ring')+'T'+(rpg.ring.t+1)+' '+RINGN[rpg.ring.st] : 'No ring';
  return '—'; }
 let mapInt=null;
 const MAPCOL={w:'#16303f',d:'#c0a870',g:'#33502f',t:'#22391f',r:'#4a4550',k:'#5d5666',e:'#3a1f14',W:'#100d14'};
@@ -275,9 +370,13 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
   +'<div class="srow"><span>Helm</span><span style="color:'+(rpg.helm>=0?tierCol(rpg.helm):'#8a8494')+'">'+slotLabel('helm')+'</span></div>'
   +'<div class="srow"><span>Armor</span><span style="color:'+(rpg.armL?'#ff9c50':tierCol(rpg.arm||0))+'">'+slotLabel('arm')+'</span></div>'
   +'<div class="srow"><span>Ring</span><span style="color:'+(rpg.ring?tierCol(rpg.ring.t):'#8a8494')+'">'+slotLabel('ring')+'</span></div>';
- function chip(l,v){ return '<div class="schip"><span>'+l+'</span><b>'+v+'</b></div>'; }
- $s('eqStats').innerHTML=chip('HP',player.maxhp)+chip('DMG',player.dmg)+chip('DEF',player.def||0)
-   +chip('SPD',Math.round(player.spd))+chip('LVL',rpg.lvl)+chip(player.resDef?player.resDef.res:'RES','\u2726');
+ function chip(l,v,col){ return '<div class="schip"><span>'+l+'</span><b'+(col?' style="color:'+col+'"':'')+'>'+v+'</b></div>'; }
+ const S=player.stats||newStats();
+ let sh='';
+ for(const k of STATS) sh+=chip(STAT_META[k].s,S[k],STAT_META[k].col);
+ sh+=chip('Pool HP',player.maxhp,'#8fd48c')+chip('Pool MP',player.maxmp,'#7ab8d4')
+   +chip('Crit',Math.round(player.crit*100)+'%','#ffc94d');
+ $s('eqStats').innerHTML=sh;
  const dc=$s('dollCv'), d2=dc.getContext('2d'); d2.imageSmoothingEnabled=false;
  const bg=d2.createLinearGradient(0,0,0,dc.height); bg.addColorStop(0,'#241b33'); bg.addColorStop(1,'#120e18');
  d2.fillStyle=bg; d2.fillRect(0,0,dc.width,dc.height);
@@ -295,15 +394,28 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  $s('invInfo').textContent=ch.inv.length+' / 20 satchel slots';
  const g=$s('invGrid'); g.innerHTML='';
  ch.inv.forEach((it,i)=>{ const d=document.createElement('div'); d.className='islot'+(i===invSelIdx?' sel':'');
-  d.style.color=it.k==='pot'?'#7dc47a':tierCol(it.t);
-  d.innerHTML=(it.k==='pot'?'🧪':'T'+(it.t+1))+'<small>'
-   +(it.k==='pot'?'Tonic':it.k==='wpn'?WTYPE[it.wt].n:it.k==='arm'?MATN[it.mt]:it.k==='helm'?MATN[it.mt]+' Helm':RINGN[it.st].replace('Ring of ',''))
-   +'</small>';
+  if(it.rar) d.style.borderColor=RAR_COL[it.rar];
+  const cvs=document.createElement('canvas'); cvs.width=44; cvs.height=38; cvs.className='isprite';
+  const cc=cvs.getContext('2d'); cc.imageSmoothingEnabled=false;
+  const sp=itemSprite(it);
+  if(sp){ const sc=Math.max(1,Math.floor(Math.min(40/sp.width,34/sp.height)));
+   cc.drawImage(sp,Math.round((44-sp.width*sc)/2),Math.round((38-sp.height*sc)/2),sp.width*sc,sp.height*sc); }
+  d.appendChild(cvs);
+  const badge=document.createElement('span'); badge.className='tbadge';
+  badge.textContent=it.k==='pot'?'✦':'T'+(it.t+1); badge.style.color=itemRarCol(it);
+  d.appendChild(badge);
   d.onclick=()=>{invSelIdx=i;paintInv();};
   g.appendChild(d); });
  const it=ch.inv[invSelIdx];
- $s('invSel').textContent = it? itemName(it)+' · sells for '+itemValue(it)+'g'
-  +((it.k!=='pot'&&!canEquip(it,ch))?' · not usable by your class':'') : 'Tap an item';
+ if(it){ let html='<b style="color:'+itemRarCol(it)+'">'+itemName(it)+'</b>';
+  if(it.rar) html+=' <span style="color:'+RAR_COL[it.rar]+'">('+RAR_NAMES[it.rar]+')</span>';
+  html+=' · '+itemValue(it)+'g';
+  if(it.k!=='pot'&&!canEquip(it,ch)) html+=' · <span style="color:#c04a3d">wrong class</span>';
+  if(it.k!=='pot'){ const s2=itemStats(it,ch.cls); let sl='';
+   for(const k of STATS){ if(s2[k]) sl+='<span style="color:'+STAT_META[k].col+'">+'+s2[k]+' '+STAT_META[k].s+'</span> '; }
+   html+='<div class="istats">'+sl+'</div>'; }
+  $s('invSel').innerHTML=html;
+ } else $s('invSel').textContent='Tap an item';
  $s('invEquip').style.display = (it&&canEquip(it,ch)) ? '' : 'none';
  $s('invSell').style.display = it? '':'none';
  $s('invDrop').style.display = it? '':'none';
@@ -312,11 +424,14 @@ $s('invBtn').addEventListener('click',openInv);
 $s('invClose').addEventListener('click',()=>{$s('invScr').style.display='none';});
 $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it||!canEquip(it,ch)) return;
- let old=null;
- if(it.k==='wpn'){ old={k:'wpn',wt:CWEAP[ch.cls],t:rpg.wpn||0}; rpg.wpn=it.t; rpg.wpnL=null; }
- else if(it.k==='arm'){ old={k:'arm',mt:CARMOR[ch.cls],t:rpg.arm||0}; rpg.arm=it.t; rpg.armL=null; }
- else if(it.k==='helm'){ if(rpg.helm>=0) old={k:'helm',mt:CARMOR[ch.cls],t:rpg.helm}; rpg.helm=it.t; }
- else if(it.k==='ring'){ if(rpg.ring) old={k:'ring',st:rpg.ring.st,t:rpg.ring.t}; rpg.ring={st:it.st,t:it.t}; }
+ if(!rpg.eqAff) rpg.eqAff={};
+ let old=null; const slot=it.k;
+ function oldAff(s){ const e=rpg.eqAff[s]; return e?{rar:e.r,aff:e.a}:{}; }
+ if(it.k==='wpn'){ if(!rpg.wpnL) old=Object.assign({k:'wpn',wt:CWEAP[ch.cls],t:rpg.wpn||0},oldAff('wpn')); rpg.wpn=it.t; rpg.wpnL=null; }
+ else if(it.k==='arm'){ if(!rpg.armL) old=Object.assign({k:'arm',mt:CARMOR[ch.cls],t:rpg.arm||0},oldAff('arm')); rpg.arm=it.t; rpg.armL=null; }
+ else if(it.k==='helm'){ if(rpg.helm>=0) old=Object.assign({k:'helm',mt:CARMOR[ch.cls],t:rpg.helm},oldAff('helm')); rpg.helm=it.t; }
+ else if(it.k==='ring'){ if(rpg.ring) old=Object.assign({k:'ring',st:rpg.ring.st,t:rpg.ring.t},oldAff('ring')); rpg.ring={st:it.st,t:it.t}; }
+ rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null};
  const nm=itemName(it);
  ch.inv.splice(invSelIdx,1); if(old) ch.inv.push(old);
  invSelIdx=-1; recalcStats(); saveRPG(); hudRPG(); paintInv();
@@ -334,36 +449,53 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.ring===undefined)rpg.ring=null;
  if(rpg.pets===undefined)rpg.pets=[]; if(rpg.pet===undefined)rpg.pet=null;
  if(rpg.legends===undefined)rpg.legends=[]; if(rpg.wpnL===undefined)rpg.wpnL=null;
- if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[]; }
+ if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[];
+ if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null; }
 function xpNeed(l){return Math.floor(50*Math.pow(l,1.5));}
+function eqAffArr(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.a:null; }
+function eqRar(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.r:0; }
 function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const ci=Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls)); const c=CLASSES[ci];
  player.cname=ch.name; player.hue=ci*20;
  rpg.wpn=Math.min(rpg.wpn||0,MAXT-1);
  player.wt=classWT(ch.cls);
+ if(!rpg.eqAff) rpg.eqAff={};
+ const mt=CARMOR[ch.cls]||'plate';
+ const at=rpg.arm||0, ht=(rpg.helm===undefined?-1:rpg.helm), rg=rpg.ring;
  const wL=rpg.wpnL?legById(rpg.wpnL):null;
  const aL=rpg.armL?legById(rpg.armL):null;
- const wAdd=wL?wL.add:weaponAt(ch.cls,rpg.wpn).add;
- const mt=CARMOR[ch.cls]||'plate';
- const at=rpg.arm||0, ht=rpg.helm, rg=rpg.ring;
- let hpB=0, dmgB=0, spdB=0, def=0;
- const helmDef=(ht>=0?(ht+1)*0.8:0), helmHp=(ht>=0?(ht+1)*5:0);
- if(aL){ def=Math.round(aL.def+helmDef); hpB=aL.hp+helmHp; spdB=aL.spd; }
- else { const defM={plate:1.5,leather:1.0,robe:0.7}[mt];
-  def=Math.round((at+1)*defM*1.3+helmDef);
-  hpB=at*6+helmHp;
-  if(mt==='leather') spdB+=at*1.5;
-  if(mt==='robe') dmgB+=Math.round(at*1.2); }
- if(rg){ if(rg.st==='hp')hpB+=rg.t*8+10; if(rg.st==='dmg')dmgB+=Math.round(rg.t*1.5)+2; if(rg.st==='spd')spdB+=rg.t*2+4; }
- player.def=def;
- player.maxhp=c.hp+12*(rpg.lvl-1)+hpB;
- player.spd=c.spd+spdB;
- player.fireRate=c.fr*(player.wt.rof||1)*(wL?(wL.rof||1):1);
- player.dmg=c.dmg+Math.round(1.5*(rpg.lvl-1))+wAdd+dmgB;
+ // ---- accumulate the 10 stats: class base + level + gear (+ affixes)
+ const st=addStats(classBaseStats(c), levelStats(c,rpg.lvl));
+ if(wL) st.atk+=wL.add; else addStats(st,gearBaseStats('wpn',rpg.wpn));
+ addStats(st,affStats(eqAffArr('wpn')));
+ if(aL){ st.def+=aL.def; st.hp+=aL.hp; st.spd+=aL.spd||0; }
+ else addStats(st,gearBaseStats('arm',at,mt));
+ addStats(st,affStats(eqAffArr('arm')));
+ if(ht>=0){ addStats(st,gearBaseStats('helm',ht,mt)); addStats(st,affStats(eqAffArr('helm'))); }
+ if(rg){ addStats(st,gearBaseStats('ring',rg.t,rg.st)); addStats(st,affStats(eqAffArr('ring'))); }
+ for(const k of STATS) st[k]=Math.max(0,Math.round(st[k]));
+ player.stats=st;
+ // ---- derive combat values from the 10 stats
+ player.def=st.def;
+ player.dr=Math.min(0.80, st.def/(st.def+55));       // DEFENSE -> % damage reduction
+ player.maxhp=Math.round(st.hp + st.vit*3);           // HP + VIT
+ player.spd=st.spd;                                   // SPEED
+ player.dmg=Math.max(1,Math.round(st.atk));           // ATTACK
+ const wRof=(player.wt.rof||1)*(wL?(wL.rof||1):1);
+ player.fireRate=c.fr*wRof/(1+st.dex*0.02);           // DEX -> attack speed
+ player.projSpd=1+st.dex*0.012;                       // DEX -> projectile speed
+ player.regen=0.8+st.vit*0.12;                        // VIT -> hp regen/sec
+ player.maxmp=Math.max(10,Math.round(st.mp));         // MP -> mana pool
+ player.mpregen=2+st.wis*0.25;                        // WISDOM -> mana regen
+ player.abilPow=1+st.wis*0.02;                        // WISDOM -> ability power
+ player.crit=Math.min(0.75, st.luck*0.005);           // LUCK -> crit chance + hit
+ player.critMult=1.5+st.luck*0.004;
+ player.fortune=st.fort;                              // FORTUNE -> loot
  player.shots=c.shots||1; player.pierce=c.pierce||0;
- player.ls=c.ls||0; player.regen=c.regen||1; player.slowShot=!!c.slow;
+ player.ls=c.ls||0; player.slowShot=!!c.slow;
  player.resDef=ABIL[ch.cls]||ABIL.squire;
- player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:(ht===undefined?-1:ht)};
+ player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht};
+ if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }
 function saveRPG(){ if(curUser&&users[curUser]&&rpg){ LS.set('er-users',users); } }
 function hudRPG(){ if(!rpg)return;
@@ -393,14 +525,14 @@ function legendRows(slot,out){ for(const L of LEGENDS){ if(L.slot!==slot) contin
 function shopRowsFor(id){ const ch=curChar(); const out=[];
  if(id==='bram'){ const nt=(rpg.wpn||0)+1;
   if(nt<3){ const w=weaponAt(ch.cls,nt);
-   out.push({l:'T'+(nt+1)+' '+w.n+' (+'+w.add+' dmg)',c:w.cost,f:function(){rpg.wpn=nt; rpg.wpnL=null;}}); }
+   out.push({l:'T'+(nt+1)+' '+w.n+' (+'+w.add+' dmg)',c:w.cost,f:function(){rpg.wpn=nt; rpg.wpnL=null; if(rpg.eqAff)rpg.eqAff.wpn=null;}}); }
   else out.push({l:'Bram stocks up to T3 — finer steel is won in the field',c:-1});
   legendRows('wpn',out); }
  if(id==='sella'){ const na=(rpg.arm||0)+1;
-  if(na<3) out.push({l:'T'+(na+1)+' '+MATN[CARMOR[ch.cls]]+' Armor',c:Math.round(tierCost(na)*0.8),f:function(){rpg.arm=na; rpg.armL=null;}});
+  if(na<3) out.push({l:'T'+(na+1)+' '+MATN[CARMOR[ch.cls]]+' Armor',c:Math.round(tierCost(na)*0.8),f:function(){rpg.arm=na; rpg.armL=null; if(rpg.eqAff)rpg.eqAff.arm=null;}});
   else out.push({l:'Armor above T3 must be found, not bought',c:-1});
   const nh=(rpg.helm===undefined||rpg.helm<0)?0:rpg.helm+1;
-  if(nh<3) out.push({l:'T'+(nh+1)+' '+MATN[CARMOR[ch.cls]]+' Helm',c:Math.round(tierCost(Math.max(1,nh))*0.6),f:function(){rpg.helm=nh;}});
+  if(nh<3) out.push({l:'T'+(nh+1)+' '+MATN[CARMOR[ch.cls]]+' Helm',c:Math.round(tierCost(Math.max(1,nh))*0.6),f:function(){rpg.helm=nh; if(rpg.eqAff)rpg.eqAff.helm=null;}});
   else out.push({l:'Helms above T3 drop in the field',c:-1});
   legendRows('arm',out); }
  if(id==='odo'){ const pets=[['wolf','Grey Wolf',500],['skel','Bone Servant',1500],['wisp','Ember Wisp',4000]];
@@ -524,7 +656,7 @@ function play(){
  const u=users[curUser];
  const ch=curChar();
  if(!ch){openChar();return;}
- loadRPG(); recalcStats(); player.hp=player.maxhp;
+ loadRPG(); recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
  player.kills=0; player.inv=1;
  res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
@@ -532,7 +664,7 @@ function play(){
  document.getElementById('killTxt').textContent='Kills 0';
  hudRPG();
  hideAll(); $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
- $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='flex'; $s('mapBtn').style.display='flex'; $s('abBtn').style.display='flex'; $s('mapBtn').style.display='flex'; inGame=true;
+ $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex'; inGame=true;
  const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
 }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){

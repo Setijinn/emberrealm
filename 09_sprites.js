@@ -160,6 +160,104 @@ function blitRot(sp,x,y,sc,ang){ ctx.save(); ctx.translate(x,y); ctx.rotate(ang)
  ctx.drawImage(sp,-sp.width*sc*0.2,-sp.height*sc/2,sp.width*sc,sp.height*sc);
  ctx.restore(); }
 
+// ---------- inventory item sprites ----------
+const MATCOL={plate:'#9aa3ad',leather:'#8a6a3a',robe:'#7a5aa0'};
+const ARMOR_A=[".OO...OO.","OBBO.OBBO","OBBBGBBBO","OBGGGGGBO","OBGGGGGBO","OBGGGGGBO","OBBGGGBBO",".OBGGGBO.",".OBBBBBO.","..OOOOO.."];
+const HELM_A=["..OOOOO..",".OBBBBBO.","OBBGGGBBO","OBGGGGGBO","OBGOOOGBO","OBBGGGBBO",".OOOOOOO."];
+const RING_A=["..OEO..",".OGEGO.","OG...GO","OG...GO",".OG.GO.","..OGO.."];
+const POTION=["..OOO..",".O.O.O.",".OGOGO.",".OGGGO.","OWWWWWO","OWPPPWO","OWPPPWO","OWWWWWO",".OWWWO.","..OOO.."];
+const sprPotion=makeSprite(POTION,{O:'#140d08',G:'#5c3826',W:'#3a2a40',P:'#7dc47a'});
+const _armC={},_helmC={},_ringC={};
+function armorSpr(mt,t){ const k=mt+'_'+t; if(!_armC[k]) _armC[k]=makeSprite(ARMOR_A,{O:'#140d08',B:MATCOL[mt]||'#888',G:tierCol(t)}); return _armC[k]; }
+function helmSpr(mt,t){ const k=mt+'_'+t; if(!_helmC[k]) _helmC[k]=makeSprite(HELM_A,{O:'#140d08',B:MATCOL[mt]||'#888',G:tierCol(t)}); return _helmC[k]; }
+function ringSpr(st,t){ const k=st+'_'+t; if(!_ringC[k]) _ringC[k]=makeSprite(RING_A,{O:'#140d08',G:tierCol(t),E:{hp:'#8fd48c',dmg:'#e2604c',spd:'#9ad4ef'}[st]||'#ffc94d'}); return _ringC[k]; }
+function itemSprite(it){ if(!it) return null;
+ if(it.k==='pot') return sprPotion;
+ if(it.k==='wpn') return wpnSpr(it.wt,it.t);
+ if(it.k==='arm') return armorSpr(it.mt,it.t);
+ if(it.k==='helm') return helmSpr(it.mt,it.t);
+ if(it.k==='ring') return ringSpr(it.st,it.t);
+ return null; }
+
+// ---------- 15 unique ring mini-boss sprites ----------
+const BOSS_ART=[
+ {p:{O:'#0d2630',C:'#4a90a8',B:'#2e5f70',E:'#cfeaf3'},r:[   // 0 Tideworn Colossus (crab-titan)
+  "..OO........OO..",".OCCO......OCCO.",".OCCO.OOOO.OCCO.","..OCOOCCCCOOCO..","...OCCCCCCCCO...",
+  "..OCCECCCCECCO..","..OCCCCCCCCCCO..",".OCBBBBBBBBBBCO.",".OCBBBBBBBBBBCO.","..OCCCCCCCCCCO..",
+  "..OCCOOCCOOCCO..",".OCCO.OCCO.OCCO.",".OCO...OO...OCO.","..O..........O.."]},
+ {p:{O:'#1b2a12',W:'#8fae6a',B:'#b7a06a',E:'#e8f0c0',K:'#3a2a10',L:'#6a4f28'},r:[ // 1 Gullwind Harrier (raptor)
+  "OO............OO","OWO..........OWO","OWWO.OOOOOO.OWWO",".OWWO.WBBW.OWWO.",".OWWWOBEEBOWWWO.",
+  "..OWWWBBBBWWWO..","...OWWBKKBWWO...","....OWBBBBWO....","....OBBBBBBO....","....OBLLLLBO....",
+  ".....OLLLLO.....",".....OL..LO.....","....OO....OO...."]},
+ {p:{O:'#16240f',W:'#7ea44a',M:'#3a2a14',K:'#e0f2a8'},r:[   // 2 Sawgrass Devourer (reed maw)
+  "...O......O.....","..OWO....OWO....","..OWWO..OWWO....","...OWWOOWWO.....","..OWWWWWWWWWO...",
+  ".OWWMMMMMMMWWO..",".OWMKMKMKMKMWO..",".OWMMMMMMMMMWO..",".OWMKMKMKMKMWO..",".OWWMMMMMMMWWO..",
+  "..OWWWWWWWWWO...","...OWWWWWWWO....","....OWWWWWO.....",".....OOOOO......"]},
+ {p:{O:'#14240f',G:'#4f9a3f',E:'#cdf2b6',K:'#2a3a1a'},r:[   // 3 Verdant Warden (treant-golem)
+  "....OOOOOO......","...OGGGGGGO.....","..OGGEGGEGGO....","..OGGGGGGGGO....","..OGGKGGKGGO....",
+  "...OGGGGGGO.....",".OOGGGGGGGGOO...","OGGOGGGGGGOGGO..","OGGOGGGGGGOGGO..",".OOGGGGGGGGOO...",
+  "...OGGGGGGO.....","...OGGOOGGO.....","..OGGO..OGGO....","..OOO....OOO...."]},
+ {p:{O:'#101812',W:'#6d7d5a',R:'#4a5a3a',E:'#d8f0b0',K:'#2a1a10'},r:[ // 4 Wolfwood Alpha (great wolf)
+  ".O..........O...","OWO........OWO..","OWWO.OOOO.OWWO..",".OWWOWWWWOWWO...",".OWWWWEWEWWWWO..",
+  "..OWWWWKKWWWWO..","..OWWWWWWWWWWO..","..OWWRWWWWRWWO..","..OWWWWWWWWWWO..","..OWWOWWWWOWWO..",
+  "..OWO.OWWO.OWO..",".OWO...OO...OWO.",".OO..........OO."]},
+ {p:{O:'#122010',G:'#356b40',B:'#3a2a14',E:'#b0d0a0',K:'#1a2a12'},r:[ // 5 Timberfell Ancient (mossy elder)
+  "...OO..OO..OO...","..OGGOOGGOOGGO..","...OGGGGGGGGO...","..OGGGGGGGGGGO..",".OGGEGGGGGGEGGO.",
+  ".OGGGGGGGGGGGGO.",".OGGGKKKKKKGGGO.",".OGGGGGGGGGGGGO.","..OGGGGGGGGGGO..","..OBBGGGGGGBBO..",
+  "..OBBOGGGGOBBO..","..OBBO.OO.OBBO..","..OBO..OO..OBO..","..OO........OO.."]},
+ {p:{O:'#12201a',T:'#3f6b58',B:'#24140a',E:'#c6e6d6',M:'#1a2a22'},r:[ // 6 Bramble Tyrant (thorn crown)
+  ".O.O.O..O.O.O...","OTOTOTOOTOTOTO..",".OTTTTTTTTTTO...","..OTTTTTTTTTO...","..OTBBTTBBTTO...",
+  "..OTBEBTBEBTO...","..OTBBTTBBTTO...","..OTTTTTTTTTO...","..OTTTMMTTTTO...","..OTTTTTTTTTO...",
+  "...OTTTTTTTO....","...OTTOOTTTO....","..OTTO..OTTO....","..OO......OO...."]},
+ {p:{O:'#1a1c20',S:'#8a8f9a',K:'#e2e7ee',M:'#3a3d44'},r:[   // 7 Stonebrow Goliath (stone golem)
+  "...OOOOOOOO.....","..OSSSSSSSSO....",".OSSSSSSSSSSO...",".OSSKSSSSKSSO...",".OSSSSSSSSSSO...",
+  ".OSSSSMMSSSSO...","OOSSSSSSSSSSOO..","OSSOSSSSSSOSSO..","OSSOSSSSSSOSSO..","OOSSSSSSSSSSOO..",
+  ".OSSSSSSSSSSO...",".OSSOO..OOSSO...",".OSO......OSO...",".OO........OO..."]},
+ {p:{O:'#1c1814',K:'#9a8f80',E:'#ffd0a0'},r:[               // 8 Scree Stalker (rockslide beast)
+  "O..............O","OKO..........OKO",".OKKO.OOOO..OKO.","..OKKOKKKKOKKO..","...OKKKEEKKKO...",
+  "...OKKKKKKKKO...","..OKKKKKKKKKKO..",".OKKOKKKKKKOKKO.",".OKOKKKKKKKKOKO.","..O.OKKKKKKO.O..",
+  "....OKO..OKO....","...OKO....OKO...","..OO........OO.."]},
+ {p:{O:'#1c110a',A:'#8a5a4a',E:'#ffdca6',K:'#c86a3a'},r:[   // 9 Cinderwatch Sentinel (armoured warden)
+  "....OOOOOO......","...OAAAAAAO.....","..OAAEAAEAAO....","..OAAAAAAAAO....","...OAAAAAAO.....",
+  "..OOAAAAAAOO....",".OAAAAAAAAAAO...",".OAAKAAAAKAAO...",".OAAAAAAAAAAO...",".OAAAAAAAAAAO...",
+  "..OAAAOOAAAO....","..OAAO..OAAO....","..OAO....OAO....","..OO......OO...."]},
+ {p:{O:'#140d14',P:'#3a2a3a',K:'#c05a3a',S:'#c8c0b0'},r:[   // 10 Ashfall Reaper (cloaked, scythe)
+  ".......OO......S","...OOOOOO.....SS","..OPPPPPPO...SSO",".OPPPPPPPPO.SSO.",".OPPKPPKPPOSSO..",
+  ".OPPPPPPPPPSO...",".OPPPPPPPPPO....","..OPPPPPPPPO....","..OPPPPPPPPO....","...OPPPPPPO.....",
+  "...OPPPPPPO.....","...OPPOOPPO.....","..OPPO..OPPO....","..OO......OO...."]},
+ {p:{O:'#1c0f08',T:'#a5502f',E:'#ffb060',K:'#3a1a0a'},r:[   // 11 Charstep Behemoth (flaming brute)
+  "..O........O....",".OEO......OEO...",".OEEO.OO.OEEO...","..OEOOTTOOEO....","...OTTTTTTTO....",
+  "..OTTEETTEETO...",".OTTTTTTTTTTO...","OTTTKKTTKKTTTO..","OTTTTTTTTTTTTO..","OTTTTTTTTTTTTO..",
+  ".OTTTOOOOTTTO...",".OTTO....OTTO...",".OTO......OTO...",".OO........OO..."]},
+ {p:{O:'#2a1e0a',L:'#e0a83a',G:'#fff4c8',E:'#c86a1a'},r:[   // 12 Glowing Horror (light being)
+  "...O..OO..O.....","..OLO.OLO.OL....","...OLLLLLLO.....","..OLGGGGGGLO....",".OLGGEGGEGGLO...",
+  ".OLGGGGGGGGLO...",".OLGGGGGGGGLO...",".OLGGEGGEGGLO...","..OLGGGGGGLO....","...OLLLLLLO.....",
+  "..OLO.OO.OLO....",".OLO..OO..OLO...",".OO........OO..."]},
+ {p:{O:'#2a1008',W:'#e0552a',E:'#ffd39a',K:'#5a1a08'},r:[   // 13 Emberflow Wyrm (serpent)
+  ".......OOOO.....","....OOOWWWWO....","..OOWWWWWWWWO...",".OWWWWWWWWWWWO..","OWWEWWWWWWWWWO..",
+  "OWWWWWWKKWWWWO..",".OWWWWKKKKWWO...","..OWWWWWWWWO....","...OOWWWWOO.....",".....OWWO.......",
+  "....OWWWWO......","...OWWOOWWO.....","..OWO....OWO....","..OO......OO...."]},
+ {p:{O:'#2a0d05',F:'#ff7a3d',E:'#fff0c0',K:'#7a1a08',H:'#e0552a'},r:[ // 14 Heart Devourer (core demon)
+  ".O..OOOO..O.....","OHO.OFFFFO.OHO..","OHHOFFFFFFOHHO..",".OHOFFFFFFOHO...","..OFFEFFEFFO....",
+  "..OFFFFFFFFO....",".OFFFKKKKFFFO...",".OFFFFFFFFFFO...",".OFFFFFFFFFFO...","..OFFFFFFFFO....",
+  "..OFFOOOOFFO....",".OFFO....OFFO...",".OHO......OHO...",".OO........OO.."]},
+];
+const sprBoss=BOSS_ART.map(a=>makeSprite(a.r,a.p));
+// themed enemy projectile
+function drawEShot(s){
+ const col=s.col||'#e2604c', core=s.core||'#ffc0b0', r=s.r||6, ang=Math.atan2(s.vy,s.vx);
+ ctx.globalAlpha=0.3; ctx.fillStyle=col;
+ ctx.beginPath(); ctx.arc((s.px+s.x)/2,(s.py+s.y)/2,r*0.7,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+ if(s.shape==='diamond'){ ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
+   ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(r*1.2,0); ctx.lineTo(0,r*0.8); ctx.lineTo(-r*1.2,0); ctx.lineTo(0,-r*0.8); ctx.closePath(); ctx.fill();
+   ctx.fillStyle=core; ctx.fillRect(-r*0.4,-r*0.3,r*0.8,r*0.6); ctx.restore(); }
+ else if(s.shape==='dart'){ ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
+   ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(r*1.3,0); ctx.lineTo(-r*0.7,r*0.7); ctx.lineTo(-r*0.7,-r*0.7); ctx.closePath(); ctx.fill();
+   ctx.fillStyle=core; ctx.fillRect(-r*0.1,-r*0.22,r*0.6,r*0.44); ctx.restore(); }
+ else { ctx.fillStyle=col; ctx.beginPath(); ctx.arc(s.x,s.y,r,0,6.29); ctx.fill();
+   ctx.fillStyle=core; ctx.beginPath(); ctx.arc(s.x,s.y,r*0.5,0,6.29); ctx.fill(); }
+}
+
 const CTHEME={
  squire:{p:'#5a7a9c',s:'#3c5570'}, ranger:{p:'#4f7d45',s:'#37592f'},
  pyro:{p:'#d4622a',s:'#96421c'}, knight:{p:'#7d8a99',s:'#565f6b'},
@@ -198,7 +296,9 @@ function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
  if(e.type==='c') blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip);
  else if(e.type==='s') blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip);
- else blit(sprTyrant,e.x,e.y+Math.sin(pn*2)*1.5,e.wb?3.8:2.8,flip);
+ else { const sp=(e.wb && sprBoss[e.ring])?sprBoss[e.ring]:sprTyrant;
+   const sc=(e.r*2.6)/sp.width;
+   blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,sc,flip); }
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 function render(){
@@ -230,8 +330,8 @@ function render(){
   }
   for(const p of particles){ ctx.globalAlpha=p.life/0.4; ctx.fillStyle=p.col;
     ctx.fillRect(p.x-2,p.y-2,4,4); } ctx.globalAlpha=1;
-  for(const s of pShots) drawShot(s,'#ffc94d','#fff4cc');
-  for(const s of eShots) drawShot(s,'#e2604c','#ffc0b0');
+  for(const s of pShots) drawShot(s,s.crit?'#ffd23d':'#ffc94d',s.crit?'#fff8d8':'#fff4cc');
+  for(const s of eShots) drawEShot(s);
   for(const z of zones){ ctx.globalAlpha=0.20; ctx.fillStyle='#ffd07a';
     ctx.beginPath(); ctx.arc(z.x,z.y,z.r,0,6.29); ctx.fill();
     ctx.globalAlpha=0.55; ctx.strokeStyle='#ffd07a'; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
@@ -322,19 +422,37 @@ function render(){
   if(curRoom.town){ vg.addColorStop(0,'rgba(255,140,50,0.05)'); vg.addColorStop(1,'rgba(110,45,10,0.22)'); }
   else { vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.42)'); }
   ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
-  for(const k of ['move','aim']){ const s=stick[k];
+  { const s=stick.move;
     if(s.id!==null){ ctx.strokeStyle='rgba(216,210,200,.25)'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.arc(s.ox,s.oy,50,0,6.29); ctx.stroke();
       ctx.fillStyle='rgba(216,210,200,.35)';
       ctx.beginPath(); ctx.arc(s.ox+s.dx,s.oy+s.dy,20,0,6.29); ctx.fill(); } }
-  ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillRect(W/2-97,H-28,194,15);
-  ctx.strokeStyle='rgba(216,210,200,.35)'; ctx.lineWidth=1; ctx.strokeRect(W/2-97.5,H-28.5,195,16);
-  const hg=ctx.createLinearGradient(0,H-28,0,H-13);
+  // ---- bottom bars: HP / MP / XP ----
+  const bx=W/2-97, bw=194;
+  ctx.fillStyle='rgba(0,0,0,.68)'; ctx.fillRect(bx,H-34,bw,32);
+  ctx.strokeStyle='rgba(216,210,200,.30)'; ctx.lineWidth=1; ctx.strokeRect(bx-0.5,H-34.5,bw+1,33);
   const hc=player.hp/player.maxhp>0.3;
+  const hg=ctx.createLinearGradient(0,H-32,0,H-22);
   hg.addColorStop(0,hc?'#8fd48c':'#f07a64'); hg.addColorStop(1,hc?'#4f8a4c':'#a83a2a');
-  ctx.fillStyle=hg; ctx.fillRect(W/2-95,H-26,190*Math.max(0,player.hp/player.maxhp),11);
-  if(rpg){ ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillRect(W/2-97,H-10,194,6);
-    ctx.fillStyle='#7ab8d4'; ctx.fillRect(W/2-95,H-9,190*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),4); }
+  ctx.fillStyle=hg; ctx.fillRect(bx+2,H-32,(bw-4)*Math.max(0,player.hp/player.maxhp),10);
+  ctx.fillStyle='#08110a'; ctx.font='8px monospace'; ctx.textAlign='left';
+  ctx.fillText(Math.ceil(player.hp)+' / '+player.maxhp,bx+5,H-24);
+  const mp=player.mp||0, mm=player.maxmp||1;
+  ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(bx+2,H-20,bw-4,7);
+  const mg=ctx.createLinearGradient(0,H-20,0,H-13);
+  mg.addColorStop(0,'#7ab8d4'); mg.addColorStop(1,'#3f6f8a');
+  ctx.fillStyle=mg; ctx.fillRect(bx+2,H-20,(bw-4)*Math.max(0,Math.min(1,mp/mm)),7);
+  const cost=(typeof abilityCost==='function')?abilityCost():1e9;
+  if(mp>=cost){ ctx.strokeStyle='rgba(255,201,77,'+(0.5+Math.sin(performance.now()/200)*0.35)+')';
+    ctx.lineWidth=1.5; ctx.strokeRect(bx+1.5,H-20.5,bw-3,8); }
+  if(rpg){ ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(bx+2,H-11,bw-4,5);
+    ctx.fillStyle='#c9a04a'; ctx.fillRect(bx+2,H-11,(bw-4)*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),5); }
+  // ability hint (right-side invisible button)
+  if(rpg&&player.resDef){ const ready=mp>=cost;
+    ctx.textAlign='right'; ctx.font='11px "Pixelify Sans",monospace';
+    ctx.fillStyle=ready?player.resDef.col:'rgba(216,210,200,0.45)';
+    ctx.fillText((ready?'▶ ':'◇ ')+player.resDef.res+'  ·  tap right to cast',W-12,H-42);
+    ctx.textAlign='left'; }
   fpsCount++; const fn=performance.now();
   if(fn-fpsLast>500){fpsNow=Math.round(fpsCount*1000/(fn-fpsLast));fpsCount=0;fpsLast=fn;}
   if(typeof dev!=='undefined'&&dev.fps){ctx.fillStyle='#7dc47a';ctx.font='14px monospace';ctx.fillText(fpsNow+' fps',10,H-10);}

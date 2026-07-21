@@ -8,7 +8,8 @@ function update(dt){
     moveCircle(player,(m.dx/d)*sp*dt*Math.min(1,d/28),(m.dy/d)*sp*dt*Math.min(1,d/28));
   }
   player.inv=Math.max(0,player.inv-dt);
-  if(player.hp<player.maxhp) player.hp+=1.6*(player.regen||1)*dt;
+  if(player.hp<player.maxhp) player.hp+=(player.regen||1)*dt;               // VIT -> regen
+  if(player.mp<player.maxmp) player.mp=Math.min(player.maxmp,player.mp+(player.mpregen||2)*dt); // WIS -> mana
 
   // room transitions (walk off edge through a door)
   const gx=player.x/TILE, gy=player.y/TILE;
@@ -25,7 +26,7 @@ function update(dt){
     const dx=player.x-e.x, dy=player.y-e.y, dd=Math.hypot(dx,dy)||1;
     if(e.type==='c'){
       moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
-      if(dd<e.r+player.r && player.inv<=0){ player.hp-=Math.max(1,e.touch-(player.def||0)); player.inv=0.7; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6); }
+      if(dd<e.r+player.r && player.inv<=0){ player.hp-=Math.max(1,Math.round(e.touch*(1-(player.dr||0)))); player.inv=0.7; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6); }
     }
     if(e.type==='s'){
       if(dd>200) moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
@@ -82,7 +83,7 @@ function update(dt){
     for(const e of enemies){ if(e!==s.lastHit && Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
       const dmg=Math.round((s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1));
       e.hp-=dmg; e.flash=0.12; s.lastHit=e; chargeRes('hit');
-      texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:dmg,col:'#ffe9b0',life:0.55});
+      texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:s.crit?dmg+'!':dmg,col:s.crit?'#ffd23d':'#ffe9b0',life:s.crit?0.85:0.55});
       if(player.ls) player.hp=Math.min(player.maxhp,player.hp+dmg*player.ls);
       if(s.slow) e.slowT=1;
       boom(s.x,s.y,'#ffc94d',4);
@@ -103,7 +104,7 @@ function update(dt){
       texts.push({x:de.x,y:de.y-8,txt:'+'+rx+'xp',col:'#7ab8d4',life:1.1});
       texts.push({x:de.x,y:de.y+10,txt:'+'+rg2+'g',col:'#ffc94d',life:1.1});
       gainXP(rx,rg2); chargeRes('kill');
-      if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null;
+      if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null; ringBossCd[de.ring]=32+Math.random()*20;
         groundPortals.push({x:de.x,y:de.y,ring:de.ring,life:45});
         for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/12.5)+1))));
         msg('A PORTAL TEARS OPEN',GBOSS[de.ring].dn+' awaits'); }
@@ -120,7 +121,7 @@ function update(dt){
     s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
     if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
-      player.hp-=Math.max(1,(s.bd||8)-(player.def||0)*0.6); player.inv=0.35; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
+      player.hp-=Math.max(1,Math.round((s.bd||8)*(1-(player.dr||0)))); player.inv=0.35; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
   }
   // particles
   for(let i=particles.length-1;i>=0;i--){ const p=particles[i];
@@ -135,9 +136,11 @@ function update(dt){
     if(e.life<=0) embers.splice(i,1); }
   for(let i=texts.length-1;i>=0;i--){ const t2=texts[i];
     t2.y-=28*dt; t2.life-=dt; if(t2.life<=0) texts.splice(i,1); }
-  // world boss spawner (grove only)
-  if(curRoom.rings){ wbCd-=dt;
-    if(wbCd<=0){ wbCd=22+Math.random()*16; if(!worldBoss && Math.random()<0.7) spawnWorldBoss(); } }
+  // per-ring mini-boss spawner (grove only) — one unique boss per ring at a time
+  if(curRoom.rings){ const cb=grvBandXY(player.x/TILE,player.y/TILE);
+    ringBossCd[cb]=(ringBossCd[cb]||0)-dt;
+    if(ringBossCd[cb]<=0){ ringBossCd[cb]=14+Math.random()*12;
+      if(!ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } }
   // ground dungeon portals from slain world bosses
   for(let i=groundPortals.length-1;i>=0;i--){ const gp=groundPortals[i];
     gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; }
@@ -209,21 +212,8 @@ function update(dt){
       else { continue; }
       loots.splice(i,1); saveRPG();
     } }
-  // signature resource charge + ability systems
-  const rd=player.resDef;
+  // ability upkeep (mana regen handled at top; abilities cast from the right-side button)
   lastShotT+=dt;
-  if(rd&&inGame){
-    const mv=stick.move.id!==null;
-    if(rd.rule==='time') res+=7*dt;
-    else if(rd.rule==='time2') res+=10*dt;
-    else if(rd.rule==='move') res+=(mv?13:1)*dt;
-    else if(rd.rule==='still') res+=(mv?3:16)*dt;
-    else if(rd.rule==='calm') res+=(lastShotT>1?15:4)*dt;
-    else if(rd.rule==='prox'){ let near=false;
-      for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<260){near=true;break;} }
-      res+=(near?10:2)*dt; }
-    res=Math.min(100,res);
-  }
   if(player.bDmgT>0)player.bDmgT-=dt; if(player.bRofT>0)player.bRofT-=dt; if(player.bSpdT>0)player.bSpdT-=dt;
   for(let i=allies.length-1;i>=0;i--){ const al=allies[i];
     al.life-=dt; if(al.life<=0){allies.splice(i,1);continue;}
@@ -237,29 +227,23 @@ function update(dt){
   }
   for(let i=zones.length-1;i>=0;i--){ const z=zones[i]; z.life-=dt; z.tick-=dt;
     if(z.tick<=0){ z.tick=0.5;
-      for(const e of enemies){ if(Math.hypot(e.x-z.x,e.y-z.y)<z.r){ e.hp-=12; e.flash=0.08; } }
+      for(const e of enemies){ if(Math.hypot(e.x-z.x,e.y-z.y)<z.r){ e.hp-=Math.round(12*(z.ap||1)); e.flash=0.08; } }
       if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) player.hp=Math.min(player.maxhp,player.hp+5); }
     if(z.life<=0) zones.splice(i,1); }
   if(player.spiritT>0){ player.spiritT-=dt;
     for(let i=0;i<8;i++){ const a=performance.now()/300+i*Math.PI/4;
       const ox=player.x+Math.cos(a)*62, oy=player.y+Math.sin(a)*62;
       for(const e of enemies){ if((e.spiritCd||0)<=0 && Math.hypot(e.x-ox,e.y-oy)<e.r+8){
-        e.hp-=14; e.flash=0.1; e.spiritCd=0.4;
-        texts.push({x:e.x,y:e.y-e.r,txt:14,col:'#7ab8d4',life:0.4}); } } }
+        const sd=Math.round(14*(player.spiritAP||1)); e.hp-=sd; e.flash=0.1; e.spiritCd=0.4;
+        texts.push({x:e.x,y:e.y-e.r,txt:sd,col:'#7ab8d4',life:0.4}); } } }
     for(const e of enemies){ if(e.spiritCd>0)e.spiritCd-=dt; } }
   for(let i=fx.length-1;i>=0;i--){ fx[i].life-=dt; if(fx[i].life<=0)fx.splice(i,1); }
-  abT-=dt; if(abT<=0){ abT=0.15; const b=document.getElementById('abBtn');
-    if(rd&&b){ const pct=Math.floor(res);
-      b.style.background='linear-gradient(to top,'+rd.col+' '+pct+'%,rgba(23,20,29,.88) '+pct+'%)';
-      b.style.color = pct>=100?'#0b0a10':'#d8d2c8';
-      b.textContent = pct>=100?'READY':rd.res;
-      b.classList.toggle('rdy',pct>=100); } }
 
   // death
   if(typeof dev!=='undefined'&&dev.god&&player.hp<player.maxhp) player.hp=player.maxhp;
   if(player.hp<=0){ recordBest(player.kills); saveRPG();
     msg('YOU FELL','the hearth calls you home');
-    player.hp=player.maxhp; player.inv=1.5;
+    player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;
     const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE); spawnPet(); }
   document.getElementById('hpTxt').textContent='HP '+Math.ceil(player.hp);

@@ -51,28 +51,48 @@ const GBOSS=[
   title:'that which waits at the island\'s burning core',
   desc:'Everything at once: spiral fire, summoned horrors, relentless pressure. The final trial.'},
 ];
-let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null;
-function spawnWorldBoss(){
- if(!curRoom||!curRoom.rings||worldBoss) return;
- const b=grvBandXY(player.x/TILE,player.y/TILE);
- // spot the boss a bit away on open ground
+// per-ring projectile themes (colour/core/shape/size) — suited to each biome & creature
+const BOSS_PROJ=[
+ {col:'#4a90a8',core:'#cfeaf3',shape:'orb',size:9},    // Tideworn — brine globs
+ {col:'#8fae6a',core:'#eef4cf',shape:'dart',size:6},   // Gullwind — feather-darts
+ {col:'#7ea44a',core:'#e0f2a8',shape:'dart',size:6},   // Sawgrass — reed spines
+ {col:'#4f9a3f',core:'#cdf2b6',shape:'orb',size:7},    // Verdant — thorn seeds
+ {col:'#6f5a3a',core:'#d8c49a',shape:'orb',size:7},    // Wolfwood — bone shards
+ {col:'#356b40',core:'#bcdcae',shape:'orb',size:8},    // Timberfell — spores
+ {col:'#3f6b58',core:'#c6e6d6',shape:'dart',size:6},   // Bramble — barbs
+ {col:'#8a8f9a',core:'#e2e7ee',shape:'orb',size:9},    // Stonebrow — boulders
+ {col:'#9a8f80',core:'#e6ded0',shape:'orb',size:7},    // Scree — rockslide
+ {col:'#c86a3a',core:'#ffdca6',shape:'orb',size:7},    // Cinderwatch — cinders
+ {col:'#c05a3a',core:'#ffc7a0',shape:'diamond',size:7},// Ashfall — scythes
+ {col:'#d4622a',core:'#ffd3a0',shape:'orb',size:9},    // Charstep — magma bombs
+ {col:'#e0a83a',core:'#fff4c8',shape:'diamond',size:7},// Glowing — light lances
+ {col:'#e0552a',core:'#ffd39a',shape:'orb',size:8},    // Emberflow — fire coils
+ {col:'#ff7a3d',core:'#fff0c0',shape:'orb',size:9},    // Heart Devourer — core fire
+];
+let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
+function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
+// each ring has its own unique mini-boss; only one of a given ring's boss lives at a time
+function spawnRingBoss(b){
+ if(!curRoom||!curRoom.rings) return;
+ if(ringBossAlive(b)) return;
  for(let tries=0;tries<40;tries++){
-  const a=Math.random()*6.283, d=340+Math.random()*160;
+  const a=Math.random()*6.283, d=300+Math.random()*220;
   const bx=player.x+Math.cos(a)*d, by=player.y+Math.sin(a)*d;
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
   if(solid(bx,by)) continue;
   if(grvBandXY(bx/TILE,by/TILE)!==b) continue;
   const lv=curRoom.rings.names[b].lv;
-  const GB=GBOSS[b];
+  const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
   // matched to zone: modest early, monstrous late
   const chaserHp=40*(1+lv*0.55);
-  const size=22+ (lv/150)*20;          // small on the sands, huge at the core
-  worldBoss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:Math.round(chaserHp*6),maxhp:Math.round(chaserHp*6),
+  const size=24+ (lv/150)*22;          // small on the sands, huge at the core
+  const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:Math.round(chaserHp*6),maxhp:Math.round(chaserHp*6),
    spd:34+(lv/150)*26,fireT:1.4,ang:0,col:GB.col,bd:5+lv*0.45,lv:lv,boss:true,name:GB.n,
-   pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3};
-  enemies.push(worldBoss);
+   pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3,
+   pcol:PJ.col,pcore:PJ.core,pshape:PJ.shape,psize:PJ.size||7};
+  enemies.push(boss);
   msg('\u2620 '+GB.n,GB.title);
-  setTimeout(function(){ if(worldBoss) msg(GB.n,GB.desc); },1700);
+  setTimeout(function(){ if(enemies.indexOf(boss)>=0) msg(GB.n,GB.desc); },1700);
   return;
  }
 }
@@ -160,7 +180,7 @@ function enterRoom(key, px, py){
   curRoom=rooms[key];
   player.x=px; player.y=py;
   enemies=[]; pShots=[]; eShots=[]; embers=[]; loots=[]; zones=[]; fx=[];
-  worldBoss=null; if(!curRoom||!curRoom.dungeon) groundPortals=[];
+  worldBoss=null; ringBossCd=[]; if(!curRoom||!curRoom.dungeon) groundPortals=[];
   for(const al of allies){al.x=player.x;al.y=player.y;}
   buildRoomCache();
   curRegionN='';
