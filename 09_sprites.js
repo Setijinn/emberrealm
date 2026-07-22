@@ -472,8 +472,9 @@ function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
   const plate=(typeof _btnInteract!=='undefined' && _btnInteract && _btnInteract.complete && _btnInteract.naturalWidth);
   const fs=Math.round(b.h*0.34);
   ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle=plate?'rgba(255,232,180,0.6)':'rgba(0,0,0,0.85)'; ctx.fillText('INTERACT',b.cx,b.cy-1);   // highlight
-  ctx.fillStyle=plate?'#3a2208':'#ffe6ad'; ctx.fillText('INTERACT',b.cx,b.cy+1);                          // main
+  const lbl=(typeof inputMode!=='undefined' && inputMode==='pc')?'[E] INTERACT':'INTERACT';
+  ctx.fillStyle=plate?'rgba(255,232,180,0.6)':'rgba(0,0,0,0.85)'; ctx.fillText(lbl,b.cx,b.cy-1);   // highlight
+  ctx.fillStyle=plate?'#3a2208':'#ffe6ad'; ctx.fillText(lbl,b.cx,b.cy+1);                          // main
   ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
 }
 function hitPortalPrompt(sx,sy){ const b=portalPromptRect(); if(!b) return false;

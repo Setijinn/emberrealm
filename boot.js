@@ -10,7 +10,8 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(
   // check for a new build whenever the tab regains focus
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) reg.update().catch(function(){}); });
 }).catch(function(){});
-document.addEventListener('pointerdown', async function lockOnce(){
+document.addEventListener('pointerdown', async function lockOnce(e){
+  if(e.pointerType==='mouse') return;   // PC play: never force fullscreen/orientation on a click
   document.removeEventListener('pointerdown', lockOnce);
   try{
     if(!document.fullscreenElement && document.documentElement.requestFullscreen)

@@ -1,10 +1,15 @@
 // ---------- controls ----------
-// LEFT half of the screen = move stick.
-// RIGHT half = one big invisible ability button (tap anywhere to cast).
-// Aiming is automatic (nearest enemy) — there is no aim stick.
+// TOUCH: left half = move stick, right half = cast the armed ability at the tap.
+// PC (auto-detected): WASD/arrows move, click casts at the cursor, 1/2/3 cast slots,
+// E interact, Q potion, I equipment, K skills, L abilities, M map, Esc closes menus.
+// inputMode follows the LAST input used, so hybrid devices switch seamlessly.
+let inputMode=(typeof matchMedia==='function' && matchMedia('(pointer:fine)').matches)?'pc':'touch';
 const stick={move:{id:null,ox:0,oy:0,dx:0,dy:0}};
+const mouse={x:0,y:0};
+function mouseWorld(){ const zoom=H/(VIEW_TILES_H*TILE); return {x:camX+mouse.x/zoom, y:camY+mouse.y/zoom}; }
 addEventListener('pointerdown',e=>{
-  if(!inGame || W<=H) return;
+  if(e.pointerType==='touch') inputMode='touch'; else inputMode='pc';
+  if(!inGame || (inputMode==='touch' && W<=H)) return;
   if(e.target && e.target!==cv) return;      // taps on HUD buttons handle themselves
   // the floating USE prompt (portal/pillar) takes top precedence
   if(typeof hitPortalPrompt==='function' && hitPortalPrompt(e.clientX,e.clientY)){
@@ -12,14 +17,18 @@ addEventListener('pointerdown',e=>{
   // ability loadout buttons (bottom-left) take precedence: tap to arm a slot
   if(typeof hitAbilButton==='function'){ const hs=hitAbilButton(e.clientX,e.clientY);
     if(hs>=0){ armSlot(hs); return; } }
+  const zoom=H/(VIEW_TILES_H*TILE);
+  if(e.pointerType!=='touch'){
+    // mouse/pen: ANY canvas click casts at the cursor (movement is on the keyboard)
+    if(typeof doAbility==='function') doAbility(camX+e.clientX/zoom, camY+e.clientY/zoom);
+    return;
+  }
   if(e.clientX < W/2){
     if(stick.move.id!==null) return;
     const s=stick.move; s.id=e.pointerId; s.ox=e.clientX; s.oy=e.clientY; s.dx=0; s.dy=0;
   } else {
     // cast the armed ability; pass the tapped point in world space for aimed abilities
-    const zoom=H/(VIEW_TILES_H*TILE);
-    const wx=camX+e.clientX/zoom, wy=camY+e.clientY/zoom;
-    if(typeof doAbility==='function') doAbility(wx,wy);
+    if(typeof doAbility==='function') doAbility(camX+e.clientX/zoom, camY+e.clientY/zoom);
   }
 });
 addEventListener('pointermove',e=>{ const s=stick.move;
@@ -32,3 +41,36 @@ addEventListener('pointermove',e=>{ const s=stick.move;
 function endPointer(e){ const s=stick.move; if(s.id===e.pointerId){ s.id=null; s.dx=0; s.dy=0; } }
 addEventListener('pointerup',endPointer);
 addEventListener('pointercancel',endPointer);
+
+// ---------- keyboard (PC) ----------
+const keys={};
+addEventListener('pointermove',e=>{ if(e.pointerType!=='touch'){ mouse.x=e.clientX; mouse.y=e.clientY; } });
+addEventListener('keydown',e=>{
+  if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;   // never swallow typing in fields
+  inputMode='pc';
+  const k=e.key.toLowerCase(); keys[k]=true;
+  if(e.repeat) return;
+  if(k==='escape'){
+    if(typeof closeSkills==='function' && (document.getElementById('skillScr')||{}).style && document.getElementById('skillScr').style.display==='flex') closeSkills();
+    for(const id of ['invScr','loadScr','shopScr']){ const el=document.getElementById(id);
+      if(el && el.style.display && el.style.display!=='none') el.style.display='none'; }
+    return;
+  }
+  if(!inGame) return;
+  if(k==='1'||k==='2'||k==='3'){
+    if(typeof armSlot==='function') armSlot(+k-1);
+    const mw=mouseWorld(); if(typeof doAbility==='function') doAbility(mw.x,mw.y);
+  }
+  else if(k==='e'){ if(typeof portalPrompt!=='undefined' && portalPrompt && typeof usePortalPrompt==='function') usePortalPrompt(); }
+  else if(k==='q'){ const b=document.getElementById('potBtn'); if(b) b.click(); }
+  else if(k==='i'||k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
+  else if(k==='k'){ const b=document.getElementById('skillBtn'); if(b) b.click(); }
+  else if(k==='l'){ const b=document.getElementById('loadBtn'); if(b) b.click(); }
+  else if(k==='m'){ const b=document.getElementById('mapBtn'); if(b) b.click(); }
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+// normalized WASD/arrow vector, consumed by update() when the touch stick is idle
+function keyMove(){ let x=0,y=0;
+  if(keys['a']||keys['arrowleft'])x--; if(keys['d']||keys['arrowright'])x++;
+  if(keys['w']||keys['arrowup'])y--;   if(keys['s']||keys['arrowdown'])y++;
+  if(!x&&!y) return null; const d=Math.hypot(x,y); return {x:x/d,y:y/d}; }

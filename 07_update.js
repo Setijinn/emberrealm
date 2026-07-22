@@ -1,11 +1,14 @@
 // ---------- update ----------
 function update(dt){
-  // move
+  // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
+  const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1);
   if(m.id!==null){
     const d=Math.hypot(m.dx,m.dy)||1;
-    const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1);
     moveCircle(player,(m.dx/d)*sp*dt*Math.min(1,d/28),(m.dy/d)*sp*dt*Math.min(1,d/28));
+  } else if(typeof keyMove==='function'){
+    const kv=keyMove();
+    if(kv) moveCircle(player, kv.x*sp*dt, kv.y*sp*dt);
   }
   player.inv=Math.max(0,player.inv-dt);
   if(typeof updateAbilCooldowns==='function') updateAbilCooldowns(dt);      // ability cooldowns

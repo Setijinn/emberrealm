@@ -383,6 +383,11 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
     ctx.lineWidth= (b.slot===armedSlot)?3:2;
     ctx.strokeStyle= (b.slot===armedSlot)?'#ffc94d':'rgba(170,160,185,0.55)';
     ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,6.29); ctx.stroke();
+    // PC mode: show the 1/2/3 hotkey on each slot
+    if(typeof inputMode!=='undefined' && inputMode==='pc'){
+      ctx.font='bold 11px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(''+(b.slot+1),b.x-b.r+7,b.y-b.r+8);
+      ctx.fillStyle='#ffd07a'; ctx.fillText(''+(b.slot+1),b.x-b.r+6,b.y-b.r+7); }
     ctx.restore();
   }
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
