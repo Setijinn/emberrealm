@@ -77,9 +77,9 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 #skillScr{position:fixed;inset:0;z-index:40;display:none;background:rgba(9,7,12,.95);overflow-y:auto;
  align-items:flex-start;justify-content:center;padding:14px 10px 24px;}
 /* canvas node-tree layout */
-.skWrap2{width:min(98vw,720px);display:flex;flex-direction:column;}
+.skWrap2{width:min(98vw,980px);display:flex;flex-direction:column;}
 .skCanWrap{width:100%;display:flex;justify-content:center;margin:6px 0;}
-#skillCv{position:static;inset:auto;width:100%;max-width:690px;height:auto;image-rendering:pixelated;
+#skillCv{position:static;inset:auto;width:100%;max-width:960px;height:auto;image-rendering:pixelated;
  background:#0b090f;border:1px solid #2c2633;border-radius:12px;touch-action:none;cursor:pointer;}
 .skDetail{min-height:58px;display:flex;align-items:center;gap:12px;background:#141019;border:1px solid #2c2633;
  border-radius:10px;padding:8px 12px;margin-top:2px;}

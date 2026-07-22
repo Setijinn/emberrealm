@@ -528,7 +528,7 @@ function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg)
   ov.innerHTML='<div class="skWrap2">'
     +'<div class="skTop"><div class="skTitle" id="skTitle"></div><div class="skPts" id="skPts"></div></div>'
     +'<div class="skHint">Tap a node to inspect · learn from the trunk up · branches end in ascension ✦</div>'
-    +'<div class="skCanWrap"><canvas id="skillCv" width="690" height="520"></canvas></div>'
+    +'<div class="skCanWrap"><canvas id="skillCv" width="960" height="560"></canvas></div>'
     +'<div class="skDetail" id="skDetail"></div>'
     +'<div class="skBtns"><button class="mbtn" id="skRespec">RESPEC</button><button class="mbtn go" id="skDone">DONE</button></div>'
     +'</div>';
@@ -542,9 +542,9 @@ function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg)
 // detail bar and RESPEC/DONE buttons are always visible — the canvas can't be scrolled
 // past (touch-action:none), so it must never fill the whole screen.
 function _skFitCanvas(){ const cv=document.getElementById('skillCv'); if(!cv) return;
-  const maxW=Math.min(690, innerWidth*0.96), maxH=innerHeight*0.52;
-  const s=Math.min(maxW/690, maxH/520);
-  cv.style.width=Math.round(690*s)+'px'; cv.style.height=Math.round(520*s)+'px'; }
+  const maxW=Math.min(960, innerWidth*0.97), maxH=innerHeight*0.55;
+  const s=Math.min(maxW/960, maxH/560);
+  cv.style.width=Math.round(960*s)+'px'; cv.style.height=Math.round(560*s)+'px'; }
 function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.style.display='none'; _skStopAnim();
   removeEventListener('resize',_skFitCanvas);
   if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }
@@ -574,6 +574,13 @@ function _skBuildLayout(cls){ const cv=document.getElementById('skillCv'); const
     for(const k of c){ const w=(leafW(k)/tot)*(x1-x0); place(k,cx,cx+w); cx+=w; } }
   const totalW=roots.reduce((a,id)=>a+leafW(id),0)||1; let cx=0;
   for(const id of roots){ const w=leafW(id)/totalW; place(id,cx,cx+w); cx+=w; }
+  // spread nodes that share a depth so nodes + labels never collide (keeps them centered)
+  const byDepth={}; for(const s of all){ const d=depthById[s.n.id]; (byDepth[d]=byDepth[d]||[]).push(s.n.id); }
+  const minGap=70;
+  for(const d in byDepth){ const row=byDepth[d].slice().sort((a,b)=>pos[a].x-pos[b].x);
+    for(let i=1;i<row.length;i++){ if(pos[row[i]].x-pos[row[i-1]].x<minGap) pos[row[i]].x=pos[row[i-1]].x+minGap; }
+    const lo=pos[row[0]].x, hi=pos[row[row.length-1]].x, shift=W/2-(lo+hi)/2;
+    for(const id of row){ pos[id].x=Math.min(W-pad,Math.max(pad,pos[id].x+shift)); } }
   const nodes=all.map(s=>({n:s.n,x:Math.round(pos[s.n.id].x),y:Math.round(pos[s.n.id].y),color:s.color,
     root:depthById[s.n.id]===0, top:!(kids[s.n.id]&&kids[s.n.id].length)}));
   t.ascend.forEach((a,i)=>{ nodes.push({a:a,x:Math.round(W*(i+0.5)/t.ascend.length),y:ascY,color:a.color}); });
@@ -607,7 +614,7 @@ function _skDraw(){ const cv=document.getElementById('skillCv'); if(!cv||!_skLay
   for(const s of _skLayout.nodes){ if(s.a) _skDrawAsc(g,s,pulse,chosen); }
   g.textAlign='left'; g.textBaseline='alphabetic';
 }
-function _skDrawNode(g,s,pulse){ const ch=curChar(); const n=s.n, r=nodeRank(rpg,n.id), owned=r>0, avail=nodeUnlockable(ch.cls,rpg,n), sel=_skSel===n.id, R=21;
+function _skDrawNode(g,s,pulse){ const ch=curChar(); const n=s.n, r=nodeRank(rpg,n.id), owned=r>0, avail=nodeUnlockable(ch.cls,rpg,n), sel=_skSel===n.id, R=18;
   const col=owned?'#ffc94d':(avail?'#8fd48c':'#5a5464');
   if(owned||avail){ const gl=g.createRadialGradient(s.x,s.y,2,s.x,s.y,R*1.7);
     gl.addColorStop(0,(owned?'rgba(255,201,77,':'rgba(143,212,140,')+(0.34*(owned?1:pulse)).toFixed(2)+')'); gl.addColorStop(1,'rgba(0,0,0,0)');
@@ -621,8 +628,8 @@ function _skDrawNode(g,s,pulse){ const ch=curChar(); const n=s.n, r=nodeRank(rpg
     g.globalAlpha=owned?1:(avail?0.9:0.5); g.font='16px serif'; g.fillText(ab?ab.icon:'✦',s.x,s.y+1); g.globalAlpha=1; }
   else if(n.max>1){ g.fillStyle='#fff'; g.font='bold 11px "Pixelify Sans",monospace'; g.fillText(r+'/'+n.max,s.x,s.y+1); }
   else if(owned){ g.fillStyle='#fff'; g.font='bold 13px monospace'; g.fillText('✓',s.x,s.y+1); }
-  g.font='9px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=owned?'#e8d9b8':(avail?'#a9dea6':'#7a7484');
-  g.fillText(n.name.length>14?n.name.slice(0,13)+'…':n.name, s.x, s.y+R+3);
+  g.font='8px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=owned?'#e8d9b8':(avail?'#a9dea6':'#7a7484');
+  g.fillText(n.name.length>11?n.name.slice(0,10)+'…':n.name, s.x, s.y+R+2);
 }
 function _skDrawAsc(g,s,pulse,chosen){ const ch=curChar(); const a=s.a, isC=chosen&&chosen.id===a.id, ready=ascendReady(ch.cls,rpg), sel=_skSel===a.id, R=24;
   if(isC||ready){ const gl=g.createRadialGradient(s.x,s.y,2,s.x,s.y,R*1.8);
