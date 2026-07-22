@@ -91,24 +91,28 @@
 <button id="shopBtn">🏪 SHOP</button>
 <button id="invBtn">🎒</button>
 <button id="loadBtn">⚔️</button>
+<button id="skillBtn">🌟</button>
 <button id="abBtn">—</button>
-<div class="scr" id="invScr" style="background:rgba(9,7,12,.9);"><div id="invCard">
- <div class="mtitle" style="font-size:22px;">EQUIPMENT</div>
- <div id="eqTop">
-  <div id="eqPortrait"><canvas id="dollCv" width="96" height="120"></canvas></div>
-  <div id="eqSlots"></div>
+<div class="scr" id="invScr" style="background:rgba(9,7,12,.9);"><div id="invCard"><div id="invInner">
+ <div id="invTitle">EQUIPMENT</div>
+ <div id="eqDoll">
+  <div class="eqSlot" data-slot="helm"><canvas class="eqCv" width="52" height="52"></canvas><span class="eqTb"></span><span class="eqLbl">Helm</span></div>
+  <div class="eqSlot" data-slot="wpn"><canvas class="eqCv" width="52" height="52"></canvas><span class="eqTb"></span><span class="eqLbl">Weapon</span></div>
+  <div id="eqPortrait"><canvas id="dollCv" width="104" height="134"></canvas></div>
+  <div class="eqSlot" data-slot="arm"><canvas class="eqCv" width="52" height="52"></canvas><span class="eqTb"></span><span class="eqLbl">Armor</span></div>
+  <div class="eqSlot" data-slot="ring"><canvas class="eqCv" width="52" height="52"></canvas><span class="eqTb"></span><span class="eqLbl">Ring</span></div>
  </div>
  <div id="eqStats"></div>
- <div class="mnote" id="invSel" style="min-height:26px;color:#d8d2c8;margin-top:8px;">Tap an item</div>
- <div style="display:flex;gap:8px;">
+ <div id="satHead">SATCHEL <span id="invInfo"></span></div>
+ <div id="invGrid" class="igrid"></div>
+ <div class="mnote" id="invSel" style="min-height:24px;color:#d8d2c8;">Tap an item</div>
+ <div id="invActs">
   <button class="mbtn dev" id="invEquip">Equip</button>
   <button class="mbtn dev" id="invSell">Sell</button>
   <button class="mbtn dev" id="invDrop">Discard</button>
  </div>
- <div class="mnote" id="invInfo" style="margin-top:6px;"></div>
- <div id="invGrid" class="igrid"></div>
  <button class="mbtn go" id="invClose">CLOSE</button>
-</div></div>
+</div></div></div>
 <div id="hud" style="display:none"><span id="lvlTxt">Lv 1</span><span>·</span><span id="hpTxt">HP 100</span><span>·</span><span id="goldTxt">0g</span><span>·</span><span id="roomTxt">Emberhearth</span><span>·</span><span id="killTxt">Kills 0</span></div>
 <div id="msg"></div>
 

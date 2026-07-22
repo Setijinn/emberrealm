@@ -84,6 +84,59 @@ function doAscend(cls,rpg,ascId){ const t=treeOf(cls); if(!t||rpg.ascension) ret
 function ascendInfo(cls,rpg){ const t=treeOf(cls); if(!t||!rpg.ascension) return null;
   return t.ascend.find(a=>a.id===rpg.ascension)||null; }
 
+// ----- skill tree UI screen -----
+function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg); grantPerkPoints(rpg);
+  let ov=document.getElementById('skillScr');
+  if(!ov){ ov=document.createElement('div'); ov.id='skillScr'; ov.addEventListener('click',_skillClick); document.body.appendChild(ov); }
+  ov.style.display='flex'; _skillRender(); }
+function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.style.display='none';
+  if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }
+function _skillClick(ev){ const t=ev.target.closest('[data-act]'); if(!t) return; const act=t.getAttribute('data-act');
+  const ch=curChar(); if(!ch) return;
+  if(act==='close'){ closeSkills(); return; }
+  if(act==='node'){ const id=t.getAttribute('data-id');
+    if(unlockNode(ch.cls,rpg,id)){ recalcStats(); saveRPG(); _skillRender(); navigator.vibrate&&navigator.vibrate(12); }
+    else navigator.vibrate&&navigator.vibrate(15); return; }
+  if(act==='respec'){ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skillRender(); } return; }
+  if(act==='ascend'){ const id=t.getAttribute('data-id'); const a=treeOf(ch.cls).ascend.find(x=>x.id===id);
+    if(a && confirm('Ascend to '+a.name+'? This is permanent.')){ if(doAscend(ch.cls,rpg,id)){ recalcStats(); saveRPG(); _skillRender(); } } return; }
+}
+function _skillRender(){ const ov=document.getElementById('skillScr'); const ch=curChar(); if(!ov||!ch) return;
+  const t=treeOf(ch.cls); const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))]; const cn=cc?cc.n:ch.cls;
+  if(!t){ ov.innerHTML='<div class="skWrap"><div class="skTitle">SKILLS · '+cn+'</div>'
+      +'<div class="skHint">This class’s skill tree is still being forged — the Knight’s is ready now, the rest are coming.</div>'
+      +'<button class="mbtn go" data-act="close" style="width:100%;margin-top:14px;">DONE</button></div>'; return; }
+  xpTreeInit(rpg);
+  let cols='';
+  for(const b of t.branches){ let nodes='';
+    for(const n of b.nodes){ const r=nodeRank(rpg,n.id), owned=r>0, maxed=r>=n.max, avail=nodeUnlockable(ch.cls,rpg,n);
+      const cls='skNode'+(owned?' owned':'')+(avail?' avail':'')+((!owned&&!avail)?' locked':'');
+      let pips=''; if(n.max>1) for(let i=0;i<n.max;i++) pips+='<i class="'+(i<r?'on':'')+'"></i>';
+      nodes+='<div class="'+cls+'" data-act="node" data-id="'+n.id+'">'
+        +'<div class="skNhead"><span class="skNname">'+n.name+'</span>'
+        +'<span class="skNcost">'+(maxed?'✓':(n.cost+'p'))+'</span></div>'
+        +'<div class="skNdesc">'+n.desc+'</div>'
+        +(pips?'<div class="skPips">'+pips+'</div>':'')+'</div>'; }
+    cols+='<div class="skCol"><div class="skBname" style="color:'+b.color+'">'+b.name+'</div>'+nodes+'</div>'; }
+  let asc; const chosen=ascendInfo(ch.cls,rpg);
+  if(chosen){ asc='<div class="skAscHead">✦ ASCENDED — '+chosen.name+'</div>'
+      +'<div class="skAscChosen" style="border-color:'+chosen.color+'"><b style="color:'+chosen.color+'">'+chosen.name+'</b>'
+      +'<div class="skNdesc">'+chosen.desc+'</div></div>'; }
+  else { const ready=ascendReady(ch.cls,rpg);
+    asc='<div class="skAscHead">ASCENSION '+(ready?'— choose your path':'— locked (reach Lv 40, spend 14 points)')+'</div><div class="skAscRow">';
+    for(const a of t.ascend){ asc+='<div class="skAsc'+(ready?' rdy':' lock')+'" '+(ready?('data-act="ascend" data-id="'+a.id+'"'):'')
+        +' style="border-color:'+(ready?a.color:'#39323f')+'"><b style="color:'+a.color+'">'+a.name+'</b>'
+        +'<div class="skNdesc">'+a.desc+'</div></div>'; }
+    asc+='</div>'; }
+  ov.innerHTML='<div class="skWrap">'
+    +'<div class="skTop"><div class="skTitle">SKILLS · '+cn+'</div><div class="skPts"><b>'+rpg.perkPts+'</b> points</div></div>'
+    +'<div class="skHint">Scarce points — specialize. Nodes need the one above them. Respec anytime.</div>'
+    +'<div class="skCols">'+cols+'</div>'
+    +asc
+    +'<div class="skBtns"><button class="mbtn" data-act="respec">RESPEC</button><button class="mbtn go" data-act="close">DONE</button></div>'
+    +'</div>';
+}
+
 // ----- aggregate all effects (nodes + ascension) into a stat/flag delta -----
 function treeStats(cls,rpg){
   const d={atk:0,def:0,hp:0,mp:0,spd:0,dex:0,wis:0,vit:0,hpPct:0,atkPct:0,crit:0,ls:0,thorns:0,dr:0,rof:0,cleave:0};

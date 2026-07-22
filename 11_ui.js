@@ -322,15 +322,28 @@ $s('mapClose2').addEventListener('click',closeMap);
 
 let invSelIdx=-1;
 function openInv(){ $s('invScr').style.display='flex'; invSelIdx=-1; paintInv(); }
+// paper-doll equipment sockets: draw each equipped item's sprite into its slot canvas
+function paintEqSlots(ch){ const cls=ch.cls, mt=CARMOR[cls]||'plate', wt=CWEAP[cls]||'sword';
+ const items={
+   helm: rpg.helm>=0 ? {k:'helm',mt:mt,t:rpg.helm} : null,
+   wpn:  rpg.wpnL ? {k:'wpn',wt:wt,t:11,leg:1} : {k:'wpn',wt:wt,t:rpg.wpn||0},
+   arm:  rpg.armL ? {k:'arm',mt:mt,t:11,leg:1} : {k:'arm',mt:mt,t:rpg.arm||0},
+   ring: rpg.ring ? {k:'ring',st:rpg.ring.st,t:rpg.ring.t} : null };
+ document.querySelectorAll('#eqDoll .eqSlot').forEach(el=>{
+   const it=items[el.getAttribute('data-slot')];
+   const cv=el.querySelector('.eqCv'), g=cv.getContext('2d'); g.imageSmoothingEnabled=false; g.clearRect(0,0,cv.width,cv.height);
+   const tb=el.querySelector('.eqTb');
+   if(it){ const sp=itemSprite(it);
+     if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cv.width-10)/sp.width,(cv.height-10)/sp.height)));
+       g.drawImage(sp,Math.round((cv.width-sp.width*sc)/2),Math.round((cv.height-sp.height*sc)/2),sp.width*sc,sp.height*sc); }
+     tb.textContent=it.leg?'★':('T'+(it.t+1)); tb.style.color=it.leg?'#ff9c50':tierCol(it.t); el.classList.add('filled');
+   } else { tb.textContent=''; el.classList.remove('filled'); } });
+}
 function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  if(!ch.inv) ch.inv=[];
  recalcStats();
  const ci=Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls)); const c=CLASSES[ci];
- $s('eqSlots').innerHTML=
-   '<div class="srow"><span>Weapon</span><span style="color:'+(rpg.wpnL?'#ff9c50':tierCol(rpg.wpn||0))+'">'+slotLabel('wpn')+'</span></div>'
-  +'<div class="srow"><span>Helm</span><span style="color:'+(rpg.helm>=0?tierCol(rpg.helm):'#8a8494')+'">'+slotLabel('helm')+'</span></div>'
-  +'<div class="srow"><span>Armor</span><span style="color:'+(rpg.armL?'#ff9c50':tierCol(rpg.arm||0))+'">'+slotLabel('arm')+'</span></div>'
-  +'<div class="srow"><span>Ring</span><span style="color:'+(rpg.ring?tierCol(rpg.ring.t):'#8a8494')+'">'+slotLabel('ring')+'</span></div>';
+ paintEqSlots(ch);
  function chip(l,v,col){ return '<div class="schip"><span>'+l+'</span><b'+(col?' style="color:'+col+'"':'')+'>'+v+'</b></div>'; }
  const S=player.stats||newStats();
  let sh='';
@@ -383,6 +396,7 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
 }
 $s('invBtn').addEventListener('click',openInv);
 $s('loadBtn').addEventListener('click',function(){ if(typeof openLoadout==='function') openLoadout(); });
+$s('skillBtn').addEventListener('click',function(){ if(typeof openSkills==='function') openSkills(); });
 $s('invClose').addEventListener('click',()=>{$s('invScr').style.display='none';});
 $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it||!canEquip(it,ch)) return;
@@ -579,6 +593,8 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  $s('mapBtn').style.display='none'; $s('mapScr').style.display='none';
  if($s('loadBtn'))$s('loadBtn').style.display='none';
  if($s('loadScr'))$s('loadScr').style.display='none';
+ if($s('skillBtn'))$s('skillBtn').style.display='none';
+ if($s('skillScr'))$s('skillScr').style.display='none';
  if($s('sheetScr'))$s('sheetScr').style.display='none'; shopNear=false;}
 function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr'])$s(s).style.display='none';}
 function refreshUserList(){
@@ -669,7 +685,8 @@ function play(){
  hudRPG();
  hideAll(); $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
  $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex';
- if($s('loadBtn'))$s('loadBtn').style.display='flex'; inGame=true;
+ if($s('loadBtn'))$s('loadBtn').style.display='flex';
+ if($s('skillBtn'))$s('skillBtn').style.display='flex'; inGame=true;
  const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
 }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
