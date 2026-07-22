@@ -519,7 +519,8 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  if(rg) addSlot(gearBaseStats('ring',rg.t,rg.st),'ring');
  // ---- skill-tree flat stats fold in before deriving; % / flags applied after
  const T=(typeof treeStats==='function')?treeStats(ch.cls,rpg):null;
- if(T){ st.atk+=T.atk; st.def+=T.def; st.hp+=T.hp; st.mp+=T.mp; st.dex+=T.dex; st.wis+=T.wis; st.vit+=T.vit; st.spd=st.spd*(1+T.spd); }
+ if(T){ st.atk+=T.atk; st.def+=T.def; st.hp+=T.hp; st.mp+=T.mp; st.dex+=T.dex; st.wis+=T.wis; st.vit+=T.vit;
+   st.luck+=T.luck; st.fort+=T.fort; st.spd=st.spd*(1+T.spd); }
  for(const k of STATS) st[k]=Math.max(0,Math.round(st[k]));
  player.stats=st;
  // ---- derive combat values from the 10 stats
@@ -547,11 +548,15 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
    player.dmg=Math.max(1,Math.round(player.dmg*(1+T.atkPct)));
    player.dr=Math.min(0.88, player.dr+T.dr);
    player.crit=Math.min(0.90, player.crit+T.crit);
+   player.critMult+=T.critMult;
    player.ls=player.ls+T.ls;
-   player.pierce=player.pierce+T.cleave;
+   player.pierce=player.pierce+T.cleave+T.pierce;
+   player.shots=player.shots+T.shots;
    player.thorns=T.thorns;
-   if(T.rof>0) player.fireRate=player.fireRate/(1+T.rof);
-   player.spd=player.spd; }
+   player.mpregen+=T.mpregen; player.regen+=T.regen;
+   player.abilPow+=T.abilPow; player.projSpd+=T.projSpd;
+   if(T.slow>0) player.slowShot=true;
+   if(T.rof>0) player.fireRate=player.fireRate/(1+T.rof); }
  player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht};
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }
