@@ -516,58 +516,124 @@ function doAscend(cls,rpg,ascId){ const t=treeOf(cls); if(!t||rpg.ascension) ret
 function ascendInfo(cls,rpg){ const t=treeOf(cls); if(!t||!rpg.ascension) return null;
   return t.ascend.find(a=>a.id===rpg.ascension)||null; }
 
-// ----- skill tree UI screen -----
+// ----- skill tree UI: a literal node-tree on canvas, nodes linked to prerequisites -----
+let _skNodeImg=(typeof window!=='undefined')?(()=>{const i=new Image();i.src='assets/ui/skill_node.png';return i;})():null;
+function _skFrameReady(){ return _skNodeImg&&_skNodeImg.complete&&_skNodeImg.naturalWidth>0; }
+let _skLayout=null, _skSel=null, _skRaf=0;
+
 function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg); grantPerkPoints(rpg);
   let ov=document.getElementById('skillScr');
-  if(!ov){ ov=document.createElement('div'); ov.id='skillScr'; ov.addEventListener('click',_skillClick); document.body.appendChild(ov); }
-  ov.style.display='flex'; _skillRender(); }
-function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.style.display='none';
-  if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }
-function _skillClick(ev){ const t=ev.target.closest('[data-act]'); if(!t) return; const act=t.getAttribute('data-act');
-  const ch=curChar(); if(!ch) return;
-  if(act==='close'){ closeSkills(); return; }
-  if(act==='node'){ const id=t.getAttribute('data-id');
-    if(unlockNode(ch.cls,rpg,id)){ recalcStats(); saveRPG(); _skillRender(); navigator.vibrate&&navigator.vibrate(12); }
-    else navigator.vibrate&&navigator.vibrate(15); return; }
-  if(act==='respec'){ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skillRender(); } return; }
-  if(act==='ascend'){ const id=t.getAttribute('data-id'); const a=treeOf(ch.cls).ascend.find(x=>x.id===id);
-    if(a && confirm('Ascend to '+a.name+'? This is permanent.')){ if(doAscend(ch.cls,rpg,id)){ recalcStats(); saveRPG(); _skillRender(); } } return; }
-}
-function _skillRender(){ const ov=document.getElementById('skillScr'); const ch=curChar(); if(!ov||!ch) return;
-  const t=treeOf(ch.cls); const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))]; const cn=cc?cc.n:ch.cls;
-  if(!t){ ov.innerHTML='<div class="skWrap"><div class="skTitle">SKILLS · '+cn+'</div>'
-      +'<div class="skHint">This class’s skill tree is still being forged — the Knight’s is ready now, the rest are coming.</div>'
-      +'<button class="mbtn go" data-act="close" style="width:100%;margin-top:14px;">DONE</button></div>'; return; }
-  xpTreeInit(rpg);
-  let cols='';
-  for(const b of t.branches){ let nodes='';
-    for(const n of b.nodes){ const r=nodeRank(rpg,n.id), owned=r>0, maxed=r>=n.max, avail=nodeUnlockable(ch.cls,rpg,n);
-      const cls='skNode'+(owned?' owned':'')+(avail?' avail':'')+((!owned&&!avail)?' locked':'');
-      let pips=''; if(n.max>1) for(let i=0;i<n.max;i++) pips+='<i class="'+(i<r?'on':'')+'"></i>';
-      nodes+='<div class="'+cls+'" data-act="node" data-id="'+n.id+'">'
-        +'<div class="skNhead"><span class="skNname">'+n.name+'</span>'
-        +'<span class="skNcost">'+(maxed?'✓':(n.cost+'p'))+'</span></div>'
-        +'<div class="skNdesc">'+n.desc+'</div>'
-        +(pips?'<div class="skPips">'+pips+'</div>':'')+'</div>'; }
-    cols+='<div class="skCol"><div class="skBname" style="color:'+b.color+'">'+b.name+'</div>'+nodes+'</div>'; }
-  let asc; const chosen=ascendInfo(ch.cls,rpg);
-  if(chosen){ asc='<div class="skAscHead">✦ ASCENDED — '+chosen.name+'</div>'
-      +'<div class="skAscChosen" style="border-color:'+chosen.color+'"><b style="color:'+chosen.color+'">'+chosen.name+'</b>'
-      +'<div class="skNdesc">'+chosen.desc+'</div></div>'; }
-  else { const ready=ascendReady(ch.cls,rpg);
-    asc='<div class="skAscHead">ASCENSION '+(ready?'— choose your path':'— locked (reach Lv 40, spend 14 points)')+'</div><div class="skAscRow">';
-    for(const a of t.ascend){ asc+='<div class="skAsc'+(ready?' rdy':' lock')+'" '+(ready?('data-act="ascend" data-id="'+a.id+'"'):'')
-        +' style="border-color:'+(ready?a.color:'#39323f')+'"><b style="color:'+a.color+'">'+a.name+'</b>'
-        +'<div class="skNdesc">'+a.desc+'</div></div>'; }
-    asc+='</div>'; }
-  ov.innerHTML='<div class="skWrap">'
-    +'<div class="skTop"><div class="skTitle">SKILLS · '+cn+'</div><div class="skPts"><b>'+rpg.perkPts+'</b> points</div></div>'
-    +'<div class="skHint">Scarce points — specialize. Nodes need the one above them. Respec anytime.</div>'
-    +'<div class="skCols">'+cols+'</div>'
-    +asc
-    +'<div class="skBtns"><button class="mbtn" data-act="respec">RESPEC</button><button class="mbtn go" data-act="close">DONE</button></div>'
+  if(!ov){ ov=document.createElement('div'); ov.id='skillScr'; document.body.appendChild(ov); }
+  ov.style.display='flex';
+  ov.innerHTML='<div class="skWrap2">'
+    +'<div class="skTop"><div class="skTitle" id="skTitle"></div><div class="skPts" id="skPts"></div></div>'
+    +'<div class="skHint">Tap a node to inspect · learn from the trunk up · branches end in ascension ✦</div>'
+    +'<div class="skCanWrap"><canvas id="skillCv" width="690" height="520"></canvas></div>'
+    +'<div class="skDetail" id="skDetail"></div>'
+    +'<div class="skBtns"><button class="mbtn" id="skRespec">RESPEC</button><button class="mbtn go" id="skDone">DONE</button></div>'
     +'</div>';
+  const cv=document.getElementById('skillCv'); cv.addEventListener('pointerdown',_skClick);
+  document.getElementById('skRespec').onclick=()=>{ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skSel=null; _skRefresh(); } };
+  document.getElementById('skDone').onclick=closeSkills;
+  _skSel=null; _skBuildLayout(ch.cls); _skRefresh(); _skStartAnim();
 }
+function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.style.display='none'; _skStopAnim();
+  if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }
+
+// position every node: 3 branch sub-trees growing UP from a trunk root, ascensions at top
+function _skBuildLayout(cls){ const cv=document.getElementById('skillCv'); const t=treeOf(cls); if(!cv||!t){ _skLayout=null; return; }
+  const W=cv.width, H=cv.height; const nodes=[]; const ascY=54, topY=132, botY=H-116;
+  t.branches.forEach((b,bi)=>{ const cx=Math.round(W*(bi+0.5)/3);
+    const depth={}; const dep=(n)=>{ if(depth[n.id]!=null) return depth[n.id]; let d=0;
+      for(const r of (n.req||[])){ const rn=b.nodes.find(x=>x.id===r); if(rn) d=Math.max(d,dep(rn)+1); } return depth[n.id]=d; };
+    b.nodes.forEach(dep); const maxD=Math.max(1,...b.nodes.map(n=>depth[n.id]));
+    const rows={}; b.nodes.forEach(n=>{ (rows[depth[n.id]]=rows[depth[n.id]]||[]).push(n); });
+    for(const d in rows){ const row=rows[d], y=Math.round(botY-(d/maxD)*(botY-topY));
+      row.forEach((n,i)=>{ nodes.push({n:n,bi:bi,x:cx+Math.round((i-(row.length-1)/2)*60),y:y,color:b.color,root:+d===0,top:+d===maxD}); }); }
+  });
+  t.ascend.forEach((a,i)=>{ nodes.push({a:a,x:Math.round(W*(i+0.5)/3),y:ascY,color:a.color}); });
+  _skLayout={nodes:nodes,W:W,H:H,trunkX:Math.round(W/2),trunkY:H-40};
+}
+function _skBranchLine(g,x1,y1,x2,y2,col,w,a){ g.save(); g.globalAlpha=a; g.strokeStyle=col; g.lineWidth=w; g.lineCap='round';
+  const my=(y1+y2)/2; g.beginPath(); g.moveTo(x1,y1); g.bezierCurveTo(x1,my,x2,my,x2,y2); g.stroke(); g.restore(); }
+function _skDraw(){ const cv=document.getElementById('skillCv'); if(!cv||!_skLayout){ return; } const g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+  const ch=curChar(); if(!ch) return; const cls=ch.cls; const W=_skLayout.W,H=_skLayout.H;
+  g.clearRect(0,0,W,H); const bg=g.createRadialGradient(W/2,H*0.62,40,W/2,H*0.62,H*0.95); bg.addColorStop(0,'#171019'); bg.addColorStop(1,'#0b090f'); g.fillStyle=bg; g.fillRect(0,0,W,H);
+  const pulse=0.5+Math.sin(performance.now()/430)*0.5;
+  const byId={}; for(const s of _skLayout.nodes) if(s.n) byId[s.n.id]=s;
+  // trunk -> each branch root
+  for(const s of _skLayout.nodes){ if(s.n&&s.root){ const owned=nodeRank(rpg,s.n.id)>0;
+    _skBranchLine(g,_skLayout.trunkX,_skLayout.trunkY,s.x,s.y, owned?'#8a6a2e':'#3a3442', owned?5:4, 0.7); } }
+  // req -> node links
+  for(const s of _skLayout.nodes){ if(!s.n) continue; const childOwned=nodeRank(rpg,s.n.id)>0;
+    for(const rq of (s.n.req||[])){ const p=byId[rq]; if(!p) continue; const reqOwned=nodeRank(rpg,rq)>0;
+      _skBranchLine(g,p.x,p.y,s.x,s.y, childOwned?'#ffc94d':(reqOwned?s.color:'#3a3442'), childOwned?4.5:3, childOwned?0.95:(reqOwned?0.75:0.4)); } }
+  // branch tops -> ascension (faint aspiration lines)
+  for(const s of _skLayout.nodes){ if(s.n&&s.top){ const asc=_skLayout.nodes.find(a=>a.a&&a.x===Math.round(_skLayout.W*(s.bi+0.5)/3));
+    if(asc) _skBranchLine(g,s.x,s.y,asc.x,asc.y,'#2c2633',2,0.3); } }
+  // trunk root emblem
+  g.fillStyle='#241b33'; g.beginPath(); g.arc(_skLayout.trunkX,_skLayout.trunkY,16,0,6.29); g.fill();
+  g.lineWidth=2; g.strokeStyle='#7a4a1e'; g.stroke();
+  const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===cls))];
+  g.font='16px serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(cc?cc.ic:'★',_skLayout.trunkX,_skLayout.trunkY+1);
+  for(const s of _skLayout.nodes){ if(s.n) _skDrawNode(g,s,pulse); }
+  const chosen=ascendInfo(cls,rpg);
+  for(const s of _skLayout.nodes){ if(s.a) _skDrawAsc(g,s,pulse,chosen); }
+  g.textAlign='left'; g.textBaseline='alphabetic';
+}
+function _skDrawNode(g,s,pulse){ const ch=curChar(); const n=s.n, r=nodeRank(rpg,n.id), owned=r>0, avail=nodeUnlockable(ch.cls,rpg,n), sel=_skSel===n.id, R=21;
+  const col=owned?'#ffc94d':(avail?'#8fd48c':'#5a5464');
+  if(owned||avail){ const gl=g.createRadialGradient(s.x,s.y,2,s.x,s.y,R*1.7);
+    gl.addColorStop(0,(owned?'rgba(255,201,77,':'rgba(143,212,140,')+(0.34*(owned?1:pulse)).toFixed(2)+')'); gl.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=gl; g.beginPath(); g.arc(s.x,s.y,R*1.7,0,6.29); g.fill(); }
+  if(_skFrameReady()){ g.globalAlpha=owned?1:(avail?0.95:0.55); g.drawImage(_skNodeImg,s.x-R,s.y-R,R*2,R*2); g.globalAlpha=1; }
+  else { g.fillStyle='#141019'; g.beginPath(); g.arc(s.x,s.y,R,0,6.29); g.fill(); }
+  g.fillStyle=s.color+(owned?'dd':(avail?'99':'44')); g.beginPath(); g.arc(s.x,s.y,R*0.52,0,6.29); g.fill();
+  g.lineWidth=sel?3:2; g.strokeStyle=sel?'#fff':col; g.beginPath(); g.arc(s.x,s.y,R,0,6.29); g.stroke();
+  g.textAlign='center'; g.textBaseline='middle';
+  if(n.max>1){ g.fillStyle='#fff'; g.font='bold 11px "Pixelify Sans",monospace'; g.fillText(r+'/'+n.max,s.x,s.y+1); }
+  else if(owned){ g.fillStyle='#fff'; g.font='bold 13px monospace'; g.fillText('✓',s.x,s.y+1); }
+  g.font='9px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=owned?'#e8d9b8':(avail?'#a9dea6':'#7a7484');
+  g.fillText(n.name.length>14?n.name.slice(0,13)+'…':n.name, s.x, s.y+R+3);
+}
+function _skDrawAsc(g,s,pulse,chosen){ const ch=curChar(); const a=s.a, isC=chosen&&chosen.id===a.id, ready=ascendReady(ch.cls,rpg), sel=_skSel===a.id, R=24;
+  if(isC||ready){ const gl=g.createRadialGradient(s.x,s.y,2,s.x,s.y,R*1.8);
+    gl.addColorStop(0,'rgba(212,185,106,'+(0.4*(isC?1:pulse)).toFixed(2)+')'); gl.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gl; g.beginPath(); g.arc(s.x,s.y,R*1.8,0,6.29); g.fill(); }
+  g.save(); g.translate(s.x,s.y); g.rotate(Math.PI/4);
+  g.fillStyle=isC?a.color:'#141019'; g.fillRect(-R*0.72,-R*0.72,R*1.44,R*1.44);
+  g.lineWidth=sel?3:2; g.strokeStyle= chosen?(isC?'#fff':'#39323f') : (ready?a.color:'#4a4454'); g.strokeRect(-R*0.72,-R*0.72,R*1.44,R*1.44);
+  g.restore();
+  g.textAlign='center'; g.textBaseline='middle'; g.font='13px serif'; g.fillStyle=isC?'#fff':(chosen?'#5a5464':a.color); g.fillText('✦',s.x,s.y+1);
+  g.font='bold 10px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=isC?'#fff':(chosen?'#6a6474':a.color); g.fillText(a.name,s.x,s.y+R+3);
+}
+function _skClick(ev){ const cv=document.getElementById('skillCv'); if(!cv||!_skLayout) return; const rect=cv.getBoundingClientRect();
+  const sx=(ev.clientX-rect.left)*(cv.width/rect.width), sy=(ev.clientY-rect.top)*(cv.height/rect.height);
+  for(const s of _skLayout.nodes){ const R=s.a?30:26; if(Math.hypot(sx-s.x,sy-s.y)<R){ _skSel=s.n?s.n.id:s.a.id; navigator.vibrate&&navigator.vibrate(8); _skRefresh(); return; } }
+}
+function _skDetailBar(){ const el=document.getElementById('skDetail'); const ch=curChar(); if(!el||!ch) return; const sel=_skSel;
+  let info='<span class="skDhint">Select a node to inspect it.</span>', act='';
+  if(sel){ const n=nodeById(ch.cls,sel);
+    if(n){ const r=nodeRank(rpg,n.id), maxed=r>=n.max, avail=nodeUnlockable(ch.cls,rpg,n);
+      info='<div class="skDname">'+n.name+' <span class="skDrank">'+r+'/'+n.max+'</span></div><div class="skDdesc">'+n.desc+'</div>';
+      act = maxed?'<button class="mbtn go" disabled>MAXED</button>'
+        : '<button class="mbtn go" id="skLearn"'+(avail?'':' disabled')+'>LEARN · '+n.cost+'p</button>';
+    } else { const t=treeOf(ch.cls); const a=t.ascend.find(x=>x.id===sel);
+      if(a){ const chosen=ascendInfo(ch.cls,rpg), isC=chosen&&chosen.id===a.id, ready=ascendReady(ch.cls,rpg);
+        info='<div class="skDname" style="color:'+a.color+'">✦ '+a.name+'</div><div class="skDdesc">'+a.desc+'</div>';
+        act = isC?'<button class="mbtn go" disabled>ASCENDED</button>'
+          : (chosen?'<button class="mbtn" disabled>already ascended</button>'
+          : '<button class="mbtn go" id="skAsc"'+(ready?'':' disabled')+'>'+(ready?'ASCEND':'Lv40 + 14 pts')+'</button>'); } } }
+  el.innerHTML='<div class="skDinfo">'+info+'</div><div class="skDact">'+act+'</div>';
+  const lb=document.getElementById('skLearn'); if(lb) lb.onclick=()=>{ if(unlockNode(ch.cls,rpg,sel)){ recalcStats(); saveRPG(); _skRefresh(); navigator.vibrate&&navigator.vibrate(12);} else navigator.vibrate&&navigator.vibrate(15); };
+  const ab=document.getElementById('skAsc'); if(ab) ab.onclick=()=>{ const a=treeOf(ch.cls).ascend.find(x=>x.id===sel); if(a&&confirm('Ascend to '+a.name+'? This is permanent.')){ if(doAscend(ch.cls,rpg,sel)){ recalcStats(); saveRPG(); _skRefresh(); } } };
+}
+function _skRefresh(){ const ch=curChar(); if(!ch) return; const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))];
+  const tt=document.getElementById('skTitle'); if(tt) tt.textContent='SKILLS · '+(cc?cc.n:ch.cls);
+  const pp=document.getElementById('skPts'); if(pp) pp.innerHTML='<b>'+rpg.perkPts+'</b> points';
+  _skDetailBar(); _skDraw();
+}
+function _skStartAnim(){ _skStopAnim(); const step=()=>{ const ov=document.getElementById('skillScr'); if(!ov||ov.style.display==='none'){ _skRaf=0; return; } _skDraw(); _skRaf=requestAnimationFrame(step); }; _skRaf=requestAnimationFrame(step); }
+function _skStopAnim(){ if(_skRaf) cancelAnimationFrame(_skRaf); _skRaf=0; }
 
 // ----- aggregate all effects (nodes + ascension) into a stat/flag delta -----
 function treeStats(cls,rpg){
