@@ -51,7 +51,10 @@ if(typeof window!=='undefined') for(let b=0;b<=8;b++) _bossImg[b]=_img('assets/m
 function _frames(dir,name,n){ const a=[]; if(typeof window!=='undefined') for(let i=0;i<n;i++) a.push(_img(dir+'/'+name+'_'+i+'.png')); return a; }
 const _mobAnim={}, _bossAnim={};
 if(typeof window!=='undefined'){
-  _mobAnim.c={idle:_frames('assets/mobs/anim/hound','idle',7), attack:_frames('assets/mobs/anim/hound','attack',7)};
+  const _anim=(name)=>({idle:_frames('assets/mobs/anim/'+name,'idle',7), attack:_frames('assets/mobs/anim/'+name,'attack',7)});
+  _mobAnim.c=_anim('hound');
+  _mobAnim.s=_anim('cultist');
+  for(let b=0;b<=8;b++) _bossAnim[b]=_anim('boss_'+b);
 }
 
 // All 17 classes have real PixelLab art vendored to assets/<class>/.
