@@ -359,12 +359,25 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  glow.addColorStop(0,th.p+'3c'); glow.addColorStop(1,'rgba(0,0,0,0)');
  d2.fillStyle=glow; d2.fillRect(0,0,dc.width,dc.height);
  d2.fillStyle='rgba(0,0,0,0.4)'; d2.beginPath(); d2.ellipse(dc.width/2,dc.height-13,28,6,0,0,6.29); d2.fill();
- const hs=heroSprite(player.look||{cls:ch.cls,helmT:-1},0); const sc=5;
- const hx=Math.round((dc.width-hs.width*sc)/2), hy=dc.height-16-hs.height*sc;
- d2.drawImage(hs,hx,hy,hs.width*sc,hs.height*sc);
- const ws=wpnSpr(CWEAP[ch.cls]||'sword',rpg.wpnL?11:(rpg.wpn||0));
- d2.save(); d2.translate(hx+hs.width*sc-4,hy+hs.height*sc*0.6); d2.rotate(-1.1);
- d2.drawImage(ws,-2,-ws.height*1.1,ws.width*2.2,ws.height*2.2); d2.restore();
+ // portrait: prefer the real PixelLab class sprite (south-facing idle); it already holds
+ // the weapon, so no separate weapon overlay. Fall back to the procedural hero if not loaded.
+ let drewReal=false;
+ if(typeof _emberReady!=='undefined' && _emberReady[ch.cls] && typeof _emberIdle==='function'){
+  const im=_emberIdle(ch.cls,'s');
+  if(im && im.complete && im.naturalWidth){
+   const sc=Math.min((dc.width-8)/im.naturalWidth,(dc.height-14)/im.naturalHeight);
+   const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
+   d2.drawImage(im,Math.round((dc.width-w)/2),Math.round(dc.height-8-h),w,h); drewReal=true;
+  }
+ }
+ if(!drewReal){
+  const hs=heroSprite(player.look||{cls:ch.cls,helmT:-1},0); const sc=5;
+  const hx=Math.round((dc.width-hs.width*sc)/2), hy=dc.height-16-hs.height*sc;
+  d2.drawImage(hs,hx,hy,hs.width*sc,hs.height*sc);
+  const ws=wpnSpr(CWEAP[ch.cls]||'sword',rpg.wpnL?11:(rpg.wpn||0));
+  d2.save(); d2.translate(hx+hs.width*sc-4,hy+hs.height*sc*0.6); d2.rotate(-1.1);
+  d2.drawImage(ws,-2,-ws.height*1.1,ws.width*2.2,ws.height*2.2); d2.restore();
+ }
  $s('invInfo').textContent=ch.inv.length+' / 20 satchel slots';
  const g=$s('invGrid'); g.innerHTML='';
  ch.inv.forEach((it,i)=>{ const d=document.createElement('div'); d.className='islot'+(i===invSelIdx?' sel':'');
