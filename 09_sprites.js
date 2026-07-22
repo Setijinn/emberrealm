@@ -336,11 +336,16 @@ function heroSprite(look,frame){
 }
 function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
- if(e.type==='c') blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip);
- else if(e.type==='s') blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip);
- else { const sp=(e.wb && sprBoss[e.ring])?sprBoss[e.ring]:sprTyrant;
-   const sc=(e.r*2.6)/sp.width;
-   blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,sc,flip); }
+ if(e.type==='c'){ const im=(typeof _mobHound!=='undefined')?_mobHound:null;
+   if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/im.width,flip);
+   else blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip); }
+ else if(e.type==='s'){ const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
+   if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/im.width,flip);
+   else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); }
+ else { const im=(typeof _bossImg!=='undefined')?_bossImg[e.ring]:null;
+   if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/im.width,flip);
+   else { const sp=(e.wb && sprBoss[e.ring])?sprBoss[e.ring]:sprTyrant;
+     blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/sp.width,flip); } }
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // ---------- hub / world decor ----------

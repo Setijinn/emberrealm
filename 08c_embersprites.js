@@ -41,6 +41,12 @@ const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (u
   _bandTone[8]='rgba(8,3,10,0.46)';     // molten: darker still, subdue the busy lava grid
 })();
 
+// Enemy sprites (PixelLab). Mobs (hound=c, cultist=s) + per-band boss images.
+const _mobHound = _img('assets/mobs/hound.png');
+const _mobCultist = _img('assets/mobs/cultist.png');
+const _bossImg = {};
+if(typeof window!=='undefined') for(let b=0;b<=8;b++) _bossImg[b]=_img('assets/mobs/boss_'+b+'.png');
+
 // All 17 classes have real PixelLab art vendored to assets/<class>/.
 // walk = 4 frames/dir; attack probed up to 8 (some dirs 5, some 7). West walk/attack
 // mirror East at render time, so only s/e/n are vendored/probed for those; idle has
