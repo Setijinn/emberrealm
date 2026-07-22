@@ -37,33 +37,33 @@ function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('emberrealm\u00b7'+s));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const CLASSES=[
- {id:'ranger',n:'Ranger',ic:'🏹',d:'Fast hands, thin armor.',hp:90,spd:205,dmg:9,fr:0.14},
- {id:'pyro',n:'Pyromancer',ic:'🔥',d:'Bolts that hit like a forge.',hp:80,spd:160,dmg:26,fr:0.38},
+ {id:'ranger',n:'Ranger',ic:'🏹',d:'Fast hands, thin armor.',hp:90,spd:205,dmg:9,fr:0.17},
+ {id:'pyro',n:'Pyromancer',ic:'🔥',d:'Bolts that hit like a forge.',hp:80,spd:160,dmg:26,fr:0.30},
  {id:'knight',n:'Knight',ic:'⚔️',d:'A walking wall of iron.',hp:190,spd:145,dmg:14,fr:0.30},
- {id:'rogue',n:'Rogue',ic:'🗡️',d:'Never where the blade lands.',hp:85,spd:230,dmg:8,fr:0.16},
+ {id:'rogue',n:'Rogue',ic:'🗡️',d:'Never where the blade lands.',hp:85,spd:230,dmg:8,fr:0.18},
  {id:'assassin',n:'Assassin',ic:'🔪',d:'One breath, one kill.',hp:88,spd:220,dmg:14,fr:0.20},
  {id:'cleric',n:'Cleric',ic:'⛑️',d:'Wounds close as fast as they open.',hp:115,spd:170,dmg:10,fr:0.24,regen:3},
  {id:'berserker',n:'Berserker',ic:'🪓',d:'Anger, weaponized.',hp:125,spd:185,dmg:19,fr:0.30},
- {id:'warlock',n:'Warlock',ic:'💀',d:'Every wound he deals feeds him.',hp:95,spd:170,dmg:16,fr:0.28,ls:0.12},
+ {id:'warlock',n:'Warlock',ic:'💀',d:'Every wound he deals feeds him.',hp:95,spd:170,dmg:16,fr:0.26,ls:0.12},
  {id:'frost',n:'Frostweaver',ic:'❄️',d:'Her bolts freeze the blood.',hp:100,spd:170,dmg:13,fr:0.26,slow:true},
  {id:'storm',n:'Stormcaller',ic:'⚡',d:'Lightning stops for no one.',hp:95,spd:180,dmg:12,fr:0.26,pierce:2},
- {id:'hunter',n:'Hunter',ic:'🐺',d:'Two arrows, one breath.',hp:105,spd:195,dmg:8,fr:0.22,shots:2,spread:0.10},
- {id:'monk',n:'Monk',ic:'🥋',d:'Speed is its own armor.',hp:105,spd:215,dmg:9,fr:0.18},
+ {id:'hunter',n:'Hunter',ic:'🐺',d:'Two arrows, one breath.',hp:105,spd:195,dmg:8,fr:0.24,shots:2,spread:0.10},
+ {id:'monk',n:'Monk',ic:'🥋',d:'Speed is its own armor.',hp:105,spd:215,dmg:9,fr:0.20},
  {id:'paladin',n:'Paladin',ic:'✨',d:'Faith holds the line.',hp:165,spd:155,dmg:12,fr:0.28,regen:2},
- {id:'necro',n:'Necromancer',ic:'🧟',d:'Death pays him tribute.',hp:90,spd:165,dmg:17,fr:0.30,ls:0.15},
- {id:'bard',n:'Bard',ic:'🎻',d:'Fights in tempo.',hp:100,spd:200,dmg:10,fr:0.20},
+ {id:'necro',n:'Necromancer',ic:'🧟',d:'Death pays him tribute.',hp:90,spd:165,dmg:17,fr:0.28,ls:0.15},
+ {id:'bard',n:'Bard',ic:'🎻',d:'Fights in tempo.',hp:100,spd:200,dmg:10,fr:0.22},
  {id:'shaman',n:'Shaman',ic:'🌀',d:'The spirits scatter wide.',hp:110,spd:175,dmg:6,fr:0.24,shots:3,spread:0.22},
  {id:'dragoon',n:'Dragoon',ic:'🐉',d:'Ember-blooded lancer.',hp:145,spd:175,dmg:16,fr:0.28},
 ];
 const $s=id=>document.getElementById(id);
 const WTYPE={
  sword:{n:'Sword',shots:3,spread:0.35,spd:380,life:0.28,size:6,dm:1.0,rof:1.0},
- dagger:{n:'Dagger',shots:2,spread:0.12,spd:560,life:0.28,size:4,dm:0.6,rof:0.6},
+ dagger:{n:'Dagger',shots:2,spread:0.12,spd:560,life:0.28,size:4,dm:0.7,rof:0.7},
  bow:{n:'Bow',shots:1,spd:640,life:1.2,size:5,dm:1.0,rof:1.0},
- xbow:{n:'Crossbow',shots:1,spd:760,life:1.3,size:6,dm:1.7,rof:1.7,pierce:1},
- staff:{n:'Staff',shots:2,par:11,spd:480,life:0.9,size:6,dm:0.85,rof:1.0},
- wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:0.9,rof:0.85},
- fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.7,rof:0.5},
+ xbow:{n:'Crossbow',shots:1,spd:760,life:1.3,size:6,dm:1.6,rof:1.7,pierce:1},
+ staff:{n:'Staff',shots:2,par:11,spd:480,life:0.9,size:6,dm:1.0,rof:1.0},
+ wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:1.0,rof:0.85},
+ fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.85,rof:0.66},
 };
 // Melee -> sword; rogue/assassin -> dagger; ranger/hunter/bard -> bow (swap to xbow, see WSWAP); monk -> fists.
 const CWEAP={rogue:'dagger',assassin:'dagger',monk:'fists',ranger:'bow',hunter:'bow',bard:'bow',
@@ -126,7 +126,7 @@ function levelStats(c,lvl){ const L=Math.max(0,lvl-1); const mt=CARMOR[c.id]||'p
  const cast=mt==='robe', agile=mt==='leather';
  return { atk:Math.round(L*1.6), def:Math.round(L*0.35), hp:Math.round(L*10),
   mp:Math.round(L*(cast?1.4:0.7)), vit:Math.round(L*0.5),
-  wis:Math.round(L*(cast?0.6:0.3)), dex:Math.round(L*(agile?0.4:0.2)),
+  wis:Math.round(L*(cast?0.6:0.3)), dex:Math.round(L*(cast?0.26:agile?0.26:0.22)),
   spd:Math.round(L*0.6), luck:Math.round(L*0.15), fort:Math.round(L*0.12) };
 }
 // fixed base stats for a gear piece by slot + tier (+ material / ring type)
@@ -489,7 +489,7 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  player.spd=st.spd;                                   // SPEED
  player.dmg=Math.max(1,Math.round(st.atk));           // ATTACK
  const wRof=(player.wt.rof||1)*(wL?(wL.rof||1):1);
- player.fireRate=c.fr*wRof/(1+st.dex*0.02);           // DEX -> attack speed
+ player.fireRate=c.fr*wRof/(1+st.dex*0.013);          // DEX -> attack speed (softened to curb runaway)
  player.projSpd=1+st.dex*0.012;                       // DEX -> projectile speed
  player.regen=0.8+st.vit*0.12;                        // VIT -> hp regen/sec
  player.maxmp=Math.max(10,Math.round(st.mp));         // MP -> mana pool
@@ -527,8 +527,9 @@ function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
   msg('LEVEL '+rpg.lvl,'the ember grows'); }
  saveRPG(); hudRPG(); }
 function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
- rpg.pots--; player.hp=Math.min(player.maxhp,player.hp+60); saveRPG(); hudRPG();
- texts.push({x:player.x,y:player.y-22,txt:'+60',col:'#7dc47a',life:1}); }
+ const heal=Math.max(60,Math.round(player.maxhp*0.35));   // scale with HP pool, not flat
+ rpg.pots--; player.hp=Math.min(player.maxhp,player.hp+heal); saveRPG(); hudRPG();
+ texts.push({x:player.x,y:player.y-22,txt:'+'+heal,col:'#7dc47a',life:1}); }
 
 
 $s('potBtn').addEventListener('click',usePotion);
