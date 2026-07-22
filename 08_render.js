@@ -45,7 +45,7 @@ function drawTileG(x,y){
     ctx.fillStyle=(x+y)%2?'#16303f':'#1a3848'; ctx.fillRect(tx,ty,TILE,TILE);
     const wn=Math.sin(performance.now()/700+x*0.9+y*1.7);
     if(wn>0.55){ ctx.fillStyle='rgba(200,230,240,0.10)'; ctx.fillRect(tx+6,ty+TILE/2-2,TILE-12,3); }
-  } else if('dgretk'.indexOf(c)>=0 && curRoom.rings){
+  } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
     const bd=grvBandXY(x,y);
     ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE);
     // ring boundary lines: darker edge where the neighbour is a different band

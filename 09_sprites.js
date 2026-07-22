@@ -533,14 +533,18 @@ function render(){
   const bob=Math.sin(pn*11)*(moving?1.8:0.5);
   ctx.globalAlpha = player.inv>0 ? (Math.sin(performance.now()/40)>0?0.45:1) : 1;
   const hframe = moving ? (1+(Math.floor(pn*8)%2)) : 0;
+  // Face the MOVEMENT direction while running; face aim when idle or attacking.
+  const _mv=(typeof stick!=='undefined')?stick.move:null;
+  const _moveAng=(moving && _mv && (_mv.dx||_mv.dy))?Math.atan2(_mv.dy,_mv.dx):aa;
+  const faceAng=(moving && player.atkT<=0)?_moveAng:aa;
   const _es = (typeof emberSprite==='function')
-    ? emberSprite(player.look||{cls:'knight'}, {aim:aa, moving, attacking:player.atkT>0, atkPhase:phase, clock:pn})
+    ? emberSprite(player.look||{cls:'knight'}, {aim:faceAng, moving, attacking:player.atkT>0, atkPhase:phase, clock:pn})
     : null;
   if(_es){
     // real PixelLab art: 92px sprite, scaled down; already holds its weapon
     blit(_es.img, player.x+lx, player.y-8+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
   } else {
-    blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(aa)<0);
+    blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
   }
   if(!_es && chW&&rpg && wtype!=='fists'){
     const tier=rpg.wpnL?11:(rpg.wpn||0);
