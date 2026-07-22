@@ -47,7 +47,18 @@ function drawTileG(x,y){
     if(wn>0.55){ ctx.fillStyle='rgba(200,230,240,0.10)'; ctx.fillRect(tx+6,ty+TILE/2-2,TILE-12,3); }
   } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
     const bd=grvBandXY(x,y);
-    ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE);
+    const _gset=_groundSet[bd];
+    if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
+      const hh=(x*131+y*57)>>>0, o=hh&3;   // per-cell flip (4 orientations) breaks the grid
+      // fiery zones (5-8): mix in the dark secondary tile to break the high-contrast lava grid
+      const g=(bd>=5 && hh%100<32)?GROUND_LO:GROUND_UP;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+      ctx.drawImage(_gset,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      const v=(hh>>2)%5;                    // subtle per-tile brightness noise
+      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); } }
+    else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }
     // ring boundary lines: darker edge where the neighbour is a different band
     if(x>0 && grvBandXY(x-1,y)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,2,TILE); }
     if(y>0 && grvBandXY(x,y-1)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,TILE,2); }
@@ -60,14 +71,24 @@ function drawTileG(x,y){
     else if(c==='e'){ if(h2(x*7,y)>0.72){ const gl=0.5+Math.sin(performance.now()/300+x+y)*0.35;
       ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')'; ctx.fillRect(tx+10,ty+TILE/2,TILE-20,3); } }
     else if(c==='t'){
-      ctx.fillStyle='#4a2f22'; ctx.fillRect(tx+TILE/2-4,ty+TILE/2,8,TILE/2-4);
-      ctx.fillStyle='#1f3520'; ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2-6,15,0,6.29); ctx.fill();
-      ctx.fillStyle='#2c4a2a'; ctx.beginPath(); ctx.arc(tx+TILE/2-4,ty+TILE/2-10,9,0,6.29); ctx.fill(); }
+      const _tr=_bandTree[bd];
+      if(_tr && _tr.naturalWidth){ ctx.imageSmoothingEnabled=false;
+        const tw=TILE*1.35, th=tw*_tr.height/_tr.width;
+        ctx.drawImage(_tr, tx+TILE/2-tw/2, ty+TILE-th+7, tw, th); }
+      else {
+        ctx.fillStyle='#4a2f22'; ctx.fillRect(tx+TILE/2-4,ty+TILE/2,8,TILE/2-4);
+        ctx.fillStyle='#1f3520'; ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2-6,15,0,6.29); ctx.fill();
+        ctx.fillStyle='#2c4a2a'; ctx.beginPath(); ctx.arc(tx+TILE/2-4,ty+TILE/2-10,9,0,6.29); ctx.fill(); } }
     else if(c==='k'){
-      ctx.fillStyle='#5d5666'; ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2+3,14,0,6.29); ctx.fill();
-      ctx.fillStyle='#726a80'; ctx.beginPath(); ctx.arc(tx+TILE/2-4,ty+TILE/2-1,8,0,6.29); ctx.fill();
-      ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2+3,14,0,6.29); ctx.stroke(); }
+      const _bo=_bandBoulder[bd];
+      if(_bo && _bo.naturalWidth){ ctx.imageSmoothingEnabled=false;
+        const bw=TILE*1.05, bh=bw*_bo.height/_bo.width;
+        ctx.drawImage(_bo, tx+TILE/2-bw/2, ty+TILE-bh+3, bw, bh); }
+      else {
+        ctx.fillStyle='#5d5666'; ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2+3,14,0,6.29); ctx.fill();
+        ctx.fillStyle='#726a80'; ctx.beginPath(); ctx.arc(tx+TILE/2-4,ty+TILE/2-1,8,0,6.29); ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2+3,14,0,6.29); ctx.stroke(); } }
   } else if(c==='f'){
     ctx.fillStyle=(x+y)%2?'#332318':'#3a281b'; ctx.fillRect(tx,ty,TILE,TILE);
     ctx.strokeStyle='rgba(0,0,0,.20)'; ctx.strokeRect(tx+1,ty+1,TILE-2,TILE-2);

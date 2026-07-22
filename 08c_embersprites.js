@@ -20,6 +20,27 @@ const EMBER_SC = 0.85;
 // HUD orb frame (PixelLab) — ornate hollow ring for the HP/MP globes.
 const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return i; })() : null;
 
+// Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
+function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
+const _groundSet={}, _bandTree={}, _bandBoulder={}, _bandTone={};
+const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (uniform across tilesets)
+(function(){
+  if(typeof window==='undefined') return;
+  for(let b=0;b<=8;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
+  _bandTree[0]=_img('assets/env/tree_grass.png');
+  _bandTree[1]=_img('assets/env/tree_pine.png');
+  _bandTree[2]=_img('assets/env/tree_willow.png');
+  const bGrass=_img('assets/env/boulder_grass.png'), bGrey=_img('assets/env/boulder_grey.png'),
+        bScorch=_img('assets/env/boulder_scorched.png'), bVolc=_img('assets/env/boulder_volcanic.png');
+  _bandBoulder[0]=_bandBoulder[1]=_bandBoulder[2]=bGrass;
+  _bandBoulder[3]=_bandBoulder[4]=bGrey;
+  _bandBoulder[5]=_bandBoulder[6]=bScorch;
+  _bandBoulder[7]=_bandBoulder[8]=bVolc;
+  _bandTone[0]='rgba(22,44,16,0.40)';   // toned-down vivid grass (per feedback)
+  _bandTone[7]='rgba(8,4,12,0.32)';     // calm the volcanic glow -> dark rock w/ glowing cracks
+  _bandTone[8]='rgba(8,3,10,0.46)';     // molten: darker still, subdue the busy lava grid
+})();
+
 // All 17 classes have real PixelLab art vendored to assets/<class>/.
 // walk = 4 frames/dir; attack probed up to 8 (some dirs 5, some 7). West walk/attack
 // mirror East at render time, so only s/e/n are vendored/probed for those; idle has
