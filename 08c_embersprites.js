@@ -47,6 +47,13 @@ const _mobCultist = _img('assets/mobs/cultist.png');
 const _bossImg = {};
 if(typeof window!=='undefined') for(let b=0;b<=8;b++) _bossImg[b]=_img('assets/mobs/boss_'+b+'.png');
 
+// Enemy frame animations (PixelLab objects). type/band -> {idle:[frames], attack:[frames]}
+function _frames(dir,name,n){ const a=[]; if(typeof window!=='undefined') for(let i=0;i<n;i++) a.push(_img(dir+'/'+name+'_'+i+'.png')); return a; }
+const _mobAnim={}, _bossAnim={};
+if(typeof window!=='undefined'){
+  _mobAnim.c={idle:_frames('assets/mobs/anim/hound','idle',7), attack:_frames('assets/mobs/anim/hound','attack',7)};
+}
+
 // All 17 classes have real PixelLab art vendored to assets/<class>/.
 // walk = 4 frames/dir; attack probed up to 8 (some dirs 5, some 7). West walk/attack
 // mirror East at render time, so only s/e/n are vendored/probed for those; idle has

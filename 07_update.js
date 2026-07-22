@@ -23,16 +23,17 @@ function update(dt){
 
   // enemies
   for(const e of enemies){
-    if(e.slowT>0)e.slowT-=dt; if(e.flash>0)e.flash-=dt;
+    if(e.slowT>0)e.slowT-=dt; if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt;
     const dx=player.x-e.x, dy=player.y-e.y, dd=Math.hypot(dx,dy)||1;
     if(e.type==='c'){
       moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
+      if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
       if(dd<e.r+player.r && player.inv<=0){ player.hp-=Math.max(1,Math.round(e.touch*(1-(player.dr||0)))); player.inv=0.7; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6); }
     }
     if(e.type==='s'){
       if(dd>200) moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
       e.fireT-=dt;
-      if(e.fireT<=0){ e.fireT=1.4; const base=Math.atan2(dy,dx);
+      if(e.fireT<=0){ e.fireT=1.4; e.animAtk=0.45; const base=Math.atan2(dy,dx);
         for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, 210); }
     }
     if(e.type==='B'){
@@ -52,6 +53,7 @@ function update(dt){
       }
       e.fireT-=dt;
       if(e.fireT<=0){
+        e.animAtk=0.5;
         const base=Math.atan2(dy,dx);
         if(pat==='aimed3'){ e.fireT=enraged?0.6:0.95;
           for(let i=-1;i<=1;i++) eFire(e,base+i*0.20,spd); }

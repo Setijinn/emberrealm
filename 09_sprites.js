@@ -334,18 +334,35 @@ function heroSprite(look,frame){
  if(!heroCache[k]) heroCache[k]=buildHero(cls,frame,at);
  return heroCache[k];
 }
+// pick the current animation frame for an enemy: attack burst (e.animAtk timer) else idle loop
+function _enemyFrame(anim,e,pn){
+  if(!anim) return null;
+  const atk = (e.animAtk>0 && anim.attack && anim.attack.length && anim.attack[0].naturalWidth);
+  const set = atk ? anim.attack : anim.idle;
+  if(!set || !set.length || !set[0].naturalWidth) return null;
+  let idx;
+  if(atk) idx = Math.min(set.length-1, Math.floor((1-e.animAtk/0.5)*set.length));
+  else idx = Math.floor(pn*7 + e.x*0.05) % set.length;
+  return set[idx];
+}
 function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
- if(e.type==='c'){ const im=(typeof _mobHound!=='undefined')?_mobHound:null;
-   if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/im.width,flip);
-   else blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip); }
- else if(e.type==='s'){ const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
-   if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/im.width,flip);
-   else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); }
- else { const im=(typeof _bossImg!=='undefined')?_bossImg[e.ring]:null;
-   if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/im.width,flip);
-   else { const sp=(e.wb && sprBoss[e.ring])?sprBoss[e.ring]:sprTyrant;
-     blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/sp.width,flip); } }
+ if(e.type==='c'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.c:null,e,pn);
+   if(fr) blit(fr,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/fr.width,flip);
+   else { const im=(typeof _mobHound!=='undefined')?_mobHound:null;
+     if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/im.width,flip);
+     else blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip); } }
+ else if(e.type==='s'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.s:null,e,pn);
+   if(fr) blit(fr,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/fr.width,flip);
+   else { const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
+     if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/im.width,flip);
+     else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
+ else { const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[e.ring]:null,e,pn);
+   if(fr) blit(fr,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/fr.width,flip);
+   else { const im=(typeof _bossImg!=='undefined')?_bossImg[e.ring]:null;
+     if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/im.width,flip);
+     else { const sp=(e.wb && sprBoss[e.ring])?sprBoss[e.ring]:sprTyrant;
+       blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/sp.width,flip); } } }
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // ---------- hub / world decor ----------
