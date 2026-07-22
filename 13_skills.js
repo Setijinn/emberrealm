@@ -624,8 +624,12 @@ function _skDrawNode(g,s,pulse){ const ch=curChar(); const n=s.n, r=nodeRank(rpg
   g.fillStyle=s.color+(owned?'dd':(avail?'99':'44')); g.beginPath(); g.arc(s.x,s.y,R*0.52,0,6.29); g.fill();
   g.lineWidth=sel?3:2; g.strokeStyle=sel?'#fff':col; g.beginPath(); g.arc(s.x,s.y,R,0,6.29); g.stroke();
   g.textAlign='center'; g.textBaseline='middle';
-  if(n.ability){ const ab=(typeof abilById==='function')?abilById(ch.cls,n.ability):null;   // ability-unlock node shows its icon
-    g.globalAlpha=owned?1:(avail?0.9:0.5); g.font='16px serif'; g.fillText(ab?ab.icon:'✦',s.x,s.y+1); g.globalAlpha=1; }
+  if(n.ability){ const ab=(typeof abilById==='function')?abilById(ch.cls,n.ability):null;   // ability-unlock node shows its art (or icon)
+    g.globalAlpha=owned?1:(avail?0.9:0.5);
+    const aim=(typeof abilImg==='function')?abilImg(n.ability):null;
+    if(aim){ const s2=R*1.66; g.save(); g.beginPath(); g.arc(s.x,s.y,R*0.9,0,6.29); g.clip(); g.drawImage(aim,s.x-s2/2,s.y-s2/2,s2,s2); g.restore(); }
+    else { g.font='16px serif'; g.fillText(ab?ab.icon:'✦',s.x,s.y+1); }
+    g.globalAlpha=1; }
   else if(n.max>1){ g.fillStyle='#fff'; g.font='bold 11px "Pixelify Sans",monospace'; g.fillText(r+'/'+n.max,s.x,s.y+1); }
   else if(owned){ g.fillStyle='#fff'; g.font='bold 13px monospace'; g.fillText('✓',s.x,s.y+1); }
   g.font='8px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=owned?'#e8d9b8':(avail?'#a9dea6':'#7a7484');

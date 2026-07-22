@@ -39,6 +39,12 @@ if(typeof window!=='undefined'){
   _itemArt['coin']=[0,1,2].map(b=>_img('assets/items/coin_'+b+'.png'));   // bronze/silver/gold
   _itemArt['potion']=[_img('assets/items/potion.png')];
 }
+// Ability art (PixelLab): a figure using each ability. Lazy-loaded by ability id
+// (assets/abilities/<id>.png); returns the image only once decoded, else null -> emoji.
+const _abilImgCache={};
+function abilImg(id){ if(typeof window==='undefined'||!id) return null;
+  if(_abilImgCache[id]===undefined){ const i=new Image(); i.src='assets/abilities/'+id+'.png'; _abilImgCache[id]=i; }
+  const im=_abilImgCache[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
   // coins use their denomination (0/1/2) as the band directly, not tier/4
   const band=(it.k==='coin')?Math.min(2,it.t||0):Math.min(2,Math.floor((it.t||0)/4)); let key=null;

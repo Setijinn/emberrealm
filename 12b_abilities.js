@@ -367,8 +367,11 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
     ctx.fillStyle= a?'rgba(18,14,24,0.82)':'rgba(18,14,24,0.45)'; ctx.fill();
     if(a){ const cd=abilCd(a.id), afford=(player.mp||0)>=a.mp;
       ctx.globalAlpha=(cd>0||!afford)?0.4:1;
-      ctx.font=Math.round(b.r*1.05)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(a.icon,b.x,b.y+1);
+      const aim=(typeof abilImg==='function')?abilImg(a.id):null;
+      if(aim){ const s=b.r*1.7; ctx.save(); ctx.beginPath(); ctx.arc(b.x,b.y,b.r*0.92,0,6.29); ctx.clip();
+        ctx.drawImage(aim,b.x-s/2,b.y-s/2,s,s); ctx.restore(); }
+      else { ctx.font=Math.round(b.r*1.05)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(a.icon,b.x,b.y+1); }
       ctx.globalAlpha=1;
       if(cd>0){ const frac=Math.min(1,cd/a.cd);
         ctx.beginPath(); ctx.moveTo(b.x,b.y);
@@ -406,13 +409,15 @@ function _loadClick(ev){ const t=ev.target.closest('[data-act]'); if(!t) return;
     loadSel=(loadSel+1)%3;                      // advance to next slot for quick fill
     saveRPG(); _loadRender(); return; }
 }
+// emoji sits behind; the ability image (if it exists) covers it, else onerror removes it
+function _abilIcHtml(a,emoji){ return emoji+'<img class="ldIcImg" src="assets/abilities/'+a.id+'.png" alt="" onerror="this.remove()">'; }
 function _loadRender(){ const ov=document.getElementById('loadScr'); const ch=curChar(); if(!ov||!ch) return;
   const pool=classPool(ch.cls);
   let slots='';
   for(let i=0;i<3;i++){ const a=rpg.loadout[i]?abilById(ch.cls,rpg.loadout[i]):null;
     slots+='<div class="ldSlot'+(i===loadSel?' sel':'')+'" data-act="slot" data-i="'+i+'">'
       +'<div class="ldNum">'+(i+1)+'</div>'
-      +'<div class="ldIc">'+(a?a.icon:'＋')+'</div>'
+      +'<div class="ldIc">'+(a?_abilIcHtml(a,a.icon):'＋')+'</div>'
       +'<div class="ldNm">'+(a?a.name:'empty')+'</div>'
       +(a?'<div class="ldX" data-act="clear">✕</div>':'')+'</div>'; }
   const unl=(typeof unlockedAbils==='function')?unlockedAbils(ch.cls,rpg):null;
@@ -420,7 +425,7 @@ function _loadRender(){ const ov=document.getElementById('loadScr'); const ch=cu
   for(const a of pool){ const locked=unl&&!unl.has(a.id); if(!locked) nUnl++;
     const slotIdx=rpg.loadout.indexOf(a.id); const on=slotIdx>=0;
     cards+='<div class="ldCard'+(on?' on':'')+(locked?' locked':'')+'" '+(locked?'data-act="locked"':('data-act="pick" data-id="'+a.id+'"'))+'>'
-      +'<div class="ldCic">'+(locked?'🔒':a.icon)+'</div>'
+      +'<div class="ldCic">'+(locked?'🔒':_abilIcHtml(a,a.icon))+'</div>'
       +'<div class="ldCbody"><div class="ldCn">'+a.name+(on?' <span class="ldTag">'+(slotIdx+1)+'</span>':'')+'</div>'
       +'<div class="ldCd">'+(locked?'Locked — unlock in the skill tree (🌟).':a.desc)+'</div>'
       +'<div class="ldCm">'+a.mp+' MP · '+a.cd+'s'+(a.ground?' · aimed':'')+'</div></div></div>'; }
