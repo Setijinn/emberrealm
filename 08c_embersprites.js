@@ -21,6 +21,9 @@ const EMBER_SC = 0.85;
 const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return i; })() : null;
 // Reusable interact-button plate (PixelLab) — used by the portal/pillar USE prompt.
 const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/btn_interact.png'; return i; })() : null;
+// Loot containers (PixelLab): drab sack for low rarity, ornate chest for high rarity.
+const _lootSack  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';  return i; })() : null;
+const _lootChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_chest.png'; return i; })() : null;
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }

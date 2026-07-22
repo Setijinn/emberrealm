@@ -183,6 +183,9 @@ function update(dt){
       if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'ground',x:gp.x,y:gp.y,gp:gp,ctx:gp.home?'The Vale':'The Dungeon'}; } }
     if(curRoom.pillars) for(const pl of curRoom.pillars){ const d=Math.hypot(pl.x-player.x,pl.y-player.y);
       if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl.band)?pl.name:'Attune '+pl.name}; } }
+    for(const lb of loots){ const rar=(lb.item&&lb.item.rar)||0; if(rar<2||lb.item.k==='pot') continue;
+      const d=Math.hypot(lb.x-player.x,lb.y-player.y);
+      if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'loot',x:lb.x,y:lb.y,bag:lb,ctx:(RAR_NAMES[rar]||'')}; } }
   }
   // arena wave director
   if(curRoom.arena && arenaActive && enemies.length===0){
@@ -202,15 +205,18 @@ function update(dt){
   } else if(shopNear){ shopNear=false; curShopNear=null;
     document.getElementById('shopBtn').style.display='none';
     document.getElementById('shopScr').style.display='none'; }
-  // loot bags: despawn + walk-over pickup
+  // loot bags: despawn + HYBRID pickup. Commons/uncommons/potions auto-collect on
+  // walk-over; rare+ (rar>=2) are left on the ground for the INTERACT prompt (below).
   for(let i=loots.length-1;i>=0;i--){ const lb=loots[i];
     lb.life-=dt; if(lb.life<=0){loots.splice(i,1);continue;}
+    const rar=(lb.item&&lb.item.rar)||0;
+    if(rar>=2 && lb.item.k!=='pot') continue;                 // rare+ -> press INTERACT
     if(Math.hypot(lb.x-player.x,lb.y-player.y)<42){
       const ch=curChar(); if(!ch||!rpg) continue; if(!ch.inv)ch.inv=[];
       if(lb.item.k==='pot'){ rpg.pots++; hudRPG();
         texts.push({x:lb.x,y:lb.y-14,txt:'+Tonic',col:'#7dc47a',life:1}); }
       else if(ch.inv.length<20){ ch.inv.push(lb.item);
-        texts.push({x:lb.x,y:lb.y-14,txt:itemName(lb.item),col:tierCol(lb.item.t),life:1.3}); }
+        texts.push({x:lb.x,y:lb.y-14,txt:itemName(lb.item),col:itemRarCol(lb.item),life:1.3}); }
       else { continue; }
       loots.splice(i,1); saveRPG();
     } }

@@ -15,7 +15,8 @@ function pillarUnlocked(b){ return _pillars().has(b); }
 function unlockPillar(b){ _pillars().add(b); LS.set('er-pillars',[..._pillarSet]); }
 function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
 // USE-button handler for the portal/pillar prompt (see 07_update portalPrompt detection)
-function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalLock=true; portalPrompt=null;
+function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=null;
+  if(p.kind!=='loot') portalLock=true;   // teleports suppress re-prompt; loot doesn't
   if(p.kind==='portal'){ usePortal(p.to); }
   else if(p.kind==='ground'){ const gp=p.gp;
     if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
@@ -25,6 +26,13 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalLock=true
   else if(p.kind==='pillar'){ const pl=p.pl;
     if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
     openFastTravel(); }
+  else if(p.kind==='loot'){ const lb=p.bag, idx=loots.indexOf(lb);
+    if(idx>=0){ const ch=curChar();
+      if(ch&&rpg){ if(!ch.inv)ch.inv=[];
+        if(ch.inv.length<20){ ch.inv.push(lb.item);
+          texts.push({x:lb.x,y:lb.y-16,txt:itemName(lb.item),col:itemRarCol(lb.item),life:1.6});
+          loots.splice(idx,1); saveRPG(); }
+        else texts.push({x:player.x,y:player.y-30,txt:'satchel full',col:'#c04a3d',life:1.1}); } } }
   navigator.vibrate&&navigator.vibrate(30);
 }
 function travelTo(pl){ closeFastTravel(); const g=rooms['G']; const sp=safeSpot(g,pl.x,pl.y);
@@ -157,13 +165,22 @@ function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
  return s;
 }
 // rarity + rolled prefix affixes on tier-7+ (index >=6) gear
-const RAR_NAMES=['','Uncommon','Rare','Epic','Legendary'];
-const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#c07ad4','#ff9c50'];
+const RAR_NAMES=['','Uncommon','Rare','Epic','Legendary','Mythical'];
+const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#c07ad4','#ff9c50','#ff4d5e'];
 const AFFIX_PREFIX={ atk:'Vicious', def:'Sturdy', hp:'Vital', mp:'Arcane',
  vit:'Hearty', wis:"Sage's", dex:'Nimble', spd:'Swift', luck:'Lucky', fort:'Prosperous' };
-function rollRarity(t,fortune){ if((t|0)<6) return 0;
- let r=Math.random()-(fortune||0)*0.0035;
- if(r<0.02) return 4; if(r<0.09) return 3; if(r<0.25) return 2; if(r<0.55) return 1; return 0; }
+// rarity can roll at ANY tier. Quality q in [0,1) is skewed toward 1 by tier+fortune
+// (higher exponent = better rolls) but the fixed ascending cutoffs keep the order
+// intact — Mythical is always the rarest slice, never overtaking Legendary.
+function rollRarity(t,fortune){
+ const e=1+(t|0)*0.045+(fortune||0)*0.03;
+ const q=1-Math.pow(Math.random(),e);
+ if(q>0.997) return 5;   // Mythical
+ if(q>0.975) return 4;   // Legendary
+ if(q>0.91)  return 3;   // Epic
+ if(q>0.75)  return 2;   // Rare
+ if(q>0.46)  return 1;   // Uncommon
+ return 0; }
 function affixValue(k,t,rar){ const mag=(t-3)*(1+rar*0.4);
  if(k==='hp'||k==='mp') return Math.max(2,Math.round(mag*3+4));
  if(k==='atk'||k==='spd') return Math.max(1,Math.round(mag*1.5+2));
@@ -210,7 +227,8 @@ function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let
   else if(r<0.85) it={k:'helm',mt:mats[Math.floor(Math.random()*3)],t:t};
   else it={k:'ring',st:['hp','dmg','spd'][Math.floor(Math.random()*3)],t:t}; }
  return rollAffixes(it,(typeof player!=='undefined'&&player.fortune)||0); }
-function bagAt(e,item){ return {x:e.x+(Math.random()*22-11),y:e.y+(Math.random()*22-11),item:item,life:60}; }
+function bagAt(e,item){ const rar=(item&&item.rar)||0;
+ return {x:e.x+(Math.random()*22-11),y:e.y+(Math.random()*22-11),item:item,rar:rar,life:rar>=2?150:60}; }
 function rollLoot(e){
  const lv=e.lv||1;
  const F=(typeof player!=='undefined'&&player.fortune)||0;
