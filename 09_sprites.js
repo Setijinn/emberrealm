@@ -367,9 +367,10 @@ function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
     ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R*0.9,0,6.29); ctx.stroke(); }
   if(_uiOrb&&_uiOrb.complete&&_uiOrb.naturalWidth) ctx.drawImage(_uiOrb,cx-R,cy-R,R*2,R*2);
   else { ctx.strokeStyle='#c9a24d'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R*0.82,0,6.29); ctx.stroke(); }
-  ctx.font='bold 12px "Pixelify Sans",monospace'; ctx.textAlign='center';
-  ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(txt,cx+1,cy+5);
-  ctx.fillStyle='#fff'; ctx.fillText(txt,cx,cy+4); ctx.textAlign='left';
+  const fs=Math.round(R*0.4); ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center';
+  const ty2=cy+Math.round(fs*0.35);
+  ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(txt,cx+1,ty2+1);
+  ctx.fillStyle='#fff'; ctx.fillText(txt,cx,ty2); ctx.textAlign='left';
 }
 function drawPillar(pl){
   const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
@@ -620,17 +621,15 @@ function render(){
   // ---- HP / MP orbs + XP bar ----
   const mp=player.mp||0, mm=player.maxmp||1;
   const cost=(typeof abilityCost==='function')?abilityCost():1e9;
-  // HP + MP orbs clustered bottom-left (right side is reserved for cast/potion buttons)
-  const orbR=31, oy=H-orbR-12;
+  // HP + MP orbs, large, flanking the bottom-center; XP bar spans beneath them
+  const orbR=Math.round(Math.min(46, W*0.11)), oy=H-orbR-18;
   const hpF=Math.max(0,player.hp/player.maxhp), mpF=Math.max(0,Math.min(1,mp/mm));
-  drawOrb(orbR+10, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
-  drawOrb(orbR*3+18, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
-  if(rpg){ const xbx=orbR*4+28, xbw=Math.max(40,W-xbx-118), xby=H-13;
+  drawOrb(W/2-orbR-5, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
+  drawOrb(W/2+orbR+5, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
+  if(rpg){ const xbw=orbR*4+10, xbx=W/2-xbw/2, xby=H-12;
     ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,6);
     ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),6);
-    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,7);
-    ctx.font='7px monospace'; ctx.textAlign='left'; ctx.fillStyle='rgba(230,220,200,.65)';
-    ctx.fillText('XP', xbx, xby-2); }
+    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,7); }
   // ability hint (right-side invisible button)
   if(rpg&&player.resDef){ const ready=mp>=cost;
     ctx.textAlign='right'; ctx.font='11px "Pixelify Sans",monospace';
