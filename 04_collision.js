@@ -2,7 +2,11 @@
 function solid(px,py){
   const gx=Math.floor(px/TILE), gy=Math.floor(py/TILE);
   if(gy<0||gy>=curRoom.h||gx<0||gx>=curRoom.w) return false; // off-edge = door gap
-  return 'WhlHwtk'.indexOf(curRoom.grid[gy][gx])>=0;
+  const c=curRoom.grid[gy][gx];
+  // Trees / boulders: block only a small circle at the trunk/base, not the whole tile.
+  if(c==='t'){ const ax=px-(gx+0.5)*TILE, ay=py-((gy+0.5)*TILE+7); return ax*ax+ay*ay < 90; }   // r~9.5 trunk
+  if(c==='k'){ const ax=px-(gx+0.5)*TILE, ay=py-((gy+0.5)*TILE+3); return ax*ax+ay*ay < 180; }  // r~13 boulder
+  return 'WhlHw'.indexOf(c)>=0;   // walls / structures / water: full tile
 }
 function moveCircle(e,dx,dy){
   // axis-separated with corner sampling
