@@ -1,4 +1,14 @@
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(function(reg){
+  // auto-reload when a new version activates so players always get the latest build
+  reg.addEventListener('updatefound', function(){
+    var nw = reg.installing; if(!nw) return;
+    nw.addEventListener('statechange', function(){
+      if(nw.state==='activated' && navigator.serviceWorker.controller) location.reload();
+    });
+  });
+  // check for a new build whenever the tab regains focus
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) reg.update().catch(function(){}); });
+}).catch(function(){});
 document.addEventListener('pointerdown', async function lockOnce(){
   document.removeEventListener('pointerdown', lockOnce);
   try{
