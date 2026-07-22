@@ -549,18 +549,34 @@ function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.
   removeEventListener('resize',_skFitCanvas);
   if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }
 
-// position every node: 3 branch sub-trees growing UP from a trunk root, ascensions at top
+// Organic tidy-tree layout: ALL branches are one graph rooted at the trunk. Every node's
+// primary parent is its first req; a node with several children forks, a node with none is
+// a dead-end. Subtrees get horizontal space proportional to their leaf count, so branches
+// spread and fork naturally instead of sitting in rigid columns.
 function _skBuildLayout(cls){ const cv=document.getElementById('skillCv'); const t=treeOf(cls); if(!cv||!t){ _skLayout=null; return; }
-  const W=cv.width, H=cv.height; const nodes=[]; const ascY=54, topY=132, botY=H-116;
-  t.branches.forEach((b,bi)=>{ const cx=Math.round(W*(bi+0.5)/3);
-    const depth={}; const dep=(n)=>{ if(depth[n.id]!=null) return depth[n.id]; let d=0;
-      for(const r of (n.req||[])){ const rn=b.nodes.find(x=>x.id===r); if(rn) d=Math.max(d,dep(rn)+1); } return depth[n.id]=d; };
-    b.nodes.forEach(dep); const maxD=Math.max(1,...b.nodes.map(n=>depth[n.id]));
-    const rows={}; b.nodes.forEach(n=>{ (rows[depth[n.id]]=rows[depth[n.id]]||[]).push(n); });
-    for(const d in rows){ const row=rows[d], y=Math.round(botY-(d/maxD)*(botY-topY));
-      row.forEach((n,i)=>{ nodes.push({n:n,bi:bi,x:cx+Math.round((i-(row.length-1)/2)*60),y:y,color:b.color,root:+d===0,top:+d===maxD}); }); }
-  });
-  t.ascend.forEach((a,i)=>{ nodes.push({a:a,x:Math.round(W*(i+0.5)/3),y:ascY,color:a.color}); });
+  const W=cv.width, H=cv.height;
+  const all=[]; for(const b of t.branches) for(const n of b.nodes) all.push({n:n,color:b.color});
+  const kids={}, primary={};
+  for(const s of all){ const reqs=s.n.req||[]; if(reqs.length){ const p=reqs[0]; primary[s.n.id]=p; (kids[p]=kids[p]||[]).push(s.n.id); } }
+  const roots=all.filter(s=>!(s.n.req&&s.n.req.length)).map(s=>s.n.id);
+  const wById={}; function leafW(id){ if(wById[id]!=null) return wById[id]; const c=kids[id]||[];
+    if(!c.length) return wById[id]=1; let w=0; for(const k of c) w+=leafW(k); return wById[id]=w; }
+  roots.forEach(leafW);
+  const depthById={}; function depth(id){ if(depthById[id]!=null) return depthById[id]; const p=primary[id];
+    return depthById[id]=(p!=null?depth(p)+1:0); }
+  all.forEach(s=>depth(s.n.id));
+  const maxD=Math.max(1,...all.map(s=>depthById[s.n.id]));
+  const pad=46, availW=W-2*pad, ascY=50, topY=118, botY=H-104;
+  const yFor=d=> botY-(d/maxD)*(botY-topY);
+  const pos={};
+  function place(id,x0,x1){ pos[id]={x:pad+((x0+x1)/2)*availW, y:yFor(depthById[id])};
+    const c=kids[id]||[]; if(!c.length) return; const tot=leafW(id)||1; let cx=x0;
+    for(const k of c){ const w=(leafW(k)/tot)*(x1-x0); place(k,cx,cx+w); cx+=w; } }
+  const totalW=roots.reduce((a,id)=>a+leafW(id),0)||1; let cx=0;
+  for(const id of roots){ const w=leafW(id)/totalW; place(id,cx,cx+w); cx+=w; }
+  const nodes=all.map(s=>({n:s.n,x:Math.round(pos[s.n.id].x),y:Math.round(pos[s.n.id].y),color:s.color,
+    root:depthById[s.n.id]===0, top:!(kids[s.n.id]&&kids[s.n.id].length)}));
+  t.ascend.forEach((a,i)=>{ nodes.push({a:a,x:Math.round(W*(i+0.5)/t.ascend.length),y:ascY,color:a.color}); });
   _skLayout={nodes:nodes,W:W,H:H,trunkX:Math.round(W/2),trunkY:H-40};
 }
 function _skBranchLine(g,x1,y1,x2,y2,col,w,a){ g.save(); g.globalAlpha=a; g.strokeStyle=col; g.lineWidth=w; g.lineCap='round';
@@ -577,9 +593,10 @@ function _skDraw(){ const cv=document.getElementById('skillCv'); if(!cv||!_skLay
   for(const s of _skLayout.nodes){ if(!s.n) continue; const childOwned=nodeRank(rpg,s.n.id)>0;
     for(const rq of (s.n.req||[])){ const p=byId[rq]; if(!p) continue; const reqOwned=nodeRank(rpg,rq)>0;
       _skBranchLine(g,p.x,p.y,s.x,s.y, childOwned?'#ffc94d':(reqOwned?s.color:'#3a3442'), childOwned?4.5:3, childOwned?0.95:(reqOwned?0.75:0.4)); } }
-  // branch tops -> ascension (faint aspiration lines)
-  for(const s of _skLayout.nodes){ if(s.n&&s.top){ const asc=_skLayout.nodes.find(a=>a.a&&a.x===Math.round(_skLayout.W*(s.bi+0.5)/3));
-    if(asc) _skBranchLine(g,s.x,s.y,asc.x,asc.y,'#2c2633',2,0.3); } }
+  // dead-end tips -> nearest ascension (faint aspiration lines)
+  for(const s of _skLayout.nodes){ if(s.n&&s.top&&s.y<_skLayout.H*0.45){ let best=null,bd=1e9;
+    for(const a of _skLayout.nodes){ if(!a.a) continue; const d=Math.abs(a.x-s.x); if(d<bd){bd=d;best=a;} }
+    if(best) _skBranchLine(g,s.x,s.y,best.x,best.y,'#2c2633',2,0.25); } }
   // trunk root emblem
   g.fillStyle='#241b33'; g.beginPath(); g.arc(_skLayout.trunkX,_skLayout.trunkY,16,0,6.29); g.fill();
   g.lineWidth=2; g.strokeStyle='#7a4a1e'; g.stroke();
