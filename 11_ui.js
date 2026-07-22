@@ -322,6 +322,20 @@ $s('mapClose2').addEventListener('click',closeMap);
 
 let invSelIdx=-1;
 function openInv(){ $s('invScr').style.display='flex'; invSelIdx=-1; paintInv(); }
+// draw a class's real PixelLab idle sprite (south-facing) into a card icon canvas;
+// falls back to the class emoji, retrying once if the art is still preloading.
+function paintClassIcon(cv,cls){ if(!cv) return; const g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+ g.clearRect(0,0,cv.width,cv.height); let drew=false;
+ if(typeof _emberReady!=='undefined' && _emberReady[cls] && typeof _emberIdle==='function'){
+   const im=_emberIdle(cls,'s');
+   if(im&&im.complete&&im.naturalWidth){ const sc=Math.min(cv.width/im.naturalWidth,cv.height/im.naturalHeight);
+     const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
+     g.drawImage(im,Math.round((cv.width-w)/2),Math.round((cv.height-h)/2),w,h); drew=true; } }
+ if(!drew){ const ci=CLASSES.findIndex(x=>x.id===cls); const c=CLASSES[ci<0?0:ci];
+   g.font=Math.round(cv.height*0.62)+'px serif'; g.textAlign='center'; g.textBaseline='middle';
+   g.fillText(c?c.ic:'❓',cv.width/2,cv.height/2+1);
+   if(typeof _emberReady==='undefined' || !_emberReady[cls]) setTimeout(()=>{ if(document.body.contains(cv)) paintClassIcon(cv,cls); },500); }
+}
 // paper-doll equipment sockets: draw each equipped item's sprite into its slot canvas
 function paintEqSlots(ch){ const cls=ch.cls, mt=CARMOR[cls]||'plate', wt=CWEAP[cls]||'sword';
  const items={
@@ -655,10 +669,11 @@ function openChar(){
  if(!u.chars.length){ box.innerHTML='<div class="mnote">No characters yet. Forge your first hero.</div>'; }
  u.chars.forEach((ch,i)=>{ const ci=CLASSES.findIndex(x=>x.id===ch.cls); const c=CLASSES[ci<0?0:ci];
   const d=document.createElement('div'); d.className='ccard'+(i===u.cur?' sel':'');
-  d.innerHTML='<div class="cic">'+c.ic+'</div><div class="cn">'+ch.name+'</div>'
+  d.innerHTML='<canvas class="cicCv" width="64" height="64"></canvas><div class="cn">'+ch.name+'</div>'
    +'<div class="cd">'+c.n+' · Lv '+ch.rpg.lvl+'</div>'
    +'<div class="cs">'+ch.rpg.gold+'g · T'+((ch.rpg.wpn||0)+1)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n+'</div>'
    +'<div class="cdel">✕</div>';
+  paintClassIcon(d.querySelector('.cicCv'), ch.cls);
   d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')){
     if(confirm('Delete '+ch.name+' forever?')){ u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0;
      LS.set('er-users',users); openChar(); }
@@ -673,9 +688,10 @@ function openClassPick(){
   let tags=' · '+classWT(c.id).n;
   if(c.shots>1) tags+=' · ×'+c.shots+' shots'; if(c.pierce) tags+=' · pierce';
   if(c.ls) tags+=' · lifesteal'; if(c.regen>1) tags+=' · regen'; if(c.slow) tags+=' · chill';
-  d.innerHTML='<div class="cic">'+c.ic+'</div><div class="cn">'+c.n+'</div>'
+  d.innerHTML='<canvas class="cicCv" width="56" height="56"></canvas><div class="cn">'+c.n+'</div>'
    +'<div class="cd">'+c.d+'<br><span style="color:#ffd07a">'+((typeof APOOL!=='undefined'&&APOOL[c.id])?APOOL[c.id][0].name+' — '+APOOL[c.id][0].desc:'')+'</span></div>'
    +'<div class="cs">HP '+c.hp+' · SPD '+c.spd+' · DMG '+c.dmg+' · '+(1/c.fr).toFixed(1)+'/s'+tags+'</div>';
+  paintClassIcon(d.querySelector('.cicCv'), c.id);
   d.onclick=()=>{ const nm=($s('charName').value.trim()||('Hero'+Math.floor(Math.random()*900+100))).slice(0,14);
    const u=users[curUser];
    u.chars.push({name:nm, cls:c.id, rpg:{lvl:1,xp:0,gold:0,wpn:0,pots:1}});

@@ -31,6 +31,8 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .ccard{background:#17141d;border:2px solid #39323f;border-radius:12px;padding:14px;width:168px;text-align:center;}
 .ccard:active{border-color:#ffc94d;background:#221c2b;}
 .cic{font-size:34px;}.cn{font-size:19px;color:#ffc94d;}
+.cicCv{position:static;inset:auto;display:block;margin:0 auto 3px;image-rendering:pixelated;width:64px;height:64px;}
+.ccard.mini .cicCv{width:56px;height:56px;}
 .cd{font-size:11px;color:#8a8494;min-height:40px;margin-top:4px;}
 .cs{font-size:11px;color:#d8d2c8;margin-top:6px;}
 #menuBtn{position:fixed;top:8px;right:10px;z-index:15;display:none;align-items:center;justify-content:center;
