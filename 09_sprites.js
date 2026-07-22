@@ -561,12 +561,14 @@ function render(){
   const bob=Math.sin(pn*11)*(moving?1.8:0.5);
   ctx.globalAlpha = player.inv>0 ? (Math.sin(performance.now()/40)>0?0.45:1) : 1;
   const hframe = moving ? (1+(Math.floor(pn*8)%2)) : 0;
-  // Face the MOVEMENT direction while running; face aim when idle or attacking.
+  // While running, face + animate the MOVEMENT direction (dominates auto-aim/auto-fire).
+  // Only show the attack pose when standing still; when moving you keep walking.
   const _mv=(typeof stick!=='undefined')?stick.move:null;
   const _moveAng=(moving && _mv && (_mv.dx||_mv.dy))?Math.atan2(_mv.dy,_mv.dx):aa;
-  const faceAng=(moving && player.atkT<=0)?_moveAng:aa;
+  const faceAng = moving ? _moveAng : aa;
+  const _attacking = player.atkT>0 && !moving;
   const _es = (typeof emberSprite==='function')
-    ? emberSprite(player.look||{cls:'knight'}, {aim:faceAng, moving, attacking:player.atkT>0, atkPhase:phase, clock:pn})
+    ? emberSprite(player.look||{cls:'knight'}, {aim:faceAng, moving, attacking:_attacking, atkPhase:phase, clock:pn})
     : null;
   if(_es){
     // real PixelLab art: 92px sprite, scaled down; already holds its weapon
@@ -629,7 +631,20 @@ function render(){
   if(rpg){ const xbw=orbR*4+10, xbx=W/2-xbw/2, xby=H-12;
     ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,6);
     ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),6);
-    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,7); }
+    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,7);
+    // integrated status line above the orbs (replaces the old top HUD bar)
+    const zn=(typeof curRegionN!=='undefined'&&curRegionN)?curRegionN:(curRoom.name||'');
+    const sy=oy-orbR-8;
+    ctx.textAlign='center';
+    ctx.font='bold 13px "Pixelify Sans",monospace';
+    const l1='Lv '+rpg.lvl+'  ·  '+zn;
+    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l1,W/2+1,sy+1);
+    ctx.fillStyle='#ffd07a'; ctx.fillText(l1,W/2,sy);
+    ctx.font='11px "Pixelify Sans",monospace';
+    const l2=rpg.gold+'g   ·   '+(player.kills||0)+' kills';
+    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l2,W/2+1,sy+15);
+    ctx.fillStyle='#d8cfb8'; ctx.fillText(l2,W/2,sy+14);
+    ctx.textAlign='left'; }
   // ability hint (right-side invisible button)
   if(rpg&&player.resDef){ const ready=mp>=cost;
     ctx.textAlign='right'; ctx.font='11px "Pixelify Sans",monospace';
