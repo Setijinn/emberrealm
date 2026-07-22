@@ -55,6 +55,18 @@ function drawTileG(x,y){
     ctx.fillStyle=(x+y)%2?'#16303f':'#1a3848'; ctx.fillRect(tx,ty,TILE,TILE);
     const wn=Math.sin(performance.now()/700+x*0.9+y*1.7);
     if(wn>0.55){ ctx.fillStyle='rgba(200,230,240,0.10)'; ctx.fillRect(tx+6,ty+TILE/2-2,TILE-12,3); }
+  } else if(c==='X' || c==='F'){
+    // boss-room wall ('X', sampled from tileset upper) / floor ('F', lower), themed per zone
+    const bd=curRoom.rings?grvBandXY(x,y):8;
+    const set=_lairSet[bd], src=(c==='X')?GROUND_UP:GROUND_LO;
+    if(set && set.naturalWidth){ ctx.imageSmoothingEnabled=false;
+      const hh=(x*131+y*57)>>>0, o=hh&3;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+      ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      if(c==='X'){ ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(tx,ty,TILE,3);
+        ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5); }
+    } else { ctx.fillStyle=(c==='X')?'#3a3340':'#241f2a'; ctx.fillRect(tx,ty,TILE,TILE);
+      if(c==='X'){ ctx.fillStyle='#4a4350'; ctx.fillRect(tx,ty,TILE,9); ctx.fillStyle='#181420'; ctx.fillRect(tx,ty+TILE-5,TILE,5); } }
   } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
     const bd=grvBandXY(x,y);
     const _gset=_groundSet[bd];

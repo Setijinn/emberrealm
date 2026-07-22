@@ -584,18 +584,23 @@ function drawShopSign(np){ const x=np.x, sy=np.y-96;
  ctx.font='9px monospace'; ctx.fillStyle='#cfc8bd'; ctx.fillText(np.role,x,sy+12);
  ctx.textAlign='left';
 }
-// Boss surface lairs — a fixed themed structure per zone, drawn base-anchored on the ground.
+// Boss lairs — interior dressing for the tile-built compounds: a den centrepiece at the
+// back wall plus themed corner decorations. The walls/floor themselves are drawn as tiles.
 function drawLairs(){
-  if(!curRoom||!curRoom.rings||curRoom.dungeon||curRoom.town) return;
-  if(typeof LAIR_BANDS==='undefined'||typeof _lair==='undefined') return;
+  const R=curRoom; if(!R||!R.rings||R.dungeon||R.town||!R.lairs) return;
+  if(typeof _lair==='undefined') return;
   ctx.imageSmoothingEnabled=false;
-  for(const b of LAIR_BANDS){ const im=_lair[b]; if(!im||!im.naturalWidth) continue;
-    const p=grvLairXY(b); if(!p) continue;
-    const w=212, h=w*im.height/im.width;
-    // soft ground shadow, then the structure base-anchored just below the anchor tile
-    ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
-    ctx.ellipse(p.x,p.y+18,w*0.34,w*0.12,0,0,6.29); ctx.fill();
-    ctx.drawImage(im, p.x-w/2, p.y+22-h, w, h); }
+  for(const b in R.lairs){ const L=R.lairs[b];
+    // corner decorations (bones, mushrooms, lava pools, braziers…)
+    const dec=(typeof _lairDec!=='undefined')?_lairDec[b]:null;
+    if(dec) for(const d of L.decos){ const im=dec[d.i]; if(im&&im.naturalWidth){
+      const w=TILE*1.1, h=w*im.height/im.width; ctx.drawImage(im, d.x-w/2, d.y-h*0.72, w, h); } }
+    // den centrepiece (the exterior lair art, reused as an interior back-wall feature)
+    const cp=_lair[b];
+    if(cp&&cp.naturalWidth){ const w=TILE*3.1, h=w*cp.height/cp.width;
+      ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.beginPath(); ctx.ellipse(L.sprite.x,L.sprite.y+8,w*0.30,w*0.10,0,0,6.29); ctx.fill();
+      ctx.drawImage(cp, L.sprite.x-w/2, L.sprite.y+12-h, w, h); }
+  }
 }
 function render(){
   ctx.fillStyle='#0b0a10'; ctx.fillRect(0,0,W,H);

@@ -11,7 +11,7 @@ function solid(px,py){
     const bx=(gx+0.5)*TILE+o[0], by=(gy+1)*TILE-6+o[1];
     const ax=px-bx, ay=py-(by-(c==='t'?3:6)), rr=(c==='t'?8:11);
     return ax*ax+ay*ay < rr*rr; }
-  return 'WhlHw'.indexOf(c)>=0;   // walls / structures / water: full tile
+  return 'WhlHwX'.indexOf(c)>=0;   // walls / structures / water / lair walls: full tile
 }
 function moveCircle(e,dx,dy){
   // axis-separated with corner sampling

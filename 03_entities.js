@@ -56,15 +56,69 @@ const BOSS_PROJ=[
 ];
 let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
 function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
-// Fixed surface-lair anchor for a zone boss: a walkable tile near the centre of band b.
-function grvLairXY(b){ const R=rooms['G']; if(!R||!R.rings) return null;
- const NZ=R.rings.names.length;
- const tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
- let txc=Math.floor(R.w/2);
- const walk=ch=>ch!=null && 'WwhHl'.indexOf(ch)<0;
- if(R.grid && R.grid[tyc] && !walk(R.grid[tyc][txc])){
-  for(let d=1;d<R.w/2;d++){ if(walk(R.grid[tyc][txc-d])){txc-=d;break;} if(walk(R.grid[tyc][txc+d])){txc+=d;break;} } }
- return {x:(txc+0.5)*TILE, y:(tyc+0.5)*TILE}; }
+// ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
+// 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
+const LAIR_TEMPLATES={
+ 0:[ // Heartwood Hollow (13x10) — the Grovewarden's den
+  'XXXXXXXXXXXXX',
+  'X...........X',
+  'X...........X',
+  'X...........X',
+  'X...........X',
+  'X...........X',
+  'X...........X',
+  'X...........X',
+  'X...........X',
+  'XXXXX...XXXXX'],
+ 5:[ // Scorch Barrows (15x11) — Magmaw's lair, inner pillars for cover
+  'XXXXXXXXXXXXXXX',
+  'X.............X',
+  'X..X.......X..X',
+  'X.............X',
+  'X.............X',
+  'X.............X',
+  'X.............X',
+  'X.............X',
+  'X..X.......X..X',
+  'X.............X',
+  'XXXXXX...XXXXXX'],
+};
+const LAIR_STAMP_BANDS=[0,5];   // pilot; add bands as their art ships
+let _lairsStamped=false;
+function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return; _lairsStamped=true; R.lairs={};
+ const NZ=(R.rings&&R.rings.names.length)||9;
+ for(const b of LAIR_STAMP_BANDS){ const T=LAIR_TEMPLATES[b]; if(!T) continue;
+  const TH=T.length, TW=T[0].length;
+  const cyBand=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ))));
+  const clear=(px,py)=>{ if(px<1||py<1||px+TW>=R.w-1||py+TH>=R.h-1) return false;
+    for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){ const row=R.grid[ty]; const c=row&&row[tx];
+      if(c==null||'wWhHlXF'.indexOf(c)>=0) return false; }
+    for(const pl of (R.pillars||[])){ const plx=pl.x/TILE,ply=pl.y/TILE; if(plx>px-2&&plx<px+TW+2&&ply>py-2&&ply<py+TH+2) return false; }
+    for(const pt of (R.portals||[])){ const ptx=pt.x/TILE,pty=pt.y/TILE; if(ptx>px-2&&ptx<px+TW+2&&pty>py-2&&pty<py+TH+2) return false; }
+    return true; };
+  let place=null; const cx0=Math.round(R.w/2-TW/2);
+  for(let r=0;r<8 && !place;r++)for(const dy of (r?[0,-r,r]:[0]))for(const dx of (r?[0,-r,r]:[0])){
+    const px=cx0+dx*2, py=cyBand-Math.round(TH/2)+dy*2; if(clear(px,py)) place={px,py}; }
+  if(!place) place={px:cx0, py:cyBand-Math.round(TH/2)};
+  const {px,py}=place;
+  for(let ty=0;ty<TH;ty++)for(let tx=0;tx<TW;tx++){ const ch=T[ty][tx];
+    if(ch==='X') R.grid[py+ty][px+tx]='X'; else if(ch==='.') R.grid[py+ty][px+tx]='F'; }
+  R.lairs[b]={ b, px, py, tw:TW, th:TH,
+    spawn:{x:(px+TW/2)*TILE, y:(py+TH*0.58)*TILE},          // boss stands in front of the den
+    sprite:{x:(px+TW/2)*TILE, y:(py+2.7)*TILE},             // den centrepiece near the back wall
+    decos:[ {x:(px+2.4)*TILE,y:(py+2.4)*TILE,i:0}, {x:(px+TW-2.4)*TILE,y:(py+2.4)*TILE,i:1},
+            {x:(px+2.4)*TILE,y:(py+TH-2.4)*TILE,i:2}, {x:(px+TW-2.4)*TILE,y:(py+TH-2.4)*TILE,i:3} ] };
+  // drop any arrival landing points that now fall inside this compound (avoid spawning trapped)
+  if(R.arrivals) R.arrivals=R.arrivals.filter(a=>!(a[0]>=px-1&&a[0]<=px+TW&&a[1]>=py-1&&a[1]<=py+TH));
+ }
+}
+// Boss spawn anchor = its lair interior (falls back to band centre if unstamped).
+function grvLairXY(b){ const R=rooms['G']; if(!R) return null;
+ if(R.lairs && R.lairs[b]) return R.lairs[b].spawn;
+ if(!R.rings) return null;
+ const NZ=R.rings.names.length, tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
+ return {x:(R.w/2)*TILE, y:(tyc+0.5)*TILE}; }
+if(typeof rooms!=='undefined' && rooms['G']) stampLairs();   // carve the boss compounds into the grove once
 // each ring has its own unique mini-boss; only one of a given ring's boss lives at a time
 function spawnRingBoss(b){
  if(!curRoom||!curRoom.rings) return;
@@ -72,7 +126,7 @@ function spawnRingBoss(b){
  const lair=(typeof grvLairXY==='function')?grvLairXY(b):null;
  for(let tries=0;tries<40;tries++){
   let bx,by;
-  if(lair && tries<12){ const a=Math.random()*6.283, d=30+Math.random()*70; bx=lair.x+Math.cos(a)*d; by=lair.y+Math.sin(a)*d; } // guard its lair
+  if(lair && tries<14){ const a=Math.random()*6.283, d=15+Math.random()*45; bx=lair.x+Math.cos(a)*d; by=lair.y+Math.sin(a)*d; } // guard its lair (stay inside)
   else { const a=Math.random()*6.283, d=300+Math.random()*220; bx=player.x+Math.cos(a)*d; by=player.y+Math.sin(a)*d; }
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
   if(solid(bx,by)) continue;
