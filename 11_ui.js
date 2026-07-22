@@ -7,6 +7,33 @@ const LS={
 };
 let users=LS.get('er-users',{});
 let curUser=null;
+
+// ---- teleport-pillar fast-travel ----
+let _pillarSet=null;
+function _pillars(){ if(!_pillarSet) _pillarSet=new Set(LS.get('er-pillars',[])); return _pillarSet; }
+function pillarUnlocked(b){ return _pillars().has(b); }
+function unlockPillar(b){ _pillars().add(b); LS.set('er-pillars',[..._pillarSet]); }
+function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
+function travelTo(pl){ closeFastTravel(); const g=rooms['G']; const sp=safeSpot(g,pl.x,pl.y);
+  player.x=sp.x; player.y=sp.y; enemies=enemies.filter(e=>e.boss); portalLock=true; msg('WARPED',pl.name); }
+function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
+  let ov=document.getElementById('ftScr');
+  if(!ov){ ov=document.createElement('div'); ov.id='ftScr';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,10,.82);z-index:70;display:flex;align-items:center;justify-content:center;'; document.body.appendChild(ov); }
+  const card=document.createElement('div');
+  card.style.cssText='background:#1a151f;border:1px solid #4a3d5c;border-radius:12px;padding:18px;min-width:250px;max-width:90vw;text-align:center;';
+  card.innerHTML='<div style="font:bold 15px monospace;color:#ffd07a;margin-bottom:12px;letter-spacing:.1em;">✦ WAYPOINTS ✦</div>';
+  for(const pl of G.pillars){ const un=pillarUnlocked(pl.band);
+    const b=document.createElement('button');
+    b.textContent=(un?'▸ ':'🔒 ')+pl.name+'  ·  Lv '+G.rings.names[pl.band].lv;
+    b.disabled=!un;
+    b.style.cssText='display:block;width:100%;margin:5px 0;padding:10px;border-radius:7px;border:1px solid #4a3d5c;font:13px monospace;text-align:left;background:'+(un?'#2a2233':'#181420')+';color:'+(un?'#e8e0d0':'#6a6270')+';cursor:'+(un?'pointer':'default')+';';
+    if(un) b.onclick=()=>travelTo(pl);
+    card.appendChild(b); }
+  const cl=document.createElement('button'); cl.textContent='CLOSE';
+  cl.style.cssText='display:block;width:100%;margin-top:12px;padding:10px;border-radius:7px;border:1px solid #4a3d5c;background:#3a2c20;color:#e8e0d0;font:13px monospace;cursor:pointer;';
+  cl.onclick=closeFastTravel; card.appendChild(cl);
+  ov.innerHTML=''; ov.appendChild(card); ov.style.display='flex'; }
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('emberrealm\u00b7'+s));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const CLASSES=[

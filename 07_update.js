@@ -148,6 +148,7 @@ function update(dt){
   if(portalLock){ let nearAny=false;
     if(curRoom.portals) for(const pt of curRoom.portals){ if(Math.hypot(pt.x-player.x,pt.y-player.y)<90){nearAny=true;break;} }
     if(!nearAny) for(const gp of groundPortals){ if(Math.hypot(gp.x-player.x,gp.y-player.y)<90){nearAny=true;break;} }
+    if(!nearAny && curRoom.pillars) for(const pl of curRoom.pillars){ if(Math.hypot(pl.x-player.x,pl.y-player.y)<90){nearAny=true;break;} }
     if(!nearAny) portalLock=false; }
   // ground dungeon portals from slain world bosses
   for(let i=groundPortals.length-1;i>=0;i--){ const gp=groundPortals[i];
@@ -170,13 +171,18 @@ function update(dt){
     if(curRoom.big){ for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i];
       if(e.sref && !e.boss && Math.hypot(e.x-player.x,e.y-player.y)>1100) enemies.splice(i,1); } }
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
-      if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.band); } }
+      if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv); } }
   }
   // destination portals (release of portalLock handled above)
   if(curRoom.portals&&curRoom.portals.length){
     for(const pt of curRoom.portals){
       if(!portalLock && Math.hypot(pt.x-player.x,pt.y-player.y)<34){ portalLock=true; usePortal(pt.to||'0,0'); break; } }
   }
+  // teleport-pillar waypoints: attune on touch, then open fast-travel
+  if(curRoom.pillars) for(const pl of curRoom.pillars){
+    if(!portalLock && Math.hypot(pl.x-player.x,pl.y-player.y)<36){ portalLock=true;
+      if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
+      openFastTravel(); break; } }
   // arena wave director
   if(curRoom.arena && arenaActive && enemies.length===0){
     arenaCd-=dt; if(arenaCd<=0){ arenaCd=2.0; arenaSpawnWave(); } }

@@ -31,6 +31,7 @@ for(const key in rooms){
   r.w=r.grid[0].length; r.h=r.grid.length;
   r.big=!!ROOM_DEFS[key].big; r.regions=ROOM_DEFS[key].regions||null; r.portals=[];
   r.rings=ROOM_DEFS[key].rings||null; r.arrivals=ROOM_DEFS[key].arrivals||null;
+  r.pillars=(ROOM_DEFS[key].pillars||[]).map(p=>({x:(p.tx+.5)*TILE,y:(p.ty+.5)*TILE,band:p.b,name:p.name}));
   r.hub=!!ROOM_DEFS[key].hub; r.arena=!!ROOM_DEFS[key].arena; r.safe=!!ROOM_DEFS[key].safe;
   r.decor=ROOM_DEFS[key].decor||null; r.stalls=ROOM_DEFS[key].stalls||null;
   // explicit destination portals (hub + sub-rooms)

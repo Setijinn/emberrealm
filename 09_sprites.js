@@ -344,6 +344,22 @@ function drawEnemySprite(e,pn){
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // ---------- hub / world decor ----------
+function drawPillar(pl){
+  const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
+  const t=performance.now()/1000, col=un?'#c9a24d':'#5a6070', gy=pl.y-24;
+  ctx.fillStyle='#241f2b'; ctx.fillRect(pl.x-7,pl.y-4,14,20);
+  ctx.fillStyle='#3a3442'; ctx.fillRect(pl.x-6,pl.y-22,12,20);
+  ctx.fillStyle='#4a4452'; ctx.fillRect(pl.x-6,pl.y-22,12,2);
+  const pulse=0.55+0.45*Math.sin(t*3), rad=un?16:9;
+  const g=ctx.createRadialGradient(pl.x,gy,1,pl.x,gy,rad);
+  g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.globalAlpha=un?0.85*pulse:0.4; ctx.fillStyle=g;
+  ctx.beginPath(); ctx.arc(pl.x,gy,rad,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(pl.x,gy,3.5,0,6.29); ctx.fill();
+  ctx.font='9px monospace'; ctx.textAlign='center';
+  ctx.fillStyle=un?'#ffd07a':'#8a8290';
+  ctx.fillText(un?'WAYPOINT':'✦ dormant', pl.x, pl.y+28); ctx.textAlign='left';
+}
 function drawPortal(pt){
  const t=performance.now()/1000, col=pt.col||'#c07ad4', R=pt.big?36:20;
  const g=ctx.createRadialGradient(pt.x,pt.y,2,pt.x,pt.y,R*1.9);
@@ -439,6 +455,7 @@ function render(){
       ctx.fillStyle='#fff0c0'; ctx.fillRect(gl.x-4,gl.y-17+Math.sin(pn*11+gl.x),8,9);
     } }
   if(curRoom.portals) for(const pt of curRoom.portals) drawPortal(pt);
+  if(curRoom.pillars) for(const pl of curRoom.pillars) drawPillar(pl);
   if(curRoom.decor) for(const d of curRoom.decor){ const dx=d.x*TILE, dy=d.y*TILE;
     if(d.t==='fountain') drawFountain(dx,dy);
     else if(d.t==='sign') drawSign(dx,dy,d.txt);
