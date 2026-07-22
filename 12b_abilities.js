@@ -193,8 +193,8 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
 }
 
 // ----- HUD: 3 ability buttons (bottom-left), tap to arm -----
-function abilBtnRects(){ const r=Math.round(Math.min(30,W*0.075)), gap=10, x=16+r; const out=[];
-  let y=H-16-r;                          // slot 0 at the bottom (thumb-reachable)
+function abilBtnRects(){ const r=Math.round(Math.min(30,W*0.075)), gap=10, x=W-16-r; const out=[];
+  let y=H-64-r;                          // right edge, above the bottom HUD button row
   for(let s=0;s<3;s++){ out.push({slot:s,x:x,y:y,r:r}); y-=(r*2+gap); }
   return out; }
 function hitAbilButton(sx,sy){ if(!inGame||!rpg||W<=H) return -1; const rects=abilBtnRects();
