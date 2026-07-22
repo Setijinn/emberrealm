@@ -535,6 +535,9 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
 function xpNeed(l){return Math.floor(50*Math.pow(l,1.5));}
 function eqAffArr(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.a:null; }
 function eqRar(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.r:0; }
+// Global scale on the derived HP/MP pools — trims the big numbers without touching
+// per-class balance (all sources scale uniformly). Tune here.
+const HP_SCALE=0.80, MP_SCALE=0.80;
 function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const ci=Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls)); const c=CLASSES[ci];
  player.cname=ch.name; player.hue=ci*20;
@@ -564,14 +567,14 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  // ---- derive combat values from the 10 stats
  player.def=st.def;
  player.dr=Math.min(0.80, st.def/(st.def+55));       // DEFENSE -> % damage reduction
- player.maxhp=Math.round(st.hp + st.vit*3);           // HP + VIT
+ player.maxhp=Math.round((st.hp + st.vit*3)*HP_SCALE); // HP + VIT (scaled down to keep pools readable)
  player.spd=st.spd;                                   // SPEED
  player.dmg=Math.max(1,Math.round(st.atk));           // ATTACK
  const wRof=(player.wt.rof||1)*(wL?(wL.rof||1):1);
  player.fireRate=c.fr*wRof/(1+st.dex*0.013);          // DEX -> attack speed (softened to curb runaway)
  player.projSpd=1+st.dex*0.012;                       // DEX -> projectile speed
  player.regen=0.8+st.vit*0.12;                        // VIT -> hp regen/sec
- player.maxmp=Math.max(10,Math.round(st.mp));         // MP -> mana pool
+ player.maxmp=Math.max(10,Math.round(st.mp*MP_SCALE)); // MP -> mana pool (scaled down)
  player.mpregen=2+st.wis*0.25;                        // WISDOM -> mana regen
  player.abilPow=1+st.wis*0.02;                        // WISDOM -> ability power
  player.crit=Math.min(0.75, st.luck*0.005);           // LUCK -> crit chance + hit
