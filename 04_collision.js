@@ -1,11 +1,16 @@
 // ---------- collision ----------
+// Per-tile pseudo-random offset so trees/boulders aren't all grid-centred.
+// Used by BOTH the renderer and collision so the hitbox tracks the sprite.
+function featOffset(x,y){ const h=(x*73+y*149)>>>0; return [(h%15)-7,((h>>4)%11)-5]; }
 function solid(px,py){
   const gx=Math.floor(px/TILE), gy=Math.floor(py/TILE);
   if(gy<0||gy>=curRoom.h||gx<0||gx>=curRoom.w) return false; // off-edge = door gap
   const c=curRoom.grid[gy][gx];
-  // Trees / boulders: block only a small circle at the trunk/base, not the whole tile.
-  if(c==='t'){ const ax=px-(gx+0.5)*TILE, ay=py-((gy+0.5)*TILE+7); return ax*ax+ay*ay < 90; }   // r~9.5 trunk
-  if(c==='k'){ const ax=px-(gx+0.5)*TILE, ay=py-((gy+0.5)*TILE+3); return ax*ax+ay*ay < 180; }  // r~13 boulder
+  // Trees / boulders: block a small circle at the offset base, not the whole tile.
+  if(c==='t'||c==='k'){ const o=featOffset(gx,gy);
+    const bx=(gx+0.5)*TILE+o[0], by=(gy+1)*TILE-6+o[1];
+    const ax=px-bx, ay=py-(by-(c==='t'?3:6)), rr=(c==='t'?8:11);
+    return ax*ax+ay*ay < rr*rr; }
   return 'WhlHw'.indexOf(c)>=0;   // walls / structures / water: full tile
 }
 function moveCircle(e,dx,dy){
