@@ -161,10 +161,10 @@ function safeSpot(r,px,py){
    if(!sol(t0x+dx,t0y+dy)) return {x:(t0x+dx+.5)*TILE,y:(t0y+dy+.5)*TILE};
   } }
  return {x:px,y:py}; }
-function grvBand(nd){ return Math.max(0,Math.min(14,Math.floor((1-Math.min(nd,0.999))*15))); }
-function ringInfoAt(tx,ty){ const R=curRoom.rings;
- const nd=Math.sqrt(Math.pow((tx-R.cx)/R.rx,2)+Math.pow((ty-R.cy)/R.ry,2));
- return R.names[grvBand(nd)]; }
+// Vertical zone band from tile-y: bottom (high y)=band 0, top (y=0)=highest band.
+function grvBandY(ty){ const NZ=(curRoom.rings&&curRoom.rings.names.length)||9, H=curRoom.h||1;
+ return Math.max(0,Math.min(NZ-1,Math.floor((1-ty/H)*NZ))); }
+function ringInfoAt(tx,ty){ return curRoom.rings.names[grvBandY(ty)]; }
 function regionAtPx(px,py){ if(!curRoom) return null;
  if(curRoom.rings) return ringInfoAt(px/TILE,py/TILE);
  if(!curRoom.regions) return null;
@@ -202,7 +202,7 @@ function usePortal(to){
     if(gv.arrivals&&gv.arrivals.length){ const ar=gv.arrivals[Math.floor(Math.random()*gv.arrivals.length)];
       ax=(ar[0]+.5)*TILE; ay=(ar[1]+.5)*TILE; }
     const sp=safeSpot(gv,ax,ay); enterRoom('G',sp.x,sp.y);
-    msg('WASHED ASHORE','somewhere on the Landing Sands'); return; }
+    msg('ROOTHOLLOW VALE','the climb begins'); return; }
   const dst=rooms[to]; if(!dst) return;
   const sp=safeSpot(dst,(dst.px+.5)*TILE,(dst.py+.5)*TILE);
   enterRoom(to,sp.x,sp.y);

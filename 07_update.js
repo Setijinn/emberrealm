@@ -154,7 +154,7 @@ function update(dt){
     gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; }
     if(Math.hypot(gp.x-player.x,gp.y-player.y)<30 && !portalLock){ portalLock=true;
       if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
-        const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('BACK ON THE ISLE',''); }
+        const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('THE CLIMB','back to the vale'); }
       else enterDungeon(gp.ring);
       groundPortals.length=0; break; } }
   // spawns: streaming activation + 60s respawns (only once you leave the area)

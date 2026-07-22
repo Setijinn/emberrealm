@@ -4,16 +4,21 @@ const VIEW_TILES_H=10;
 const roomCV=document.createElement('canvas');
 function h2(x,y){const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);}
 function buildRoomCache(){} // rooms render live now
+// 9 vertical zones, bottom (band 0, green vale) -> top (band 8, molten crown)
 const GBANDCOL=[
- ['#cdb98a','#c4ad7c'],['#c3b079','#b9a46d'],['#a7b06a','#9da762'],
- ['#82a457','#799b4e'],['#5f9a48','#56913f'],['#488a44','#40813b'],
- ['#3a7d48','#327440'],['#3f6b58','#37624f'],['#516052','#485749'],
- ['#585450','#4f4b47'],['#5f4f46','#56463d'],['#6a473c','#613e33'],
- ['#79432f','#703a27'],['#8a3d26','#81341f'],['#9a3a1c','#912f16'],
+ ['#4a6b3e','#547a44'], // 0 Roothollow Vale
+ ['#33502f','#3c5b35'], // 1 Mistwood
+ ['#4a5a30','#556636'], // 2 Bramblemarch
+ ['#5a6350','#66705a'], // 3 Greystone Foothills
+ ['#6a706a','#767c74'], // 4 Wind Crags
+ ['#75574a','#836254'], // 5 Emberscar Ridge
+ ['#5e5854','#6a635e'], // 6 Ashfall Reach
+ ['#7a4030','#8a4a22'], // 7 Cinderspire
+ ['#9a3a1c','#b5451e'], // 8 Molten Crown
 ];
-function grvBandXY(x,y){ const R=curRoom.rings;
- const nd=Math.sqrt(Math.pow((x-R.cx)/R.rx,2)+Math.pow((y-R.cy)/R.ry,2));
- return Math.max(0,Math.min(14,Math.floor((1-Math.min(nd,0.999))*15))); }
+// Vertical band: bottom of the map (high y) = band 0 (easy), top (y=0) = highest.
+function grvBandXY(x,y){ const R=curRoom, NZ=R.rings.names.length, H=R.h||1;
+ return Math.max(0,Math.min(NZ-1,Math.floor((1-y/H)*NZ))); }
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');

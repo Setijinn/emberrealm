@@ -277,49 +277,29 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  const hpx=Math.ceil(G.h*scl);
  if(cv2.height!==hpx+30) cv2.height=hpx+30;
  // deep ocean backdrop with faint swell lines
- c.fillStyle='#101c26'; c.fillRect(0,0,cv2.width,cv2.height);
- c.strokeStyle='rgba(120,170,190,0.05)';
- for(let y=6;y<hpx;y+=10){ c.beginPath(); c.moveTo(0,y);
-  for(let x=0;x<=cv2.width;x+=8) c.lineTo(x,y+Math.sin(x*0.06+y)*1.5);
-  c.stroke(); }
- // the island itself, tile by tile
- const MRAMP=['#c4ad7c','#b9a46d','#9da762','#799b4e','#56913f','#40813b','#327440','#37624f','#485749','#4f4b47','#56463d','#613e33','#703a27','#81341f','#912f16'];
+ c.fillStyle='#14110e'; c.fillRect(0,0,cv2.width,cv2.height);
+ // vertical zone map, tile by tile \u2014 band by height (bottom=green vale, top=molten)
+ const NZ=G.rings.names.length;
+ const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e'];
  for(let y=0;y<G.h;y++){ const row=G.grid[y];
+  const bd=Math.max(0,Math.min(NZ-1,Math.floor((1-y/G.h)*NZ)));
   for(let x=0;x<G.w;x++){ const ch=row[x];
-   if(ch==='w'||ch==='W') continue;
-   const nd=Math.sqrt(Math.pow((x-G.rings.cx)/G.rings.rx,2)+Math.pow((y-G.rings.cy)/G.rings.ry,2));
-   const bd=Math.max(0,Math.min(14,Math.floor((1-Math.min(nd,0.999))*15)));
-   c.fillStyle=(ch==='t')?'rgba(20,40,20,0.9)':(ch==='k')?'#5d5666':MRAMP[bd];
+   if(ch==='W') continue;
+   c.fillStyle=(ch==='t')?'rgba(20,40,20,0.9)':(ch==='k')?'#5d5666':(MRAMP[bd]||'#547a44');
    c.fillRect(x*scl,y*scl,scl+0.6,scl+0.6); } }
- c.strokeStyle='rgba(0,0,0,0.4)'; c.lineWidth=1;
- for(let i=1;i<15;i++){ const nd=1-(i/15);
-  c.beginPath(); c.ellipse(G.rings.cx*scl,G.rings.cy*scl,G.rings.rx*scl*nd,G.rings.ry*scl*nd,0,0,6.29); c.stroke(); }
- // molten heart glow
- const R=G.rings, ccx=R.cx*scl, ccy=R.cy*scl;
- const gg=c.createRadialGradient(ccx,ccy,2,ccx,ccy,R.rx*scl*0.16);
- gg.addColorStop(0,'rgba(255,122,61,0.55)'); gg.addColorStop(1,'rgba(255,122,61,0)');
- c.fillStyle=gg; c.beginPath(); c.arc(ccx,ccy,R.rx*scl*0.16,0,6.29); c.fill();
- // ring contour hints
- c.strokeStyle='rgba(255,201,77,0.10)'; c.lineWidth=1;
- for(let i=3;i<15;i+=3){ const nd=1-(i/15);
-  c.beginPath(); c.ellipse(ccx,ccy,R.rx*scl*nd,R.ry*scl*nd,0,0,6.29); c.stroke(); }
- // labels spiral inward around the island
- const BOSSB=[4,9,14];
- for(let i=0;i<15;i++){ const rg=R.names[i];
-  const nd=1-((i+0.5)/15);
-  const ang=-1.35+i*0.95;
-  let lx=ccx+Math.cos(ang)*R.rx*scl*nd, ly=ccy+Math.sin(ang)*R.ry*scl*nd;
-  if(i===14){ lx=ccx; ly=ccy-12; }
-  c.textAlign='center';
+ // zone boundary lines + centered labels
+ c.strokeStyle='rgba(0,0,0,0.45)'; c.lineWidth=1;
+ for(let i=1;i<NZ;i++){ const yy=G.h*(1-i/NZ)*scl;
+  c.beginPath(); c.moveTo(0,yy); c.lineTo(cv2.width,yy); c.stroke(); }
+ c.textAlign='center';
+ for(let i=0;i<NZ;i++){ const rg=G.rings.names[i];
+  const ly=G.h*(1-(i+0.5)/NZ)*scl, lx=cv2.width/2;
   c.font='bold 9px "Pixelify Sans",monospace';
   c.fillStyle='rgba(0,0,0,0.85)'; c.fillText(rg.n,lx+1,ly+1);
   c.fillStyle='#f0e8d8'; c.fillText(rg.n,lx,ly);
   c.font='8px "Pixelify Sans",monospace';
-  c.fillStyle='rgba(0,0,0,0.85)'; c.fillText('Lv '+rg.band,lx+1,ly+10);
-  c.fillStyle='#ffc94d'; c.fillText('Lv '+rg.band,lx,ly+9);
-  if(BOSSB.indexOf(i)>=0){ c.font='11px monospace';
-   c.fillStyle='rgba(0,0,0,0.85)'; c.fillText('\u2620',lx+1,ly-9);
-   c.fillStyle='#ff6b5a'; c.fillText('\u2620',lx,ly-10); } }
+  c.fillStyle='rgba(0,0,0,0.85)'; c.fillText('Lv '+rg.lv,lx+1,ly+10);
+  c.fillStyle='#ffc94d'; c.fillText('Lv '+rg.lv,lx,ly+9); }
  // return portals
  for(const gp of G.portals){ const px=gp.x/TILE*scl, py=gp.y/TILE*scl;
   c.strokeStyle='#c07ad4'; c.lineWidth=1.5;
