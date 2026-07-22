@@ -213,7 +213,9 @@ function update(dt){
     if(rar>=2 && lb.item.k!=='pot') continue;                 // rare+ -> press INTERACT
     if(Math.hypot(lb.x-player.x,lb.y-player.y)<42){
       const ch=curChar(); if(!ch||!rpg) continue; if(!ch.inv)ch.inv=[];
-      if(lb.item.k==='pot'){ rpg.pots++; hudRPG();
+      if(lb.item.k==='coin'){ addCoin(); recalcStats();
+        texts.push({x:lb.x,y:lb.y-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); }
+      else if(lb.item.k==='pot'){ rpg.pots++; hudRPG();
         texts.push({x:lb.x,y:lb.y-14,txt:'+Tonic',col:'#7dc47a',life:1}); }
       else if(ch.inv.length<20){ ch.inv.push(lb.item);
         texts.push({x:lb.x,y:lb.y-14,txt:itemName(lb.item),col:itemRarCol(lb.item),life:1.3}); }

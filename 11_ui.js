@@ -110,8 +110,18 @@ const RING_DEF={
  dex: {stat:'dex', n:'Ring of Precision', col:'#e8b34b', v:t=>Math.round(t*0.9)+2},
  spd: {stat:'spd', n:'Ring of Haste',     col:'#9ad4ef', v:t=>t*2+4},
  luck:{stat:'luck',n:'Ring of Luck',      col:'#8fd48c', v:t=>Math.round(t*1.2)+3},
- fort:{stat:'fort',n:'Ring of Fortune',   col:'#ffc94d', v:t=>Math.round(t*1.2)+3},
 };
+// FORTUNE COINS — a rare passive loot boost you carry. Bronze/Silver/Gold (tier 0/1/2).
+// Coins merge: 20 bronze -> 1 silver, 20 silver -> 1 gold. Your BEST coin tier grants
+// passive fortune (more/better drops via rollLoot). Stored as rpg.coins=[bronze,silver,gold].
+const COIN_NAMES=['Bronze','Silver','Gold'];
+const COIN_VAL=[1,20,400];     // bronze-equivalent value (silver=20 bronze, gold=20 silver)
+function coinValue(){ if(!rpg||!rpg.coins) return 0; let v=0; for(let i=0;i<3;i++) v+=(rpg.coins[i]||0)*COIN_VAL[i]; return v; }
+// Every coin adds to the loot boost (merge-neutral in value); soft-diminishing so it stays sane.
+function coinFortune(){ const v=coinValue(); return v>0?Math.round(2*Math.sqrt(v)):0; }
+function addCoin(){ if(!rpg) return; if(!rpg.coins) rpg.coins=[0,0,0]; rpg.coins[0]++;
+  while(rpg.coins[0]>=20){ rpg.coins[0]-=20; rpg.coins[1]++; }
+  while(rpg.coins[1]>=20){ rpg.coins[1]-=20; rpg.coins[2]++; } }
 const RING_STATS=Object.keys(RING_DEF);
 const RINGN={}; for(const _k in RING_DEF) RINGN[_k]=RING_DEF[_k].n;
 const LEGENDS=[
@@ -215,6 +225,7 @@ function rollAffixes(it,fortune){ it.rar=rollRarity(it.t,fortune); it.aff=[];
 function affStats(aff){ const s=newStats(); if(aff) for(const a of aff) s[a.s]=(s[a.s]||0)+a.v; return s; }
 // full stat block an item contributes (base + its own affixes)
 function itemStats(it,cls){ if(!it||it.k==='pot') return newStats();
+ if(it.k==='coin') return newStats();   // coins boost via the carried total, not per-item
  let base;
  if(it.k==='wpn') base=gearBaseStats('wpn',it.t);
  else if(it.k==='arm') base=gearBaseStats('arm',it.t,it.mt);
@@ -232,6 +243,7 @@ function itemBaseName(it){
  if(it.k==='arm')return p+MATN[it.mt]+' Armor';
  if(it.k==='helm')return p+MATN[it.mt]+' Helm';
  if(it.k==='ring')return 'T'+(it.t+1)+' '+RINGN[it.st];
+ if(it.k==='coin')return (COIN_NAMES[it.t||0])+' Fortune Coin';
  return p; }
 function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
  let nm=itemBaseName(it);
@@ -242,7 +254,8 @@ function canEquip(it,ch){ if(!it||it.k==='pot')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
-function itemValue(it){ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*rarMult(it.rar))); }
+function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
+ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*rarMult(it.rar))); }
 function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
  if(r<0.5){ const keys=Object.keys(WTYPE).filter(k=>k!=='fists');
   it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
@@ -261,6 +274,8 @@ function rollLoot(e){
  let tier=Math.max(0,Math.min(11,tb+Math.floor(Math.random()*3)-1));
  if(Math.random()<F*0.004) tier=Math.min(11,tier+1);  // fortune: better tier
  const r=Math.random();
+ // rare Fortune Coin (bronze) — its own roll, can drop alongside gear
+ if(Math.random() < (e.type==='B'?0.85:0.04)) loots.push(bagAt(e,{k:'coin'}));
  if(e.type==='B'){ loots.push(bagAt(e,mkDrop(Math.min(11,tb+1))));
    if(Math.random()<0.4) loots.push(bagAt(e,{k:'pot'})); return; }
  if(e.type==='s'){ if(r<0.10*fmul) loots.push(bagAt(e,mkDrop(tier)));
@@ -447,6 +462,17 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  }
  $s('invInfo').textContent=ch.inv.length+' / 20 satchel slots';
  const g=$s('invGrid'); g.innerHTML='';
+ // Fortune Coins (carried, passively boost loot): bronze/silver/gold stacks shown first
+ if(rpg.coins) rpg.coins.forEach((cnt,ci)=>{ if(cnt<=0) return;
+   const d=document.createElement('div'); d.className='islot coin';
+   const cvs=document.createElement('canvas'); cvs.width=44; cvs.height=38; cvs.className='isprite';
+   drawItemIcon(cvs.getContext('2d'),{k:'coin',t:ci},44,38); d.appendChild(cvs);
+   const badge=document.createElement('span'); badge.className='tbadge'; badge.textContent='×'+cnt; badge.style.color='#ffd07a'; d.appendChild(badge);
+   d.onclick=()=>{ invSelIdx=-1;
+     $s('invSel').innerHTML='<b style="color:#ffd07a">'+COIN_NAMES[ci]+' Fortune Coin</b> ×'+cnt
+       +'<div class="istats">Carry coins to boost loot — total <span style="color:#ffc94d">+'+coinFortune()+' Fortune</span>. 20 '+COIN_NAMES[ci]+' merge into 1 '+(COIN_NAMES[ci+1]||'—')+'.</div>';
+     $s('invEquip').style.display='none'; $s('invSell').style.display='none'; $s('invDrop').style.display='none'; };
+   g.appendChild(d); });
  ch.inv.forEach((it,i)=>{ const d=document.createElement('div'); d.className='islot'+(i===invSelIdx?' sel':'');
   if(it.rar) d.style.borderColor=RAR_COL[it.rar];
   const cvs=document.createElement('canvas'); cvs.width=44; cvs.height=38; cvs.className='isprite';
@@ -528,6 +554,7 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  else addSlot(gearBaseStats('arm',at,mt),'arm');
  if(ht>=0) addSlot(gearBaseStats('helm',ht,mt),'helm');
  if(rg) addSlot(gearBaseStats('ring',rg.t,rg.st),'ring');
+ st.fort += coinFortune();      // passive loot boost from your best Fortune Coin
  // ---- skill-tree flat stats fold in before deriving; % / flags applied after
  const T=(typeof treeStats==='function')?treeStats(ch.cls,rpg):null;
  if(T){ st.atk+=T.atk; st.def+=T.def; st.hp+=T.hp; st.mp+=T.mp; st.dex+=T.dex; st.wis+=T.wis; st.vit+=T.vit;

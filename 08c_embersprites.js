@@ -35,14 +35,16 @@ if(typeof window!=='undefined'){
   ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
   ['plate','leather','robe'].forEach(m=>{ _itemArt['arm_'+m]=[0,1,2].map(b=>_img('assets/items/arm_'+m+'_'+b+'.png'));
     _itemArt['helm_'+m]=[0,1,2].map(b=>_img('assets/items/helm_'+m+'_'+b+'.png')); });
-  ['hp','dmg','def','mp','vit','wis','dex','spd','luck','fort'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
+  ['hp','dmg','def','mp','vit','wis','dex','spd','luck'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
+  _itemArt['coin']=[0,1,2].map(b=>_img('assets/items/coin_'+b+'.png'));   // bronze/silver/gold
   _itemArt['potion']=[_img('assets/items/potion.png')];
 }
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
-  const band=Math.min(2,Math.floor((it.t||0)/4)); let key=null;
+  // coins use their denomination (0/1/2) as the band directly, not tier/4
+  const band=(it.k==='coin')?Math.min(2,it.t||0):Math.min(2,Math.floor((it.t||0)/4)); let key=null;
   if(it.k==='wpn') key='wpn_'+it.wt; else if(it.k==='arm') key='arm_'+it.mt;
   else if(it.k==='helm') key='helm_'+it.mt; else if(it.k==='ring') key='ring_'+it.st;
-  else if(it.k==='pot') key='potion';
+  else if(it.k==='coin') key='coin'; else if(it.k==='pot') key='potion';
   const arr=_itemArt[key]; if(!arr) return null;
   const im=arr[Math.min(band,arr.length-1)];
   return (im&&im.complete&&im.naturalWidth)?im:null; }
