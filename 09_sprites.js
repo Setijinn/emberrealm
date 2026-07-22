@@ -402,9 +402,13 @@ function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
     ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R*0.9,0,6.29); ctx.stroke(); }
   if(_uiOrb&&_uiOrb.complete&&_uiOrb.naturalWidth) ctx.drawImage(_uiOrb,cx-R,cy-R,R*2,R*2);
   else { ctx.strokeStyle='#c9a24d'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R*0.82,0,6.29); ctx.stroke(); }
-  const fs=Math.round(R*0.4); ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center';
+  // auto-fit the % label inside the glass (never touching the ornate ring)
+  let fs=Math.round(R*0.4); ctx.font='bold '+fs+'px "Pixelify Sans",monospace';
+  const maxW=R*0.95, tw=ctx.measureText(txt).width;
+  if(tw>maxW){ fs=Math.max(8,Math.floor(fs*maxW/tw)); ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; }
+  ctx.textAlign='center';
   const ty2=cy+Math.round(fs*0.35);
-  ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(txt,cx+1,ty2+1);
+  ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.fillText(txt,cx+1,ty2+1);
   ctx.fillStyle='#fff'; ctx.fillText(txt,cx,ty2); ctx.textAlign='left';
 }
 // Loot bag: rarity-signaled art + glow + light beam + floating label.
