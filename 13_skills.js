@@ -617,7 +617,9 @@ function _skDrawNode(g,s,pulse){ const ch=curChar(); const n=s.n, r=nodeRank(rpg
   g.fillStyle=s.color+(owned?'dd':(avail?'99':'44')); g.beginPath(); g.arc(s.x,s.y,R*0.52,0,6.29); g.fill();
   g.lineWidth=sel?3:2; g.strokeStyle=sel?'#fff':col; g.beginPath(); g.arc(s.x,s.y,R,0,6.29); g.stroke();
   g.textAlign='center'; g.textBaseline='middle';
-  if(n.max>1){ g.fillStyle='#fff'; g.font='bold 11px "Pixelify Sans",monospace'; g.fillText(r+'/'+n.max,s.x,s.y+1); }
+  if(n.ability){ const ab=(typeof abilById==='function')?abilById(ch.cls,n.ability):null;   // ability-unlock node shows its icon
+    g.globalAlpha=owned?1:(avail?0.9:0.5); g.font='16px serif'; g.fillText(ab?ab.icon:'✦',s.x,s.y+1); g.globalAlpha=1; }
+  else if(n.max>1){ g.fillStyle='#fff'; g.font='bold 11px "Pixelify Sans",monospace'; g.fillText(r+'/'+n.max,s.x,s.y+1); }
   else if(owned){ g.fillStyle='#fff'; g.font='bold 13px monospace'; g.fillText('✓',s.x,s.y+1); }
   g.font='9px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=owned?'#e8d9b8':(avail?'#a9dea6':'#7a7484');
   g.fillText(n.name.length>14?n.name.slice(0,13)+'…':n.name, s.x, s.y+R+3);
@@ -678,3 +680,21 @@ function treeStats(cls,rpg){
     d[k]=Math.round(d[k]*lm*10)/10;
   return d;
 }
+
+// ===== abilities unlock through the tree (start with the class's first ability) =====
+function abilityStarter(cls){ const p=(typeof APOOL!=='undefined')&&APOOL[cls]; return (p&&p[0])?p[0].id:null; }
+function unlockedAbils(cls,rpg){ const set=new Set(); const st=abilityStarter(cls); if(st) set.add(st);
+  const t=treeOf(cls); if(t&&rpg&&rpg.tree) for(const b of t.branches) for(const n of b.nodes)
+    if(n.ability && nodeRank(rpg,n.id)>0) set.add(n.ability);
+  return set; }
+function isAbilUnlocked(cls,rpg,id){ return unlockedAbils(cls,rpg).has(id); }
+// Inject ability-unlock nodes into every class tree from its APOOL (ability #0 is the free
+// starter; #1.. become unlock nodes hung off the branches — extra forks/dead-ends too).
+(function _injectAbilityNodes(){ if(typeof APOOL==='undefined'||typeof CLASS_TREE==='undefined') return;
+  for(const cls in CLASS_TREE){ const t=CLASS_TREE[cls], pool=APOOL[cls]; if(!pool||!t.branches) continue;
+    for(let i=1;i<pool.length;i++){ const ab=pool[i], br=t.branches[(i-1)%t.branches.length];
+      if(!br.nodes.length) continue; const anchor=br.nodes[(i-1)%br.nodes.length];
+      br.nodes.push({id:'ab_'+ab.id, name:ab.name, desc:'Unlock ability — '+ab.desc,
+        cost:2, max:1, req:[anchor.id], eff:{}, ability:ab.id}); }
+  }
+})();

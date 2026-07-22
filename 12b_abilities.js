@@ -169,10 +169,11 @@ const APOOL = {
 let armedSlot = 0;
 function classPool(cls){ return APOOL[cls]||APOOL.knight; }
 function abilById(cls,id){ return classPool(cls).find(a=>a.id===id)||null; }
-function defaultLoadout(cls){ return classPool(cls).slice(0,3).map(a=>a.id); }
+function defaultLoadout(cls){ const p=classPool(cls); return [p[0]?p[0].id:null,null,null]; }   // start with the 1 free ability
+function isUnlocked(cls,id){ return (typeof unlockedAbils==='function') ? unlockedAbils(cls,rpg).has(id) : true; }
 function ensureLoadout(){ const ch=curChar(); if(!ch||!rpg) return;
   if(!rpg.loadout || !Array.isArray(rpg.loadout) || rpg.loadout.length!==3) rpg.loadout=defaultLoadout(ch.cls);
-  rpg.loadout=rpg.loadout.map(id=> (id&&abilById(ch.cls,id))?id:null);
+  rpg.loadout=rpg.loadout.map(id=>{ if(!id||!abilById(ch.cls,id)) return null; if(!isUnlocked(ch.cls,id)) return null; return id; });
   if(!player.acd) player.acd={};
   if(armedSlot<0||armedSlot>2) armedSlot=0;
 }
@@ -240,7 +241,8 @@ function _loadClick(ev){ const t=ev.target.closest('[data-act]'); if(!t) return;
   if(act==='close'){ closeLoadout(); return; }
   if(act==='slot'){ loadSel=+t.getAttribute('data-i'); _loadRender(); return; }
   if(act==='clear'){ rpg.loadout[loadSel]=null; saveRPG(); _loadRender(); return; }
-  if(act==='pick'){ const id=t.getAttribute('data-id');
+  if(act==='locked'){ navigator.vibrate&&navigator.vibrate(15); return; }
+  if(act==='pick'){ const id=t.getAttribute('data-id'); if(!isUnlocked(ch.cls,id)) return;
     // if already slotted elsewhere, pull it out of that slot first
     for(let i=0;i<3;i++) if(rpg.loadout[i]===id) rpg.loadout[i]=null;
     rpg.loadout[loadSel]=id;
@@ -256,17 +258,19 @@ function _loadRender(){ const ov=document.getElementById('loadScr'); const ch=cu
       +'<div class="ldIc">'+(a?a.icon:'＋')+'</div>'
       +'<div class="ldNm">'+(a?a.name:'empty')+'</div>'
       +(a?'<div class="ldX" data-act="clear">✕</div>':'')+'</div>'; }
-  let cards='';
-  for(const a of pool){ const slotIdx=rpg.loadout.indexOf(a.id); const on=slotIdx>=0;
-    cards+='<div class="ldCard'+(on?' on':'')+'" data-act="pick" data-id="'+a.id+'">'
-      +'<div class="ldCic">'+a.icon+'</div>'
+  const unl=(typeof unlockedAbils==='function')?unlockedAbils(ch.cls,rpg):null;
+  let cards='', nUnl=0;
+  for(const a of pool){ const locked=unl&&!unl.has(a.id); if(!locked) nUnl++;
+    const slotIdx=rpg.loadout.indexOf(a.id); const on=slotIdx>=0;
+    cards+='<div class="ldCard'+(on?' on':'')+(locked?' locked':'')+'" '+(locked?'data-act="locked"':('data-act="pick" data-id="'+a.id+'"'))+'>'
+      +'<div class="ldCic">'+(locked?'🔒':a.icon)+'</div>'
       +'<div class="ldCbody"><div class="ldCn">'+a.name+(on?' <span class="ldTag">'+(slotIdx+1)+'</span>':'')+'</div>'
-      +'<div class="ldCd">'+a.desc+'</div>'
+      +'<div class="ldCd">'+(locked?'Locked — unlock in the skill tree (🌟).':a.desc)+'</div>'
       +'<div class="ldCm">'+a.mp+' MP · '+a.cd+'s'+(a.ground?' · aimed':'')+'</div></div></div>'; }
   const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))];
   ov.innerHTML='<div class="ldWrap">'
     +'<div class="ldTitle">ABILITIES · '+(cc?cc.n:ch.cls)+'</div>'
-    +'<div class="ldHint">tap a slot, then an ability. tap ability buttons in-game to arm, then tap the right side to cast.</div>'
+    +'<div class="ldHint">'+nUnl+' of '+pool.length+' unlocked · tap a slot then an ability. Unlock more in the skill tree (🌟).</div>'
     +'<div class="ldSlots">'+slots+'</div>'
     +'<div class="ldGrid">'+cards+'</div>'
     +'<button class="mbtn go" data-act="close" style="width:100%;margin-top:12px;">DONE</button>'

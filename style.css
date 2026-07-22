@@ -141,6 +141,8 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .ldCard{display:flex;align-items:center;gap:10px;background:#161119;border:1px solid #2c2633;border-radius:10px;
  padding:8px 10px;cursor:pointer;}
 .ldCard.on{border-color:#ffc94d;background:#1e1826;}
+.ldCard.locked{opacity:.5;cursor:default;}
+.ldCard.locked .ldCn{color:#8a8494;}
 .ldCic{font-size:24px;flex:0 0 auto;width:30px;text-align:center;}
 .ldCbody{flex:1;min-width:0;}
 .ldCn{font-family:'Pixelify Sans',monospace;font-size:14px;color:#f0e8d8;}
