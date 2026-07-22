@@ -344,6 +344,33 @@ function drawEnemySprite(e,pn){
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // ---------- hub / world decor ----------
+// HP/MP liquid orb: dark glass + colored fill (bottom->frac) inside the ornate frame
+function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
+  frac=Math.max(0,Math.min(1,frac||0));
+  const rIn=R*0.56;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,rIn,0,6.29); ctx.clip();
+  ctx.fillStyle='#0b0910'; ctx.fillRect(cx-rIn,cy-rIn,rIn*2,rIn*2);
+  const surf=cy+rIn-2*rIn*frac;
+  const lg=ctx.createLinearGradient(0,surf,0,cy+rIn);
+  lg.addColorStop(0,c1); lg.addColorStop(1,c2);
+  ctx.fillStyle=lg; ctx.fillRect(cx-rIn,surf,rIn*2,cy+rIn-surf);
+  if(frac>0.02&&frac<0.99){ ctx.fillStyle='rgba(255,255,255,0.22)';
+    ctx.beginPath(); ctx.moveTo(cx-rIn,surf);
+    for(let x=-rIn;x<=rIn;x+=3) ctx.lineTo(cx+x,surf+Math.sin(performance.now()/280+x*0.14)*1.8);
+    ctx.lineTo(cx+rIn,surf+3); ctx.lineTo(cx-rIn,surf+3); ctx.closePath(); ctx.fill(); }
+  const gs=ctx.createRadialGradient(cx-rIn*0.35,cy-rIn*0.4,1,cx-rIn*0.35,cy-rIn*0.4,rIn*1.1);
+  gs.addColorStop(0,'rgba(255,255,255,0.20)'); gs.addColorStop(0.6,'rgba(255,255,255,0)');
+  ctx.fillStyle=gs; ctx.fillRect(cx-rIn,cy-rIn,rIn*2,rIn*2);
+  ctx.restore();
+  if(glow){ ctx.strokeStyle='rgba(255,201,77,'+(0.4+Math.sin(performance.now()/200)*0.35).toFixed(2)+')';
+    ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R*0.9,0,6.29); ctx.stroke(); }
+  if(_uiOrb&&_uiOrb.complete&&_uiOrb.naturalWidth) ctx.drawImage(_uiOrb,cx-R,cy-R,R*2,R*2);
+  else { ctx.strokeStyle='#c9a24d'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R*0.82,0,6.29); ctx.stroke(); }
+  ctx.font='bold 12px "Pixelify Sans",monospace'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(txt,cx+1,cy+5);
+  ctx.fillStyle='#fff'; ctx.fillText(txt,cx,cy+4); ctx.textAlign='left';
+}
 function drawPillar(pl){
   const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
   const t=performance.now()/1000, col=un?'#c9a24d':'#5a6070', gy=pl.y-24;
@@ -590,26 +617,20 @@ function render(){
       ctx.beginPath(); ctx.arc(s.ox,s.oy,50,0,6.29); ctx.stroke();
       ctx.fillStyle='rgba(216,210,200,.35)';
       ctx.beginPath(); ctx.arc(s.ox+s.dx,s.oy+s.dy,20,0,6.29); ctx.fill(); } }
-  // ---- bottom bars: HP / MP / XP ----
-  const bx=W/2-97, bw=194;
-  ctx.fillStyle='rgba(0,0,0,.68)'; ctx.fillRect(bx,H-34,bw,32);
-  ctx.strokeStyle='rgba(216,210,200,.30)'; ctx.lineWidth=1; ctx.strokeRect(bx-0.5,H-34.5,bw+1,33);
-  const hc=player.hp/player.maxhp>0.3;
-  const hg=ctx.createLinearGradient(0,H-32,0,H-22);
-  hg.addColorStop(0,hc?'#8fd48c':'#f07a64'); hg.addColorStop(1,hc?'#4f8a4c':'#a83a2a');
-  ctx.fillStyle=hg; ctx.fillRect(bx+2,H-32,(bw-4)*Math.max(0,player.hp/player.maxhp),10);
-  ctx.fillStyle='#08110a'; ctx.font='8px monospace'; ctx.textAlign='left';
-  ctx.fillText(Math.ceil(player.hp)+' / '+player.maxhp,bx+5,H-24);
+  // ---- HP / MP orbs + XP bar ----
   const mp=player.mp||0, mm=player.maxmp||1;
-  ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(bx+2,H-20,bw-4,7);
-  const mg=ctx.createLinearGradient(0,H-20,0,H-13);
-  mg.addColorStop(0,'#7ab8d4'); mg.addColorStop(1,'#3f6f8a');
-  ctx.fillStyle=mg; ctx.fillRect(bx+2,H-20,(bw-4)*Math.max(0,Math.min(1,mp/mm)),7);
   const cost=(typeof abilityCost==='function')?abilityCost():1e9;
-  if(mp>=cost){ ctx.strokeStyle='rgba(255,201,77,'+(0.5+Math.sin(performance.now()/200)*0.35)+')';
-    ctx.lineWidth=1.5; ctx.strokeRect(bx+1.5,H-20.5,bw-3,8); }
-  if(rpg){ ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(bx+2,H-11,bw-4,5);
-    ctx.fillStyle='#c9a04a'; ctx.fillRect(bx+2,H-11,(bw-4)*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),5); }
+  // HP + MP orbs clustered bottom-left (right side is reserved for cast/potion buttons)
+  const orbR=31, oy=H-orbR-12;
+  const hpF=Math.max(0,player.hp/player.maxhp), mpF=Math.max(0,Math.min(1,mp/mm));
+  drawOrb(orbR+10, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
+  drawOrb(orbR*3+18, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
+  if(rpg){ const xbx=orbR*4+28, xbw=Math.max(40,W-xbx-118), xby=H-13;
+    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,6);
+    ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),6);
+    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,7);
+    ctx.font='7px monospace'; ctx.textAlign='left'; ctx.fillStyle='rgba(230,220,200,.65)';
+    ctx.fillText('XP', xbx, xby-2); }
   // ability hint (right-side invisible button)
   if(rpg&&player.resDef){ const ready=mp>=cost;
     ctx.textAlign='right'; ctx.font='11px "Pixelify Sans",monospace';

@@ -17,6 +17,9 @@
 // On-screen scale for the 92px PixelLab sprites (tune to match world scale).
 const EMBER_SC = 0.85;
 
+// HUD orb frame (PixelLab) — ornate hollow ring for the HP/MP globes.
+const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return i; })() : null;
+
 // All 17 classes have real PixelLab art vendored to assets/<class>/.
 // walk = 4 frames/dir; attack probed up to 8 (some dirs 5, some 7). West walk/attack
 // mirror East at render time, so only s/e/n are vendored/probed for those; idle has
