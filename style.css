@@ -223,11 +223,16 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 
 /* ---------- shop UI ---------- */
 #shopScr{gap:0;}
-#shopTitle{font-family:'Pixelify Sans',monospace;color:#ffc94d;text-shadow:0 2px 0 #7a4a1e;margin-bottom:4px;}
-#shopGold{margin-bottom:12px;}
+/* ornate shop panel (reuses the equipment window frame) */
+#shopCard{width:min(95vw,432px);max-height:94vh;display:flex;padding:0;
+ background:url(assets/ui/equip_panel.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
+#shopInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:46px 40px 44px;display:flex;flex-direction:column;}
+#shopInner::-webkit-scrollbar{width:5px;} #shopInner::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
+#shopTitle{font-family:'Pixelify Sans',monospace;font-size:19px;color:#ffce7a;text-align:center;text-shadow:0 2px 3px #000;letter-spacing:.04em;margin-bottom:4px;}
+#shopGold{margin-bottom:10px;text-align:center;}
 .purse{display:inline-block;background:#1c1626;border:1px solid #7a4a1e;border-radius:20px;
  padding:5px 16px;color:#ffc94d;font-family:'Pixelify Sans',monospace;font-size:15px;}
-#shopRows{width:min(94vw,410px)!important;max-height:60vh;overflow-y:auto;gap:8px!important;padding:2px;}
+#shopRows{display:flex;flex-direction:column;width:100%;gap:7px;padding:2px 0;margin-bottom:8px;}
 .shopcard{display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,#1c1626,#151019);
  border:1px solid #39323f;border-radius:12px;padding:8px 11px;cursor:pointer;transition:border-color .12s,transform .06s;}
 .shopcard:active{transform:scale(0.98);}

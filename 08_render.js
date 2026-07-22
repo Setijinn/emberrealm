@@ -23,6 +23,16 @@ function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
   ctx.fillRect(tx,ty,TILE,TILE);
+  // town cobblestone floor (PixelLab) for walkable cells, per-cell flip for variety
+  if(t && typeof _hearth!=='undefined' && _hearth.floor && _hearth.floor.complete && _hearth.floor.naturalWidth && 'WwhHl'.indexOf(c)<0){
+    ctx.imageSmoothingEnabled=false; const hh=(x*131+y*57)>>>0, o=hh&3;
+    ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+    ctx.drawImage(_hearth.floor,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+    const v=(hh>>2)%5;
+    if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
+    else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+    return;
+  }
   const r1=h2(x,y);
   if(r1>0.55){ ctx.fillStyle='rgba(0,0,0,0.14)';
     ctx.fillRect(tx+(r1*30)%TILE,ty+(r1*57)%TILE,3,3); }
