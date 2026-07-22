@@ -387,9 +387,7 @@ function paintEqSlots(ch){ const cls=ch.cls, mt=CARMOR[cls]||'plate', wt=CWEAP[c
    const it=items[el.getAttribute('data-slot')];
    const cv=el.querySelector('.eqCv'), g=cv.getContext('2d'); g.imageSmoothingEnabled=false; g.clearRect(0,0,cv.width,cv.height);
    const tb=el.querySelector('.eqTb');
-   if(it){ const sp=itemSprite(it);
-     if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cv.width-10)/sp.width,(cv.height-10)/sp.height)));
-       g.drawImage(sp,Math.round((cv.width-sp.width*sc)/2),Math.round((cv.height-sp.height*sc)/2),sp.width*sc,sp.height*sc); }
+   if(it){ drawItemIcon(g,it,cv.width,cv.height);
      tb.textContent=it.leg?'★':('T'+(it.t+1)); tb.style.color=it.leg?'#ff9c50':tierCol(it.t); el.classList.add('filled');
    } else { tb.textContent=''; el.classList.remove('filled'); } });
 }
@@ -438,9 +436,7 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
   if(it.rar) d.style.borderColor=RAR_COL[it.rar];
   const cvs=document.createElement('canvas'); cvs.width=44; cvs.height=38; cvs.className='isprite';
   const cc=cvs.getContext('2d'); cc.imageSmoothingEnabled=false;
-  const sp=itemSprite(it);
-  if(sp){ const sc=Math.max(1,Math.floor(Math.min(40/sp.width,34/sp.height)));
-   cc.drawImage(sp,Math.round((44-sp.width*sc)/2),Math.round((38-sp.height*sc)/2),sp.width*sc,sp.height*sc); }
+  drawItemIcon(cc,it,44,38);
   d.appendChild(cvs);
   const badge=document.createElement('span'); badge.className='tbadge';
   badge.textContent=it.k==='pot'?'✦':'T'+(it.t+1); badge.style.color=itemRarCol(it);
@@ -627,11 +623,11 @@ function paintShop2(id){ if(!rpg) return;
   const afford=!(it.c>0&&rpg.gold<it.c);
   const card=document.createElement('div'); card.className='shopcard'+(afford?'':' broke')+(it.legend?' legend':'');
   const ico=document.createElement('div'); ico.className='shopico';
-  const sp = it.ic?itemSprite(it.ic) : (it.pet?petSprite(it.pet) : null);
-  if(sp){ const cv=document.createElement('canvas'); cv.width=42; cv.height=36; cv.className='isprite';
+  if(it.ic||it.pet){ const cv=document.createElement('canvas'); cv.width=42; cv.height=36; cv.className='isprite';
    const cc=cv.getContext('2d'); cc.imageSmoothingEnabled=false;
-   const sc=Math.max(1,Math.floor(Math.min(38/sp.width,32/sp.height)));
-   cc.drawImage(sp,Math.round((42-sp.width*sc)/2),Math.round((36-sp.height*sc)/2),sp.width*sc,sp.height*sc);
+   if(it.ic){ drawItemIcon(cc,it.ic,42,36); }
+   else { const sp=petSprite(it.pet); if(sp){ const sc=Math.max(1,Math.floor(Math.min(38/sp.width,32/sp.height)));
+     cc.drawImage(sp,Math.round((42-sp.width*sc)/2),Math.round((36-sp.height*sc)/2),sp.width*sc,sp.height*sc); } }
    ico.appendChild(cv);
   } else { ico.classList.add('emoji'); ico.textContent=it.legend?'★':'🛒'; }
   card.appendChild(ico);

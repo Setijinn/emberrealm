@@ -166,6 +166,16 @@ function armorSpr(mt,t){ const k=mt+'_'+t; if(!_armC[k]) _armC[k]=makeSprite(ARM
 function helmSpr(mt,t){ const k=mt+'_'+t; if(!_helmC[k]) _helmC[k]=makeSprite(HELM_A,{O:'#140d08',B:MATCOL[mt]||'#888',G:tierCol(t)}); return _helmC[k]; }
 function ringSpr(st,t){ const k=st+'_'+t; if(!_ringC[k]) _ringC[k]=makeSprite(RING_A,{O:'#140d08',G:tierCol(t),E:{hp:'#8fd48c',dmg:'#e2604c',spd:'#9ad4ef'}[st]||'#ffc94d'}); return _ringC[k]; }
 function petSprite(p){ return p==='wolf'?sprWolf:p==='skel'?sprSkel:sprWisp; }
+// Draw an item's icon into a 2d context box (cw x ch), centered. Prefers the real
+// PixelLab tier-band art (fractional fit); falls back to the procedural sprite (pixel
+// floor-scale). Used by equipment slots, the satchel grid, and shop rows.
+function drawItemIcon(g,it,cw,ch){ if(!it) return; g.imageSmoothingEnabled=false;
+ const real=(typeof itemArtImg==='function')?itemArtImg(it):null;
+ if(real){ const sc=Math.min((cw-4)/real.naturalWidth,(ch-4)/real.naturalHeight);
+   const w=real.naturalWidth*sc, h=real.naturalHeight*sc;
+   g.drawImage(real,Math.round((cw-w)/2),Math.round((ch-h)/2),Math.round(w),Math.round(h)); return; }
+ const sp=itemSprite(it); if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cw-4)/sp.width,(ch-4)/sp.height)));
+   g.drawImage(sp,Math.round((cw-sp.width*sc)/2),Math.round((ch-sp.height*sc)/2),sp.width*sc,sp.height*sc); } }
 function itemSprite(it){ if(!it) return null;
  if(it.k==='pot') return sprPotion;
  if(it.k==='wpn') return wpnSpr(it.wt,it.t);

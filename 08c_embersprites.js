@@ -28,6 +28,24 @@ const _lootChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
+// Item icon art (PixelLab): 3 tier bands per type/material (crude 0-3 / fine 4-7 / ornate 8-11).
+// key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
+const _itemArt={};
+if(typeof window!=='undefined'){
+  ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
+  ['plate','leather','robe'].forEach(m=>{ _itemArt['arm_'+m]=[0,1,2].map(b=>_img('assets/items/arm_'+m+'_'+b+'.png'));
+    _itemArt['helm_'+m]=[0,1,2].map(b=>_img('assets/items/helm_'+m+'_'+b+'.png')); });
+  ['hp','dmg','spd'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
+  _itemArt['potion']=[_img('assets/items/potion.png')];
+}
+function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
+  const band=Math.min(2,Math.floor((it.t||0)/4)); let key=null;
+  if(it.k==='wpn') key='wpn_'+it.wt; else if(it.k==='arm') key='arm_'+it.mt;
+  else if(it.k==='helm') key='helm_'+it.mt; else if(it.k==='ring') key='ring_'+it.st;
+  else if(it.k==='pot') key='potion';
+  const arr=_itemArt[key]; if(!arr) return null;
+  const im=arr[Math.min(band,arr.length-1)];
+  return (im&&im.complete&&im.naturalWidth)?im:null; }
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
