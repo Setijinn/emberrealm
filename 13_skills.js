@@ -535,9 +535,18 @@ function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg)
   const cv=document.getElementById('skillCv'); cv.addEventListener('pointerdown',_skClick);
   document.getElementById('skRespec').onclick=()=>{ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skSel=null; _skRefresh(); } };
   document.getElementById('skDone').onclick=closeSkills;
-  _skSel=null; _skBuildLayout(ch.cls); _skRefresh(); _skStartAnim();
+  _skSel=null; _skBuildLayout(ch.cls); _skFitCanvas(); _skRefresh(); _skStartAnim();
+  addEventListener('resize',_skFitCanvas);
 }
+// scale the canvas DISPLAY to fit the viewport (buffer stays 690x520) so the header,
+// detail bar and RESPEC/DONE buttons are always visible — the canvas can't be scrolled
+// past (touch-action:none), so it must never fill the whole screen.
+function _skFitCanvas(){ const cv=document.getElementById('skillCv'); if(!cv) return;
+  const maxW=Math.min(690, innerWidth*0.96), maxH=innerHeight*0.52;
+  const s=Math.min(maxW/690, maxH/520);
+  cv.style.width=Math.round(690*s)+'px'; cv.style.height=Math.round(520*s)+'px'; }
 function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.style.display='none'; _skStopAnim();
+  removeEventListener('resize',_skFitCanvas);
   if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }
 
 // position every node: 3 branch sub-trees growing UP from a trunk root, ascensions at top
