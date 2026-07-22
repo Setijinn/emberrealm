@@ -479,14 +479,26 @@ function drawPillar(pl){
 }
 function drawPortal(pt){
  const t=performance.now()/1000, col=pt.col||'#c07ad4', R=pt.big?36:20;
+ const pimg=(typeof _hearth!=='undefined')?_hearth.portal:null;
+ // colored ground glow (behind the arch)
  const g=ctx.createRadialGradient(pt.x,pt.y,2,pt.x,pt.y,R*1.9);
  g.addColorStop(0,col); g.addColorStop(0.45,col+'66'); g.addColorStop(1,'rgba(0,0,0,0)');
- ctx.globalAlpha=0.55+Math.sin(t*3)*0.12; ctx.fillStyle=g;
+ ctx.globalAlpha=(0.5+Math.sin(t*3)*0.12)*(pimg&&pimg.complete&&pimg.naturalWidth?0.7:1); ctx.fillStyle=g;
  ctx.beginPath(); ctx.arc(pt.x,pt.y,R*1.9,0,6.29); ctx.fill(); ctx.globalAlpha=1;
- for(let i=0;i<3;i++){ ctx.strokeStyle=col; ctx.lineWidth=pt.big?4:3; ctx.globalAlpha=0.85-i*0.22;
-   ctx.beginPath(); ctx.arc(pt.x,pt.y,R-i*7+Math.sin(t*4+i*2)*3,0,6.29); ctx.stroke(); }
- ctx.globalAlpha=1;
- ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.big?7:4,0,6.29); ctx.fill();
+ if(pimg&&pimg.complete&&pimg.naturalWidth){
+   const w=pt.big?106:76, h=pimg.naturalHeight*(w/pimg.width);
+   ctx.imageSmoothingEnabled=false; ctx.drawImage(pimg,Math.round(pt.x-w/2),Math.round(pt.y-h*0.64),Math.round(w),Math.round(h));
+   // tint the vortex toward the portal's colour (additive pulse)
+   ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.32+Math.sin(t*3)*0.16;
+   const vy=pt.y-h*0.14, vg=ctx.createRadialGradient(pt.x,vy,1,pt.x,vy,w*0.32);
+   vg.addColorStop(0,col); vg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=vg;
+   ctx.beginPath(); ctx.arc(pt.x,vy,w*0.32,0,6.29); ctx.fill(); ctx.restore();
+ } else {
+   for(let i=0;i<3;i++){ ctx.strokeStyle=col; ctx.lineWidth=pt.big?4:3; ctx.globalAlpha=0.85-i*0.22;
+     ctx.beginPath(); ctx.arc(pt.x,pt.y,R-i*7+Math.sin(t*4+i*2)*3,0,6.29); ctx.stroke(); }
+   ctx.globalAlpha=1;
+   ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.big?7:4,0,6.29); ctx.fill();
+ }
  if(pt.label){ const ly=pt.y-R-(pt.big?26:18);
    ctx.font=(pt.big?'bold 16px':'bold 12px')+' "Pixelify Sans",monospace'; ctx.textAlign='center';
    const w=ctx.measureText(pt.label).width+16;
@@ -495,7 +507,14 @@ function drawPortal(pt){
    ctx.fillStyle=col; ctx.fillText(pt.label,pt.x,ly);
    ctx.textAlign='left'; }
 }
+// draw a PixelLab object scaled to width w with its BASE (feet) at (cx, baseY)
+function drawObjBottom(img,cx,baseY,w){ if(!img||!img.complete||!img.naturalWidth) return false;
+ const h=img.naturalHeight*(w/img.naturalWidth); ctx.imageSmoothingEnabled=false;
+ ctx.drawImage(img,Math.round(cx-w/2),Math.round(baseY-h),Math.round(w),Math.round(h)); return true; }
 function drawFountain(x,y){ const t=performance.now()/1000;
+ const fimg=(typeof _hearth!=='undefined')?_hearth.fountain:null;
+ if(fimg&&fimg.complete&&fimg.naturalWidth){ ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x,y+16,34,12,0,0,6.29); ctx.fill();
+   drawObjBottom(fimg,x,y+24,128); return; }
  ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(x,y+10,30,11,0,0,6.29); ctx.fill();
  ctx.fillStyle='#6d6560'; ctx.beginPath(); ctx.ellipse(x,y+4,22,9,0,0,6.29); ctx.fill();
  ctx.fillStyle='#847c76'; ctx.fillRect(x-7,y-20,14,24);
@@ -539,7 +558,7 @@ function drawStall(np){ const x=np.x, y=np.y, awn=np.awn||'#b5482f';
  for(let i=0;i<9;i++){ ctx.fillStyle=i%2?awn:'#efe3d0'; ctx.fillRect(x-36+i*8,y-26,8,10);
    ctx.beginPath(); ctx.moveTo(x-36+i*8,y-16); ctx.lineTo(x-32+i*8,y-11); ctx.lineTo(x-28+i*8,y-16); ctx.closePath(); ctx.fill(); }
 }
-function drawShopSign(np){ const x=np.x, sy=np.y-54;
+function drawShopSign(np){ const x=np.x, sy=np.y-96;
  ctx.textAlign='center'; ctx.font='bold 13px "Pixelify Sans",monospace';
  const label=np.name.toUpperCase();
  const w=Math.max(ctx.measureText(label).width,32)+20;
@@ -624,10 +643,13 @@ function render(){
       ctx.stroke(); ctx.globalAlpha=1; } }
   if(curRoom.town){
     for(const np of SHOPNPCS){
-      drawStall(np);
-      shadow(np.x,np.y+14,13);
-      const sp=np.id==='maren'?sprMaren:np.id==='bram'?sprBram:np.id==='sella'?sprSella:np.id==='odo'?sprOdo:sprNyx;
-      blit(sp,np.x,np.y+2,1.9,false);
+      const simg=(typeof _hearth!=='undefined')?_hearth['stall_'+np.id]:null;
+      if(simg&&simg.complete&&simg.naturalWidth){
+        ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(np.x,np.y+22,30,11,0,0,6.29); ctx.fill();
+        drawObjBottom(simg,np.x,np.y+26,108); }
+      else { drawStall(np); shadow(np.x,np.y+14,13);
+        const sp=np.id==='maren'?sprMaren:np.id==='bram'?sprBram:np.id==='sella'?sprSella:np.id==='odo'?sprOdo:sprNyx;
+        blit(sp,np.x,np.y+2,1.9,false); }
       drawShopSign(np); }
   }
   ctx.font='13px monospace'; ctx.textAlign='center';

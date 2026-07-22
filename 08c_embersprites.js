@@ -24,6 +24,10 @@ const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image();
 // Loot containers (PixelLab): drab sack for low rarity, ornate chest for high rarity.
 const _lootSack  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';  return i; })() : null;
 const _lootChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_chest.png'; return i; })() : null;
+// Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
+const _hearth={};
+if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal']
+  .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
