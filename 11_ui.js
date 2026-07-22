@@ -421,6 +421,19 @@ function paintEqSlots(ch){ const cls=ch.cls, mt=CARMOR[cls]||'plate', wt=CWEAP[c
      tb.textContent=it.leg?'★':('T'+(it.t+1)); tb.style.color=it.leg?'#ff9c50':tierCol(it.t); el.classList.add('filled');
    } else { tb.textContent=''; el.classList.remove('filled'); } });
 }
+// opaque-pixel bounding box of an image (cached by src) — used to crop away
+// transparent sheet margins so sprites can be scaled to genuinely fill a box
+const _bboxCache={};
+function _imgBBox(im){ const k=im.src;
+ if(_bboxCache[k]) return _bboxCache[k];
+ const c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight;
+ const g=c.getContext('2d'); g.drawImage(im,0,0);
+ const d=g.getImageData(0,0,c.width,c.height).data;
+ let x0=c.width,y0=c.height,x1=-1,y1=-1;
+ for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+  if(d[(y*c.width+x)*4+3]>10){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+ const bb=(x1>=x0)?{x:x0,y:y0,w:x1-x0+1,h:y1-y0+1}:{x:0,y:0,w:c.width,h:c.height};
+ _bboxCache[k]=bb; return bb; }
 function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  if(!ch.inv) ch.inv=[];
  recalcStats();
@@ -447,9 +460,13 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  if(typeof _emberReady!=='undefined' && _emberReady[ch.cls] && typeof _emberIdle==='function'){
   const im=_emberIdle(ch.cls,'s');
   if(im && im.complete && im.naturalWidth){
-   const sc=Math.min((dc.width-8)/im.naturalWidth,(dc.height-14)/im.naturalHeight);
-   const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
-   d2.drawImage(im,Math.round((dc.width-w)/2),Math.round(dc.height-8-h),w,h); drewReal=true;
+   // crop to the figure's opaque bbox — the sheets carry big transparent margins,
+   // which left the hero tiny in the portrait window
+   const bb=_imgBBox(im);
+   const sc=Math.min((dc.width-10)/bb.w,(dc.height-16)/bb.h);
+   const w=bb.w*sc, h=bb.h*sc;
+   d2.drawImage(im,bb.x,bb.y,bb.w,bb.h,Math.round((dc.width-w)/2),Math.round(dc.height-10-h),w,h);
+   drewReal=true;
   }
  }
  if(!drewReal){
