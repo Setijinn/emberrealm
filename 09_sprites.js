@@ -513,8 +513,9 @@ function drawObjBottom(img,cx,baseY,w){ if(!img||!img.complete||!img.naturalWidt
  ctx.drawImage(img,Math.round(cx-w/2),Math.round(baseY-h),Math.round(w),Math.round(h)); return true; }
 function drawFountain(x,y){ const t=performance.now()/1000;
  const fimg=(typeof _hearth!=='undefined')?_hearth.fountain:null;
- if(fimg&&fimg.complete&&fimg.naturalWidth){ ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x,y+16,34,12,0,0,6.29); ctx.fill();
-   drawObjBottom(fimg,x,y+24,128); return; }
+ if(fimg&&fimg.complete&&fimg.naturalWidth){ const w=132, h=fimg.naturalHeight*(w/fimg.naturalWidth);
+   ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x,y+h*0.3,38,13,0,0,6.29); ctx.fill();
+   ctx.imageSmoothingEnabled=false; ctx.drawImage(fimg,Math.round(x-w/2),Math.round(y-h/2),Math.round(w),Math.round(h)); return; }
  ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(x,y+10,30,11,0,0,6.29); ctx.fill();
  ctx.fillStyle='#6d6560'; ctx.beginPath(); ctx.ellipse(x,y+4,22,9,0,0,6.29); ctx.fill();
  ctx.fillStyle='#847c76'; ctx.fillRect(x-7,y-20,14,24);
