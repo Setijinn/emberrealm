@@ -56,13 +56,24 @@ const BOSS_PROJ=[
 ];
 let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
 function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
+// Fixed surface-lair anchor for a zone boss: a walkable tile near the centre of band b.
+function grvLairXY(b){ const R=rooms['G']; if(!R||!R.rings) return null;
+ const NZ=R.rings.names.length;
+ const tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
+ let txc=Math.floor(R.w/2);
+ const walk=ch=>ch!=null && 'WwhHl'.indexOf(ch)<0;
+ if(R.grid && R.grid[tyc] && !walk(R.grid[tyc][txc])){
+  for(let d=1;d<R.w/2;d++){ if(walk(R.grid[tyc][txc-d])){txc-=d;break;} if(walk(R.grid[tyc][txc+d])){txc+=d;break;} } }
+ return {x:(txc+0.5)*TILE, y:(tyc+0.5)*TILE}; }
 // each ring has its own unique mini-boss; only one of a given ring's boss lives at a time
 function spawnRingBoss(b){
  if(!curRoom||!curRoom.rings) return;
  if(ringBossAlive(b)) return;
+ const lair=(typeof grvLairXY==='function')?grvLairXY(b):null;
  for(let tries=0;tries<40;tries++){
-  const a=Math.random()*6.283, d=300+Math.random()*220;
-  const bx=player.x+Math.cos(a)*d, by=player.y+Math.sin(a)*d;
+  let bx,by;
+  if(lair && tries<12){ const a=Math.random()*6.283, d=30+Math.random()*70; bx=lair.x+Math.cos(a)*d; by=lair.y+Math.sin(a)*d; } // guard its lair
+  else { const a=Math.random()*6.283, d=300+Math.random()*220; bx=player.x+Math.cos(a)*d; by=player.y+Math.sin(a)*d; }
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
   if(solid(bx,by)) continue;
   if(grvBandXY(bx/TILE,by/TILE)!==b) continue;

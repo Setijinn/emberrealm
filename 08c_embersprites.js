@@ -58,10 +58,19 @@ function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
 const _groundSet={}, _bandTree={}, _bandBoulder={}, _bandTone={};
+const _groundVar={}, _decal={}, _lair={};   // richer terrain: variant ground tiles + scatter decals + boss lairs
 const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (uniform across tilesets)
+const DECAL_BANDS={0:6, 5:6};                // bands with decal art + how many each (pilot: Roothollow, Emberscar)
+const LAIR_BANDS=[0,5];                       // bands with a boss-lair structure (pilot)
 (function(){
   if(typeof window==='undefined') return;
   for(let b=0;b<=8;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
+  // per-zone variant ground sheet (sampled at GROUND_UP like the base) for large-scale variety
+  for(const b of [0,5]) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
+  // scatter decals (small transparent props laid on the ground) per band
+  for(const b in DECAL_BANDS){ _decal[b]=[]; for(let i=0;i<DECAL_BANDS[b];i++) _decal[b].push(_img('assets/env/decal_'+b+'_'+i+'.png')); }
+  // boss surface lairs per band
+  for(const b of LAIR_BANDS) _lair[b]=_img('assets/env/lair_'+b+'.png');
   _bandTree[0]=_img('assets/env/tree_grass.png');
   _bandTree[1]=_img('assets/env/tree_pine.png');
   _bandTree[2]=_img('assets/env/tree_willow.png');

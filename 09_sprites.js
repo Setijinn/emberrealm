@@ -584,6 +584,19 @@ function drawShopSign(np){ const x=np.x, sy=np.y-96;
  ctx.font='9px monospace'; ctx.fillStyle='#cfc8bd'; ctx.fillText(np.role,x,sy+12);
  ctx.textAlign='left';
 }
+// Boss surface lairs — a fixed themed structure per zone, drawn base-anchored on the ground.
+function drawLairs(){
+  if(!curRoom||!curRoom.rings||curRoom.dungeon||curRoom.town) return;
+  if(typeof LAIR_BANDS==='undefined'||typeof _lair==='undefined') return;
+  ctx.imageSmoothingEnabled=false;
+  for(const b of LAIR_BANDS){ const im=_lair[b]; if(!im||!im.naturalWidth) continue;
+    const p=grvLairXY(b); if(!p) continue;
+    const w=212, h=w*im.height/im.width;
+    // soft ground shadow, then the structure base-anchored just below the anchor tile
+    ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
+    ctx.ellipse(p.x,p.y+18,w*0.34,w*0.12,0,0,6.29); ctx.fill();
+    ctx.drawImage(im, p.x-w/2, p.y+22-h, w, h); }
+}
 function render(){
   ctx.fillStyle='#0b0a10'; ctx.fillRect(0,0,W,H);
   const roomW=curRoom.w*TILE, roomH=curRoom.h*TILE;
@@ -595,6 +608,7 @@ function render(){
   const tx0=Math.max(0,Math.floor(camX/TILE)), ty0=Math.max(0,Math.floor(camY/TILE));
   const tx1=Math.min(curRoom.w-1,Math.ceil((camX+vw)/TILE)), ty1=Math.min(curRoom.h-1,Math.ceil((camY+vh)/TILE));
   for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++) drawTileG(tx,ty);
+  if(typeof drawLairs==='function') drawLairs();
   const pn=performance.now()/1000;
   if(curRoom.glows) for(const gl of curRoom.glows){
     const fl=1+Math.sin(pn*9+gl.x)*0.16;

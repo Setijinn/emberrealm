@@ -62,12 +62,22 @@ function drawTileG(x,y){
       const hh=(x*131+y*57)>>>0, o=hh&3;   // per-cell flip (4 orientations) breaks the grid
       // fiery zones (5-8): mix in the dark secondary tile to break the high-contrast lava grid
       const g=(bd>=5 && hh%100<32)?GROUND_LO:GROUND_UP;
+      // ~1/3 of cells use the zone's variant ground sheet for large-scale variety
+      const _vs=_groundVar[bd];
+      const src=(_vs && _vs.naturalWidth && hh%100>=68)?_vs:_gset;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
-      ctx.drawImage(_gset,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
       const v=(hh>>2)%5;                    // subtle per-tile brightness noise
       if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
       else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); } }
+      if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
+      // scatter a ground decal (deterministic) on plain ground only — breaks repetition
+      const _dl=_decal[bd];
+      if(_dl && _dl.length && 'tk'.indexOf(c)<0){
+        const dh=(x*197+y*263)>>>0;
+        if(dh%100<15){ const im=_dl[dh%_dl.length];
+          if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
+            ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }
     else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }
     // ring boundary lines: darker edge where the neighbour is a different band
     if(x>0 && grvBandXY(x-1,y)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,2,TILE); }
