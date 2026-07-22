@@ -6,6 +6,9 @@ const stick={move:{id:null,ox:0,oy:0,dx:0,dy:0}};
 addEventListener('pointerdown',e=>{
   if(!inGame || W<=H) return;
   if(e.target && e.target!==cv) return;      // taps on HUD buttons handle themselves
+  // the floating USE prompt (portal/pillar) takes top precedence
+  if(typeof hitPortalPrompt==='function' && hitPortalPrompt(e.clientX,e.clientY)){
+    if(typeof usePortalPrompt==='function') usePortalPrompt(); return; }
   // ability loadout buttons (bottom-left) take precedence: tap to arm a slot
   if(typeof hitAbilButton==='function'){ const hs=hitAbilButton(e.clientX,e.clientY);
     if(hs>=0){ armSlot(hs); return; } }

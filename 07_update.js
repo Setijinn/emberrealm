@@ -154,14 +154,9 @@ function update(dt){
     if(!nearAny) for(const gp of groundPortals){ if(Math.hypot(gp.x-player.x,gp.y-player.y)<90){nearAny=true;break;} }
     if(!nearAny && curRoom.pillars) for(const pl of curRoom.pillars){ if(Math.hypot(pl.x-player.x,pl.y-player.y)<90){nearAny=true;break;} }
     if(!nearAny) portalLock=false; }
-  // ground dungeon portals from slain world bosses
+  // ground dungeon portals from slain world bosses: tick life + despawn (USE-gated below)
   for(let i=groundPortals.length-1;i>=0;i--){ const gp=groundPortals[i];
-    gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; }
-    if(Math.hypot(gp.x-player.x,gp.y-player.y)<30 && !portalLock){ portalLock=true;
-      if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
-        const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('THE CLIMB','back to the vale'); }
-      else enterDungeon(gp.ring);
-      groundPortals.length=0; break; } }
+    gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; } }
   // spawns: streaming activation + 60s respawns (only once you leave the area)
   respawnT-=dt;
   if(respawnT<=0 && !curRoom.dungeon){ respawnT=0.5; const rn=Date.now();
@@ -177,16 +172,18 @@ function update(dt){
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
       if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv); } }
   }
-  // destination portals (release of portalLock handled above)
-  if(curRoom.portals&&curRoom.portals.length){
-    for(const pt of curRoom.portals){
-      if(!portalLock && Math.hypot(pt.x-player.x,pt.y-player.y)<34){ portalLock=true; usePortal(pt.to||'0,0'); break; } }
+  // find the nearest interactable portal/pillar and show a USE prompt above the hero.
+  // Nothing auto-fires anymore — the player must press the prompt (see usePortalPrompt).
+  // portalLock suppresses the prompt right after interacting, until you step clear.
+  portalPrompt=null;
+  if(!portalLock){ let _pbest=1e9;
+    if(curRoom.portals) for(const pt of curRoom.portals){ const d=Math.hypot(pt.x-player.x,pt.y-player.y);
+      if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'portal',x:pt.x,y:pt.y,to:pt.to||'0,0',ctx:pt.label||'Portal'}; } }
+    for(const gp of groundPortals){ const d=Math.hypot(gp.x-player.x,gp.y-player.y);
+      if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'ground',x:gp.x,y:gp.y,gp:gp,ctx:gp.home?'The Vale':'The Dungeon'}; } }
+    if(curRoom.pillars) for(const pl of curRoom.pillars){ const d=Math.hypot(pl.x-player.x,pl.y-player.y);
+      if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl.band)?pl.name:'Attune '+pl.name}; } }
   }
-  // teleport-pillar waypoints: attune on touch, then open fast-travel
-  if(curRoom.pillars) for(const pl of curRoom.pillars){
-    if(!portalLock && Math.hypot(pl.x-player.x,pl.y-player.y)<36){ portalLock=true;
-      if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
-      openFastTravel(); break; } }
   // arena wave director
   if(curRoom.arena && arenaActive && enemies.length===0){
     arenaCd-=dt; if(arenaCd<=0){ arenaCd=2.0; arenaSpawnWave(); } }

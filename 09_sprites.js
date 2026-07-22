@@ -394,6 +394,39 @@ function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
   ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(txt,cx+1,ty2+1);
   ctx.fillStyle='#fff'; ctx.fillText(txt,cx,ty2); ctx.textAlign='left';
 }
+// Big reusable INTERACT button (screen space) — anchored above the interactable, clamped on-screen.
+function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt) return null;
+  const zoom=H/(VIEW_TILES_H*TILE);
+  const w=Math.round(Math.max(150,Math.min(238,W*0.34))), h=Math.round(w*0.403);  // match plate 216x87
+  const cx=Math.max(w/2+8,Math.min(W-w/2-8,(portalPrompt.x-camX)*zoom));
+  const cy=Math.max(h/2+34,(portalPrompt.y-camY)*zoom - h*0.6 - 62);
+  return {cx,cy,w,h,ctx:portalPrompt.ctx||''}; }
+function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
+  const x=b.cx-b.w/2, y=b.cy-b.h/2; const pulse=0.6+Math.sin(performance.now()/230)*0.3;
+  ctx.save();
+  // soft amber glow behind the button
+  const gg=ctx.createRadialGradient(b.cx,b.cy,4,b.cx,b.cy,b.w*0.62);
+  gg.addColorStop(0,'rgba(255,180,70,'+(0.18*pulse+0.1).toFixed(2)+')'); gg.addColorStop(1,'rgba(255,180,70,0)');
+  ctx.fillStyle=gg; ctx.fillRect(b.cx-b.w,b.cy-b.h,b.w*2,b.h*2);
+  // plate: PixelLab art if loaded, else a styled fallback
+  if(typeof _btnInteract!=='undefined' && _btnInteract && _btnInteract.complete && _btnInteract.naturalWidth){
+    ctx.imageSmoothingEnabled=false; ctx.drawImage(_btnInteract,x,y,b.w,b.h);
+  } else {
+    ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y,b.w,b.h,10); else ctx.rect(x,y,b.w,b.h);
+    ctx.fillStyle='rgba(20,15,26,0.94)'; ctx.fill();
+    ctx.lineWidth=2.5; ctx.strokeStyle='rgba(255,201,77,'+pulse.toFixed(2)+')'; ctx.stroke();
+  }
+  // INTERACT label (crisp, dark for legibility on the gold plate) — reusable; swap the
+  // string for other interactions later.
+  const plate=(typeof _btnInteract!=='undefined' && _btnInteract && _btnInteract.complete && _btnInteract.naturalWidth);
+  const fs=Math.round(b.h*0.34);
+  ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=plate?'rgba(255,232,180,0.6)':'rgba(0,0,0,0.85)'; ctx.fillText('INTERACT',b.cx,b.cy-1);   // highlight
+  ctx.fillStyle=plate?'#3a2208':'#ffe6ad'; ctx.fillText('INTERACT',b.cx,b.cy+1);                          // main
+  ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+function hitPortalPrompt(sx,sy){ const b=portalPromptRect(); if(!b) return false;
+  return Math.abs(sx-b.cx)<=b.w/2+10 && Math.abs(sy-b.cy)<=b.h/2+12; }
 function drawPillar(pl){
   const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
   const t=performance.now()/1000, col=un?'#c9a24d':'#5a6070', gy=pl.y-24;
@@ -669,6 +702,8 @@ function render(){
     ctx.textAlign='left'; }
   // ability loadout buttons (bottom-left) + "tap right to cast" hint
   if(typeof drawAbilButtons==='function') drawAbilButtons();
+  // floating USE prompt above the hero when near a portal/pillar (button-gated)
+  drawPortalPrompt();
   // arena wave banner
   if(curRoom.arena){ ctx.textAlign='center';
     ctx.font='bold 18px "Pixelify Sans",monospace'; ctx.fillStyle='rgba(0,0,0,.6)';

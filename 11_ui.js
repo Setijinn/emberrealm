@@ -14,6 +14,19 @@ function _pillars(){ if(!_pillarSet) _pillarSet=new Set(LS.get('er-pillars',[]))
 function pillarUnlocked(b){ return _pillars().has(b); }
 function unlockPillar(b){ _pillars().add(b); LS.set('er-pillars',[..._pillarSet]); }
 function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
+// USE-button handler for the portal/pillar prompt (see 07_update portalPrompt detection)
+function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalLock=true; portalPrompt=null;
+  if(p.kind==='portal'){ usePortal(p.to); }
+  else if(p.kind==='ground'){ const gp=p.gp;
+    if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
+      const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('THE CLIMB','back to the vale'); }
+    else enterDungeon(gp.ring);
+    groundPortals.length=0; }
+  else if(p.kind==='pillar'){ const pl=p.pl;
+    if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
+    openFastTravel(); }
+  navigator.vibrate&&navigator.vibrate(30);
+}
 function travelTo(pl){ closeFastTravel(); const g=rooms['G']; const sp=safeSpot(g,pl.x,pl.y);
   player.x=sp.x; player.y=sp.y; enemies=enemies.filter(e=>e.boss); portalLock=true; msg('WARPED',pl.name); }
 function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
