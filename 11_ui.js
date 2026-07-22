@@ -167,6 +167,12 @@ function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
 // rarity + rolled prefix affixes on tier-7+ (index >=6) gear
 const RAR_NAMES=['','Uncommon','Rare','Epic','Legendary','Mythical'];
 const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#c07ad4','#ff9c50','#ff4d5e'];
+// rarity POWER multiplier on an item's base gear stats — makes rarity a dominant power
+// axis (design rule 3): at any given tier each rarity step is a big jump, so a Mythical
+// always out-stats a Legendary of the same tier. (Affixes are added on top, unscaled.)
+const RAR_MULT=[1, 1.18, 1.42, 1.8, 2.3, 3.0];
+function rarMult(r){ return RAR_MULT[r|0]||1; }
+function scaleStats(s,m){ for(const k of STATS) s[k]*=m; return s; }
 const AFFIX_PREFIX={ atk:'Vicious', def:'Sturdy', hp:'Vital', mp:'Arcane',
  vit:'Hearty', wis:"Sage's", dex:'Nimble', spd:'Swift', luck:'Lucky', fort:'Prosperous' };
 // rarity can roll at ANY tier. Quality q in [0,1) is skewed toward 1 by tier+fortune
@@ -200,7 +206,10 @@ function itemStats(it,cls){ if(!it||it.k==='pot') return newStats();
  else if(it.k==='helm') base=gearBaseStats('helm',it.t,it.mt);
  else if(it.k==='ring') base=gearBaseStats('ring',it.t,it.st);
  else base=newStats();
- return addStats(base,affStats(it.aff));
+ scaleStats(base,rarMult(it.rar));                 // rarity scales base power (design rule 3)
+ addStats(base,affStats(it.aff));
+ for(const k of STATS) base[k]=Math.round(base[k]);
+ return base;
 }
 function itemBaseName(it){
  const p='T'+(it.t+1)+' '+TIER_NAMES[it.t]+' ';
@@ -218,7 +227,7 @@ function canEquip(it,ch){ if(!it||it.k==='pot')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
-function itemValue(it){ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4)); }
+function itemValue(it){ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*rarMult(it.rar))); }
 function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
  if(r<0.5){ const keys=Object.keys(WTYPE).filter(k=>k!=='fists');
   it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
@@ -499,15 +508,15 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const at=rpg.arm||0, ht=(rpg.helm===undefined?-1:rpg.helm), rg=rpg.ring;
  const wL=rpg.wpnL?legById(rpg.wpnL):null;
  const aL=rpg.armL?legById(rpg.armL):null;
- // ---- accumulate the 10 stats: class base + level + gear (+ affixes)
+ // ---- accumulate the 10 stats: class base + level + gear (base×rarity + affixes)
  const st=addStats(classBaseStats(c), levelStats(c,rpg.lvl));
- if(wL) st.atk+=wL.add; else addStats(st,gearBaseStats('wpn',rpg.wpn));
- addStats(st,affStats(eqAffArr('wpn')));
+ // gear slot: base stats scaled by the equipped item's rarity, then affixes added on top
+ function addSlot(base,slot){ scaleStats(base,rarMult(eqRar(slot))); addStats(base,affStats(eqAffArr(slot))); addStats(st,base); }
+ if(wL) st.atk+=wL.add; else addSlot(gearBaseStats('wpn',rpg.wpn),'wpn');
  if(aL){ st.def+=aL.def; st.hp+=aL.hp; st.spd+=aL.spd||0; }
- else addStats(st,gearBaseStats('arm',at,mt));
- addStats(st,affStats(eqAffArr('arm')));
- if(ht>=0){ addStats(st,gearBaseStats('helm',ht,mt)); addStats(st,affStats(eqAffArr('helm'))); }
- if(rg){ addStats(st,gearBaseStats('ring',rg.t,rg.st)); addStats(st,affStats(eqAffArr('ring'))); }
+ else addSlot(gearBaseStats('arm',at,mt),'arm');
+ if(ht>=0) addSlot(gearBaseStats('helm',ht,mt),'helm');
+ if(rg) addSlot(gearBaseStats('ring',rg.t,rg.st),'ring');
  // ---- skill-tree flat stats fold in before deriving; % / flags applied after
  const T=(typeof treeStats==='function')?treeStats(ch.cls,rpg):null;
  if(T){ st.atk+=T.atk; st.def+=T.def; st.hp+=T.hp; st.mp+=T.mp; st.dex+=T.dex; st.wis+=T.wis; st.vit+=T.vit; st.spd=st.spd*(1+T.spd); }
