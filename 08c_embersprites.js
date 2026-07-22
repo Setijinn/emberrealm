@@ -35,7 +35,7 @@ if(typeof window!=='undefined'){
   ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
   ['plate','leather','robe'].forEach(m=>{ _itemArt['arm_'+m]=[0,1,2].map(b=>_img('assets/items/arm_'+m+'_'+b+'.png'));
     _itemArt['helm_'+m]=[0,1,2].map(b=>_img('assets/items/helm_'+m+'_'+b+'.png')); });
-  ['hp','dmg','spd'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
+  ['hp','dmg','def','mp','vit','wis','dex','spd','luck','fort'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
   _itemArt['potion']=[_img('assets/items/potion.png')];
 }
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;

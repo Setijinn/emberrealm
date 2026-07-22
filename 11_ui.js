@@ -97,7 +97,23 @@ const CARMOR={knight:'plate',paladin:'plate',berserker:'plate',dragoon:'plate',
  ranger:'leather',hunter:'leather',rogue:'leather',assassin:'leather',monk:'leather',bard:'leather',
  pyro:'robe',frost:'robe',cleric:'robe',storm:'robe',warlock:'robe',necro:'robe',shaman:'robe'};
 const MATN={plate:'Plate',leather:'Leather',robe:'Robe'};
-const RINGN={hp:'Ring of Vigor',dmg:'Ring of Fury',spd:'Ring of Haste'};
+// One ring per straight stat (T1-12 like weapons/armor). st keys keep the old
+// 'hp'/'dmg'/'spd' for save compat; each ring grants its stat scaled by tier.
+// (Special rings with unique effects will layer on top of this later.)
+const RING_DEF={
+ hp:  {stat:'hp',  n:'Ring of Vigor',     col:'#f0705a', v:t=>t*8+10},
+ dmg: {stat:'atk', n:'Ring of Fury',      col:'#e2604c', v:t=>Math.round(t*1.6)+3},
+ def: {stat:'def', n:'Ring of Warding',   col:'#c9d2da', v:t=>Math.round(t*1.0)+2},
+ mp:  {stat:'mp',  n:'Ring of the Font',  col:'#7ab8d4', v:t=>t*5+8},
+ vit: {stat:'vit', n:'Ring of Vitality',  col:'#7dc47a', v:t=>Math.round(t*0.9)+2},
+ wis: {stat:'wis', n:'Ring of Wisdom',    col:'#c07ad4', v:t=>Math.round(t*1.0)+2},
+ dex: {stat:'dex', n:'Ring of Precision', col:'#e8b34b', v:t=>Math.round(t*0.9)+2},
+ spd: {stat:'spd', n:'Ring of Haste',     col:'#9ad4ef', v:t=>t*2+4},
+ luck:{stat:'luck',n:'Ring of Luck',      col:'#8fd48c', v:t=>Math.round(t*1.2)+3},
+ fort:{stat:'fort',n:'Ring of Fortune',   col:'#ffc94d', v:t=>Math.round(t*1.2)+3},
+};
+const RING_STATS=Object.keys(RING_DEF);
+const RINGN={}; for(const _k in RING_DEF) RINGN[_k]=RING_DEF[_k].n;
 const LEGENDS=[
  {id:'hearthrender',slot:'wpn',n:'Hearthrender',price:12000,add:120,rof:1.0,d:'+120 dmg · forged in the first fire'},
  {id:'duskfang',slot:'wpn',n:'Duskfang',price:9000,add:55,rof:0.72,d:'+55 dmg · strikes 40% faster'},
@@ -160,8 +176,7 @@ function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
   else { s.def+=Math.round(t*0.6); s.hp+=t*3; } }
  else if(slot==='helm'){ s.wis=Math.round((t+1)*1.1); s.mp=(t+1)*4;
   s.def=Math.round((t+1)*0.6); s.vit=Math.round(t*0.4); }
- else if(slot==='ring'){ s.luck=t+3; s.fort=t+3;
-  if(extra==='hp') s.hp=t*8+10; else if(extra==='dmg') s.atk=Math.round(t*1.5)+2; else if(extra==='spd') s.spd=t*2+4; }
+ else if(slot==='ring'){ const rd=RING_DEF[extra]||RING_DEF.hp; s[rd.stat]=(s[rd.stat]||0)+rd.v(t); }
  return s;
 }
 // rarity + rolled prefix affixes on tier-7+ (index >=6) gear
@@ -234,7 +249,7 @@ function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let
  else { const mats=['plate','leather','robe'];
   if(r<0.7) it={k:'arm',mt:mats[Math.floor(Math.random()*3)],t:t};
   else if(r<0.85) it={k:'helm',mt:mats[Math.floor(Math.random()*3)],t:t};
-  else it={k:'ring',st:['hp','dmg','spd'][Math.floor(Math.random()*3)],t:t}; }
+  else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t}; }
  return rollAffixes(it,(typeof player!=='undefined'&&player.fortune)||0); }
 function bagAt(e,item){ const rar=(item&&item.rar)||0;
  return {x:e.x+(Math.random()*22-11),y:e.y+(Math.random()*22-11),item:item,rar:rar,life:rar>=2?150:60}; }

@@ -164,7 +164,10 @@ const sprPotion=makeSprite(POTION,{O:'#140d08',G:'#5c3826',W:'#3a2a40',P:'#7dc47
 const _armC={},_helmC={},_ringC={};
 function armorSpr(mt,t){ const k=mt+'_'+t; if(!_armC[k]) _armC[k]=makeSprite(ARMOR_A,{O:'#140d08',B:MATCOL[mt]||'#888',G:tierCol(t)}); return _armC[k]; }
 function helmSpr(mt,t){ const k=mt+'_'+t; if(!_helmC[k]) _helmC[k]=makeSprite(HELM_A,{O:'#140d08',B:MATCOL[mt]||'#888',G:tierCol(t)}); return _helmC[k]; }
-function ringSpr(st,t){ const k=st+'_'+t; if(!_ringC[k]) _ringC[k]=makeSprite(RING_A,{O:'#140d08',G:tierCol(t),E:{hp:'#8fd48c',dmg:'#e2604c',spd:'#9ad4ef'}[st]||'#ffc94d'}); return _ringC[k]; }
+function ringSpr(st,t){ const k=st+'_'+t;
+ if(!_ringC[k]){ const gem=(typeof RING_DEF!=='undefined'&&RING_DEF[st])?RING_DEF[st].col:'#ffc94d';
+   _ringC[k]=makeSprite(RING_A,{O:'#140d08',G:tierCol(t),E:gem}); }
+ return _ringC[k]; }
 function petSprite(p){ return p==='wolf'?sprWolf:p==='skel'?sprSkel:sprWisp; }
 // Draw an item's icon into a 2d context box (cw x ch), centered. Prefers the real
 // PixelLab tier-band art (fractional fit); falls back to the procedural sprite (pixel
