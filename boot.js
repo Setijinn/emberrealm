@@ -1,4 +1,5 @@
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(function(reg){
+  reg.update().catch(function(){});   // check for a newer build right away on load
   // auto-reload when a new version activates so players always get the latest build
   reg.addEventListener('updatefound', function(){
     var nw = reg.installing; if(!nw) return;
