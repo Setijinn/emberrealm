@@ -17,13 +17,23 @@
 // On-screen scale for the 92px PixelLab sprites (tune to match world scale).
 const EMBER_SC = 0.85;
 
-// Populated as each class's animations are generated + vendored to assets/<class>/.
-// Empty => every class falls back to the procedural heroSprite() until wired.
+// All 17 classes have real PixelLab art vendored to assets/<class>/.
+// walk = 4 frames/dir; attack probed up to 8 (some dirs 5, some 7). West walk/attack
+// mirror East at render time, so only s/e/n are vendored/probed for those; idle has
+// real s/e/n/w rotations.
 const EMBER_CLASSES = {
-  // maxN = upper bound of frames to probe per animation (walk=4, attack up to 8)
-  // e.g. knight: { anims: { walk: 4, attack: 8 } }
+  knight:{anims:{walk:4,attack:8}}, paladin:{anims:{walk:4,attack:8}},
+  berserker:{anims:{walk:4,attack:8}}, dragoon:{anims:{walk:4,attack:8}},
+  rogue:{anims:{walk:4,attack:8}}, assassin:{anims:{walk:4,attack:8}},
+  ranger:{anims:{walk:4,attack:8}}, hunter:{anims:{walk:4,attack:8}},
+  bard:{anims:{walk:4,attack:8}}, monk:{anims:{walk:4,attack:8}},
+  cleric:{anims:{walk:4,attack:8}}, pyro:{anims:{walk:4,attack:8}},
+  frost:{anims:{walk:4,attack:8}}, storm:{anims:{walk:4,attack:8}},
+  warlock:{anims:{walk:4,attack:8}}, necro:{anims:{walk:4,attack:8}},
+  shaman:{anims:{walk:4,attack:8}},
 };
-const EMBER_DIRS = ['s','e','n','w'];
+const EMBER_DIRS = ['s','e','n','w'];       // idle rotations (all real)
+const EMBER_ANIM_DIRS = ['s','e','n'];      // walk/attack (west mirrors east)
 
 const _emberImg = {};      // path -> HTMLImageElement
 const _emberFrames = {};   // `${cls}/${anim}_${dir}` -> [img,...] (loaded, contiguous)
@@ -47,8 +57,8 @@ function _emberImgAt(cls, anim, dir, n){
 function preloadEmber(){
   for(const cls in EMBER_CLASSES){
     const spec = EMBER_CLASSES[cls];
-    for(const d of EMBER_DIRS){
-      _emberImgAt(cls, 'idle', d, null);
+    for(const d of EMBER_DIRS) _emberImgAt(cls, 'idle', d, null);
+    for(const d of EMBER_ANIM_DIRS){
       for(const anim in spec.anims){
         for(let n=0; n<spec.anims[anim]; n++) _emberImgAt(cls, anim, d, n);
       }
@@ -60,7 +70,7 @@ function preloadEmber(){
 function _emberBuild(){
   for(const cls in EMBER_CLASSES){
     const spec = EMBER_CLASSES[cls];
-    for(const d of EMBER_DIRS){
+    for(const d of EMBER_ANIM_DIRS){
       for(const anim in spec.anims){
         const arr = [];
         for(let n=0; n<spec.anims[anim]; n++){
