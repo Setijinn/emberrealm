@@ -8,6 +8,7 @@ function update(dt){
     moveCircle(player,(m.dx/d)*sp*dt*Math.min(1,d/28),(m.dy/d)*sp*dt*Math.min(1,d/28));
   }
   player.inv=Math.max(0,player.inv-dt);
+  if(typeof updateAbilCooldowns==='function') updateAbilCooldowns(dt);      // ability cooldowns
   if(player.atkT>0) player.atkT-=dt;                                       // attack animation timer
   if(player.hp<player.maxhp) player.hp+=(player.regen||1)*dt;               // VIT -> regen
   if(player.mp<player.maxmp) player.mp=Math.min(player.maxmp,player.mp+(player.mpregen||2)*dt); // WIS -> mana
@@ -28,7 +29,8 @@ function update(dt){
     if(e.type==='c'){
       moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
-      if(dd<e.r+player.r && player.inv<=0){ player.hp-=Math.max(1,Math.round(e.touch*(1-(player.dr||0)))); player.inv=0.7; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6); }
+      if(dd<e.r+player.r && player.inv<=0){ const hit=Math.max(1,Math.round(e.touch*(1-(player.dr||0)))); player.hp-=hit; player.inv=0.7; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
+        if(player.thorns>0){ const rf=Math.round(hit*player.thorns*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
     }
     if(e.type==='s'){
       if(dd>200) moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);

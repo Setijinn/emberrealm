@@ -241,50 +241,9 @@ function chargeRes(kind){ const rd=player.resDef; if(!rd) return;
 function aoe(x,y,r,dmg,col){ fx.push({t:'ring',x:x,y:y,r:r,life:0.35,col:col});
  for(const e of enemies){ if(Math.hypot(e.x-x,e.y-y)<r){ e.hp-=dmg; e.flash=0.15;
   texts.push({x:e.x,y:e.y-e.r,txt:dmg,col:col,life:0.6}); } } boom(x,y,col,20); }
-function abilityCost(){ return Math.max(18, Math.round((player.maxmp||40)*0.5)); }
-function doAbility(){
- if(!rpg||!inGame) return; const ch=curChar(); if(!ch)return;
- const cost=abilityCost();
- if((player.mp||0)<cost){ texts.push({x:player.x,y:player.y-30,txt:'◇ low mana',col:'#7ab8d4',life:0.7});
-   navigator.vibrate&&navigator.vibrate(20); return; }
- player.mp-=cost;
- const AP=player.abilPow||1, cls=ch.cls;
- if(cls==='ranger'){ const a0=player.aim||0;
-   for(let i=0;i<12;i++){ const sa=a0+(i-5.5)*0.12;
-     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*640,vy:Math.sin(sa)*640,r:5,life:1.1,dmg:Math.round(player.dmg*AP),pierce:0,lastHit:null}); } }
- else if(cls==='pyro'){ aoe(player.x,player.y,170,Math.round(player.dmg*3*AP),'#ff7a3d'); }
- else if(cls==='knight'){ player.inv=4; }
- else if(cls==='rogue'){ const a0=player.aim||0;
-   const nx=player.x+Math.cos(a0)*150, ny=player.y+Math.sin(a0)*150;
-   if(!solid(nx,ny)){player.x=nx;player.y=ny;} player.inv=1.2; boom(player.x,player.y,'#c07ad4',14); }
- else if(cls==='assassin'){ player.bDmgT=4; player.bDmgM=2.2; player.inv=0.8; boom(player.x,player.y,'#c0304a',14); }
- else if(cls==='cleric'){ player.hp=player.maxhp; boom(player.x,player.y,'#fff0c0',16); }
- else if(cls==='berserker'){ for(let i=0;i<16;i++){ const sa=i*Math.PI/8;
-   pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*420,vy:Math.sin(sa)*420,r:7,life:0.5,dmg:Math.round(player.dmg*1.2*AP),pierce:0,lastHit:null}); } }
- else if(cls==='warlock'){ let n=0;
-   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<200){ e.hp-=Math.round(player.dmg*2*AP); e.flash=0.15; n++; } }
-   player.hp=Math.min(player.maxhp,player.hp+n*15*AP);
-   fx.push({t:'ring',x:player.x,y:player.y,r:200,life:0.35,col:'#8a5ac0'}); }
- else if(cls==='frost'){ for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<220){ e.slowT=3; e.hp-=Math.round(player.dmg*AP); e.flash=0.1; } }
-   fx.push({t:'ring',x:player.x,y:player.y,r:220,life:0.4,col:'#9ad4ef'}); }
- else if(cls==='storm'){ const sorted=enemies.slice().sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y)).slice(0,6);
-   const pts=[{x:player.x,y:player.y}];
-   for(const e of sorted){ const d2=Math.round(player.dmg*2.5*AP); e.hp-=d2; e.flash=0.15; pts.push({x:e.x,y:e.y});
-     texts.push({x:e.x,y:e.y-e.r,txt:d2,col:'#ffe9b0',life:0.6}); }
-   if(pts.length>1) fx.push({t:'bolt',pts:pts,life:0.3,col:'#ffe9b0'}); }
- else if(cls==='hunter'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.8*AP),life:10,cd:0,spr:'wolf'}); }
- else if(cls==='monk'){ player.bSpdT=5; player.bSpdM=1.8; player.inv=1.5; }
- else if(cls==='paladin'){ zones.push({x:player.x,y:player.y,r:95,life:6,tick:0,ap:AP}); }
- else if(cls==='necro'){ for(let i=0;i<2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(player.dmg*0.9*AP),life:12,cd:0,spr:'skel'}); }
- else if(cls==='bard'){ player.bRofT=6; player.bRofM=1.5; }
- else if(cls==='shaman'){ player.spiritT=8; player.spiritAP=AP; }
- else if(cls==='dragoon'){ const a0=player.aim||0;
-   const nx=player.x+Math.cos(a0)*160, ny=player.y+Math.sin(a0)*160;
-   if(!solid(nx,ny)){player.x=nx;player.y=ny;}
-   aoe(player.x,player.y,130,Math.round(player.dmg*2.2*AP),'#e07a2e'); }
- navigator.vibrate&&navigator.vibrate(60);
-}
-$s('abBtn').addEventListener('pointerdown',function(ev){ ev.stopPropagation(); doAbility(); });
+// Ability casting now routes through the 3-slot loadout system (12b_abilities.js).
+function abilityCost(){ return (typeof armedCost==='function')?armedCost():1e9; }
+function doAbility(wx,wy){ if(typeof castArmed==='function') castArmed(wx,wy); }
 function eqPrefix(slot){ const a=eqAffArr(slot); return (a&&a.length)?AFFIX_PREFIX[a[0].s]+' ':''; }
 function slotLabel(kind){ const ch=curChar(); if(!ch||!rpg)return '—';
  if(kind==='wpn'){ if(rpg.wpnL){const L=legById(rpg.wpnL); return '★ '+(L?L.n:'');}
@@ -423,6 +382,7 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  $s('invDrop').style.display = it? '':'none';
 }
 $s('invBtn').addEventListener('click',openInv);
+$s('loadBtn').addEventListener('click',function(){ if(typeof openLoadout==='function') openLoadout(); });
 $s('invClose').addEventListener('click',()=>{$s('invScr').style.display='none';});
 $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it||!canEquip(it,ch)) return;
@@ -476,6 +436,9 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  addStats(st,affStats(eqAffArr('arm')));
  if(ht>=0){ addStats(st,gearBaseStats('helm',ht,mt)); addStats(st,affStats(eqAffArr('helm'))); }
  if(rg){ addStats(st,gearBaseStats('ring',rg.t,rg.st)); addStats(st,affStats(eqAffArr('ring'))); }
+ // ---- skill-tree flat stats fold in before deriving; % / flags applied after
+ const T=(typeof treeStats==='function')?treeStats(ch.cls,rpg):null;
+ if(T){ st.atk+=T.atk; st.def+=T.def; st.hp+=T.hp; st.mp+=T.mp; st.dex+=T.dex; st.wis+=T.wis; st.vit+=T.vit; st.spd=st.spd*(1+T.spd); }
  for(const k of STATS) st[k]=Math.max(0,Math.round(st[k]));
  player.stats=st;
  // ---- derive combat values from the 10 stats
@@ -497,6 +460,17 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  player.shots=c.shots||1; player.pierce=c.pierce||0;
  player.ls=c.ls||0; player.slowShot=!!c.slow;
  player.resDef=ABIL[ch.cls]||ABIL.knight;
+ // ---- skill-tree percentage bonuses + combat flags
+ player.thorns=0;
+ if(T){ player.maxhp=Math.round(player.maxhp*(1+T.hpPct));
+   player.dmg=Math.max(1,Math.round(player.dmg*(1+T.atkPct)));
+   player.dr=Math.min(0.88, player.dr+T.dr);
+   player.crit=Math.min(0.90, player.crit+T.crit);
+   player.ls=player.ls+T.ls;
+   player.pierce=player.pierce+T.cleave;
+   player.thorns=T.thorns;
+   if(T.rof>0) player.fireRate=player.fireRate/(1+T.rof);
+   player.spd=player.spd; }
  player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht};
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }
@@ -507,6 +481,7 @@ function hudRPG(){ if(!rpg)return;
  $s('potBtn').textContent='🧪 '+rpg.pots; }
 function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
  while(rpg.lvl<150 && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
+  if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;
   msg('LEVEL '+rpg.lvl,'the ember grows'); }
  saveRPG(); hudRPG(); }
@@ -602,6 +577,8 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
  $s('mapBtn').style.display='none'; $s('mapScr').style.display='none';
+ if($s('loadBtn'))$s('loadBtn').style.display='none';
+ if($s('loadScr'))$s('loadScr').style.display='none';
  if($s('sheetScr'))$s('sheetScr').style.display='none'; shopNear=false;}
 function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr'])$s(s).style.display='none';}
 function refreshUserList(){
@@ -668,7 +645,7 @@ function openClassPick(){
   if(c.shots>1) tags+=' · ×'+c.shots+' shots'; if(c.pierce) tags+=' · pierce';
   if(c.ls) tags+=' · lifesteal'; if(c.regen>1) tags+=' · regen'; if(c.slow) tags+=' · chill';
   d.innerHTML='<div class="cic">'+c.ic+'</div><div class="cn">'+c.n+'</div>'
-   +'<div class="cd">'+c.d+'<br><span style="color:#ffd07a">'+(ABIL[c.id]?ABIL[c.id].res+' — '+ABIL[c.id].d:'')+'</span></div>'
+   +'<div class="cd">'+c.d+'<br><span style="color:#ffd07a">'+((typeof APOOL!=='undefined'&&APOOL[c.id])?APOOL[c.id][0].name+' — '+APOOL[c.id][0].desc:'')+'</span></div>'
    +'<div class="cs">HP '+c.hp+' · SPD '+c.spd+' · DMG '+c.dmg+' · '+(1/c.fr).toFixed(1)+'/s'+tags+'</div>';
   d.onclick=()=>{ const nm=($s('charName').value.trim()||('Hero'+Math.floor(Math.random()*900+100))).slice(0,14);
    const u=users[curUser];
@@ -685,11 +662,14 @@ function play(){
  player.kills=0; player.inv=1;
  res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
+ player.acd={}; armedSlot=0; if(typeof ensureLoadout==='function') ensureLoadout();
+ if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);   // backfill earned perk points
  spawnPet();
  document.getElementById('killTxt').textContent='Kills 0';
  hudRPG();
  hideAll(); $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
- $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex'; inGame=true;
+ $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex';
+ if($s('loadBtn'))$s('loadBtn').style.display='flex'; inGame=true;
  const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
 }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){

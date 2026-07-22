@@ -6,11 +6,17 @@ const stick={move:{id:null,ox:0,oy:0,dx:0,dy:0}};
 addEventListener('pointerdown',e=>{
   if(!inGame || W<=H) return;
   if(e.target && e.target!==cv) return;      // taps on HUD buttons handle themselves
+  // ability loadout buttons (bottom-left) take precedence: tap to arm a slot
+  if(typeof hitAbilButton==='function'){ const hs=hitAbilButton(e.clientX,e.clientY);
+    if(hs>=0){ armSlot(hs); return; } }
   if(e.clientX < W/2){
     if(stick.move.id!==null) return;
     const s=stick.move; s.id=e.pointerId; s.ox=e.clientX; s.oy=e.clientY; s.dx=0; s.dy=0;
   } else {
-    if(typeof doAbility==='function') doAbility();
+    // cast the armed ability; pass the tapped point in world space for aimed abilities
+    const zoom=H/(VIEW_TILES_H*TILE);
+    const wx=camX+e.clientX/zoom, wy=camY+e.clientY/zoom;
+    if(typeof doAbility==='function') doAbility(wx,wy);
   }
 });
 addEventListener('pointermove',e=>{ const s=stick.move;

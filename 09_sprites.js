@@ -667,12 +667,8 @@ function render(){
     ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l2,W/2+1,sy+15);
     ctx.fillStyle='#d8cfb8'; ctx.fillText(l2,W/2,sy+14);
     ctx.textAlign='left'; }
-  // ability hint (right-side invisible button)
-  if(rpg&&player.resDef){ const ready=mp>=cost;
-    ctx.textAlign='right'; ctx.font='11px "Pixelify Sans",monospace';
-    ctx.fillStyle=ready?player.resDef.col:'rgba(216,210,200,0.45)';
-    ctx.fillText((ready?'▶ ':'◇ ')+player.resDef.res+'  ·  tap right to cast',W-12,H-42);
-    ctx.textAlign='left'; }
+  // ability loadout buttons (bottom-left) + "tap right to cast" hint
+  if(typeof drawAbilButtons==='function') drawAbilButtons();
   // arena wave banner
   if(curRoom.arena){ ctx.textAlign='center';
     ctx.font='bold 18px "Pixelify Sans",monospace'; ctx.fillStyle='rgba(0,0,0,.6)';
