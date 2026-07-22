@@ -144,5 +144,10 @@ function treeStats(cls,rpg){
   const add=(eff,mult)=>{ if(!eff) return; for(const k in eff) if(k in d) d[k]+=eff[k]*(mult||1); };
   for(const b of t.branches) for(const n of b.nodes){ const r=nodeRank(rpg,n.id); if(r) add(n.eff,r); }
   const asc=ascendInfo(cls,rpg); if(asc) add(asc.eff,1);
+  // Flat stat bonuses scale with LEVEL so tree investment stays relevant end-game
+  // (the % nodes — hpPct/atkPct/spd/crit/dr/... — already scale with level+gear since
+  //  they multiply the gear-inclusive totals). ~1x at Lv1 -> ~3x at Lv150.
+  const lm=1+Math.max(0,(rpg.lvl||1)-1)*0.014;
+  for(const k of ['atk','def','hp','mp','dex','wis','vit']) d[k]=Math.round(d[k]*lm);
   return d;
 }
