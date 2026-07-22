@@ -526,15 +526,16 @@ function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg)
   if(!ov){ ov=document.createElement('div'); ov.id='skillScr'; document.body.appendChild(ov); }
   ov.style.display='flex';
   ov.innerHTML='<div class="skWrap2">'
+    +'<button class="tabX" id="skX" aria-label="Close">✕</button>'
     +'<div class="skTop"><div class="skTitle" id="skTitle"></div><div class="skPts" id="skPts"></div></div>'
     +'<div class="skHint">Tap a node to inspect · learn from the trunk up · branches end in ascension ✦</div>'
     +'<div class="skCanWrap"><canvas id="skillCv" width="960" height="560"></canvas></div>'
     +'<div class="skDetail" id="skDetail"></div>'
-    +'<div class="skBtns"><button class="mbtn" id="skRespec">RESPEC</button><button class="mbtn go" id="skDone">DONE</button></div>'
+    +'<div class="skBtns"><button class="mbtn" id="skRespec">RESPEC</button></div>'
     +'</div>';
   const cv=document.getElementById('skillCv'); cv.addEventListener('pointerdown',_skClick);
   document.getElementById('skRespec').onclick=()=>{ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skSel=null; _skRefresh(); } };
-  document.getElementById('skDone').onclick=closeSkills;
+  document.getElementById('skX').onclick=closeSkills;
   _skSel=null; _skBuildLayout(ch.cls); _skFitCanvas(); _skRefresh(); _skStartAnim();
   addEventListener('resize',_skFitCanvas);
 }

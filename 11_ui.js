@@ -501,7 +501,7 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
 $s('invBtn').addEventListener('click',openInv);
 $s('loadBtn').addEventListener('click',function(){ if(typeof openLoadout==='function') openLoadout(); });
 $s('skillBtn').addEventListener('click',function(){ if(typeof openSkills==='function') openSkills(); });
-$s('invClose').addEventListener('click',()=>{$s('invScr').style.display='none';});
+$s('invX').addEventListener('click',()=>{$s('invScr').style.display='none';});
 $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it||!canEquip(it,ch)) return;
  if(!rpg.eqAff) rpg.eqAff={};

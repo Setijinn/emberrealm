@@ -431,10 +431,10 @@ function _loadRender(){ const ov=document.getElementById('loadScr'); const ch=cu
       +'<div class="ldCm">'+a.mp+' MP · '+a.cd+'s'+(a.ground?' · aimed':'')+'</div></div></div>'; }
   const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))];
   ov.innerHTML='<div class="ldWrap">'
+    +'<button class="tabX" data-act="close" aria-label="Close">✕</button>'
     +'<div class="ldTitle">ABILITIES · '+(cc?cc.n:ch.cls)+'</div>'
     +'<div class="ldHint">'+nUnl+' of '+pool.length+' unlocked · tap a slot then an ability. Unlock more in the skill tree (🌟).</div>'
     +'<div class="ldSlots">'+slots+'</div>'
     +'<div class="ldGrid">'+cards+'</div>'
-    +'<button class="mbtn go" data-act="close" style="width:100%;margin-top:12px;">DONE</button>'
     +'</div>';
 }
