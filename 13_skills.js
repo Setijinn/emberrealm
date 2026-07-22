@@ -533,19 +533,20 @@ function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg)
     +'<div class="skDetail" id="skDetail"></div>'
     +'<div class="skBtns"><button class="mbtn" id="skRespec">RESPEC</button></div>'
     +'</div>';
-  const cv=document.getElementById('skillCv'); cv.addEventListener('pointerdown',_skClick);
+  // 'click' (not pointerdown) so dragging/panning the tree never selects a node
+  const cv=document.getElementById('skillCv'); cv.addEventListener('click',_skClick);
   document.getElementById('skRespec').onclick=()=>{ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skSel=null; _skRefresh(); } };
   document.getElementById('skX').onclick=closeSkills;
   _skSel=null; _skBuildLayout(ch.cls); _skFitCanvas(); _skRefresh(); _skStartAnim();
   addEventListener('resize',_skFitCanvas);
 }
-// scale the canvas DISPLAY to fit the viewport (buffer stays 690x520) so the header,
-// detail bar and RESPEC/DONE buttons are always visible — the canvas can't be scrolled
-// past (touch-action:none), so it must never fill the whole screen.
+// The tree stays FULL SIZE (960x560, readable nodes) inside the scrollable .skCanWrap
+// viewport; here we just aim the initial view at the trunk (bottom-centre), where a
+// build starts. On desktop the whole tree fits; on phones you pan around it.
 function _skFitCanvas(){ const cv=document.getElementById('skillCv'); if(!cv) return;
-  const maxW=Math.min(960, innerWidth*0.97), maxH=innerHeight*0.55;
-  const s=Math.min(maxW/960, maxH/560);
-  cv.style.width=Math.round(960*s)+'px'; cv.style.height=Math.round(560*s)+'px'; }
+  const wrap=cv.parentElement; if(!wrap) return;
+  wrap.scrollLeft=Math.max(0,(cv.offsetWidth-wrap.clientWidth)/2);
+  wrap.scrollTop=Math.max(0, cv.offsetHeight-wrap.clientHeight); }
 function closeSkills(){ const ov=document.getElementById('skillScr'); if(ov) ov.style.display='none'; _skStopAnim();
   removeEventListener('resize',_skFitCanvas);
   if(typeof recalcStats==='function') recalcStats(); if(typeof saveRPG==='function') saveRPG(); }

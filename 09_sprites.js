@@ -764,8 +764,8 @@ function render(){
   // ---- HP / MP orbs + XP bar ----
   const mp=player.mp||0, mm=player.maxmp||1;
   const cost=(typeof abilityCost==='function')?abilityCost():1e9;
-  // HP + MP orbs, large, flanking the bottom-center; XP bar spans beneath them
-  const orbR=Math.round(Math.min(46, W*0.11)), oy=H-orbR-18;
+  // HP + MP orbs flanking the bottom-center; XP bar spans beneath them
+  const orbR=Math.round(Math.min(34, W*0.08)), oy=H-orbR-16;
   const hpF=Math.max(0,player.hp/player.maxhp), mpF=Math.max(0,Math.min(1,mp/mm));
   drawOrb(W/2-orbR-5, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
   drawOrb(W/2+orbR+5, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
