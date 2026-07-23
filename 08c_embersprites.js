@@ -1,4 +1,4 @@
-// ---------- EmberForge real-sprite loader (PixelLab assets) ----------
+﻿// ---------- EmberForge real-sprite loader (PixelLab assets) ----------
 // Loads vendored PNG frames for classes that have real art and exposes
 // emberSprite(look, state) -> {img, flip} for the renderer to blit.
 // Falls back to the procedural heroSprite() for any class/anim not present.
@@ -17,9 +17,9 @@
 // On-screen scale for the 92px PixelLab sprites (tune to match world scale).
 const EMBER_SC = 0.85;
 
-// HUD orb frame (PixelLab) — ornate hollow ring for the HP/MP globes.
+// HUD orb frame (PixelLab) â€” ornate hollow ring for the HP/MP globes.
 const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return i; })() : null;
-// Reusable interact-button plate (PixelLab) — used by the portal/pillar USE prompt.
+// Reusable interact-button plate (PixelLab) â€” used by the portal/pillar USE prompt.
 const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/btn_interact.png'; return i; })() : null;
 // Loot containers (PixelLab): drab sack for low rarity, ornate chest for high rarity.
 const _lootSack  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';  return i; })() : null;
@@ -30,7 +30,7 @@ if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall
   'floor_walk','floor_walk2','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
   'wall','planter','brazier','lamp']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
-// water tile (global — hub pool + grove lakes)
+// water tile (global â€” hub pool + grove lakes)
 const _waterImg=(typeof window!=='undefined')?_img('assets/tiles/water.png'):null;
 // Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
 // (render falls back to lairset / normal boss art until these land)
@@ -81,7 +81,7 @@ function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
-// PixelLab projectile art — 24 base shapes; the forge hue-shifts each into many variants
+// PixelLab projectile art â€” 24 base shapes; the forge hue-shifts each into many variants
 const _projArt={_list:['arrow','fireball','ice_shard','lightning','magic_orb','skull','note','leaf',
  'dagger','chakram','spear','void_orb','holy_star','bone','wind_slash','crystal',
  'thorn','ember','wisp','rune','shuriken','axe','meteor','feather']};
@@ -90,7 +90,7 @@ const _groundVar={}, _decal={}, _lair={};   // richer terrain: variant ground ti
 const _lairSet={}, _lairDec={};              // boss-room wall/floor tileset (wall=GROUND_UP, floor=GROUND_LO) + interior decorations
 const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (uniform across tilesets)
 // every band gets decals: forest zones share the grass set (0), stone zones the rocky set (3),
-// ash/fire zones the ember set (5) — richness everywhere without 9 full unique sets
+// ash/fire zones the ember set (5) â€” richness everywhere without 9 full unique sets
 const DECAL_SRC={0:0,1:0,2:0,3:3,4:3,5:5,6:5,7:5,8:5};
 const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair structure
 (function(){
@@ -153,9 +153,9 @@ const EMBER_CLASSES = {
   shaman:{anims:{walk:4,attack:8}},
 };
 // Ascended forms: vendored ascension sprite sets register as pseudo-classes
-// 'asc_<ascensionId>' at assets/asc_<id>/ — emberSprite prefers them when the
+// 'asc_<ascensionId>' at assets/asc_<id>/ â€” emberSprite prefers them when the
 // player has ascended and the art is loaded, else falls back to the base class.
-const ASC_FORMS=['templar','warlord','sentinel','crusader','guardian','highpriest','ravager','bloodlord','juggernaut','wyrmknight','skylord','dragonlord','deathblade','nightblade','reaper','nightshade','executioner_a','phantom_a','sharpshooter','windranger','tempest_r','packlord','falconer','pathwarden','maestro','skald','loremaster','grandmaster','windwalker','ascendant','bishop','inquisitor','warden_c','infernomancer','emberlord','cinderguard','cryomancer','frostwarden','icebreaker','stormlord','thunderer','galewalker'];   // grows as each form's art lands
+const ASC_FORMS=['templar','warlord','sentinel','crusader','guardian','highpriest','ravager','bloodlord','juggernaut','wyrmknight','skylord','dragonlord','deathblade','nightblade','reaper','nightshade','executioner_a','phantom_a','sharpshooter','windranger','tempest_r','packlord','falconer','pathwarden','maestro','skald','loremaster','grandmaster','windwalker','ascendant','bishop','inquisitor','warden_c','infernomancer','emberlord','cinderguard','cryomancer','frostwarden','icebreaker','stormlord','thunderer','galewalker','soulflayer','doomcaller','dreadlord'];   // grows as each form's art lands
 for(const a of ASC_FORMS) EMBER_CLASSES['asc_'+a]={anims:{walk:4,attack:8}};
 const EMBER_DIRS = ['s','e','n','w'];       // idle rotations (all real)
 const EMBER_ANIM_DIRS = ['s','e','n'];      // walk/attack (west mirrors east)

@@ -1,4 +1,4 @@
-const CACHE = 'emberrealm-v146';
+﻿const CACHE = 'emberrealm-v147';
 const ASSETS = ['.', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -13,7 +13,7 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 // CACHE-FIRST: serve assets instantly from cache; only hit the network on a miss
-// (then store it). Freshness is handled by the CACHE version bump on each deploy —
+// (then store it). Freshness is handled by the CACHE version bump on each deploy â€”
 // the activate step above deletes old caches, so a new build re-fetches everything once
 // and then loads instantly on every subsequent visit. Much faster than re-fetching every
 // asset over the network on every load (the old network-first behaviour).
