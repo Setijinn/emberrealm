@@ -110,6 +110,13 @@ function drawCoopPeers(pn){
 // how many heroes (incl. me) are live on my connection
 function coopCount(){ const now=performance.now();
   return 1+Object.keys(coop.peers).filter(id=>now-(coop.peers[id].ts||0)<3000).length; }
+// how many heroes (incl. me) are near a point in MY room — drives enemy group scaling
+function coopNearCount(x,y){ if(!coop.on) return 1;
+  const now=performance.now(); let n=1;
+  for(const id in coop.peers){ const p=coop.peers[id];
+    if(now-(p.ts||0)<3000 && p.rm===((curRoom&&curRoom.key)||'?')
+       && Math.hypot((p.x||0)-x,(p.y||0)-y)<1100) n++; }
+  return n; }
 // ---- panel ----
 function openCoop(){ const ov=document.getElementById('coopScr'); if(!ov) return;
   ov.style.display='flex'; _coopPanel(); }

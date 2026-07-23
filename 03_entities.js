@@ -300,78 +300,143 @@ const DPUZ_LABEL=[
  'Awaken the Titan Locks as they glow'];
 const DOBJ_PLAN={};
 for(let r=0;r<9;r++) DOBJ_PLAN[r]=[DPUZ[r],'waves'];
+// Per-ring dungeon ARCHITECTURE: room shape, edge irregularity, radii, corridor
+// wobble/width, spacing. This is what makes each mind read differently on the map.
+const DSHAPE=[
+ {room:'blob', irr:0.55,rmin:8, rmax:12,wob:2.5,cw:2.0,gap:9 },  // 0 root caves
+ {room:'round',irr:0.10,rmin:6, rmax:9, wob:3.5,cw:1.6,gap:15},  // 1 misty glades, thin winding paths
+ {room:'blob', irr:0.80,rmin:8, rmax:12,wob:3.0,cw:2.3,gap:10},  // 2 ragged bog warren
+ {room:'vault',irr:0.0, rmin:7, rmax:10,wob:0.0,cw:2.0,gap:14},  // 3 shattered vault (elbow halls)
+ {room:'round',irr:0.15,rmin:5, rmax:7, wob:4.2,cw:1.5,gap:17},  // 4 wind ledges + perches
+ {room:'blob', irr:0.50,rmin:9, rmax:13,wob:2.0,cw:2.6,gap:9 },  // 5 magma caverns
+ {room:'cells',irr:0.35,rmin:8, rmax:11,wob:1.5,cw:1.6,gap:9 },  // 6 catacomb cell-clusters
+ {room:'vault',irr:0.0, rmin:9, rmax:12,wob:0.0,cw:2.4,gap:15},  // 7 fortress halls
+ {room:'round',irr:0.08,rmin:10,rmax:13,wob:1.0,cw:2.2,gap:10},  // 8 grand sanctums
+];
 function genDungeon(ring){
  const _n=rooms['G'].rings.names[ring];
  // the mind is a step beyond the zone's peak — "matching but a little more difficult"
  const lv=Math.min(160,(_n.lv2!==undefined?_n.lv2:_n.lv)+5);
- // seeded PRNG — every ring gets its OWN layout, stable across visits
+ // seeded PRNG — every ring gets its OWN layout, stable across visits.
+ // MIRRORED 1:1 by scratchpad dun_gen2.py (structural validation) — keep in sync.
  let _s=(ring*7919+1013)>>>0;
  const rng=function(){ _s=(_s+0x6D2B79F5)>>>0;
   let t=Math.imul(_s^(_s>>>15),1|_s); t=(t+Math.imul(t^(t>>>7),61|t))^t;
   return ((t^(t>>>14))>>>0)/4294967296; };
- // carve 5-7 chambers snaking east with vertical jogs through a solid grid:
- // entry -> objective-locked chambers -> the Awakened's arena. Long by design.
- const W2=170,H2=64, g=[];
+ const seed=ring*7919+1013;
+ const chash=(x,y)=>{ let h=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(seed,971))>>>0;
+  h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))>>>0)/4294967296; };
+ const st=DSHAPE[ring];
+ const W2=170+ring*26, H2=84, g=[];
  for(let y=0;y<H2;y++){ const row=[]; for(let x=0;x<W2;x++) row.push('W'); g.push(row); }
- const NCH=5+Math.floor(rng()*2.99);            // 5..7 chambers
- const chs=[]; let cx=14, cy=32;
+ // deeper minds are LONGER: ring 0 ~4-5 chambers, ring 8 ~8-9
+ const NCH=4+Math.floor(ring*0.55)+Math.floor(rng()*2);
+ const chs=[]; let cx=18, cy=36;
+ const step=st.rmax+st.gap+st.rmax;
  for(let i=0;i<NCH;i++){
-  const hw=7+Math.floor(rng()*5), hh=6+Math.floor(rng()*4);   // half-extents
-  chs.push({cx:cx,cy:cy,hw:hw,hh:hh,dir:'E'});
+  let r=st.rmin+rng()*(st.rmax-st.rmin);
+  const aspect=st.room==='round'?0.7+rng()*0.5:0.85+rng()*0.3;
+  if(i===NCH-1) r*=1.25;                        // boss arena is grander
+  chs.push({cx:cx,cy:cy,r:r,ry:r*aspect,out:'E'});
   if(i===NCH-1) break;
-  // pick the walk direction to the next chamber (east bias, vertical jogs for shape)
-  let d=rng(); let dir=(d<0.56||i===NCH-2)?'E':(d<0.78?'N':'S');
-  if(dir==='N'&&cy-(hh+16)<10) dir='S'; if(dir==='S'&&cy+(hh+16)>H2-10) dir='N';
-  const nhw=7+Math.floor(rng()*5), nhh=6+Math.floor(rng()*4), COR=7;
-  if(dir==='E') cx+=hw+COR+nhw; else cy+=(dir==='S'?1:-1)*(hh+COR+nhh);
-  if(cx+nhw>W2-2){ cx=W2-2-nhw; }
+  const d=rng();
+  const vstep=Math.min(step,24);                // vertical hops shorter — grid is wide, not tall
+  let dir=(d<0.55||i===NCH-2)?'E':(d<0.775?'N':'S');
+  if(dir==='E'&&cx+step>W2-20) dir=(cy>Math.floor(H2/2))?'N':'S';
+  if(dir==='N'&&cy-vstep<16) dir='S';
+  if(dir==='S'&&cy+vstep>H2-16) dir='N';
+  if(dir==='E') cx+=step; else cy+=(dir==='S'?1:-1)*vstep;
+  cx=Math.min(cx,W2-18); cy=Math.max(16,Math.min(H2-16,cy));
   chs[i].out=dir;
  }
- const carve=(x0,y0,x1,y1)=>{ for(let y=Math.max(1,y0);y<=Math.min(H2-2,y1);y++)
-  for(let x=Math.max(1,x0);x<=Math.min(W2-2,x1);x++) g[y][x]='.'; };
- for(const c of chs) carve(c.cx-c.hw,c.cy-c.hh,c.cx+c.hw,c.cy+c.hh);
- // clutter pillars inside chambers (unique per ring via rng)
- chs.forEach(function(c,i){ if(i===NCH-1) return;   // boss arena stays open
-  const k=2+Math.floor(rng()*3);
-  for(let q=0;q<k;q++){ const px2=c.cx-c.hw+2+Math.floor(rng()*(c.hw*2-4));
-   const py2=c.cy-c.hh+2+Math.floor(rng()*(c.hh*2-4));
-   const s2=1+Math.floor(rng()*2);
-   for(let yy=py2;yy<py2+s2;yy++)for(let xx=px2;xx<px2+s2;xx++)
-    if(Math.abs(xx-c.cx)>3||Math.abs(yy-c.cy)>3) g[yy][xx]='W'; } });
- // corridors + gates between consecutive chambers (entry corridor stays open).
- // The corridor spine is laid as 'p' dream-path so the way forward always reads.
- const gatesByCh=[];   // gateCells for objective i (locking chamber i+1's entrance)
- const lay=(x0,y0,x1,y1)=>{ for(let y=Math.max(1,y0);y<=Math.min(H2-2,y1);y++)
-  for(let x=Math.max(1,x0);x<=Math.min(W2-2,x1);x++) g[y][x]='p'; };
- for(let i=0;i<NCH-1;i++){ const a=chs[i], b=chs[i+1]; const cells=[];
-  if(a.out==='E'){ const x0=a.cx+a.hw, x1=b.cx-b.hw, my=a.cy;
-    carve(x0,my-2,x1,my+2); lay(a.cx,my-1,b.cx,my+1);
-    const gx=Math.floor((x0+x1)/2);
-    if(i>0){ for(let y=my-2;y<=my+2;y++){ g[y][gx]='D'; cells.push({x:gx,y:y}); } } }
-  else { const s=a.out==='S'?1:-1, y0=a.cy+s*a.hh, y1=b.cy-s*b.hh, mx=a.cx;
-    carve(mx-2,Math.min(y0,y1),mx+2,Math.max(y0,y1));
-    lay(mx-1,Math.min(a.cy,b.cy),mx+1,Math.max(a.cy,b.cy));
-    const gy=Math.floor((y0+y1)/2);
-    if(i>0){ for(let x=mx-2;x<=mx+2;x++){ g[gy][x]='D'; cells.push({x:x,y:gy}); } } }
-  if(i>0) gatesByCh.push(cells);
+ const carveCell=(x,y)=>{ if(x>=1&&x<W2-1&&y>=1&&y<H2-1) g[y][x]='.'; };
+ // ---- carve rooms in the ring's architecture ----
+ for(const c of chs){
+  const r=c.r, ry=c.ry;
+  if(st.room==='blob'||st.room==='round'||st.room==='cells'){
+   let subs=[[0,0,1.0]];
+   if(st.room==='cells'){ const k=3+Math.floor(rng()*2); subs=[];
+    for(let q=0;q<4;q++){ const ox=(rng()*2-1)*r*0.75, oy=(rng()*2-1)*ry*0.75;
+     if(q<k) subs.push([ox,oy,0.55]); } }
+   for(const sub of subs){ const ox=sub[0], oy=sub[1], fr=sub[2];
+    const rr=r*fr, rry=ry*fr;
+    const x0=Math.floor(c.cx+ox-rr-3), x1=Math.floor(c.cx+ox+rr+3);
+    const y0=Math.floor(c.cy+oy-rry-3), y1=Math.floor(c.cy+oy+rry+3);
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+     const dx=(x-(c.cx+ox))/rr, dy=(y-(c.cy+oy))/rry;
+     const dd=Math.sqrt(dx*dx+dy*dy);
+     const edge=1.0+(chash(x,y)-0.5)*st.irr*2;
+     if(dd<=edge) carveCell(x,y); } }
+  } else { // vault: main hall + 2 offset side rooms (asymmetric composite)
+   const w=Math.floor(r*1.5), h=Math.floor(ry*1.1);
+   for(let y=Math.floor(c.cy-h);y<=Math.floor(c.cy+h);y++)
+    for(let x=Math.floor(c.cx-w);x<=Math.floor(c.cx+w);x++) carveCell(x,y);
+   for(let q=0;q<2;q++){ const sw=Math.floor(3+rng()*3), sh=Math.floor(2+rng()*3);
+    const sx=Math.floor(c.cx+(rng()*2-1)*(w-sw-1));
+    const sy=Math.floor(c.cy+(rng()<0.5?1:-1)*(h+sh-1));
+    for(let y=sy-sh;y<=sy+sh;y++)for(let x=sx-sw;x<=sx+sw;x++) carveCell(x,y); } }
+ }
+ // ---- corridors (wavy polyline or elbow) with dream-path spine; gates stamped LAST ----
+ const brush=(fx,fy,rad)=>{ for(let y=Math.floor(fy-rad);y<=Math.floor(fy+rad);y++)
+  for(let x=Math.floor(fx-rad);x<=Math.floor(fx+rad);x++)
+   if((x-fx)*(x-fx)+(y-fy)*(y-fy)<=rad*rad) carveCell(x,y); };
+ const gatePts=[], gatesByCh=[];
+ for(let i=0;i<NCH-1;i++){ const a=chs[i], b=chs[i+1];
+  const ph=rng()*6.283, midf=0.35+rng()*0.3;
+  const ax=a.cx, ay=a.cy, bx=b.cx, by=b.cy;
+  const dist=Math.hypot(bx-ax,by-ay), steps=Math.max(8,Math.floor(dist*2));
+  const pts=[]; let gpt=null;
+  if(st.room==='vault'){
+   let segs;
+   if(a.out==='E'){ const mx=ax+(bx-ax)*midf; segs=[[ax,ay],[mx,ay],[mx,by],[bx,by]]; gpt=[mx,(ay+by)/2]; }
+   else { const my=ay+(by-ay)*midf; segs=[[ax,ay],[ax,my],[bx,my],[bx,by]]; gpt=[(ax+bx)/2,my]; }
+   for(let si=0;si<segs.length-1;si++){ const x0=segs[si][0],y0=segs[si][1],x1=segs[si+1][0],y1=segs[si+1][1];
+    const sl=Math.max(2,Math.floor(Math.hypot(x1-x0,y1-y0)*2));
+    for(let t=0;t<=sl;t++){ const f=t/sl; pts.push([x0+(x1-x0)*f, y0+(y1-y0)*f]); } }
+  } else {
+   const pxn=-(by-ay)/(dist||1), pyn=(bx-ax)/(dist||1);
+   for(let t=0;t<=steps;t++){ const f=t/steps;
+    const fade=Math.sin(f*Math.PI);              // no wobble at the ends
+    const off=Math.sin(f*Math.PI*2+ph)*st.wob*fade;
+    pts.push([ax+(bx-ax)*f+pxn*off, ay+(by-ay)*f+pyn*off]); }
+   gpt=pts[Math.floor(pts.length/2)];
+  }
+  for(const p2 of pts) brush(p2[0],p2[1],st.cw);
+  // dream-path spine along the corridor
+  for(const p2 of pts){ const fx=p2[0], fy=p2[1];
+   for(let y=Math.floor(fy-1);y<=Math.floor(fy+1);y++)
+    for(let x=Math.floor(fx-1);x<=Math.floor(fx+1);x++)
+     if((x-fx)*(x-fx)+(y-fy)*(y-fy)<=1.0&&x>=1&&x<W2-1&&y>=1&&y<H2-1&&g[y][x]==='.') g[y][x]='p'; }
+  if(i>0) gatePts.push(gpt);
+ }
+ for(const gp of gatePts){ const gx=gp[0], gy=gp[1], cells=[];
+  const rad=st.cw+1.6;
+  for(let y=Math.floor(gy-rad)-1;y<=Math.floor(gy+rad)+1;y++)
+   for(let x=Math.floor(gx-rad)-1;x<=Math.floor(gx+rad)+1;x++)
+    if((x-gx)*(x-gx)+(y-gy)*(y-gy)<=rad*rad&&x>0&&x<W2-1&&y>0&&y<H2-1&&(g[y][x]==='.'||g[y][x]==='p')){
+     g[y][x]='D'; cells.push({x:x,y:y}); }
+  gatesByCh.push(cells);
  }
  const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
-  glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:chs[0].cx,py:chs[0].cy,
+  glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,
+  px:Math.floor(chs[0].cx),py:Math.floor(chs[0].cy),
   orbs:[], switches:[], plates:[], circles:[], chases:[], objs:[], ddec:[] };
  // objectives: chambers 1..NCH-2 alternate the ring's SIGNATURE puzzle with combat
- const otypes=DOBJ_PLAN[ring]||['waves','waves'];
  for(let ci=1;ci<NCH-1;ci++){ const c=chs[ci], oi=ci-1;
-  const type=otypes[oi%otypes.length];
+  const isSig=(oi%2===0);
+  const type=isSig?DPUZ[ring]:'waves';
   const obj={type:type,mode:type,ch:oi,need:3,got:0,done:false,gateCells:gatesByCh[oi]||[],
-   bounds:{x0:c.cx-c.hw,y0:c.cy-c.hh,x1:c.cx+c.hw,y1:c.cy+c.hh},
+   bounds:{x0:Math.floor(c.cx-c.r)-4,y0:Math.floor(c.cy-c.ry)-4,
+           x1:Math.floor(c.cx+c.r)+4,y1:Math.floor(c.cy+c.ry)+4},
    label:type==='waves'?'Slay every phantom':DPUZ_LABEL[ring],
    spots:[], rgT:0, snuffT:0, demoT:0, timer:0};
-  if(type!=='waves'){
-   // every puzzle builds on 3 seeded spots (identical rng pattern keeps sim valid)
-   for(let q=0;q<3;q++){ const sx=c.cx-c.hw+3+Math.floor(rng()*(c.hw*2-6));
-    const sy=c.cy-c.hh+3+Math.floor(rng()*(c.hh*2-6));
-    for(let yy=sy-1;yy<=sy+1;yy++)for(let xx=sx-1;xx<=sx+1;xx++)
-     if(yy>0&&xx>0&&yy<H2-1&&xx<W2-1&&g[yy][xx]==='W') g[yy][xx]='.';
+  if(isSig){
+   // 3 puzzle spots via rejection sampling on the organic floor (mirrored by the sim)
+   for(let q=0;q<3;q++){ let sx=null, sy=null;
+    for(let t2=0;t2<24;t2++){ const tx2=Math.floor(c.cx+(rng()*2-1)*c.r*0.7);
+     const ty2=Math.floor(c.cy+(rng()*2-1)*c.ry*0.7);
+     if(tx2>0&&tx2<W2-1&&ty2>0&&ty2<H2-1&&g[ty2][tx2]==='.'){ sx=tx2; sy=ty2; break; } }
+    if(sx===null){ sx=Math.floor(c.cx)+q; sy=Math.floor(c.cy); }
     const px2=(sx+.5)*TILE, py2=(sy+.5)*TILE;
     obj.spots.push({tx:sx,ty:sy,x:px2,y:py2});
     if(type==='regrow'||type==='ambush') room.spawns.push({t:'N',x:sx,y:sy,ch:oi});
@@ -382,24 +447,29 @@ function genDungeon(ring){
     else if(type==='hold') room.circles.push({x:px2,y:py2,ch:oi,prog:0,lit:false}); }
    if(type==='chase') room.chases.push({ch:oi,x:obj.spots[0].x,y:obj.spots[0].y,wt:0});
   } else obj.need=-1;
-  // mob packs in this chamber (denser deeper into the mind)
+  // mob packs in this chamber (denser deeper into the mind); 2 rng draws per pack
   const nm=3+Math.floor(rng()*2)+Math.floor(ci*0.7);
-  for(let q=0;q<nm;q++){ const sx=c.cx-c.hw+2+Math.floor(rng()*(c.hw*2-4));
-   const sy=c.cy-c.hh+2+Math.floor(rng()*(c.hh*2-4));
-   if(g[sy][sx]==='.') room.spawns.push({t:rng()<0.4?'s':'c',x:sx,y:sy,ch:oi}); }
+  for(let q=0;q<nm;q++){ const ra=rng(), rb=rng();
+   const sx=Math.floor(c.cx+(ra*2-1)*c.r*0.8), sy=Math.floor(c.cy+(rb*2-1)*c.ry*0.8);
+   if(sx>0&&sx<W2-1&&sy>0&&sy<H2-1&&g[sy][sx]==='.')
+    room.spawns.push({t:ra<0.4?'s':'c',x:sx,y:sy,ch:oi}); }
   room.objs.push(obj); }
+ const bc=chs[NCH-1];
+ room.spawns.push({t:'B',x:Math.floor(bc.cx),y:Math.floor(bc.cy),ch:99});
+ // entry + boss centres guaranteed open (mirror: python brushes these at the end)
+ brush(chs[0].cx,chs[0].cy,2.5); brush(bc.cx,bc.cy,3.0);
+ // --- everything below is JS-only garnish (no grid mutation the sim needs) ---
  // a light welcome pack in the entry chamber
  for(let q=0;q<2;q++){ const c=chs[0];
-  const sx=c.cx-c.hw+3+Math.floor(rng()*(c.hw*2-6)), sy=c.cy-c.hh+3+Math.floor(rng()*(c.hh*2-6));
-  if(g[sy][sx]==='.'&&(sx!==chs[0].cx||sy!==chs[0].cy)) room.spawns.push({t:'c',x:sx,y:sy,ch:-1}); }
- const bc=chs[NCH-1];
- room.spawns.push({t:'B',x:bc.cx,y:bc.cy,ch:99});
+  const sx=Math.floor(c.cx+(rng()*2-1)*c.r*0.7), sy=Math.floor(c.cy+(rng()*2-1)*c.ry*0.7);
+  if(sx>0&&sx<W2-1&&sy>0&&sy<H2-1&&g[sy][sx]==='.'&&(sx!==room.px||sy!==room.py))
+   room.spawns.push({t:'c',x:sx,y:sy,ch:-1}); }
  // dream decor scattered through every chamber (crystals, saplings, sunken faces,
- // spectral braziers, memory shards, rune stumps) — placed LAST so the structural
- // rng sequence above stays exactly as sim-validated
+ // spectral braziers, memory shards, rune stumps)
  chs.forEach(function(c,i){ const k=2+Math.floor(rng()*3);
-  for(let q=0;q<k;q++){ const dx2=c.cx-c.hw+2+Math.floor(rng()*(c.hw*2-4));
-   const dy2=c.cy-c.hh+2+Math.floor(rng()*(c.hh*2-4));
+  for(let q=0;q<k;q++){ const dx2=Math.floor(c.cx+(rng()*2-1)*c.r*0.8);
+   const dy2=Math.floor(c.cy+(rng()*2-1)*c.ry*0.8);
+   if(dx2<=0||dx2>=W2-1||dy2<=0||dy2>=H2-1) continue;
    if(g[dy2][dx2]!=='.'||(Math.abs(dx2-c.cx)<3&&Math.abs(dy2-c.cy)<3)) continue;
    room.ddec.push({x:(dx2+.5)*TILE,y:(dy2+.5)*TILE,i:Math.floor(rng()*6)}); } });
  room.bossRing=ring;
@@ -446,8 +516,13 @@ function makeEnemy(sp){
      col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?1.25:1),
      name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
      chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
-  e.hp=Math.round(e.hp); e.maxhp=e.hp;
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
+  // group scaling: enemies grow with how many heroes are actually here (co-op)
+  const cn=(typeof coopNearCount==='function')?coopNearCount(e.x,e.y):1;
+  if(cn>1){ e.hp*=1+0.65*(cn-1);
+    if(e.touch) e.touch*=1+0.22*(cn-1);
+    if(e.bd) e.bd*=1+0.22*(cn-1); }
+  e.hp=Math.round(e.hp); e.maxhp=e.hp;
   return e;
 }
 function slowF(e){return e.slowT>0?0.55:1;}

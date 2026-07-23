@@ -12,12 +12,14 @@ function fire(dt){
   // LOS is always from the player (you still can't shoot through walls).
   let ref={x:player.x,y:player.y};
   if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof mouseWorld==='function') ref=mouseWorld();
+  const wt=player.wt||WTYPE.sword;
+  // auto-aim range cap: only engage targets the weapon can actually reach (+15% grace)
+  const wRange=((wt.spd||520)*(player.projSpd||1))*(wt.life||1)*1.15;
   let ang=null, best=null, bd=1e9;
   for(const e of enemies){ const d=Math.hypot(e.x-ref.x,e.y-ref.y);
-    if(d<bd&&los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
+    if(d<bd && Math.hypot(e.x-player.x,e.y-player.y)<=wRange && los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
   if(best) ang=Math.atan2(best.y-player.y,best.x-player.x);
   if(ang===null) return;
-  const wt=player.wt||WTYPE.sword;
   player.fireT=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
   player.aim=ang;
   player.atkT=0.2;                     // trigger the attack animation
