@@ -6,43 +6,85 @@
 //
 // rpg.loadout = [id,id,id]  (persisted). armedSlot = which of the 3 is live.
 
+// ----- ability visual effects: every cast type has a distinct signature look -----
+// (particle recipes on emitP + sprite flashes via fx {t:'img'}; colors follow the cast)
+function abilFx(kind,x,y,col,ang){
+ if(typeof emitP!=='function') return;
+ const C=col||'#ffd07a';
+ if(kind==='blast'){ for(let i=0;i<16;i++){ const a=Math.random()*6.283,s=60+Math.random()*180;
+   emitP(x,y,{vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:0.35+Math.random()*0.25,
+     col:Math.random()<0.7?C:'#fff8e0',sz:2+Math.random()*3,drag:2.5,g:90,glow:true}); } }
+ else if(kind==='nova'){ for(let i=0;i<24;i++){ const a=(i/24)*6.283;
+   emitP(x,y,{vx:Math.cos(a)*180,vy:Math.sin(a)*180,life:0.5,col:C,sz:3,drag:1.4,glow:true}); } }
+ else if(kind==='fan'){ for(let i=0;i<10;i++){ const a=(ang||0)+(Math.random()-0.5)*0.9;
+   emitP(x,y,{vx:Math.cos(a)*(140+Math.random()*160),vy:Math.sin(a)*(140+Math.random()*160),
+     life:0.3,col:C,sz:2,drag:2,glow:true}); }
+   if(typeof _fxSlash!=='undefined'&&_fxSlash&&_fxSlash.naturalWidth)
+     fx.push({t:'img',img:_fxSlash,x:x+Math.cos(ang||0)*34,y:y+Math.sin(ang||0)*34,
+       ang:(ang||0)+Math.PI/2,sc:0.9,life:0.22,max:0.22}); }
+ else if(kind==='buff'){ for(let i=0;i<10;i++)
+   emitP(x+(Math.random()*36-18),y+(Math.random()*20-4),
+     {vx:0,vy:-44-Math.random()*40,life:0.7,col:C,sz:2.5,glow:true}); }
+ else if(kind==='invuln'){ for(let i=0;i<18;i++){ const a=(i/18)*6.283;
+   emitP(x+Math.cos(a)*26,y-8+Math.sin(a)*26,
+     {vx:Math.cos(a)*22,vy:Math.sin(a)*22,life:0.5,col:'#c9d2da',sz:2.5,glow:true}); } }
+ else if(kind==='heal'){ for(let i=0;i<12;i++)
+   emitP(x+(Math.random()*30-15),y+(Math.random()*14-2),
+     {vx:0,vy:-52-Math.random()*30,life:0.8,col:i%3?'#8fd48c':'#fff0c0',sz:2.5,glow:true});
+   if(typeof _fxHeal!=='undefined'&&_fxHeal&&_fxHeal.naturalWidth)
+     fx.push({t:'img',img:_fxHeal,x:x,y:y-26,ang:0,sc:0.8,life:0.6,max:0.6,rise:26}); }
+ else if(kind==='whirl'){ for(let i=0;i<16;i++){ const a=(i/16)*6.283;
+   emitP(x,y,{vx:Math.cos(a)*230,vy:Math.sin(a)*230,life:0.35,col:C,sz:2.5,glow:true}); } }
+ else if(kind==='summon'){ for(let i=0;i<12;i++){ const a=Math.random()*6.283;
+   emitP(x+Math.cos(a)*26,y+Math.sin(a)*26,
+     {vx:-Math.cos(a)*44,vy:-Math.sin(a)*44-22,life:0.6,col:'#8fd48c',sz:2.5,glow:true}); } }
+ else if(kind==='drain'){ for(let i=0;i<14;i++){ const a=Math.random()*6.283,d=90+Math.random()*70;
+   emitP(x+Math.cos(a)*d,y+Math.sin(a)*d,
+     {vx:-Math.cos(a)*170,vy:-Math.sin(a)*170,life:0.5,col:C,sz:2.5,glow:true}); } }
+ else if(kind==='dashTrail'){ /* laid inline by dash */ }
+}
 // ----- cast primitives (each returns a cast(ctx) fn). ctx={x,y,aim,AP,dmg,cls} -----
 // ground abilities use ctx.x/ctx.y (the tapped world point); others use player pos.
 const P = {
  fan:(n,sp,spd,dm,col,r,life,pc)=>(c)=>{ const a0=c.aim;
    for(let i=0;i<n;i++){ const sa=a0+(i-(n-1)/2)*sp;
      pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*spd,vy:Math.sin(sa)*spd,r:r,life:life,dmg:Math.round(c.dmg*dm*c.AP),pierce:pc||0,lastHit:null}); }
-   boom(player.x,player.y,col,6); },
+   abilFx('fan',player.x,player.y,col,a0); },
  nova:(rad,dm,col,slow)=>(c)=>{ fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.38,col:col});
-   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)e.slowT=slow; texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
-   boom(player.x,player.y,col,18); },
+   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)applyStatus(e,'chill',slow,0); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
+   abilFx('nova',player.x,player.y,col); },
  blast:(rad,dm,col,slow)=>(c)=>{ fx.push({t:'ring',x:c.x,y:c.y,r:rad,life:0.38,col:col});
-   for(const e of enemies){ if(Math.hypot(e.x-c.x,e.y-c.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)e.slowT=slow; texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
-   boom(c.x,c.y,col,18); },
- dash:(dist,inv,col)=>(c)=>{ const a=c.aim, nx=player.x+Math.cos(a)*dist, ny=player.y+Math.sin(a)*dist;
+   for(const e of enemies){ if(Math.hypot(e.x-c.x,e.y-c.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)applyStatus(e,'chill',slow,0); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
+   abilFx('blast',c.x,c.y,col); },
+ dash:(dist,inv,col)=>(c)=>{ const a=c.aim, ox=player.x, oy=player.y;
+   const nx=player.x+Math.cos(a)*dist, ny=player.y+Math.sin(a)*dist;
    if(!solid(nx,ny)){player.x=nx;player.y=ny;}
    let iv=inv; if(player.dashInv) iv=Math.max(iv,0.6);          // Windranger / Windwalker
-   player.inv=Math.max(player.inv,iv); boom(player.x,player.y,col,14);
+   player.inv=Math.max(player.inv,iv);
+   // afterimage smear along the dash line
+   if(typeof emitP==='function') for(let t=0;t<=1;t+=0.12)
+     emitP(ox+(player.x-ox)*t,oy+(player.y-oy)*t,
+       {vx:0,vy:0,life:0.3+t*0.15,col:col||'#c9d2da',sz:3.5,glow:true});
    if(player.dashBlast) aoe(player.x,player.y,80,Math.round(c.dmg*1.2*c.AP),'#e8b34b'); }, // Skylord crater
  whirl:(n,dm,col,spd,life)=>(c)=>{ for(let i=0;i<n;i++){ const sa=i*6.283/n;
      pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*(spd||420),vy:Math.sin(sa)*(spd||420),r:7,life:life||0.5,dmg:Math.round(c.dmg*dm*c.AP),pierce:0,lastHit:null}); }
-   boom(player.x,player.y,col,10); },
+   abilFx('whirl',player.x,player.y,col); },
  chain:(n,dm,col)=>(c)=>{ const s=enemies.slice().sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y)).slice(0,n);
    const pts=[{x:player.x,y:player.y}];
    for(const e of s){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; pts.push({x:e.x,y:e.y}); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); }
    if(pts.length>1) fx.push({t:'bolt',pts:pts,life:0.3,col:col}); },
  summon:(spr,cnt,dm,life)=>(c)=>{ const n2=cnt*(player.summonX2?2:1);   // Packlord / Lich
-   for(let i=0;i<n2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(c.dmg*dm*c.AP),life:life,cd:0,spr:spr}); boom(player.x,player.y,'#8fd48c',12); },
- heal:(pct)=>(c)=>{ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*pct); boom(player.x,player.y,'#fff0c0',16);
+   for(let i=0;i<n2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(c.dmg*dm*c.AP),life:life,cd:0,spr:spr}); abilFx('summon',player.x,player.y); },
+ heal:(pct)=>(c)=>{ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*pct); abilFx('heal',player.x,player.y);
    texts.push({x:player.x,y:player.y-28,txt:'+'+Math.round(player.maxhp*pct),col:'#8fd48c',life:0.8}); },
- buff:(fld,mult,dur,inv)=>(c)=>{ player[fld+'T']=dur; player[fld+'M']=mult; if(inv)player.inv=Math.max(player.inv,inv); boom(player.x,player.y,'#ffd07a',12); },
- invuln:(dur)=>(c)=>{ player.inv=Math.max(player.inv,dur); boom(player.x,player.y,'#c9d2da',14); },
+ buff:(fld,mult,dur,inv)=>(c)=>{ player[fld+'T']=dur; player[fld+'M']=mult; if(inv)player.inv=Math.max(player.inv,inv); abilFx('buff',player.x,player.y,'#ffd07a'); },
+ invuln:(dur)=>(c)=>{ player.inv=Math.max(player.inv,dur); abilFx('invuln',player.x,player.y); },
  zone:(rad,life,col)=>(c)=>{ zones.push({x:c.x,y:c.y,r:rad,life:life,tick:0,ap:c.AP}); fx.push({t:'ring',x:c.x,y:c.y,r:rad,life:0.35,col:col}); },
  drain:(rad,dm,col,healPer)=>(c)=>{ let n=0;
    for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ e.hp-=Math.round(c.dmg*dm*c.AP); e.flash=0.15; n++; } }
-   player.hp=Math.min(player.maxhp,player.hp+n*healPer*c.AP); fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.35,col:col}); },
+   player.hp=Math.min(player.maxhp,player.hp+n*healPer*c.AP); fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.35,col:col}); abilFx('drain',player.x,player.y,col); },
  spirit:(dur)=>(c)=>{ player.spiritT=dur*(1+(player.spiritDur||0));   // Spiritcaller lingering
-   player.spiritAP=c.AP; boom(player.x,player.y,'#7ab8d4',12); },
+   player.spiritAP=c.AP; abilFx('summon',player.x,player.y); },
  combo:(...fns)=>(c)=>{ for(const f of fns) f(c); },
 };
 function A(id,name,mp,cd,icon,desc,cast,ground){ return {id:id,name:name,mp:mp,cd:cd,icon:icon,desc:desc,cast:cast,ground:!!ground}; }

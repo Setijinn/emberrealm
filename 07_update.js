@@ -475,6 +475,11 @@ function update(dt){
   // ability upkeep (mana regen handled at top; abilities cast from the right-side button)
   lastShotT+=dt;
   if(player.bDmgT>0)player.bDmgT-=dt; if(player.bRofT>0)player.bRofT-=dt; if(player.bSpdT>0)player.bSpdT-=dt;
+  // active buffs shed colored motes so you can SEE they're running
+  if(typeof emitP==='function'){
+    if(player.bDmgT>0&&Math.random()<2.5*dt) emitP(player.x+(Math.random()*30-15),player.y+6,{vx:0,vy:-34,life:0.6,col:'#ff8c5a',sz:2,glow:true});
+    if(player.bRofT>0&&Math.random()<2.5*dt) emitP(player.x+(Math.random()*30-15),player.y+6,{vx:0,vy:-34,life:0.6,col:'#ffd23d',sz:2,glow:true});
+    if(player.bSpdT>0&&Math.random()<2.5*dt) emitP(player.x+(Math.random()*30-15),player.y+6,{vx:0,vy:-34,life:0.6,col:'#7dc47a',sz:2,glow:true}); }
   for(let i=allies.length-1;i>=0;i--){ const al=allies[i];
     al.life-=dt; if(al.life<=0){allies.splice(i,1);continue;}
     let tgt=null,bd=1e9;

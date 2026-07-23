@@ -796,9 +796,16 @@ function render(){
   ctx.globalAlpha=1;
   for(const s of pShots) drawShot(s,s.crit?'#ffd23d':'#ffc94d',s.crit?'#fff8d8':'#fff4cc');
   for(const s of eShots) drawEShot(s);
-  for(const z of zones){ ctx.globalAlpha=0.20; ctx.fillStyle='#ffd07a';
+  for(const z of zones){
+    const zc=z.healOnly?'#8fd48c':z.fire?'#ff8c3a':'#ffd07a';
+    // rune circle sprite under the glow (spins slowly)
+    if(typeof _fxRune!=='undefined'&&_fxRune&&_fxRune.complete&&_fxRune.naturalWidth){
+      ctx.save(); ctx.globalAlpha=0.75; ctx.imageSmoothingEnabled=false;
+      ctx.translate(z.x,z.y); ctx.rotate(performance.now()/2400);
+      ctx.drawImage(_fxRune,-z.r,-z.r,z.r*2,z.r*2); ctx.restore(); }
+    ctx.globalAlpha=0.16; ctx.fillStyle=zc;
     ctx.beginPath(); ctx.arc(z.x,z.y,z.r,0,6.29); ctx.fill();
-    ctx.globalAlpha=0.55; ctx.strokeStyle='#ffd07a'; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
+    ctx.globalAlpha=0.5; ctx.strokeStyle=zc; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
   for(const gp of groundPortals){ const pp=performance.now()/220;
     // dungeon drops render as a miniature of that zone boss's DEN (the lair centrepiece art);
     // the EXIT portal (and zones whose den art hasn't shipped) keep the swirl rings.
@@ -870,7 +877,14 @@ function render(){
     else if(f.t==='bolt'){ ctx.globalAlpha=Math.min(1,f.life*3); ctx.strokeStyle=f.col; ctx.lineWidth=3;
       ctx.beginPath(); ctx.moveTo(f.pts[0].x,f.pts[0].y);
       for(let i=1;i<f.pts.length;i++) ctx.lineTo(f.pts[i].x,f.pts[i].y);
-      ctx.stroke(); ctx.globalAlpha=1; } }
+      ctx.stroke(); ctx.globalAlpha=1; }
+    else if(f.t==='img'&&f.img&&f.img.naturalWidth){ // sprite flash (slash arcs, glyphs)
+      const al=Math.max(0,f.life/(f.max||0.3));
+      ctx.save(); ctx.globalAlpha=al; ctx.imageSmoothingEnabled=false;
+      const dy2=f.rise?(1-al)*-f.rise:0;
+      ctx.translate(f.x,f.y+dy2); if(f.ang) ctx.rotate(f.ang);
+      const w2=f.img.width*(f.sc||1), h2=f.img.height*(f.sc||1);
+      ctx.drawImage(f.img,-w2/2,-h2/2,w2,h2); ctx.restore(); ctx.globalAlpha=1; } }
   if(curRoom.town){
     for(const np of SHOPNPCS){
       const simg=(typeof _hearth!=='undefined')?_hearth['stall_'+np.id]:null;

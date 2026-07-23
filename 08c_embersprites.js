@@ -38,6 +38,10 @@ const _dunSet={}, _awakImg={};
 if(typeof window!=='undefined') for(let b=0;b<=8;b++){
   _dunSet[b]=_img('assets/tiles/dunset_'+b+'.png');
   _awakImg[b]=_img('assets/mobs/awak_'+b+'.png'); }
+// ability effect sprites: zone rune circle, melee slash arc, heal glyph
+const _fxRune=(typeof window!=='undefined')?_img('assets/fx/rune.png'):null;
+const _fxSlash=(typeof window!=='undefined')?_img('assets/fx/slash.png'):null;
+const _fxHeal=(typeof window!=='undefined')?_img('assets/fx/heal.png'):null;
 // status effect icons (pips above afflicted enemies)
 const _stIcons={};
 if(typeof window!=='undefined') for(const k of ['burn','poison','bleed','chill','freeze','stun','curse','weak','shock'])
