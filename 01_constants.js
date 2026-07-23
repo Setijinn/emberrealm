@@ -1,5 +1,6 @@
 // ---------- constants ----------
 const TILE=44;
+let UIS=1;   // global UI scale factor — set from device settings (er-opts) in 11_ui.js
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let W=0,H=0,DPR=Math.min(devicePixelRatio||1,2);
 // Use the visual viewport (the actually-visible area) so the drawing buffer always

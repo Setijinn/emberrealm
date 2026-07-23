@@ -35,7 +35,23 @@
  <button id="playBtn" class="mbtn go">PLAY</button>
  <button id="charBtn" class="mbtn">CHARACTERS</button>
  <button id="switchBtn" class="mbtn">SWITCH USER</button>
+ <button id="setBtn" class="mbtn">⚙️ SETTINGS</button>
  <button id="devMenuBtn" class="mbtn" style="display:none;border-color:#7a4a1e;">🛠 DEV PANEL</button>
+</div>
+<div class="scr" id="setScr">
+ <div class="mtitle" style="font-size:26px;">SETTINGS</div>
+ <div class="setCard">
+  <div class="setRow"><span>UI size</span><input type="range" id="setUi" min="70" max="140" step="5" value="100"><b id="setUiV">100%</b></div>
+  <div class="setRow"><span>Camera distance</span><input type="range" id="setZoom" min="80" max="130" step="5" value="100"><b id="setZoomV">100%</b></div>
+  <div class="setRow tog" id="setAim"><span>Manual aim (desktop)</span><b>OFF</b></div>
+  <div class="setRow tog" id="setDmg"><span>Damage numbers</span><b>ON</b></div>
+  <div class="setRow tog" id="setVib"><span>Vibration</span><b>ON</b></div>
+  <div class="setRow tog" id="setFps"><span>FPS counter</span><b>OFF</b></div>
+  <div class="setRow tog" id="setFs"><span>Fullscreen on touch</span><b>ON</b></div>
+ </div>
+ <div class="mnote">saved on this device · applies to every hero</div>
+ <button class="mbtn dev" id="setReset">Reset to defaults</button>
+ <button class="mbtn go" id="setBack">DONE</button>
 </div>
 <div class="scr" id="charScr">
  <div class="mtitle" style="font-size:26px;">YOUR CHARACTERS</div>

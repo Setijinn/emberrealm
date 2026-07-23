@@ -292,3 +292,40 @@ body.pcmode #coopBtn{bottom:auto;top:8px;right:262px;}
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
+
+/* ---------- settings screen ---------- */
+.setCard{background:#17141d;border:2px solid #39323f;border-radius:12px;padding:8px 16px;
+ width:min(92vw,430px);display:flex;flex-direction:column;}
+.setRow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid rgba(216,210,200,.08);}
+.setRow:last-child{border-bottom:none;}
+.setRow span{flex:0 0 132px;font-size:14px;color:#d8d2c8;text-align:left;}
+.setRow b{flex:0 0 48px;margin-left:auto;text-align:right;font-family:'Pixelify Sans',monospace;font-size:14px;color:#ffc94d;}
+.setRow b.off{color:#8a8494;}
+.setRow input[type=range]{flex:1;min-width:0;accent-color:#e07a2e;height:26px;touch-action:manipulation;}
+.setRow.tog{cursor:pointer;}
+.setRow.tog:active{background:rgba(255,201,77,.05);}
+
+/* ---------- UI scale (settings -> --uis) ----------
+   Scales the fixed HUD buttons: sizes, fonts AND corner offsets shrink/grow
+   together so the button rows keep their spacing at any scale. Canvas-drawn
+   UI (orbs, ability buttons, prompts) reads the same factor as UIS in JS. */
+:root{--uis:1;}
+#menuBtn{top:calc(8px*var(--uis));right:calc(10px*var(--uis));width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(18px*var(--uis));}
+#devBtn2{top:calc(8px*var(--uis));right:calc(58px*var(--uis));width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(17px*var(--uis));}
+#potBtn,#shopBtn{bottom:calc(14px*var(--uis));right:calc(12px*var(--uis));min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
+#shopBtn{right:calc(84px*var(--uis));}
+#invBtn{bottom:calc(14px*var(--uis));right:calc(156px*var(--uis));width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#loadBtn{top:calc(8px*var(--uis));right:calc(62px*var(--uis));width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#skillBtn{top:calc(8px*var(--uis));right:calc(112px*var(--uis));width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#mapBtn{bottom:calc(14px*var(--uis));right:calc(268px*var(--uis));width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
+#coopBtn{bottom:calc(14px*var(--uis));right:calc(324px*var(--uis));width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
+body.pcmode #potBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(12px*var(--uis));}
+body.pcmode #invBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(62px*var(--uis));}
+body.pcmode #loadBtn{top:calc(8px*var(--uis));right:calc(112px*var(--uis));}
+body.pcmode #skillBtn{top:calc(8px*var(--uis));right:calc(162px*var(--uis));}
+body.pcmode #mapBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(212px*var(--uis));}
+body.pcmode #coopBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(262px*var(--uis));}
+/* pcmode gathers the HUD into the top-right row — the ☰/🛠 buttons (right:10/58) were
+   left underneath it, fully covered by the 🧪/🎒 buttons. Give them their own slots. */
+body.pcmode #menuBtn{right:calc(318px*var(--uis));}
+body.pcmode #devBtn2{right:calc(366px*var(--uis));}

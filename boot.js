@@ -12,6 +12,8 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(
 }).catch(function(){});
 document.addEventListener('pointerdown', async function lockOnce(e){
   if(e.pointerType==='mouse') return;   // PC play: never force fullscreen/orientation on a click
+  // settings: "Fullscreen on touch" can be disabled (er-opts is written by 11_ui.js)
+  try{ var _o=JSON.parse(localStorage.getItem('er-opts')||'{}'); if(_o&&_o.fs===false) return; }catch(err){}
   document.removeEventListener('pointerdown', lockOnce);
   try{
     if(!document.fullscreenElement && document.documentElement.requestFullscreen)

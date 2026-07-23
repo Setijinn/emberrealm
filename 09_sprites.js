@@ -494,7 +494,7 @@ function drawLootBag(lb,pn){
 }
 // Big reusable INTERACT button (screen space) — anchored above the interactable, clamped on-screen.
 function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt) return null;
-  const w=Math.round(Math.max(150,Math.min(238,W*0.34))), h=Math.round(w*0.403);  // match plate 216x87
+  const w=Math.round(Math.max(150,Math.min(238,W*0.34))*UIS), h=Math.round(w*0.403);  // match plate 216x87
   const sp=w2s(portalPrompt.x,portalPrompt.y);    // through the full camera transform (incl. rotation)
   const cx=Math.max(w/2+8,Math.min(W-w/2-8,sp.x));
   const cy=Math.max(h/2+34,sp.y - h*0.6 - 62);
@@ -897,7 +897,10 @@ function render(){
       drawShopSign(np); }
   }
   ctx.font='13px monospace'; ctx.textAlign='center';
-  for(const t2 of texts){ ctx.globalAlpha=Math.min(1,t2.life*1.4); ctx.fillStyle=t2.col;
+  // damage numbers can be muted in settings; xp/gold/loot texts always show
+  const _hideDmg=(typeof OPTS!=='undefined'&&OPTS.dmgTxt===false);
+  for(const t2 of texts){ if(_hideDmg&&/^\d+!?$/.test(''+t2.txt)) continue;
+    ctx.globalAlpha=Math.min(1,t2.life*1.4); ctx.fillStyle=t2.col;
     upright(t2.x,t2.y,(lx,ly)=>ctx.fillText(t2.txt,lx,ly)); }
   ctx.globalAlpha=1; ctx.textAlign='left';
   const aa=player.aim||0;
@@ -981,26 +984,26 @@ function render(){
   const mp=player.mp||0, mm=player.maxmp||1;
   const cost=(typeof abilityCost==='function')?abilityCost():1e9;
   // HP + MP orbs flanking the bottom-center; XP bar spans beneath them
-  const orbR=Math.round(Math.min(34, W*0.08)), oy=H-orbR-16;
+  const orbR=Math.round(Math.min(34, W*0.08)*UIS), oy=H-orbR-Math.round(16*UIS);
   const hpF=Math.max(0,player.hp/player.maxhp), mpF=Math.max(0,Math.min(1,mp/mm));
   drawOrb(W/2-orbR-5, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
   drawOrb(W/2+orbR+5, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
-  if(rpg){ const xbw=orbR*4+10, xbx=W/2-xbw/2, xby=H-12;
-    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,6);
-    ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),6);
-    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,7);
+  if(rpg){ const xbw=orbR*4+10, xbx=W/2-xbw/2, xbh=Math.max(4,Math.round(6*UIS)), xby=H-Math.round(12*UIS);
+    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,xbh);
+    ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),xbh);
+    ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,xbh+1);
     // integrated status line above the orbs (replaces the old top HUD bar)
     const zn=(typeof curRegionN!=='undefined'&&curRegionN)?curRegionN:(curRoom.name||'');
     const sy=oy-orbR-8;
     ctx.textAlign='center';
-    ctx.font='bold 13px "Pixelify Sans",monospace';
+    ctx.font='bold '+Math.round(13*UIS)+'px "Pixelify Sans",monospace';
     const l1='Lv '+rpg.lvl+'  ·  '+zn;
     ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l1,W/2+1,sy+1);
     ctx.fillStyle='#ffd07a'; ctx.fillText(l1,W/2,sy);
-    ctx.font='11px "Pixelify Sans",monospace';
+    ctx.font=Math.round(11*UIS)+'px "Pixelify Sans",monospace';
     const l2=rpg.gold+'g   ·   '+(player.kills||0)+' kills';
-    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l2,W/2+1,sy+15);
-    ctx.fillStyle='#d8cfb8'; ctx.fillText(l2,W/2,sy+14);
+    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l2,W/2+1,sy+Math.round(15*UIS)+1);
+    ctx.fillStyle='#d8cfb8'; ctx.fillText(l2,W/2,sy+Math.round(15*UIS));
     ctx.textAlign='left'; }
   // ability loadout buttons (bottom-left) + "tap right to cast" hint
   if(typeof drawAbilButtons==='function') drawAbilButtons();
@@ -1046,5 +1049,5 @@ function render(){
     ctx.textAlign='left'; }
   fpsCount++; const fn=performance.now();
   if(fn-fpsLast>500){fpsNow=Math.round(fpsCount*1000/(fn-fpsLast));fpsCount=0;fpsLast=fn;}
-  if(typeof dev!=='undefined'&&dev.fps){ctx.fillStyle='#7dc47a';ctx.font='14px monospace';ctx.fillText(fpsNow+' fps',10,H-10);}
+  if((typeof dev!=='undefined'&&dev.fps)||(typeof OPTS!=='undefined'&&OPTS.fps)){ctx.fillStyle='#7dc47a';ctx.font='14px monospace';ctx.fillText(fpsNow+' fps',10,H-10);}
 }

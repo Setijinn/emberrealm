@@ -46,17 +46,26 @@ function los(x1,y1,x2,y2){
 function fire(dt){
   player.fireT-=dt;
   if(player.fireT>0) return;
-  // auto-aim: PC favors the enemy nearest the CURSOR; touch favors the nearest to the player.
-  // LOS is always from the player (you still can't shoot through walls).
-  let ref={x:player.x,y:player.y};
-  if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof mouseWorld==='function') ref=mouseWorld();
   const wt=player.wt||WTYPE.sword;
-  // auto-aim range cap: only engage targets the weapon can actually reach (+15% grace)
-  const wRange=((wt.spd||520)*(player.projSpd||1))*(wt.life||1)*1.15;
-  let ang=null, best=null, bd=1e9;
-  for(const e of enemies){ const d=Math.hypot(e.x-ref.x,e.y-ref.y);
-    if(d<bd && Math.hypot(e.x-player.x,e.y-player.y)<=wRange && los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
-  if(best) ang=Math.atan2(best.y-player.y,best.x-player.x);
+  let ang=null;
+  // Manual aim (PC opt-in, Settings toggle): fire straight toward the cursor with
+  // no auto-target lock. Touch is never affected — mobile keeps the auto-aim below.
+  const manualPC=(typeof OPTS!=='undefined' && OPTS.aim &&
+    typeof inputMode!=='undefined' && inputMode==='pc' && typeof mouseWorld==='function');
+  if(manualPC){
+    const m=mouseWorld(); ang=Math.atan2(m.y-player.y,m.x-player.x);
+  } else {
+    // auto-aim: PC favors the enemy nearest the CURSOR; touch favors the nearest to the player.
+    // LOS is always from the player (you still can't shoot through walls).
+    let ref={x:player.x,y:player.y};
+    if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof mouseWorld==='function') ref=mouseWorld();
+    // auto-aim range cap: only engage targets the weapon can actually reach (+15% grace)
+    const wRange=((wt.spd||520)*(player.projSpd||1))*(wt.life||1)*1.15;
+    let best=null, bd=1e9;
+    for(const e of enemies){ const d=Math.hypot(e.x-ref.x,e.y-ref.y);
+      if(d<bd && Math.hypot(e.x-player.x,e.y-player.y)<=wRange && los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
+    if(best) ang=Math.atan2(best.y-player.y,best.x-player.x);
+  }
   if(ang===null) return;
   let _rate=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
   if(player.moveRof&&player._moving) _rate/=(1+player.moveRof);   // Galewalker: faster on the move

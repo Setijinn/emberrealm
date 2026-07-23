@@ -16,7 +16,9 @@ function w2s(wx,wy){ const zoom=H/(viewTilesH()*TILE);
   return {x:x*zoom, y:y*zoom}; }
 const VIEW_TILES_H=10;
 // PC shows a wider slice of the world (mouse+keyboard play felt too zoomed in)
-function viewTilesH(){ return (typeof inputMode!=='undefined' && inputMode==='pc') ? 13.5 : VIEW_TILES_H; }
+// OPTS.zoom (settings "camera distance") multiplies the visible tile count: >1 = farther out
+function viewTilesH(){ const z=(typeof OPTS!=='undefined'&&OPTS.zoom)?OPTS.zoom:1;
+  return ((typeof inputMode!=='undefined' && inputMode==='pc') ? 13.5 : VIEW_TILES_H)*z; }
 const roomCV=document.createElement('canvas');
 function h2(x,y){const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);}
 function buildRoomCache(){} // rooms render live now

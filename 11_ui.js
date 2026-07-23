@@ -748,7 +748,7 @@ $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none'
 
 
 
-function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr'])$s(s).style.display=(s===id)?'flex':'none';
+function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr'])$s(s).style.display=(s===id)?'flex':'none';
  $s('menuBtn').style.display='none'; $s('potBtn').style.display='none';
  $s('shopBtn').style.display='none'; $s('shopScr').style.display='none';
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
@@ -761,7 +761,7 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  if($s('skillBtn'))$s('skillBtn').style.display='none';
  if($s('skillScr'))$s('skillScr').style.display='none';
  if($s('sheetScr'))$s('sheetScr').style.display='none'; shopNear=false;}
-function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr'])$s(s).style.display='none';}
+function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr'])$s(s).style.display='none';}
 function refreshUserList(){
  const box=$s('userList'); box.innerHTML='';
  for(const n of Object.keys(users)){const b=document.createElement('button');b.className='mbtn user';
@@ -859,6 +859,38 @@ function play(){
 }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
  users[curUser].best=k; LS.set('er-users',users); } }
+// ---------- device settings (UI scale, camera, feedback toggles, manual aim) ----------
+// Stored per DEVICE in er-opts (not per user) — display comfort follows the screen.
+const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false};
+let OPTS=Object.assign({},OPT_DEF,LS.get('er-opts',{}));
+function saveOpts(){ LS.set('er-opts',OPTS); applyOpts(); }
+function applyOpts(){
+ UIS=OPTS.ui||1;
+ document.documentElement.style.setProperty('--uis',UIS);   // scales the fixed HUD buttons (style.css)
+ // vibration mute: shadow navigator.vibrate so every existing call site respects it
+ try{
+  if(OPTS.vib===false) Object.defineProperty(navigator,'vibrate',{value:function(){return false;},configurable:true,writable:true});
+  else if(Object.getOwnPropertyDescriptor(navigator,'vibrate')) delete navigator.vibrate;
+ }catch(e){}
+}
+applyOpts();
+function _setPaint(){
+ $s('setUi').value=Math.round((OPTS.ui||1)*100);   $s('setUiV').textContent=Math.round((OPTS.ui||1)*100)+'%';
+ $s('setZoom').value=Math.round((OPTS.zoom||1)*100); $s('setZoomV').textContent=Math.round((OPTS.zoom||1)*100)+'%';
+ const tg=(id,on)=>{ const b=$s(id).querySelector('b'); b.textContent=on?'ON':'OFF'; b.classList.toggle('off',!on); };
+ tg('setAim',!!OPTS.aim); tg('setDmg',OPTS.dmgTxt!==false); tg('setVib',OPTS.vib!==false); tg('setFps',!!OPTS.fps); tg('setFs',OPTS.fs!==false);
+}
+function openSettings(){ _setPaint(); show('setScr'); }
+$s('setBtn').addEventListener('click',openSettings);
+$s('setBack').addEventListener('click',openMenu);
+$s('setReset').addEventListener('click',()=>{ OPTS=Object.assign({},OPT_DEF); saveOpts(); _setPaint(); });
+$s('setUi').addEventListener('input',e=>{ OPTS.ui=(+e.target.value)/100; saveOpts(); $s('setUiV').textContent=e.target.value+'%'; });
+$s('setZoom').addEventListener('input',e=>{ OPTS.zoom=(+e.target.value)/100; saveOpts(); $s('setZoomV').textContent=e.target.value+'%'; });
+$s('setAim').addEventListener('click',()=>{ OPTS.aim=!OPTS.aim; saveOpts(); _setPaint(); });
+$s('setDmg').addEventListener('click',()=>{ OPTS.dmgTxt=(OPTS.dmgTxt===false); saveOpts(); _setPaint(); });
+$s('setVib').addEventListener('click',()=>{ OPTS.vib=(OPTS.vib===false); saveOpts(); _setPaint(); });
+$s('setFps').addEventListener('click',()=>{ OPTS.fps=!OPTS.fps; saveOpts(); _setPaint(); });
+$s('setFs').addEventListener('click',()=>{ OPTS.fs=(OPTS.fs===false); saveOpts(); _setPaint(); });
 $s('loginBtn').addEventListener('click',doLogin);
 $s('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $s('playBtn').addEventListener('click',play);

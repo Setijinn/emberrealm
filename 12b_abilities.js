@@ -408,15 +408,16 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
 
 // ----- HUD: 3 ability buttons (bottom-left), tap to arm -----
 function abilBtnRects(){ const out=[];
+  const us=(typeof UIS!=='undefined')?UIS:1;          // UI scale from settings
   if(typeof inputMode!=='undefined' && inputMode==='pc'){
     // PC: MMO-style action bar — a horizontal 1/2/3 row right of the MP orb
-    const r=26, gap=12, orbR=Math.round(Math.min(34,W*0.08));
-    let x=W/2+orbR*2+40+r; const y=H-r-24;
+    const r=Math.round(26*us), gap=Math.round(12*us), orbR=Math.round(Math.min(34,W*0.08)*us);
+    let x=W/2+orbR*2+Math.round(40*us)+r; const y=H-r-Math.round(24*us);
     for(let s=0;s<3;s++){ out.push({slot:s,x:x,y:y,r:r}); x+=(r*2+gap); }
     return out;
   }
-  const r=Math.round(Math.min(30,W*0.075)), gap=10, x=W-16-r;
-  let y=H-64-r;                          // touch: right edge, above the bottom HUD button row
+  const r=Math.round(Math.min(30,W*0.075)*us), gap=Math.round(10*us), x=W-Math.round(16*us)-r;
+  let y=H-Math.round(64*us)-r;           // touch: right edge, above the bottom HUD button row
   for(let s=0;s<3;s++){ out.push({slot:s,x:x,y:y,r:r}); y-=(r*2+gap); }
   return out; }
 function hitAbilButton(sx,sy){ if(!inGame||!rpg||(W<=H&&(typeof inputMode==='undefined'||inputMode!=='pc'))) return -1; const rects=abilBtnRects();
@@ -449,7 +450,7 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
     ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,6.29); ctx.stroke();
     // PC mode: show the 1/2/3 hotkey on each slot
     if(typeof inputMode!=='undefined' && inputMode==='pc'){
-      ctx.font='bold 11px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font='bold '+Math.round(11*((typeof UIS!=='undefined')?UIS:1))+'px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(''+(b.slot+1),b.x-b.r+7,b.y-b.r+8);
       ctx.fillStyle='#ffd07a'; ctx.fillText(''+(b.slot+1),b.x-b.r+6,b.y-b.r+7); }
     ctx.restore();

@@ -49,6 +49,7 @@ const keys={};
 addEventListener('pointermove',e=>{ if(e.pointerType!=='touch'){ mouse.x=e.clientX; mouse.y=e.clientY; } });
 addEventListener('keydown',e=>{
   if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;   // never swallow typing in fields
+  if(!e.key) return;   // synthetic/IME events can arrive without a key
   _setMode('pc');
   const k=e.key.toLowerCase(); keys[k]=true;
   if(e.repeat) return;
@@ -70,7 +71,7 @@ addEventListener('keydown',e=>{
   else if(k==='l'){ const b=document.getElementById('loadBtn'); if(b) b.click(); }
   else if(k==='m'){ const b=document.getElementById('mapBtn'); if(b) b.click(); }
 });
-addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+addEventListener('keyup',e=>{ if(e.key) keys[e.key.toLowerCase()]=false; });
 // normalized WASD/arrow vector, consumed by update() when the touch stick is idle.
 // Screen-relative: with the camera rotated, "up" still moves toward the top of the screen.
 function keyMove(){ let x=0,y=0;
