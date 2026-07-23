@@ -925,7 +925,14 @@ function render(){
   const _moveAng = (_mv.id!==null && (_mv.dx||_mv.dy)) ? Math.atan2(_mv.dy,_mv.dx)
                  : (_kv ? Math.atan2(_kv.y,_kv.x) : aa);
   const _shooting = player.atkT>0;
-  const faceAng = _shooting ? aa : (moving ? _moveAng : aa);
+  // Facing priority: attacking -> aim; walking -> move dir; idle -> the LAST real facing
+  // (remembered below), defaulting to south so a fresh/idle hero faces the camera, not
+  // hard-right. player.aim only changes when firing, so idle must not fall back to it.
+  let faceAng;
+  if(_shooting) faceAng = aa;
+  else if(moving) faceAng = _moveAng;
+  else faceAng = (player.face!==undefined ? player.face : Math.PI/2);
+  if(_shooting || moving) player.face = faceAng;   // remember for the next idle frame
   const _attacking = player.atkT>0 && !moving;
   const _es = (typeof emberSprite==='function')
     ? emberSprite(player.look||{cls:'knight'}, {aim:faceAng, moving, attacking:_attacking, atkPhase:phase, clock:pn})
