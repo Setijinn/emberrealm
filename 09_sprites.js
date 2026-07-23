@@ -1047,6 +1047,8 @@ function render(){
     ctx.font='11px monospace'; ctx.fillStyle='#cfc8bd';
     ctx.fillText('best: wave '+((rpg&&rpg.arenaBest)||0)+'   ·   foes left: '+enemies.length, W/2, 64);
     ctx.textAlign='left'; }
+  // ability hover tooltip draws last so it sits on top of the whole HUD
+  if(typeof drawAbilTooltip==='function') drawAbilTooltip();
   fpsCount++; const fn=performance.now();
   if(fn-fpsLast>500){fpsNow=Math.round(fpsCount*1000/(fn-fpsLast));fpsCount=0;fpsLast=fn;}
   if((typeof dev!=='undefined'&&dev.fps)||(typeof OPTS!=='undefined'&&OPTS.fps)){ctx.fillStyle='#7dc47a';ctx.font='14px monospace';ctx.fillText(fpsNow+' fps',10,H-10);}

@@ -458,6 +458,66 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
   ctx.textAlign='left'; ctx.textBaseline='alphabetic';
 }
 
+// ----- hover tooltip for the ability buttons (PC only, during play) -----
+// Shows the armed ability's name, cost/cooldown and description when the mouse
+// rests over one of the 3 slots — but only while actually playing (no menu open).
+function _abilMenuOpen(){
+  const ids=['menuScr','charScr','classScr','devScr','setScr','loginScr',
+             'invScr','loadScr','shopScr','skillScr','mapScr','coopScr'];
+  for(const id of ids){ const el=document.getElementById(id);
+    if(el && getComputedStyle(el).display!=='none') return true; }
+  return false;
+}
+function drawAbilTooltip(){
+  if(!inGame||!rpg) return;
+  if(typeof inputMode==='undefined'||inputMode!=='pc') return;   // hover is a mouse concept
+  if(typeof mouse==='undefined') return;
+  const slot=(typeof hitAbilButton==='function')?hitAbilButton(mouse.x,mouse.y):-1;
+  if(slot<0) return;                 // cheap hover test first…
+  if(_abilMenuOpen()) return;        // …only pay for the menu check when actually hovering
+  const ch=curChar(); if(!ch) return;
+  const id=rpg.loadout[slot]; const a=id?abilById(ch.cls,id):null; if(!a) return;
+  const rects=abilBtnRects(); const b=rects[slot]; if(!b) return;
+  const us=(typeof UIS!=='undefined')?UIS:1;
+  const cd=abilCd(a.id), afford=(player.mp||0)>=a.mp;
+  const status = cd>0 ? ('On cooldown · '+Math.ceil(cd)+'s') : (!afford ? ('Needs '+a.mp+' MP') : 'Ready');
+  const statusCol = (cd>0||!afford) ? '#e6a5a5' : '#8fd48c';
+  const meta = a.mp+' MP · '+a.cd+'s'+(a.ground?' · aimed':'');
+  const pad=Math.round(9*us), maxW=Math.round(228*us);
+  const titleF='bold '+Math.round(14*us)+'px "Pixelify Sans",monospace';
+  const metaF=Math.round(11*us)+'px "Pixelify Sans",monospace';
+  const descF=Math.round(12*us)+'px system-ui,Segoe UI,sans-serif';
+  ctx.save();
+  // word-wrap the description
+  ctx.font=descF;
+  const words=(a.desc||'').split(/\s+/); const lines=[]; let cur='';
+  for(const w of words){ const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width>maxW-pad*2 && cur){ lines.push(cur); cur=w; } else cur=t; }
+  if(cur) lines.push(cur);
+  // box width from the widest line
+  ctx.font=titleF; let inW=ctx.measureText(a.name).width;
+  ctx.font=metaF; inW=Math.max(inW, ctx.measureText(meta+'    '+status).width);
+  ctx.font=descF; for(const l of lines) inW=Math.max(inW, ctx.measureText(l).width);
+  const boxW=Math.min(maxW, inW)+pad*2;
+  const lineH=Math.round(16*us);
+  const boxH=pad*2 + Math.round(17*us) + Math.round(16*us) + 2 + lines.length*lineH;
+  // above the button, clamped to the screen; flip below if there's no room
+  let bx=Math.max(6,Math.min(W-boxW-6, b.x-boxW/2));
+  let by=b.y-b.r-10*us-boxH; if(by<6) by=b.y+b.r+10*us;
+  ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(bx,by,boxW,boxH,8); else ctx.rect(bx,by,boxW,boxH);
+  ctx.fillStyle='rgba(16,12,20,0.95)'; ctx.fill();
+  ctx.lineWidth=1.5; ctx.strokeStyle=(slot===armedSlot)?'rgba(255,201,77,0.85)':'rgba(170,160,185,0.6)'; ctx.stroke();
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  let ty=by+pad+Math.round(13*us);
+  ctx.font=titleF; ctx.fillStyle='#ffd07a'; ctx.fillText(a.name, bx+pad, ty);
+  ty+=Math.round(16*us);
+  ctx.font=metaF; ctx.fillStyle='#b0a8bc'; ctx.fillText(meta, bx+pad, ty);
+  const mw=ctx.measureText(meta+'    ').width; ctx.fillStyle=statusCol; ctx.fillText(status, bx+pad+mw, ty);
+  ctx.font=descF; ctx.fillStyle='#dbd5cb';
+  for(const l of lines){ ty+=lineH; ctx.fillText(l, bx+pad, ty); }
+  ctx.restore();
+}
+
 // ----- loadout picker overlay (in-game) -----
 let loadSel=0;
 function openLoadout(){ const ch=curChar(); if(!ch||!rpg){ return; } ensureLoadout(); loadSel=0;
