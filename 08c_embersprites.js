@@ -152,6 +152,11 @@ const EMBER_CLASSES = {
   warlock:{anims:{walk:4,attack:8}}, necro:{anims:{walk:4,attack:8}},
   shaman:{anims:{walk:4,attack:8}},
 };
+// Ascended forms: vendored ascension sprite sets register as pseudo-classes
+// 'asc_<ascensionId>' at assets/asc_<id>/ — emberSprite prefers them when the
+// player has ascended and the art is loaded, else falls back to the base class.
+const ASC_FORMS=['templar','warlord','sentinel'];   // grows as each form's art lands
+for(const a of ASC_FORMS) EMBER_CLASSES['asc_'+a]={anims:{walk:4,attack:8}};
 const EMBER_DIRS = ['s','e','n','w'];       // idle rotations (all real)
 const EMBER_ANIM_DIRS = ['s','e','n'];      // walk/attack (west mirrors east)
 
@@ -221,7 +226,10 @@ function _emberIdle(cls, dir){ return _emberImg['assets/'+cls+'/idle_'+dir+'.png
 
 // Returns {img, flip} or null (=> procedural fallback in renderer)
 function emberSprite(look, state){
-  const cls = (look && look.cls) || 'knight';
+  let cls = (look && look.cls) || 'knight';
+  // ascended? use the ascension's own sprite set once its art is in
+  if(look && look.asc && EMBER_CLASSES['asc_'+look.asc] && _emberReady['asc_'+look.asc])
+    cls='asc_'+look.asc;
   if(!EMBER_CLASSES[cls] || !_emberReady[cls]) return null;
   const {dir, flip} = _emberDir(state.aim||0);
   let flp = flip;

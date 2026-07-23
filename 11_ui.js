@@ -647,7 +647,7 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
     'summonX2','homing','terrainGhost','stun3','groundHeal','allyDot','allyHaste',
     'echoCast','spiritDur','dashBlast','poisonHit','shockHit','bleedHit','weakHit']) player[k]=T[k]||0; }
  if(player.shield===undefined) player.shield=0;
- player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht};
+ player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht, asc:(rpg.ascension||null)};
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }
 function saveRPG(){ if(curUser&&users[curUser]&&rpg){ LS.set('er-users',users); } }
