@@ -40,8 +40,9 @@ function drawTileG(x,y){
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
   ctx.fillRect(tx,ty,TILE,TILE);
   // town floor (PixelLab): cobble base, 'p' = paved walkway, ~11% broken variant
-  // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes)
-  if(t && typeof _hearth!=='undefined' && _hearth.floor && _hearth.floor.complete && _hearth.floor.naturalWidth && 'WwhHl'.indexOf(c)<0){
+  // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes).
+  // Decor cells (h planter / H brazier / l lamp) draw floor UNDER their sprite.
+  if(t && typeof _hearth!=='undefined' && _hearth.floor && _hearth.floor.complete && _hearth.floor.naturalWidth && c!=='W' && c!=='w'){
     ctx.imageSmoothingEnabled=false; const hh=(x*131+y*57)>>>0, o=hh&3;
     let m=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
     m=Math.imul(m^(m>>>13),1274126177)>>>0; m=(m^(m>>>16))>>>0;
@@ -53,15 +54,31 @@ function drawTileG(x,y){
     const v=(hh>>2)%5;
     if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
     else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
-    return;
+    // decor sprite on the floor (short objects, drawn base-anchored in the tile pass)
+    if(c==='h'||c==='H'||c==='l'){
+      const dimg=c==='h'?_hearth.planter:c==='H'?_hearth.brazier:_hearth.lamp;
+      if(ok(dimg)){ ctx.fillStyle='rgba(0,0,0,.25)';
+        ctx.beginPath(); ctx.ellipse(tx+TILE/2,ty+TILE-3,15,5,0,0,6.29); ctx.fill();
+        drawObjBottom(dimg,tx+TILE/2,ty+TILE-1,c==='l'?34:40); return; }
+      // art not loaded yet -> fall through to the procedural shapes below
+    } else return;   // plain floor/walkway cell: done
   }
   const r1=h2(x,y);
   if(r1>0.55){ ctx.fillStyle='rgba(0,0,0,0.14)';
     ctx.fillRect(tx+(r1*30)%TILE,ty+(r1*57)%TILE,3,3); }
   if(c==='W'){
+    const wimg=(t&&typeof _hearth!=='undefined')?_hearth.wall:null;
+    if(wimg&&wimg.complete&&wimg.naturalWidth){
+      ctx.imageSmoothingEnabled=false;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale((x*131+y*57)&1?-1:1,1);
+      ctx.drawImage(wimg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fillRect(tx,ty,TILE,3);
+      ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.fillRect(tx,ty+TILE-6,TILE,6);
+    } else {
     ctx.fillStyle=t?'#3a2a20':'#262031'; ctx.fillRect(tx,ty,TILE,TILE);
     ctx.fillStyle=t?'#54402f':'#3a3344'; ctx.fillRect(tx,ty,TILE,10);
     ctx.fillStyle=t?'#241812':'#151120'; ctx.fillRect(tx,ty+TILE-7,TILE,7);
+    }
   } else if(c==='h'){
     ctx.fillStyle='#4a2f22'; ctx.fillRect(tx,ty,TILE,TILE);
     ctx.fillStyle='#84422a'; ctx.fillRect(tx,ty,TILE,11);

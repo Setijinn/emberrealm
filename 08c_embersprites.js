@@ -27,7 +27,8 @@ const _lootChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',
-  'floor_walk','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena']
+  'floor_walk','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
+  'wall','planter','brazier','lamp']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
 // Item icon art (PixelLab): 3 tier bands per type/material (crude 0-3 / fine 4-7 / ornate 8-11).
 // key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
