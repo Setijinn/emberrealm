@@ -257,11 +257,11 @@ function spawnRingBoss(b){
   if(grvBandXY(bx/TILE,by/TILE)!==b) continue;
   const lv=grvLvAtY(by/TILE);   // boss level matches where its lair sits in the zone
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
-  // matched to zone: modest early, monstrous late
-  const chaserHp=40*(1+lv*0.55);
+  // matched to zone: modest early, monstrous late — on the unified difficulty curve
+  const chaserHp=40*eHpScale(lv);
   const size=24+ (lv/150)*22;          // small on the sands, huge at the core
   const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:Math.round(chaserHp*6),maxhp:Math.round(chaserHp*6),
-   spd:34+(lv/150)*26,fireT:1.4,ang:0,col:GB.col,bd:5+lv*0.45,lv:lv,boss:true,name:GB.n,
+   spd:34+(lv/150)*26,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,
    pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3,
    pcol:PJ.col,pcore:PJ.core,pshape:PJ.shape,psize:PJ.size||7};
   enemies.push(boss);
@@ -308,16 +308,24 @@ const SHOPNPCS=[
  {id:'odo',  name:'Odo',  role:'PETS',    title:"ODO'S MENAGERIE",    awn:'#7ab8d4', x:32.5*TILE, y:18.3*TILE},
 ];
 let curShopNear=null;
+// ---- unified difficulty curve ----
+// EVERY enemy stat derives from these two so the whole game rescales in unison.
+// Linear early (unchanged feel in the first zones) + quadratic late: player power
+// compounds (tier² weapons × rarity × tree × attack speed), so enemies must too —
+// with only the old linear curve the realm got EASIER as you climbed.
+const DIFF={hpLin:0.55, hpQuad:0.012, dmLin:0.8, dmQuad:0.012};
+function eHpScale(lv){ return 1 + lv*DIFF.hpLin + lv*lv*DIFF.hpQuad; }
+function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
 function makeEnemy(sp){
   const lv=roomLvAt(sp);
-  const hm=1+lv*0.55, dm=lv*0.8;
+  const hm=eHpScale(lv), dm=eDmgScale(lv);
   let e;
   if(sp.t==='c') e={type:'c',r:15,hp:40*hm,spd:95+Math.min(60,lv*0.6),touch:12+dm,col:'#c04a3d'};
-  else if(sp.t==='s') e={type:'s',r:16,hp:60*hm,spd:45,fireT:1,bd:8+lv*0.5,col:'#8a5ac0'};
+  else if(sp.t==='s') e={type:'s',r:16,hp:60*hm,spd:45,fireT:1,bd:8+dm*0.63,col:'#8a5ac0'};
   else { const dr=(curRoom&&curRoom.dungeon)?curRoom.bossRing:-1;
     const GB=dr>=0?GBOSS[dr]:null;
     e={type:'B',r:GB?30+(lv/150)*14:30,hp:Math.round(600*hm*(GB?1.4:1)),spd:38,fireT:1.5,ang:0,
-     col:GB?GB.col:'#e07a2e',boss:true,bd:8+lv*0.5,
+     col:GB?GB.col:'#e07a2e',boss:true,bd:8+dm*0.63,
      name:GB?GB.n:null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',chargeT:0,sumT:3,wb:!!GB}; }
   e.hp=Math.round(e.hp); e.maxhp=e.hp;
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv;

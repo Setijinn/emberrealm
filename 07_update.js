@@ -34,6 +34,25 @@ function ambientParts(dt){
         {vx:Math.random()*10-5, vy:fiery?(-22-Math.random()*30):(-8-Math.random()*10),
          life:1.1, col:fiery?'#ff9a4d':((+b)<3?'#9fd08a':'#c9c2b8'), sz:2, glow:fiery}); } }
 }
+// Fire ONE volley of a boss shot pattern; returns that pattern's cooldown.
+// Kept separate so patterns can be layered (combined) on independent timers.
+function bossVolley(e,pat,base,spd,enraged){
+  if(pat==='aimed3'){ for(let i=-1;i<=1;i++) eFire(e,base+i*0.20,spd); return enraged?0.6:0.95; }
+  if(pat==='spread5'){ for(let i=-2;i<=2;i++) eFire(e,base+i*0.16,spd*1.1); return enraged?0.5:0.8; }
+  if(pat==='nova'){ const n=enraged?16:12; for(let i=0;i<n;i++) eFire(e,(i/n)*6.283,spd*0.8); return enraged?1.0:1.5; }
+  if(pat==='spiral'){ eFire(e,e.ang,spd*0.9); eFire(e,e.ang+Math.PI,spd*0.9); return enraged?0.12:0.18; }
+  if(pat==='ring8'){ for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.85);
+    if(enraged) eFire(e,base,spd*1.6); return enraged?0.55:0.9; }
+  if(pat==='summon'){ e.sumT-=1;
+    if(e.sumT<=0){ e.sumT=3;
+      const alive=enemies.filter(function(m){return m.summoned;}).length;
+      if(alive<6){ for(let q=0;q<3;q++){ const a=Math.random()*6.283;
+        const mlv=e.lv||10, mh=40*eHpScale(mlv);   // minions ride the unified curve too
+        enemies.push({type:'c',summoned:true,x:e.x+Math.cos(a)*40,y:e.y+Math.sin(a)*40,
+         r:15,hp:Math.round(mh),maxhp:Math.round(mh),spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:e.lv}); } } }
+    for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); return 2.2; }
+  for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); return 0.9;
+}
 function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
@@ -103,31 +122,15 @@ function update(dt){
         moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
       }
       e.fireT-=dt;
-      if(e.fireT<=0){
-        e.animAtk=0.5;
-        const base=Math.atan2(dy,dx);
-        if(pat==='aimed3'){ e.fireT=enraged?0.6:0.95;
-          for(let i=-1;i<=1;i++) eFire(e,base+i*0.20,spd); }
-        else if(pat==='spread5'){ e.fireT=enraged?0.5:0.8;
-          for(let i=-2;i<=2;i++) eFire(e,base+i*0.16,spd*1.1); }
-        else if(pat==='nova'){ e.fireT=enraged?1.0:1.5;
-          const n=enraged?16:12; for(let i=0;i<n;i++) eFire(e,(i/n)*6.283,spd*0.8); }
-        else if(pat==='spiral'){ e.fireT=enraged?0.12:0.18;
-          eFire(e,e.ang,spd*0.9); eFire(e,e.ang+Math.PI,spd*0.9); }
-        else if(pat==='ring8'){ e.fireT=enraged?0.55:0.9;
-          for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.85);
-          if(enraged) eFire(e,base,spd*1.6); }
-        else if(pat==='summon'){ e.fireT=2.2;
-          e.sumT-=1;
-          if(e.sumT<=0){ e.sumT=3;
-            const alive=enemies.filter(function(m){return m.summoned;}).length;
-            if(alive<6){ for(let q=0;q<3;q++){ const a=Math.random()*6.283;
-              const mh=40*(1+(e.lv||10)*0.55);
-              enemies.push({type:'c',summoned:true,x:e.x+Math.cos(a)*40,y:e.y+Math.sin(a)*40,
-               r:15,hp:Math.round(mh),maxhp:Math.round(mh),spd:120,touch:6+(e.lv||10)*0.3,col:e.col,lv:e.lv}); } } }
-          for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); }
-        else { e.fireT=0.9; for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); }
-      }
+      if(e.fireT<=0){ e.animAtk=0.5;
+        e.fireT=bossVolley(e,pat,Math.atan2(dy,dx),spd,enraged); }
+      // design rule 5: high-level bosses LAYER their two patterns into one crazier
+      // combined pattern — the second pattern fires on its own (slower) timer.
+      const other=(pat===e.pat2)?e.pat:e.pat2;
+      if((e.lv||1)>=60 && other && other!==pat && other!=='charge' && other!=='summon'){
+        e.fireT2=(e.fireT2===undefined?1.2:e.fireT2)-dt;
+        if(e.fireT2<=0){ e.animAtk=0.5;
+          e.fireT2=bossVolley(e,other,Math.atan2(dy,dx),spd,enraged)*1.5; } }
     }
   }
   // player shots
