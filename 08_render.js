@@ -92,9 +92,17 @@ function drawTileG(x,y){
     ctx.fillStyle='#241812'; ctx.fillRect(tx+TILE/2-6,ty+5,12,11);
   } else if(c==='w'){
     if(typeof _waterImg!=='undefined'&&_waterImg&&_waterImg.complete&&_waterImg.naturalWidth){
-      ctx.imageSmoothingEnabled=false; const o=(x*131+y*57)&3;
-      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
-      ctx.drawImage(_waterImg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      // NO per-cell flip — the ripple pattern must stay aligned or the pool checkerboards
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(_waterImg,tx,ty,TILE,TILE);
+      ctx.fillStyle='rgba(6,10,20,0.25)'; ctx.fillRect(tx,ty,TILE,TILE);   // sit in the palette
+      // dark bank edge where water meets land -> reads as a pool rim
+      const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
+      ctx.fillStyle='rgba(4,8,14,0.55)';
+      if(!wat(x,y-1)) ctx.fillRect(tx,ty,TILE,4);
+      if(!wat(x,y+1)) ctx.fillRect(tx,ty+TILE-4,TILE,4);
+      if(!wat(x-1,y)) ctx.fillRect(tx,ty,4,TILE);
+      if(!wat(x+1,y)) ctx.fillRect(tx+TILE-4,ty,4,TILE);
     } else { ctx.fillStyle=(x+y)%2?'#16303f':'#1a3848'; ctx.fillRect(tx,ty,TILE,TILE); }
     const wn=Math.sin(performance.now()/700+x*0.9+y*1.7);
     if(wn>0.55){ ctx.fillStyle='rgba(200,230,240,0.10)'; ctx.fillRect(tx+6,ty+TILE/2-2,TILE-12,3); }
