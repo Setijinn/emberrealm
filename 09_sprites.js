@@ -365,15 +365,16 @@ function _enemyFrame(anim,e,pn){
 }
 function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
+ const bd=enemyBand(e);
  if(e.type==='c'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.c:null,e,pn);
-   if(fr) blit(fr,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/fr.width,flip);
+   if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
    else { const im=(typeof _mobHound!=='undefined')?_mobHound:null;
-     if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/im.width,flip);
+     if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
      else blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip); } }
  else if(e.type==='s'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.s:null,e,pn);
-   if(fr) blit(fr,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/fr.width,flip);
+   if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
    else { const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
-     if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/im.width,flip);
+     if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
  else { const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[e.ring]:null,e,pn);
    if(fr) blit(fr,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/fr.width,flip);
@@ -383,6 +384,29 @@ function drawEnemySprite(e,pn){
        blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/sp.width,flip); } } }
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
+// Zone-themed mob variants (roadmap #3 polish): same base art, per-band name +
+// cached hue wash so packs read native to their zone (band 5 = base cinder look).
+const MOBNAME={
+ c:['Briar Hound','Mist Hound','Bog Hound','Stone Hound','Crag Hound','Cinder Hound','Ash Hound','Char Hound','Molten Hound'],
+ s:['Grove Cultist','Fog Cultist','Mire Cultist','Vault Cultist','Wind Cultist','Ember Cultist','Ashbound Cultist','Flame Cultist','Core Cultist'],
+};
+const MOBTINT=['rgba(96,168,72,0.30)','rgba(120,190,160,0.30)','rgba(128,148,64,0.30)',
+ 'rgba(148,150,160,0.30)','rgba(186,196,206,0.30)',null,'rgba(150,138,132,0.30)',
+ 'rgba(255,116,44,0.28)','rgba(255,176,64,0.28)'];
+function enemyBand(e){
+ if(curRoom&&curRoom.rings) return grvBandXY(e.x/TILE,e.y/TILE);
+ if(curRoom&&typeof curRoom.ring==='number') return curRoom.ring;
+ return -1; }
+function mobLabel(e){ const t=MOBNAME[e.type]; if(!t) return ENAME[e.type]||'';
+ const bd=enemyBand(e); return (bd>=0&&t[bd])||ENAME[e.type]||''; }
+const _mobTintCache=new Map();
+function tintedMob(im,bd){ const tint=(bd>=0)?MOBTINT[bd]:null; if(!tint) return im;
+ const k=im.src+'|'+bd; let cv=_mobTintCache.get(k);
+ if(!cv){ cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight;
+  const c=cv.getContext('2d'); c.imageSmoothingEnabled=false; c.drawImage(im,0,0);
+  c.globalCompositeOperation='source-atop'; c.fillStyle=tint; c.fillRect(0,0,cv.width,cv.height);
+  _mobTintCache.set(k,cv); }
+ return cv; }
 // ---------- hub / world decor ----------
 // HP/MP liquid orb: dark glass + colored fill (bottom->frac) inside the ornate frame
 function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
@@ -682,7 +706,7 @@ function render(){
     if(e.wb){ ctx.fillStyle='#ff6b5a'; ctx.font='12px "Pixelify Sans",monospace';
       ctx.fillText('\u2620 '+e.name+' \u2620',e.x,e.y-e.r-30);
       ctx.font='10px monospace'; ctx.fillStyle='#ffd07a'; ctx.fillText('WORLD BOSS · Lv'+e.lv,e.x,e.y-e.r-19); }
-    else ctx.fillText((ENAME[e.type]||'')+(e.lv?' · Lv'+e.lv:''),e.x,e.y-e.r-19);
+    else ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),e.x,e.y-e.r-19);
     ctx.textAlign='left';
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);
