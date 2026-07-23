@@ -155,7 +155,7 @@ const EMBER_CLASSES = {
 // Ascended forms: vendored ascension sprite sets register as pseudo-classes
 // 'asc_<ascensionId>' at assets/asc_<id>/ — emberSprite prefers them when the
 // player has ascended and the art is loaded, else falls back to the base class.
-const ASC_FORMS=['templar','warlord','sentinel','crusader','guardian','highpriest','ravager','bloodlord','juggernaut','wyrmknight','skylord','dragonlord','deathblade','nightblade','reaper','nightshade','executioner_a','phantom_a','sharpshooter','windranger','tempest_r','packlord','falconer','pathwarden'];   // grows as each form's art lands
+const ASC_FORMS=['templar','warlord','sentinel','crusader','guardian','highpriest','ravager','bloodlord','juggernaut','wyrmknight','skylord','dragonlord','deathblade','nightblade','reaper','nightshade','executioner_a','phantom_a','sharpshooter','windranger','tempest_r','packlord','falconer','pathwarden','maestro','skald','loremaster'];   // grows as each form's art lands
 for(const a of ASC_FORMS) EMBER_CLASSES['asc_'+a]={anims:{walk:4,attack:8}};
 const EMBER_DIRS = ['s','e','n','w'];       // idle rotations (all real)
 const EMBER_ANIM_DIRS = ['s','e','n'];      // walk/attack (west mirrors east)
