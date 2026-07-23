@@ -20,7 +20,10 @@ const P = {
    for(const e of enemies){ if(Math.hypot(e.x-c.x,e.y-c.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)e.slowT=slow; texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
    boom(c.x,c.y,col,18); },
  dash:(dist,inv,col)=>(c)=>{ const a=c.aim, nx=player.x+Math.cos(a)*dist, ny=player.y+Math.sin(a)*dist;
-   if(!solid(nx,ny)){player.x=nx;player.y=ny;} player.inv=Math.max(player.inv,inv); boom(player.x,player.y,col,14); },
+   if(!solid(nx,ny)){player.x=nx;player.y=ny;}
+   let iv=inv; if(player.dashInv) iv=Math.max(iv,0.6);          // Windranger / Windwalker
+   player.inv=Math.max(player.inv,iv); boom(player.x,player.y,col,14);
+   if(player.dashBlast) aoe(player.x,player.y,80,Math.round(c.dmg*1.2*c.AP),'#e8b34b'); }, // Skylord crater
  whirl:(n,dm,col,spd,life)=>(c)=>{ for(let i=0;i<n;i++){ const sa=i*6.283/n;
      pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*(spd||420),vy:Math.sin(sa)*(spd||420),r:7,life:life||0.5,dmg:Math.round(c.dmg*dm*c.AP),pierce:0,lastHit:null}); }
    boom(player.x,player.y,col,10); },
@@ -28,7 +31,8 @@ const P = {
    const pts=[{x:player.x,y:player.y}];
    for(const e of s){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; pts.push({x:e.x,y:e.y}); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); }
    if(pts.length>1) fx.push({t:'bolt',pts:pts,life:0.3,col:col}); },
- summon:(spr,cnt,dm,life)=>(c)=>{ for(let i=0;i<cnt;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(c.dmg*dm*c.AP),life:life,cd:0,spr:spr}); boom(player.x,player.y,'#8fd48c',12); },
+ summon:(spr,cnt,dm,life)=>(c)=>{ const n2=cnt*(player.summonX2?2:1);   // Packlord / Lich
+   for(let i=0;i<n2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(c.dmg*dm*c.AP),life:life,cd:0,spr:spr}); boom(player.x,player.y,'#8fd48c',12); },
  heal:(pct)=>(c)=>{ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*pct); boom(player.x,player.y,'#fff0c0',16);
    texts.push({x:player.x,y:player.y-28,txt:'+'+Math.round(player.maxhp*pct),col:'#8fd48c',life:0.8}); },
  buff:(fld,mult,dur,inv)=>(c)=>{ player[fld+'T']=dur; player[fld+'M']=mult; if(inv)player.inv=Math.max(player.inv,inv); boom(player.x,player.y,'#ffd07a',12); },
@@ -37,7 +41,8 @@ const P = {
  drain:(rad,dm,col,healPer)=>(c)=>{ let n=0;
    for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ e.hp-=Math.round(c.dmg*dm*c.AP); e.flash=0.15; n++; } }
    player.hp=Math.min(player.maxhp,player.hp+n*healPer*c.AP); fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.35,col:col}); },
- spirit:(dur)=>(c)=>{ player.spiritT=dur; player.spiritAP=c.AP; boom(player.x,player.y,'#7ab8d4',12); },
+ spirit:(dur)=>(c)=>{ player.spiritT=dur*(1+(player.spiritDur||0));   // Spiritcaller lingering
+   player.spiritAP=c.AP; boom(player.x,player.y,'#7ab8d4',12); },
  combo:(...fns)=>(c)=>{ for(const f of fns) f(c); },
 };
 function A(id,name,mp,cd,icon,desc,cast,ground){ return {id:id,name:name,mp:mp,cd:cd,icon:icon,desc:desc,cast:cast,ground:!!ground}; }
@@ -350,6 +355,12 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
   try{ a.cast(ctx); }catch(e){ if(typeof showErr==='function') showErr(e); }
   // tag this cast's projectiles for the forge — every ability has its own projectile look
   for(let i=_n0;i<pShots.length;i++){ if(!pShots[i].pk) pShots[i].pk='a:'+a.id; }
+  // ---- ascension cast capstones ----
+  if(player.groundFire) zones.push({x:ctx.x,y:ctx.y,r:70,life:3,tick:0,ap:ctx.AP,fire:true});      // Infernomancer
+  if(player.groundHeal) zones.push({x:player.x,y:player.y,r:80,life:4,tick:0,ap:ctx.AP,healOnly:true}); // High Priest
+  if(player.echoCast&&!ctx._echo){                                                                  // Loremaster
+    const c2={x:ctx.x,y:ctx.y,aim:ctx.aim,AP:ctx.AP*(player.echoCast||0.4),dmg:Math.round(ctx.dmg*(player.echoCast||0.4)),cls:ctx.cls,_echo:true};
+    setTimeout(function(){ if(inGame){ try{ a.cast(c2); }catch(e){} } },450); }
   navigator.vibrate&&navigator.vibrate(50);
 }
 

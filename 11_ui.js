@@ -639,7 +639,14 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
    player.mpregen+=T.mpregen; player.regen+=T.regen;
    player.abilPow+=T.abilPow; player.projSpd+=T.projSpd;
    if(T.slow>0) player.slowShot=true;
-   if(T.rof>0) player.fireRate=player.fireRate/(1+T.rof); }
+   if(T.rof>0) player.fireRate=player.fireRate/(1+T.rof);
+   // ascension capstone mechanics — flags picked up by combat/update/ability hooks
+   for(const k of ['auraHeal','critPierce','dashInv','fork','groundFire','splash',
+    'critDashCd','vanishHurt','killHeal','chainHit','execute','killInv','overshield',
+    'burnHit','bloodNova','moveDr','curse','shatter','slowAura','critBolt','moveRof',
+    'summonX2','homing','terrainGhost','stun3','groundHeal','allyDot','allyHaste',
+    'echoCast','spiritDur','dashBlast','poisonHit','shockHit','bleedHit','weakHit']) player[k]=T[k]||0; }
+ if(player.shield===undefined) player.shield=0;
  player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht};
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }

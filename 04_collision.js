@@ -9,7 +9,10 @@ function solid(px,py){
   // Trees / boulders: block a small circle at the offset base, not the whole tile.
   // Tree circle sits UP at the visible stump (the sprite carries a shadow/grass skirt
   // below the trunk, so blocking at the image base stopped you too far down).
-  if(c==='t'||c==='k'){ const o=featOffset(gx,gy);
+  if(c==='t'||c==='k'){
+    // Pathwarden capstone: the PLAYER moves through trees and rocks
+    if(typeof _pmove!=='undefined'&&_pmove&&player.terrainGhost) return false;
+    const o=featOffset(gx,gy);
     const bx=(gx+0.5)*TILE+o[0], by=(gy+1)*TILE-6+o[1];
     const ax=px-bx, ay=py-(by-(c==='t'?13:6)), rr=(c==='t'?7:11);
     return ax*ax+ay*ay < rr*rr; }

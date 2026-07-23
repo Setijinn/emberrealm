@@ -836,7 +836,16 @@ function render(){
       if(_hpbarImg&&_hpbarImg.complete&&_hpbarImg.naturalWidth){
         ctx.imageSmoothingEnabled=false;
         const fw=bw*1.22, fh=Math.max(10,bh*2.4);
-        ctx.drawImage(_hpbarImg,bx-fw/2,by-fh/2,fw,fh); } });
+        ctx.drawImage(_hpbarImg,bx-fw/2,by-fh/2,fw,fh); }
+      // status pips above the bar
+      if(e.st){ let px3=bx-bw/2;
+        for(const id in e.st){ if(e.st[id].t<=0) continue;
+          const ic=(typeof _stIcons!=='undefined')?_stIcons[id]:null;
+          if(ic&&ic.complete&&ic.naturalWidth){ ctx.imageSmoothingEnabled=false;
+            ctx.drawImage(ic,px3,by-16,9,9); }
+          else { ctx.fillStyle=(typeof STATUS!=='undefined'&&STATUS[id])?STATUS[id].col:'#fff';
+            ctx.fillRect(px3,by-13,6,6); }
+          px3+=11; } } });
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#cfc8bd';
     if(e.wb){ upright(e.x,e.y-e.r-30,(lx,ly)=>{ ctx.fillStyle='#ff6b5a'; ctx.font='12px "Pixelify Sans",monospace';
       ctx.fillText('\u2620 '+e.name+' \u2620',lx,ly); });
@@ -847,6 +856,11 @@ function render(){
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);
     blit(al.spr==='wolf'?sprWolf:al.spr==='skel'?sprSkel:sprWisp,al.x,al.y,al.spr==='wisp'?2.2:1.6,player.x<al.x); }
+  // ascension shield (Bishop/Warden/Guardian/Soulflayer): cyan ward ring while charged
+  if((player.shield||0)>0){ const sf=Math.min(1,player.shield/(player.maxhp*0.2));
+    ctx.save(); ctx.globalAlpha=0.25+sf*0.35; ctx.strokeStyle='#9ad4ef'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.arc(player.x,player.y-8,26+Math.sin(performance.now()/200)*2,0,6.29); ctx.stroke();
+    ctx.restore(); ctx.globalAlpha=1; }
   if(player.spiritT>0){ for(let i=0;i<8;i++){ const a2=performance.now()/300+i*Math.PI/4;
     const ox=player.x+Math.cos(a2)*62, oy=player.y+Math.sin(a2)*62;
     ctx.fillStyle='#7ab8d4'; ctx.fillRect(ox-4,oy-4,8,8);

@@ -153,17 +153,38 @@ function bossVolley(e,pat,base,spd,enraged){
     for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); return 2.2; }
   for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); return 0.9;
 }
+// ---- ascension capstone helpers ----
+// heals that respect Bishop/Soulflayer (overflow -> shield) and Bloodlord (overheal nova)
+function healPlayer(amt){ if(!amt||amt<=0) return;
+  const over=Math.max(0,(player.hp+amt)-player.maxhp);
+  player.hp=Math.min(player.maxhp,player.hp+amt);
+  if(over>0.5){
+    if(player.overshield) player.shield=Math.min(player.maxhp*0.20,(player.shield||0)+over);
+    if(player.bloodNova&&over>4&&(player._bnCd||0)<=0){ player._bnCd=1.5;
+      aoe(player.x,player.y,90,Math.round(over*2),'#c0392b'); } } }
+// damage to the player through Juggernaut (less while moving), shields, Nightblade (vanish)
+function damagePlayer(raw){ let hit=raw;
+  if(player.moveDr&&player._moving) hit*=(1-player.moveDr);
+  hit=Math.max(1,Math.round(hit));
+  if((player.shield||0)>0){ const ab=Math.min(player.shield,hit); player.shield-=ab; hit-=ab; }
+  if(hit>0) player.hp-=hit;
+  if(player.vanishHurt) player.inv=Math.max(player.inv,1.1);
+  return hit; }
+let _pmove=false;   // true only while the PLAYER is being moved (Pathwarden terrain ghost)
 function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
   const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1);
+  player._moving=false; _pmove=true;
   if(m.id!==null){
     const d=Math.hypot(m.dx,m.dy)||1;
     moveCircle(player,(m.dx/d)*sp*dt*Math.min(1,d/28),(m.dy/d)*sp*dt*Math.min(1,d/28));
+    player._moving=true;
   } else if(typeof keyMove==='function'){
     const kv=keyMove();
-    if(kv) moveCircle(player, kv.x*sp*dt, kv.y*sp*dt);
+    if(kv){ moveCircle(player, kv.x*sp*dt, kv.y*sp*dt); player._moving=true; }
   }
+  _pmove=false;
   // camera rotation (PC only): hold Z/C to spin the view, X snaps back to north
   if(typeof camRot!=='undefined'){
     if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof keys!=='undefined'){
@@ -180,6 +201,17 @@ function update(dt){
   if(player.atkT>0) player.atkT-=dt;                                       // attack animation timer
   if(player.hp<player.maxhp) player.hp+=(player.regen||1)*dt;               // VIT -> regen
   if(player.mp<player.maxmp) player.mp=Math.min(player.maxmp,player.mp+(player.mpregen||2)*dt); // WIS -> mana
+  // ascension auras + shield upkeep
+  if(player._bnCd>0) player._bnCd-=dt;
+  if((player.shield||0)>0) player.shield=Math.max(0,player.shield-player.maxhp*0.02*dt);
+  if(player.auraHeal){ player.hp=Math.min(player.maxhp,player.hp+player.auraHeal*dt);
+    if(typeof emitP==='function'&&Math.random()<3*dt)
+      emitP(player.x+(Math.random()*40-20),player.y+(Math.random()*30-20),
+        {vx:0,vy:-16,life:0.8,col:'#ffe9b0',sz:2,glow:true}); }
+  if(player.slowAura){ for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<150) e.slowT=Math.max(e.slowT||0,0.4); }
+    if(typeof emitP==='function'&&Math.random()<4*dt)
+      emitP(player.x+(Math.random()*60-30),player.y+(Math.random()*40-20),
+        {vx:0,vy:-10,life:0.9,col:'#9ad4ef',sz:2,glow:true}); }
 
   // room transitions (walk off edge through a door)
   const gx=player.x/TILE, gy=player.y/TILE;
@@ -193,11 +225,14 @@ function update(dt){
   // enemies
   for(const e of enemies){
     if(e.slowT>0)e.slowT-=dt; if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt;
+    if(e.stunT>0)e.stunT-=dt;
+    if(!tickStatuses(e,dt)) continue;          // frozen / stunned foes cannot act
     const dx=player.x-e.x, dy=player.y-e.y, dd=Math.hypot(dx,dy)||1;
     if(e.type==='c'){
       moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
-      if(dd<e.r+player.r && player.inv<=0){ const hit=Math.max(1,Math.round(e.touch*(1-(player.dr||0)))); player.hp-=hit; player.inv=0.7; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
+      if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e)*(1-(player.dr||0)));
+        player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
         if(player.thorns>0){ const rf=Math.round(hit*player.thorns*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
     }
     if(e.type==='s'){
@@ -236,15 +271,51 @@ function update(dt){
   }
   // player shots
   for(let i=pShots.length-1;i>=0;i--){ const s=pShots[i];
-    s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
+    s.px=s.x; s.py=s.y;
+    // Falconer capstone: shots seek out foes (gentle steering)
+    if(player.homing&&!s.forked){ let bn=null,bd2=1e9;
+      for(const e of enemies){ const d2=Math.hypot(e.x-s.x,e.y-s.y); if(d2<420&&d2<bd2){bd2=d2;bn=e;} }
+      if(bn){ const want=Math.atan2(bn.y-s.y,bn.x-s.x), cur=Math.atan2(s.vy,s.vx);
+        let diff=want-cur; while(diff>Math.PI)diff-=6.283; while(diff<-Math.PI)diff+=6.283;
+        const na=cur+Math.max(-3.2*dt,Math.min(3.2*dt,diff)), sp2=Math.hypot(s.vx,s.vy);
+        s.vx=Math.cos(na)*sp2; s.vy=Math.sin(na)*sp2; } }
+    s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
     if(s.life<=0||solid(s.x,s.y)){ pShots.splice(i,1); continue; }
     for(const e of enemies){ if(e!==s.lastHit && Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
-      const dmg=Math.round((s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1));
+      let dmg=Math.round((s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1));
+      if(player.execute&&e.hp<e.maxhp*0.15) dmg=Math.round(dmg*(1+player.execute)); // Executioner
+      if(player.shatter&&(e.slowT>0||hasStatus(e,'freeze'))) dmg=Math.round(dmg*(1+player.shatter)); // Cryomancer
+      dmg=Math.round(dmg*statusDmgIn(e));                                           // cursed foes
       e.hp-=dmg; e.flash=0.12; s.lastHit=e; chargeRes('hit');
       if(e.boss) bossBar=e;   // big top-screen bar from the first hit on
       texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:s.crit?dmg+'!':dmg,col:s.crit?'#ffd23d':'#ffe9b0',life:s.crit?0.85:0.55});
-      if(player.ls) player.hp=Math.min(player.maxhp,player.hp+dmg*player.ls);
-      if(s.slow) e.slowT=1;
+      if(player.ls) healPlayer(dmg*player.ls);
+      if(s.slow) applyStatus(e,'chill',1,0);
+      // ---- on-hit capstones (all through the unified status system) ----
+      if(player.burnHit) applyStatus(e,'burn',3,dmg*player.burnHit/3);
+      if(player.poisonHit) applyStatus(e,'poison',4,dmg*player.poisonHit/4);
+      if(player.shockHit) applyStatus(e,'shock',2,Math.max(1,Math.round(dmg*player.shockHit)));
+      if(player.bleedHit) applyStatus(e,'bleed',3,player.bleedHit);
+      if(player.weakHit) applyStatus(e,'weak',2.5,0);
+      if(player.curse) applyStatus(e,'curse',4,player.curse);
+      if(player.stun3){ player._s3=(player._s3||0)+1;
+        if(player._s3>=3){ player._s3=0; applyStatus(e,'stun',0.8,0); fxHit(e.x,e.y,'#ffe08a'); } }
+      if(player.chainHit&&!s.forked){ let cn=null,cd2=1e9;
+        for(const e2 of enemies){ if(e2===e) continue;
+          const d3=Math.hypot(e2.x-e.x,e2.y-e.y); if(d3<170&&d3<cd2){cd2=d3;cn=e2;} }
+        if(cn){ const cdm=Math.round(dmg*player.chainHit); cn.hp-=cdm; cn.flash=0.12;
+          texts.push({x:cn.x,y:cn.y-cn.r,txt:cdm,col:'#9ad4ef',life:0.5});
+          fx.push({t:'bolt',pts:[{x:e.x,y:e.y},{x:cn.x,y:cn.y}],life:0.25,col:'#9ad4ef'}); } }
+      if(player.splash) aoe(e.x,e.y,60,Math.round(dmg*player.splash),'#ff9c50');
+      if(s.crit&&player.critBolt){ const bd3=Math.round(dmg*player.critBolt); e.hp-=bd3;
+        fx.push({t:'bolt',pts:[{x:e.x,y:e.y-120},{x:e.x,y:e.y}],life:0.3,col:'#9ad4ef'});
+        texts.push({x:e.x,y:e.y-e.r-14,txt:bd3,col:'#9ad4ef',life:0.6}); }
+      if(s.crit&&player.critDashCd&&player.acd){
+        for(const k in player.acd) if(player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-0.6); }
+      if(player.fork&&!s.forked){ const ba=Math.atan2(s.vy,s.vx), sp3=Math.hypot(s.vx,s.vy);
+        for(const off of [-0.5,0.5]) pShots.push({x:s.x,y:s.y,px:s.x,py:s.y,
+          vx:Math.cos(ba+off)*sp3,vy:Math.sin(ba+off)*sp3,r:s.r,life:0.45,
+          dmg:Math.round((s.dmg||player.dmg)*0.45),crit:false,pierce:0,lastHit:e,forked:true,pk:s.pk,pcore:s.pcore}); }
       fxHit(s.x,s.y,'#ffc94d');
       if(s.pierce>0){ s.pierce--; } else { pShots.splice(i,1); }
       break; } }
@@ -256,6 +327,8 @@ function update(dt){
     if(de.boss) msg('THRONE SHATTERED','the realm is yours — for now');
     if(de.sref) de.sref.dead=Date.now()+(de.boss?180000:60000);
     enemies.splice(i,1); player.kills++;
+    if(player.killHeal) healPlayer(player.maxhp*player.killHeal);          // Reaper
+    if(player.killInv) player.inv=Math.max(player.inv,0.9);               // Phantom
     document.getElementById('killTxt').textContent='Kills '+player.kills;
     if(de.type==='N' && curRoom.dungeon && curRoom.objs){   // objective node destroyed
       const o=curRoom.objs[de.ch]; if(o&&!o.done){ o.got++;
@@ -284,7 +357,7 @@ function update(dt){
     s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
     if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
-      player.hp-=Math.max(1,Math.round((s.bd||8)*(1-(player.dr||0)))); player.inv=0.35; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
+      damagePlayer((s.bd||8)*(1-(player.dr||0))); player.inv=Math.max(player.inv,0.35); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
   }
   // particles (gravity + drag are optional per-particle fields)
   for(let i=particles.length-1;i>=0;i--){ const p=particles[i];
@@ -407,15 +480,21 @@ function update(dt){
     let tgt=null,bd=1e9;
     for(const e of enemies){ const d=Math.hypot(e.x-al.x,e.y-al.y); if(d<bd){bd=d;tgt=e;} }
     if(tgt){ if(bd>26){ al.x+=(tgt.x-al.x)/bd*140*dt; al.y+=(tgt.y-al.y)/bd*140*dt; }
-      else { al.cd-=dt; if(al.cd<=0){ al.cd=0.5; tgt.hp-=al.dmg; tgt.flash=0.1;
+      else { al.cd-=dt; if(al.cd<=0){ al.cd=0.5/(1+(player.allyHaste||0));   // Skald tempo
+        tgt.hp-=al.dmg; tgt.flash=0.1;
+        if(player.allyDot) applyStatus(tgt,'poison',2,al.dmg*player.allyDot/2);  // Plaguebringer
         texts.push({x:tgt.x,y:tgt.y-tgt.r-2,txt:al.dmg,col:'#8fd48c',life:0.4}); } } }
     else { const d=Math.hypot(player.x-al.x,player.y-al.y)||1;
       if(d>50){ al.x+=(player.x-al.x)/d*150*dt; al.y+=(player.y-al.y)/d*150*dt; } }
   }
   for(let i=zones.length-1;i>=0;i--){ const z=zones[i]; z.life-=dt; z.tick-=dt;
     if(z.tick<=0){ z.tick=0.5;
-      for(const e of enemies){ if(Math.hypot(e.x-z.x,e.y-z.y)<z.r){ e.hp-=Math.round(12*(z.ap||1)); e.flash=0.08; } }
-      if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) player.hp=Math.min(player.maxhp,player.hp+5); }
+      if(z.healOnly){ if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) healPlayer(9*(z.ap||1)); }
+      else {
+        for(const e of enemies){ if(Math.hypot(e.x-z.x,e.y-z.y)<z.r){
+          e.hp-=Math.round(12*(z.ap||1)); e.flash=0.08;
+          if(z.fire) applyStatus(e,'burn',2,6*(z.ap||1)); } }
+        if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) player.hp=Math.min(player.maxhp,player.hp+5); } }
     if(z.life<=0) zones.splice(i,1); }
   if(player.spiritT>0){ player.spiritT-=dt;
     for(let i=0;i<8;i++){ const a=performance.now()/300+i*Math.PI/4;

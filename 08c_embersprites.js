@@ -38,6 +38,10 @@ const _dunSet={}, _awakImg={};
 if(typeof window!=='undefined') for(let b=0;b<=8;b++){
   _dunSet[b]=_img('assets/tiles/dunset_'+b+'.png');
   _awakImg[b]=_img('assets/mobs/awak_'+b+'.png'); }
+// status effect icons (pips above afflicted enemies)
+const _stIcons={};
+if(typeof window!=='undefined') for(const k of ['burn','poison','bleed','chill','freeze','stun','curse','weak','shock'])
+  _stIcons[k]=_img('assets/status/'+k+'.png');
 // enemy health-bar display cover (thin ornate frame drawn over the plain fill)
 const _hpbarImg=(typeof window!=='undefined')?_img('assets/ui/hpbar.png'):null;
 // dream-path tile + 6 shared dream decor pieces scattered through every mind

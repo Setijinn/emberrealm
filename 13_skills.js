@@ -50,12 +50,9 @@ const CLASS_TREE = {
    ]},
   ],
   ascend: [
-   {id:'templar',  name:'Templar',  color:'#d4b96a', desc:'Holy bulwark. +25% HP, +20 DEF, take 10% less damage. Capstone: a radiant aura that heals you over time.',
-    eff:{hpPct:0.25,def:20,dr:0.10}},
-   {id:'warlord',  name:'Warlord',  color:'#c0392b', desc:'Relentless attacker. +14 ATK, +15% crit, +10% attack speed. Capstone: strikes cleave through foes.',
-    eff:{atk:14,crit:0.15,rof:0.10,cleave:1}},
-   {id:'sentinel', name:'Sentinel', color:'#5a7a9c', desc:'Immovable guardian. +18% HP, +14 DEF, reflect 40% melee, +10% move. Capstone: hold the line.',
-    eff:{hpPct:0.18,def:14,thorns:0.40,spd:0.10}},
+   {id:'templar',name:'Templar',color:'#d4b96a',desc:'Holy bulwark. +25% HP, +20 DEF, take 10% less damage. Capstone: a radiant aura heals you 3 hp/s.',eff:{hpPct:0.25,def:20,dr:0.10,auraHeal:3}},
+   {id:'warlord',name:'Warlord',color:'#c0392b',desc:'Relentless attacker. +14 ATK, +15% crit, +10% attack speed. Capstone: strikes cleave through foes.',eff:{atk:14,crit:0.15,rof:0.10,cleave:1}},
+   {id:'sentinel',name:'Sentinel',color:'#5a7a9c',desc:'Immovable guardian. +18% HP, +14 DEF, reflect 40% melee, +10% move. Capstone: hold the line.',eff:{hpPct:0.18,def:14,thorns:0.40,spd:0.10}},
   ],
  },
  ranger:{ branches:[
@@ -76,14 +73,14 @@ const CLASS_TREE = {
   {key:'barrage',name:'Barrage',color:'#c0504a',nodes:[
    {id:'r_b1',name:'Sharpshot',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
    {id:'r_b2',name:'Quickbow',desc:'+8% attack speed per rank',cost:2,max:2,req:['r_b1'],eff:{rof:0.08}},
-   {id:'r_b3',name:'Split Shot',desc:'Keystone: +1 arrow',cost:3,max:1,req:['r_b1'],eff:{shots:1}},
+   {id:'r_b3',name:'Heavy Draw',desc:'Keystone: +12% damage',cost:3,max:1,req:['r_b1'],eff:{atkPct:0.12}},
    {id:'r_b4',name:'Barbed',desc:'+8% damage',cost:2,max:1,req:['r_b2'],eff:{atkPct:0.08}},
-   {id:'r_b5',name:'Storm of Arrows',desc:'Keystone: +1 arrow, +10% damage',cost:3,max:1,req:['r_b3','r_b4'],eff:{shots:1,atkPct:0.10}},
+   {id:'r_b5',name:'Storm of Arrows',desc:'Keystone: +14% damage, +8% attack speed',cost:3,max:1,req:['r_b3','r_b4'],eff:{atkPct:0.14,rof:0.08}},
   ]}],
   ascend:[
-   {id:'sharpshooter',name:'Sharpshooter',color:'#e8b34b',desc:'Precision incarnate. +12% crit, +50% crit damage, +1 pierce. Capstone: crits ignore armor.',eff:{crit:0.12,critMult:0.50,pierce:1}},
-   {id:'windranger',name:'Windranger',color:'#6aae7a',desc:'Never stops moving. +18% move, +18% attack speed, +12% HP. Capstone: dashes leave no opening.',eff:{spd:0.18,rof:0.18,hpPct:0.12}},
-   {id:'tempest_r',name:'Tempest',color:'#c0504a',desc:'A hail of death. +2 arrows, +12% damage, +10% attack speed. Capstone: every shot forks.',eff:{shots:2,atkPct:0.12,rof:0.10}},
+   {id:'sharpshooter',name:'Sharpshooter',color:'#e8b34b',desc:'Precision incarnate. +12% crit, +50% crit damage, +1 pierce. Capstone: crits pierce everything.',eff:{crit:0.12,critMult:0.50,pierce:1,critPierce:1}},
+   {id:'windranger',name:'Windranger',color:'#6aae7a',desc:'Never stops moving. +18% move, +18% attack speed, +12% HP. Capstone: dashes make you untouchable.',eff:{spd:0.18,rof:0.18,hpPct:0.12,dashInv:1}},
+   {id:'tempest_r',name:'Tempest',color:'#c0504a',desc:'A hail of death. +16% damage, +14% attack speed, +1 pierce. Capstone: every shot forks on hit.',eff:{atkPct:0.16,rof:0.14,pierce:1,fork:1}},
   ]},
  pyro:{ branches:[
   {key:'pyromancy',name:'Pyromancy',color:'#e07a2e',nodes:[
@@ -96,9 +93,9 @@ const CLASS_TREE = {
   {key:'cinders',name:'Cinders',color:'#c0504a',nodes:[
    {id:'p_c1',name:'Scorch',desc:'+5 ATK per rank',cost:1,max:3,req:[],eff:{atk:5}},
    {id:'p_c2',name:'Searing',desc:'+8% attack speed per rank',cost:2,max:2,req:['p_c1'],eff:{rof:0.08}},
-   {id:'p_c3',name:'Twin Flame',desc:'Keystone: +1 projectile',cost:3,max:1,req:['p_c1'],eff:{shots:1}},
+   {id:'p_c3',name:'Blue Heat',desc:'Keystone: +12% damage',cost:3,max:1,req:['p_c1'],eff:{atkPct:0.12}},
    {id:'p_c4',name:'Burning Aim',desc:'+5% crit',cost:2,max:1,req:['p_c2'],eff:{crit:0.05}},
-   {id:'p_c5',name:'Firestorm',desc:'Keystone: +1 projectile, +10% damage',cost:3,max:1,req:['p_c3','p_c4'],eff:{shots:1,atkPct:0.10}},
+   {id:'p_c5',name:'Firestorm',desc:'Keystone: +12% damage, +8% attack speed',cost:3,max:1,req:['p_c3','p_c4'],eff:{atkPct:0.12,rof:0.08}},
   ]},
   {key:'ashwarden',name:'Ashwarden',color:'#7d8a99',nodes:[
    {id:'p_a1',name:'Emberskin',desc:'+6 DEF per rank',cost:1,max:3,req:[],eff:{def:6}},
@@ -108,9 +105,9 @@ const CLASS_TREE = {
    {id:'p_a5',name:'Phoenix Heart',desc:'Keystone: +12% HP, +2 regen',cost:3,max:1,req:['p_a3'],eff:{hpPct:0.12,regen:2}},
   ]}],
   ascend:[
-   {id:'infernomancer',name:'Infernomancer',color:'#e07a2e',desc:'+30% ability power, +8 WIS, +3 mana regen. Capstone: spells leave burning ground.',eff:{abilPow:0.30,wis:8,mpregen:3}},
-   {id:'emberlord',name:'Emberlord',color:'#c0504a',desc:'+2 projectiles, +14% damage, +10% attack speed. Capstone: auto-shots explode.',eff:{shots:2,atkPct:0.14,rof:0.10}},
-   {id:'cinderguard',name:'Cinderguard',color:'#7d8a99',desc:'+16% HP, +14 DEF, take 10% less damage. Capstone: burn your attackers.',eff:{hpPct:0.16,def:14,dr:0.10,thorns:0.30}},
+   {id:'infernomancer',name:'Infernomancer',color:'#e07a2e',desc:'+30% ability power, +8 WIS, +3 mana regen. Capstone: spells scorch the ground they touch.',eff:{abilPow:0.30,wis:8,mpregen:3,groundFire:1}},
+   {id:'emberlord',name:'Emberlord',color:'#c0504a',desc:'+18% damage, +12% attack speed, +6% crit. Capstone: auto-shots explode.',eff:{atkPct:0.18,rof:0.12,crit:0.06,splash:0.45}},
+   {id:'cinderguard',name:'Cinderguard',color:'#7d8a99',desc:'+16% HP, +14 DEF, take 10% less damage. Capstone: attackers burn on your thorns.',eff:{hpPct:0.16,def:14,dr:0.10,thorns:0.30}},
   ]},
  rogue:{ branches:[
   {key:'assassinate',name:'Assassinate',color:'#c0304a',nodes:[
@@ -135,9 +132,9 @@ const CLASS_TREE = {
    {id:'ro_b5',name:'Massacre',desc:'Keystone: +6% lifesteal, +8% attack speed',cost:3,max:1,req:['ro_b2','ro_b3'],eff:{ls:0.06,rof:0.08}},
   ]}],
   ascend:[
-   {id:'deathblade',name:'Deathblade',color:'#c0304a',desc:'+12% crit, +50% crit damage, +1 pierce. Capstone: crits refund a dash.',eff:{crit:0.12,critMult:0.50,pierce:1}},
-   {id:'nightblade',name:'Nightblade',color:'#8a5ac0',desc:'+16% move, take 12% less damage, +10% attack speed. Capstone: vanish when hurt.',eff:{spd:0.16,dr:0.12,rof:0.10}},
-   {id:'reaper',name:'Reaper',color:'#6aae7a',desc:'+10% lifesteal, +12% attack speed, +10% HP. Capstone: kills heal you fully.',eff:{ls:0.10,rof:0.12,hpPct:0.10}},
+   {id:'deathblade',name:'Deathblade',color:'#c0304a',desc:'+12% crit, +50% crit damage, +1 pierce. Capstone: crits hasten your cooldowns.',eff:{crit:0.12,critMult:0.50,pierce:1,critDashCd:1}},
+   {id:'nightblade',name:'Nightblade',color:'#8a5ac0',desc:'+16% move, take 12% less damage, +10% attack speed. Capstone: vanish for a breath when hurt.',eff:{spd:0.16,dr:0.12,rof:0.10,vanishHurt:1}},
+   {id:'reaper',name:'Reaper',color:'#6aae7a',desc:'+10% lifesteal, +12% attack speed, +10% HP. Capstone: kills restore 20% HP.',eff:{ls:0.10,rof:0.12,hpPct:0.10,killHeal:0.20}},
   ]},
  assassin:{ branches:[
   {key:'malice',name:'Malice',color:'#c0304a',nodes:[
@@ -152,7 +149,7 @@ const CLASS_TREE = {
    {id:'as_v2',name:'Toxic Blades',desc:'Keystone: attacks slow foes',cost:2,max:1,req:['as_v1'],eff:{slow:1}},
    {id:'as_v3',name:'Swift Kill',desc:'+8% attack speed per rank',cost:2,max:2,req:['as_v1'],eff:{rof:0.08}},
    {id:'as_v4',name:'Lifedrain',desc:'Heal 5% of damage dealt',cost:2,max:1,req:['as_v2'],eff:{ls:0.05}},
-   {id:'as_v5',name:'Plague',desc:'Keystone: +1 projectile, +8% attack speed',cost:3,max:1,req:['as_v3','as_v4'],eff:{shots:1,rof:0.08}},
+   {id:'as_v5',name:'Plague',desc:'Keystone: hits poison foes',cost:3,max:1,req:['as_v3','as_v4'],eff:{poisonHit:0.6,rof:0.08}},
   ]},
   {key:'evasion',name:'Evasion',color:'#8a5ac0',nodes:[
    {id:'as_e1',name:'Lithe',desc:'+5% move speed per rank',cost:1,max:3,req:[],eff:{spd:0.05}},
@@ -162,9 +159,9 @@ const CLASS_TREE = {
    {id:'as_e5',name:'Phantom',desc:'Keystone: take 12% less damage, +8% move',cost:3,max:1,req:['as_e3','as_e4'],eff:{dr:0.12,spd:0.08}},
   ]}],
   ascend:[
-   {id:'nightshade',name:'Nightshade',color:'#6aae7a',desc:'+8% lifesteal, slowing shots, +1 pierce. Capstone: poisons spread between foes.',eff:{ls:0.08,slow:1,pierce:1}},
-   {id:'executioner_a',name:'Executioner',color:'#c0304a',desc:'+12% crit, +70% crit damage. Capstone: execute low-HP foes instantly.',eff:{crit:0.12,critMult:0.70}},
-   {id:'phantom_a',name:'Phantom',color:'#8a5ac0',desc:'+16% move, +14% less damage, +10% attack speed. Capstone: untargetable after a kill.',eff:{spd:0.16,dr:0.14,rof:0.10}},
+   {id:'nightshade',name:'Nightshade',color:'#6aae7a',desc:'+8% lifesteal, chilling shots, +1 pierce. Capstone: toxins leap to a nearby foe.',eff:{ls:0.08,slow:1,pierce:1,chainHit:0.5}},
+   {id:'executioner_a',name:'Executioner',color:'#c0304a',desc:'+12% crit, +70% crit damage. Capstone: foes below 15% HP take triple damage.',eff:{crit:0.12,critMult:0.70,execute:2}},
+   {id:'phantom_a',name:'Phantom',color:'#8a5ac0',desc:'+16% move, take 14% less damage, +10% attack speed. Capstone: kills make you briefly untouchable.',eff:{spd:0.16,dr:0.14,rof:0.10,killInv:1}},
   ]},
  cleric:{ branches:[
   {key:'devotion',name:'Devotion',color:'#d4b96a',nodes:[
@@ -177,9 +174,9 @@ const CLASS_TREE = {
   {key:'radiance',name:'Radiance',color:'#e8b34b',nodes:[
    {id:'cl_r1',name:'Smite',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
    {id:'cl_r2',name:'Holy Light',desc:'+8% ability power per rank',cost:2,max:2,req:['cl_r1'],eff:{abilPow:0.08}},
-   {id:'cl_r3',name:'Dawnray',desc:'Keystone: +1 projectile',cost:3,max:1,req:['cl_r1'],eff:{shots:1}},
+   {id:'cl_r3',name:'Dawnray',desc:'Keystone: +15% ability power',cost:3,max:1,req:['cl_r1'],eff:{abilPow:0.15}},
    {id:'cl_r4',name:'Judgment',desc:'+6% crit',cost:2,max:1,req:['cl_r2'],eff:{crit:0.06}},
-   {id:'cl_r5',name:'Wrath',desc:'Keystone: +14% damage, +1 projectile',cost:3,max:1,req:['cl_r3','cl_r4'],eff:{atkPct:0.14,shots:1}},
+   {id:'cl_r5',name:'Wrath',desc:'Keystone: +14% damage, +10% ability power',cost:3,max:1,req:['cl_r3','cl_r4'],eff:{atkPct:0.14,abilPow:0.10}},
   ]},
   {key:'sanctuary',name:'Sanctuary',color:'#7d8a99',nodes:[
    {id:'cl_s1',name:'Aegis',desc:'+6 DEF per rank',cost:1,max:3,req:[],eff:{def:6}},
@@ -189,9 +186,9 @@ const CLASS_TREE = {
    {id:'cl_s5',name:'Bastion',desc:'Keystone: +14% HP, +12 DEF',cost:3,max:1,req:['cl_s3'],eff:{hpPct:0.14,def:12}},
   ]}],
   ascend:[
-   {id:'bishop',name:'Bishop',color:'#d4b96a',desc:'+26% ability power, +8 WIS, +3 mana regen. Capstone: heals overflow into a shield.',eff:{abilPow:0.26,wis:8,mpregen:3}},
-   {id:'inquisitor',name:'Inquisitor',color:'#e8b34b',desc:'+1 projectile, +16% damage, +10% crit, +1 pierce. Capstone: holy bolts scorch.',eff:{shots:1,atkPct:0.16,crit:0.10,pierce:1}},
-   {id:'warden_c',name:'Warden',color:'#7d8a99',desc:'+18% HP, +16 DEF, take 12% less damage. Capstone: your aura shields allies.',eff:{hpPct:0.18,def:16,dr:0.12}},
+   {id:'bishop',name:'Bishop',color:'#d4b96a',desc:'+26% ability power, +8 WIS, +3 mana regen. Capstone: healing past full becomes a shield.',eff:{abilPow:0.26,wis:8,mpregen:3,overshield:1}},
+   {id:'inquisitor',name:'Inquisitor',color:'#e8b34b',desc:'+18% damage, +10% crit, +1 pierce. Capstone: bolts scorch (burn over 3s).',eff:{atkPct:0.18,crit:0.10,pierce:1,burnHit:0.5}},
+   {id:'warden_c',name:'Warden',color:'#7d8a99',desc:'+18% HP, +16 DEF, take 12% less damage. Capstone: overflowing heals ward you.',eff:{hpPct:0.18,def:16,dr:0.12,overshield:1}},
   ]},
  berserker:{ branches:[
   {key:'fury',name:'Fury',color:'#c0504a',nodes:[
@@ -216,9 +213,9 @@ const CLASS_TREE = {
    {id:'be_w5',name:'Warpath',desc:'Keystone: +12% move, +10% attack speed',cost:3,max:1,req:['be_w3'],eff:{spd:0.12,rof:0.10}},
   ]}],
   ascend:[
-   {id:'ravager',name:'Ravager',color:'#c0504a',desc:'+16 ATK, cleave +2, +10% crit. Capstone: hits chain to nearby foes.',eff:{atk:16,cleave:2,crit:0.10}},
-   {id:'bloodlord',name:'Bloodlord',color:'#8a5ac0',desc:'+12% lifesteal, +20% HP, +3 regen. Capstone: overheal becomes damage.',eff:{ls:0.12,hpPct:0.20,regen:3}},
-   {id:'juggernaut',name:'Juggernaut',color:'#e07a2e',desc:'+14% move, +16% attack speed, +14 DEF. Capstone: unstoppable — immune to slows.',eff:{spd:0.14,rof:0.16,def:14}},
+   {id:'ravager',name:'Ravager',color:'#c0504a',desc:'+16 ATK, cleave +2, +10% crit. Capstone: hits arc to a nearby foe.',eff:{atk:16,cleave:2,crit:0.10,chainHit:0.5}},
+   {id:'bloodlord',name:'Bloodlord',color:'#8a5ac0',desc:'+12% lifesteal, +20% HP, +3 regen. Capstone: overheal erupts as damage.',eff:{ls:0.12,hpPct:0.20,regen:3,bloodNova:1}},
+   {id:'juggernaut',name:'Juggernaut',color:'#e07a2e',desc:'+14% move, +16% attack speed, +14 DEF. Capstone: unstoppable — 8% less damage while moving.',eff:{spd:0.14,rof:0.16,def:14,moveDr:0.08}},
   ]},
  warlock:{ branches:[
   {key:'affliction',name:'Affliction',color:'#8a5ac0',nodes:[
@@ -243,9 +240,9 @@ const CLASS_TREE = {
    {id:'wa_w5',name:'Dread Ward',desc:'Keystone: +12% HP, take 8% less damage',cost:3,max:1,req:['wa_w3','wa_w4'],eff:{hpPct:0.12,dr:0.08}},
   ]}],
   ascend:[
-   {id:'soulflayer',name:'Soulflayer',color:'#8a5ac0',desc:'+26% ability power, +10% lifesteal, +8 WIS. Capstone: drain past full into a shield.',eff:{abilPow:0.26,ls:0.10,wis:8}},
-   {id:'doomcaller',name:'Doomcaller',color:'#c0304a',desc:'+2 pierce, +16% damage, +10% crit. Capstone: bolts curse on hit.',eff:{pierce:2,atkPct:0.16,crit:0.10}},
-   {id:'dreadlord',name:'Dreadlord',color:'#7d8a99',desc:'+18% HP, reflect 40%, +14 DEF. Capstone: pain shared with all nearby foes.',eff:{hpPct:0.18,thorns:0.40,def:14}},
+   {id:'soulflayer',name:'Soulflayer',color:'#8a5ac0',desc:'+26% ability power, +10% lifesteal, +8 WIS. Capstone: drain past full becomes a shield.',eff:{abilPow:0.26,ls:0.10,wis:8,overshield:1}},
+   {id:'doomcaller',name:'Doomcaller',color:'#c0304a',desc:'+2 pierce, +16% damage, +10% crit. Capstone: bolts curse (+15% damage taken).',eff:{pierce:2,atkPct:0.16,crit:0.10,curse:0.15}},
+   {id:'dreadlord',name:'Dreadlord',color:'#7d8a99',desc:'+18% HP, reflect 40% melee, +14 DEF. Capstone: pain shared with all who touch you.',eff:{hpPct:0.18,thorns:0.40,def:14}},
   ]},
  frost:{ branches:[
   {key:'frostbite',name:'Frostbite',color:'#5a9cc0',nodes:[
@@ -264,15 +261,15 @@ const CLASS_TREE = {
   ]},
   {key:'shatter',name:'Shatter',color:'#c0504a',nodes:[
    {id:'fr_s1',name:'Frost Edge',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'fr_s2',name:'Ice Shards',desc:'Keystone: +1 projectile',cost:3,max:1,req:['fr_s1'],eff:{shots:1}},
+   {id:'fr_s2',name:'Ice Shards',desc:'Keystone: shots chill foes',cost:3,max:1,req:['fr_s1'],eff:{slow:1}},
    {id:'fr_s3',name:'Frostbite Aim',desc:'+6% crit per rank',cost:2,max:2,req:['fr_s1'],eff:{crit:0.06}},
    {id:'fr_s4',name:'Cold Snap',desc:'+8% damage per rank',cost:2,max:2,req:['fr_s2'],eff:{atkPct:0.08}},
-   {id:'fr_s5',name:'Shatter',desc:'Keystone: +1 projectile, +30% crit damage',cost:3,max:1,req:['fr_s3','fr_s4'],eff:{shots:1,critMult:0.30}},
+   {id:'fr_s5',name:'Shatter',desc:'Keystone: +30% crit damage, chilled foes take +25%',cost:3,max:1,req:['fr_s3','fr_s4'],eff:{critMult:0.30,shatter:0.25}},
   ]}],
   ascend:[
-   {id:'cryomancer',name:'Cryomancer',color:'#5a9cc0',desc:'+28% ability power, slowing shots, +8 WIS. Capstone: frozen foes shatter.',eff:{abilPow:0.28,slow:1,wis:8}},
-   {id:'frostwarden',name:'Frostwarden',color:'#7d8a99',desc:'+18% HP, +16 DEF, reflect 40%. Capstone: an icy aura slows all near.',eff:{hpPct:0.18,def:16,thorns:0.40}},
-   {id:'icebreaker',name:'Icebreaker',color:'#c0504a',desc:'+2 projectiles, +14% damage, +8% crit, +1 pierce. Capstone: shards pierce frozen foes.',eff:{shots:2,atkPct:0.14,crit:0.08,pierce:1}},
+   {id:'cryomancer',name:'Cryomancer',color:'#5a9cc0',desc:'+28% ability power, chilling shots, +8 WIS. Capstone: chilled foes shatter (+50% damage).',eff:{abilPow:0.28,slow:1,wis:8,shatter:0.5}},
+   {id:'frostwarden',name:'Frostwarden',color:'#7d8a99',desc:'+18% HP, +16 DEF, reflect 40% melee. Capstone: an icy aura chills all near.',eff:{hpPct:0.18,def:16,thorns:0.40,slowAura:1}},
+   {id:'icebreaker',name:'Icebreaker',color:'#c0504a',desc:'+18% damage, +8% crit, +2 pierce. Capstone: shards shatter chilled foes (+35%).',eff:{atkPct:0.18,crit:0.08,pierce:2,shatter:0.35}},
   ]},
  storm:{ branches:[
   {key:'tempest',name:'Tempest',color:'#5a9cc0',nodes:[
@@ -284,10 +281,10 @@ const CLASS_TREE = {
   ]},
   {key:'voltage',name:'Voltage',color:'#c0504a',nodes:[
    {id:'st_v1',name:'Spark',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'st_v2',name:'Fork',desc:'Keystone: +1 projectile',cost:3,max:1,req:['st_v1'],eff:{shots:1}},
+   {id:'st_v2',name:'Static',desc:'Keystone: hits shock foes',cost:3,max:1,req:['st_v1'],eff:{shockHit:0.15}},
    {id:'st_v3',name:'Shock',desc:'+6% crit per rank',cost:2,max:2,req:['st_v1'],eff:{crit:0.06}},
    {id:'st_v4',name:'Amplify',desc:'+8% damage per rank',cost:2,max:2,req:['st_v2'],eff:{atkPct:0.08}},
-   {id:'st_v5',name:'Thunderclap',desc:'Keystone: +1 projectile, +12% damage',cost:3,max:1,req:['st_v3','st_v4'],eff:{shots:1,atkPct:0.12}},
+   {id:'st_v5',name:'Thunderclap',desc:'Keystone: +12% damage, +8% attack speed',cost:3,max:1,req:['st_v3','st_v4'],eff:{atkPct:0.12,rof:0.08}},
   ]},
   {key:'ionize',name:'Ionize',color:'#6aae7a',nodes:[
    {id:'st_i1',name:'Static Step',desc:'+6% move speed per rank',cost:1,max:3,req:[],eff:{spd:0.06}},
@@ -297,15 +294,15 @@ const CLASS_TREE = {
    {id:'st_i5',name:'Overdrive',desc:'Keystone: +10% attack speed, +8% move',cost:3,max:1,req:['st_i2','st_i3'],eff:{rof:0.10,spd:0.08}},
   ]}],
   ascend:[
-   {id:'stormlord',name:'Stormlord',color:'#5a9cc0',desc:'+28% ability power, +2 pierce, +8 WIS. Capstone: bolts chain to more foes.',eff:{abilPow:0.28,pierce:2,wis:8}},
-   {id:'thunderer',name:'Thunderer',color:'#c0504a',desc:'+2 projectiles, +14% damage, +10% crit. Capstone: crits call down lightning.',eff:{shots:2,atkPct:0.14,crit:0.10}},
-   {id:'galewalker',name:'Galewalker',color:'#6aae7a',desc:'+16% move, +16% attack speed, +10% HP. Capstone: cast at full speed while moving.',eff:{spd:0.16,rof:0.16,hpPct:0.10}},
+   {id:'stormlord',name:'Stormlord',color:'#5a9cc0',desc:'+28% ability power, +2 pierce, +8 WIS. Capstone: hits arc between foes.',eff:{abilPow:0.28,pierce:2,wis:8,chainHit:0.6}},
+   {id:'thunderer',name:'Thunderer',color:'#c0504a',desc:'+18% damage, +10% crit, +10% attack speed. Capstone: crits call down lightning.',eff:{atkPct:0.18,crit:0.10,rof:0.10,critBolt:0.6}},
+   {id:'galewalker',name:'Galewalker',color:'#6aae7a',desc:'+16% move, +16% attack speed, +10% HP. Capstone: attack 12% faster while moving.',eff:{spd:0.16,rof:0.16,hpPct:0.10,moveRof:0.12}},
   ]},
  hunter:{ branches:[
   {key:'beastmaster',name:'Beastmaster',color:'#6aae7a',nodes:[
    {id:'hu_b1',name:'Bond',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
    {id:'hu_b2',name:'Kinship',desc:'+6% ability power per rank',cost:2,max:2,req:['hu_b1'],eff:{abilPow:0.06}},
-   {id:'hu_b3',name:'Twin Shot',desc:'Keystone: +1 projectile',cost:3,max:1,req:['hu_b1'],eff:{shots:1}},
+   {id:'hu_b3',name:'Piercing Shot',desc:'Keystone: shots pierce +1',cost:3,max:1,req:['hu_b1'],eff:{pierce:1}},
    {id:'hu_b4',name:'Wild Aim',desc:'+5% crit',cost:2,max:1,req:['hu_b1'],eff:{crit:0.05}},
    {id:'hu_b5',name:'Alpha',desc:'Keystone: +10% damage, +8% ability power',cost:3,max:1,req:['hu_b3','hu_b4'],eff:{atkPct:0.10,abilPow:0.08}},
   ]},
@@ -314,7 +311,7 @@ const CLASS_TREE = {
    {id:'hu_t2',name:'Snare',desc:'Keystone: attacks slow foes',cost:2,max:1,req:['hu_t1'],eff:{slow:1}},
    {id:'hu_t3',name:'Rapid Trap',desc:'+8% attack speed per rank',cost:2,max:2,req:['hu_t1'],eff:{rof:0.08}},
    {id:'hu_t4',name:'Barbed Trap',desc:'Keystone: shots pierce +1',cost:3,max:1,req:['hu_t2'],eff:{pierce:1}},
-   {id:'hu_t5',name:'Volley Trap',desc:'Keystone: +1 projectile, +8% attack speed',cost:3,max:1,req:['hu_t3','hu_t4'],eff:{shots:1,rof:0.08}},
+   {id:'hu_t5',name:'Volley Trap',desc:'Keystone: +12% damage, +8% attack speed',cost:3,max:1,req:['hu_t3','hu_t4'],eff:{atkPct:0.12,rof:0.08}},
   ]},
   {key:'survivalist',name:'Survivalist',color:'#7d8a99',nodes:[
    {id:'hu_s1',name:'Rugged',desc:'+8% max HP per rank',cost:1,max:3,req:[],eff:{hpPct:0.08}},
@@ -324,9 +321,9 @@ const CLASS_TREE = {
    {id:'hu_s5',name:'Wanderer',desc:'Keystone: +12% HP, +10% move',cost:3,max:1,req:['hu_s2','hu_s3'],eff:{hpPct:0.12,spd:0.10}},
   ]}],
   ascend:[
-   {id:'packlord',name:'Packlord',color:'#6aae7a',desc:'+16% damage, +12% ability power, +1 projectile. Capstone: summons come in pairs.',eff:{atkPct:0.16,abilPow:0.12,shots:1}},
-   {id:'falconer',name:'Falconer',color:'#5a9cc0',desc:'+2 projectiles, slowing shots, +10% attack speed. Capstone: shots seek out foes.',eff:{shots:2,slow:1,rof:0.10}},
-   {id:'pathwarden',name:'Pathwarden',color:'#7d8a99',desc:'+18% HP, +14% move, +2 regen. Capstone: unhindered by terrain.',eff:{hpPct:0.18,spd:0.14,regen:2}},
+   {id:'packlord',name:'Packlord',color:'#6aae7a',desc:'+16% damage, +12% ability power, +8% attack speed. Capstone: summons come in pairs.',eff:{atkPct:0.16,abilPow:0.12,rof:0.08,summonX2:1}},
+   {id:'falconer',name:'Falconer',color:'#5a9cc0',desc:'Chilling shots, +12% damage, +10% attack speed. Capstone: shots seek out foes.',eff:{slow:1,atkPct:0.12,rof:0.10,homing:1}},
+   {id:'pathwarden',name:'Pathwarden',color:'#7d8a99',desc:'+18% HP, +14% move, +2 regen. Capstone: move through trees and rocks.',eff:{hpPct:0.18,spd:0.14,regen:2,terrainGhost:1}},
   ]},
  monk:{ branches:[
   {key:'fists',name:'Fists of Fury',color:'#c0504a',nodes:[
@@ -351,8 +348,8 @@ const CLASS_TREE = {
    {id:'mo_k5',name:'Enlightened',desc:'Keystone: +14% HP, +2 regen',cost:3,max:1,req:['mo_k2','mo_k3'],eff:{hpPct:0.14,regen:2}},
   ]}],
   ascend:[
-   {id:'grandmaster',name:'Grandmaster',color:'#c0504a',desc:'+16% attack speed, +10% crit, +8 ATK. Capstone: every third strike stuns.',eff:{rof:0.16,crit:0.10,atk:8}},
-   {id:'windwalker',name:'Windwalker',color:'#6aae7a',desc:'+18% move, +12% attack speed, take 12% less damage. Capstone: dash through foes.',eff:{spd:0.18,rof:0.12,dr:0.12}},
+   {id:'grandmaster',name:'Grandmaster',color:'#c0504a',desc:'+16% attack speed, +10% crit, +8 ATK. Capstone: every third strike stuns.',eff:{rof:0.16,crit:0.10,atk:8,stun3:1}},
+   {id:'windwalker',name:'Windwalker',color:'#6aae7a',desc:'+18% move, +12% attack speed, take 12% less damage. Capstone: dash through untouchable.',eff:{spd:0.18,rof:0.12,dr:0.12,dashInv:1}},
    {id:'ascendant',name:'Ascendant',color:'#d4b96a',desc:'+8% lifesteal, +20% HP, +3 regen. Capstone: strikes mend you.',eff:{ls:0.08,hpPct:0.20,regen:3}},
   ]},
  paladin:{ branches:[
@@ -378,15 +375,15 @@ const CLASS_TREE = {
    {id:'pa_g5',name:'Consecration',desc:'Keystone: +12% HP, +3 regen',cost:3,max:1,req:['pa_g2','pa_g3'],eff:{hpPct:0.12,regen:3}},
   ]}],
   ascend:[
-   {id:'crusader',name:'Crusader',color:'#e8b34b',desc:'+12 ATK, cleave +2, +10% crit. Capstone: smites explode.',eff:{atk:12,cleave:2,crit:0.10}},
-   {id:'guardian',name:'Guardian',color:'#7d8a99',desc:'+18% HP, +18 DEF, take 12% less damage. Capstone: shields nearby allies.',eff:{hpPct:0.18,def:18,dr:0.12}},
-   {id:'highpriest',name:'High Priest',color:'#d4b96a',desc:'+24% ability power, +8 WIS, +3 regen. Capstone: consecrated ground heals.',eff:{abilPow:0.24,wis:8,regen:3}},
+   {id:'crusader',name:'Crusader',color:'#e8b34b',desc:'+12 ATK, cleave +2, +10% crit. Capstone: smites explode.',eff:{atk:12,cleave:2,crit:0.10,splash:0.40}},
+   {id:'guardian',name:'Guardian',color:'#7d8a99',desc:'+18% HP, +18 DEF, take 12% less damage. Capstone: overflowing light wards you.',eff:{hpPct:0.18,def:18,dr:0.12,overshield:1}},
+   {id:'highpriest',name:'High Priest',color:'#d4b96a',desc:'+24% ability power, +8 WIS, +3 regen. Capstone: casts consecrate healing ground.',eff:{abilPow:0.24,wis:8,regen:3,groundHeal:1}},
   ]},
  necro:{ branches:[
   {key:'undeath',name:'Undeath',color:'#6aae7a',nodes:[
    {id:'ne_u1',name:'Command',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
    {id:'ne_u2',name:'Dark Ritual',desc:'+8% ability power per rank',cost:2,max:2,req:['ne_u1'],eff:{abilPow:0.08}},
-   {id:'ne_u3',name:'Bone Legion',desc:'Keystone: +1 projectile',cost:3,max:1,req:['ne_u1'],eff:{shots:1}},
+   {id:'ne_u3',name:'Bone Rot',desc:'Keystone: hits bleed foes',cost:3,max:1,req:['ne_u1'],eff:{bleedHit:1}},
    {id:'ne_u4',name:'Grave Feast',desc:'heal 5% of damage dealt',cost:2,max:1,req:['ne_u2'],eff:{ls:0.05}},
    {id:'ne_u5',name:'Master of Death',desc:'Keystone: +12% damage, +8% ability power',cost:3,max:1,req:['ne_u3','ne_u4'],eff:{atkPct:0.12,abilPow:0.08}},
   ]},
@@ -405,9 +402,9 @@ const CLASS_TREE = {
    {id:'ne_s5',name:'Undying',desc:'Keystone: +12% HP, take 8% less damage',cost:3,max:1,req:['ne_s2','ne_s3'],eff:{hpPct:0.12,dr:0.08}},
   ]}],
   ascend:[
-   {id:'lich',name:'Lich',color:'#8a5ac0',desc:'+26% ability power, +12% lifesteal, +8 WIS. Capstone: raise more skeletons.',eff:{abilPow:0.26,ls:0.12,wis:8}},
-   {id:'bonelord',name:'Bonelord',color:'#c0304a',desc:'+2 pierce, +16% damage, +10% crit. Capstone: bone spears explode.',eff:{pierce:2,atkPct:0.16,crit:0.10}},
-   {id:'plaguebringer',name:'Plaguebringer',color:'#6aae7a',desc:'+16% damage, +10% ability power, +1 projectile. Capstone: minions spread plague.',eff:{atkPct:0.16,abilPow:0.10,shots:1}},
+   {id:'lich',name:'Lich',color:'#8a5ac0',desc:'+26% ability power, +12% lifesteal, +8 WIS. Capstone: raise twice the skeletons.',eff:{abilPow:0.26,ls:0.12,wis:8,summonX2:1}},
+   {id:'bonelord',name:'Bonelord',color:'#c0304a',desc:'+2 pierce, +16% damage, +10% crit. Capstone: bone spears explode.',eff:{pierce:2,atkPct:0.16,crit:0.10,splash:0.45}},
+   {id:'plaguebringer',name:'Plaguebringer',color:'#6aae7a',desc:'+16% damage, +10% ability power, +8% attack speed. Capstone: minions poison foes.',eff:{atkPct:0.16,abilPow:0.10,rof:0.08,allyDot:0.5}},
   ]},
  bard:{ branches:[
   {key:'cadence',name:'Cadence',color:'#c07ad4',nodes:[
@@ -415,7 +412,7 @@ const CLASS_TREE = {
    {id:'ba_c2',name:'Sharp Note',desc:'+4 ATK per rank',cost:1,max:3,req:['ba_c1'],eff:{atk:4}},
    {id:'ba_c3',name:'Allegro',desc:'Keystone: +10% attack speed',cost:3,max:1,req:['ba_c1'],eff:{rof:0.10}},
    {id:'ba_c4',name:'Crescendo',desc:'+6% crit per rank',cost:2,max:2,req:['ba_c2'],eff:{crit:0.06}},
-   {id:'ba_c5',name:'Finale',desc:'Keystone: +1 projectile, +8% attack speed',cost:3,max:1,req:['ba_c3','ba_c4'],eff:{shots:1,rof:0.08}},
+   {id:'ba_c5',name:'Finale',desc:'Keystone: +12% damage, +8% attack speed',cost:3,max:1,req:['ba_c3','ba_c4'],eff:{atkPct:0.12,rof:0.08}},
   ]},
   {key:'ballad',name:'Ballad',color:'#6aae7a',nodes:[
    {id:'ba_b1',name:'Vitality Song',desc:'+8% max HP per rank',cost:1,max:3,req:[],eff:{hpPct:0.08}},
@@ -432,17 +429,17 @@ const CLASS_TREE = {
    {id:'ba_h5',name:'Symphony',desc:'Keystone: +16% ability power, +6 WIS',cost:3,max:1,req:['ba_h2','ba_h3'],eff:{abilPow:0.16,wis:6}},
   ]}],
   ascend:[
-   {id:'maestro',name:'Maestro',color:'#c07ad4',desc:'+1 projectile, +16% attack speed, +10% crit. Capstone: your song never ends.',eff:{shots:1,rof:0.16,crit:0.10}},
-   {id:'skald',name:'Skald',color:'#6aae7a',desc:'+18% HP, +14% move, +6% lifesteal. Capstone: allies share your tempo.',eff:{hpPct:0.18,spd:0.14,ls:0.06}},
-   {id:'loremaster',name:'Loremaster',color:'#d4b96a',desc:'+24% ability power, +8 WIS, +8 FORTUNE. Capstone: spells echo twice.',eff:{abilPow:0.24,wis:8,fort:8}},
+   {id:'maestro',name:'Maestro',color:'#c07ad4',desc:'+20% attack speed, +10% crit, +8% damage. Capstone: your tempo never breaks.',eff:{rof:0.20,crit:0.10,atkPct:0.08}},
+   {id:'skald',name:'Skald',color:'#6aae7a',desc:'+18% HP, +14% move, +6% lifesteal. Capstone: your pets share your tempo.',eff:{hpPct:0.18,spd:0.14,ls:0.06,allyHaste:0.3}},
+   {id:'loremaster',name:'Loremaster',color:'#d4b96a',desc:'+24% ability power, +8 WIS, +8 FORT. Capstone: spells echo at 40% power.',eff:{abilPow:0.24,wis:8,fort:8,echoCast:0.4}},
   ]},
  shaman:{ branches:[
   {key:'spirits',name:'Spirits',color:'#4fb0a0',nodes:[
    {id:'sh_s1',name:'Totemic',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'sh_s2',name:'Split Spirit',desc:'Keystone: +1 projectile',cost:3,max:1,req:['sh_s1'],eff:{shots:1}},
+   {id:'sh_s2',name:'Spirit Brand',desc:'Keystone: hits weaken foes',cost:3,max:1,req:['sh_s1'],eff:{weakHit:1}},
    {id:'sh_s3',name:'Spirit Power',desc:'+8% ability power per rank',cost:2,max:2,req:['sh_s1'],eff:{abilPow:0.08}},
    {id:'sh_s4',name:'Wild Spirit',desc:'+6% crit',cost:2,max:1,req:['sh_s2'],eff:{crit:0.06}},
-   {id:'sh_s5',name:'Spirit Legion',desc:'Keystone: +1 projectile, +12% damage',cost:3,max:1,req:['sh_s3','sh_s4'],eff:{shots:1,atkPct:0.12}},
+   {id:'sh_s5',name:'Spirit Legion',desc:'Keystone: +12% damage, +10% ability power',cost:3,max:1,req:['sh_s3','sh_s4'],eff:{atkPct:0.12,abilPow:0.10}},
   ]},
   {key:'tides',name:'Tides',color:'#5a9cc0',nodes:[
    {id:'sh_t1',name:'Flow',desc:'+5 WIS per rank',cost:1,max:3,req:[],eff:{wis:5}},
@@ -459,9 +456,9 @@ const CLASS_TREE = {
    {id:'sh_e5',name:'Mountain',desc:'Keystone: +12% HP, +12 DEF',cost:3,max:1,req:['sh_e3'],eff:{hpPct:0.12,def:12}},
   ]}],
   ascend:[
-   {id:'spiritcaller',name:'Spiritcaller',color:'#4fb0a0',desc:'+2 projectiles, +14% damage, +10% ability power. Capstone: spirits orbit longer.',eff:{shots:2,atkPct:0.14,abilPow:0.10}},
-   {id:'tidesage',name:'Tidesage',color:'#5a9cc0',desc:'+26% ability power, slowing shots, +1 pierce. Capstone: totems chain heal and harm.',eff:{abilPow:0.26,slow:1,pierce:1}},
-   {id:'earthwarden',name:'Earthwarden',color:'#6aae7a',desc:'+18% HP, +16 DEF, +3 regen. Capstone: roots shield you.',eff:{hpPct:0.18,def:16,regen:3}},
+   {id:'spiritcaller',name:'Spiritcaller',color:'#4fb0a0',desc:'+18% damage, +14% ability power, +8% attack speed. Capstone: spirits linger 60% longer.',eff:{atkPct:0.18,abilPow:0.14,rof:0.08,spiritDur:0.6}},
+   {id:'tidesage',name:'Tidesage',color:'#5a9cc0',desc:'+26% ability power, chilling shots, +1 pierce. Capstone: tides arc between foes.',eff:{abilPow:0.26,slow:1,pierce:1,chainHit:0.5}},
+   {id:'earthwarden',name:'Earthwarden',color:'#6aae7a',desc:'+18% HP, +16 DEF, +3 regen. Capstone: the roots sustain you.',eff:{hpPct:0.18,def:16,regen:3}},
   ]},
  dragoon:{ branches:[
   {key:'lancer',name:'Lancer',color:'#e07a2e',nodes:[
@@ -487,8 +484,8 @@ const CLASS_TREE = {
   ]}],
   ascend:[
    {id:'wyrmknight',name:'Wyrmknight',color:'#e07a2e',desc:'+2 pierce, +16% damage, +10% crit. Capstone: thrusts skewer a whole line.',eff:{pierce:2,atkPct:0.16,crit:0.10}},
-   {id:'skylord',name:'Skylord',color:'#6aae7a',desc:'+16% move, +14% attack speed, +12% HP. Capstone: leaps crater on landing.',eff:{spd:0.16,rof:0.14,hpPct:0.12}},
-   {id:'dragonlord',name:'Dragonlord',color:'#7d8a99',desc:'+18% HP, +18 DEF, reflect 40%. Capstone: scales deflect projectiles.',eff:{hpPct:0.18,def:18,thorns:0.40}},
+   {id:'skylord',name:'Skylord',color:'#6aae7a',desc:'+16% move, +14% attack speed, +12% HP. Capstone: leaps crater on landing.',eff:{spd:0.16,rof:0.14,hpPct:0.12,dashBlast:1}},
+   {id:'dragonlord',name:'Dragonlord',color:'#7d8a99',desc:'+18% HP, +18 DEF, reflect 40% melee. Capstone: scales punish every blow.',eff:{hpPct:0.18,def:18,thorns:0.40}},
   ]},
 };
 
@@ -680,7 +677,13 @@ function _skStopAnim(){ if(_skRaf) cancelAnimationFrame(_skRaf); _skRaf=0; }
 function treeStats(cls,rpg){
   const d={atk:0,def:0,hp:0,mp:0,spd:0,dex:0,wis:0,vit:0,luck:0,fort:0,
     hpPct:0,atkPct:0,crit:0,critMult:0,ls:0,thorns:0,dr:0,rof:0,cleave:0,
-    shots:0,pierce:0,mpregen:0,abilPow:0,projSpd:0,regen:0,slow:0};
+    shots:0,pierce:0,mpregen:0,abilPow:0,projSpd:0,regen:0,slow:0,
+    // ascension capstone mechanics (design rule: capstones DO what they SAY)
+    auraHeal:0,critPierce:0,dashInv:0,fork:0,groundFire:0,splash:0,critDashCd:0,
+    vanishHurt:0,killHeal:0,chainHit:0,execute:0,killInv:0,overshield:0,burnHit:0,
+    bloodNova:0,moveDr:0,curse:0,shatter:0,slowAura:0,critBolt:0,moveRof:0,
+    summonX2:0,homing:0,terrainGhost:0,stun3:0,groundHeal:0,allyDot:0,allyHaste:0,
+    echoCast:0,spiritDur:0,dashBlast:0,poisonHit:0,shockHit:0,bleedHit:0,weakHit:0};
   const t=treeOf(cls); if(!t||!rpg) return d;
   const add=(eff,mult)=>{ if(!eff) return; for(const k in eff) if(k in d) d[k]+=eff[k]*(mult||1); };
   for(const b of t.branches) for(const n of b.nodes){ const r=nodeRank(rpg,n.id); if(r) add(n.eff,r); }

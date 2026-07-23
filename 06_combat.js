@@ -1,4 +1,42 @@
 // ---------- combat ----------
+// ===== STATUS EFFECTS (enemy-side, unified) =====
+// One pipeline for every debuff: applyStatus(e,id,dur,val) -> tickStatuses in the
+// enemy loop -> pips + particles in render. Anything (tree capstones, abilities,
+// future unique weapons) inflicts these through applyStatus — never ad-hoc fields.
+//  burn/poison: damage over time (val = dps)     bleed: % max HP over time
+//  chill: 45% slower (mirrors legacy e.slowT)    freeze: cannot act, thaws to chill
+//  stun: cannot act (short)                      curse: takes +val damage (default 15%)
+//  weak: deals 30% less damage                   shock: arc-zap every 0.6s for val
+const STATUS={
+ burn:{col:'#ffb347'}, poison:{col:'#7dc47a'}, bleed:{col:'#ff4d5e'},
+ chill:{col:'#9ad4ef'}, freeze:{col:'#d8f0fa'}, stun:{col:'#ffe08a'},
+ curse:{col:'#c07ad4'}, weak:{col:'#8a8494'}, shock:{col:'#5a9cc0'} };
+function applyStatus(e,id,dur,val){ if(!e||e.hp<=0||e.node) return;   // objective nodes immune
+ if(!e.st) e.st={};
+ const s=e.st[id];
+ if(s){ s.t=Math.max(s.t,dur); s.v=Math.max(s.v||0,val||0); }
+ else e.st[id]={t:dur,v:val||0};
+ if(id==='chill') e.slowT=Math.max(e.slowT||0,dur);   // legacy mirror (slowF, shatter checks)
+ if(id==='stun')  e.stunT=Math.max(e.stunT||0,dur); }
+function hasStatus(e,id){ return !!(e.st&&e.st[id]&&e.st[id].t>0); }
+function tickStatuses(e,dt){ if(!e.st) return true;
+ let act=true;
+ for(const id in e.st){ const s=e.st[id];
+  s.t-=dt;
+  if(id==='burn'||id==='poison') e.hp-=(s.v||0)*dt;
+  else if(id==='bleed') e.hp-=e.maxhp*0.008*Math.max(1,s.v)*dt;
+  else if(id==='shock'){ s.acc=(s.acc||0)+dt;
+    if(s.acc>=0.6){ s.acc-=0.6; e.hp-=(s.v||0);
+      if(typeof fx!=='undefined') fx.push({t:'bolt',
+        pts:[{x:e.x+(Math.random()*30-15),y:e.y-26},{x:e.x,y:e.y}],life:0.15,col:'#9ad4ef'}); } }
+  else if(id==='freeze'||id==='stun') act=false;
+  if(typeof emitP==='function'&&Math.random()<4*dt){ const c=STATUS[id];
+    if(c) emitP(e.x+(Math.random()*e.r*2-e.r),e.y-6,
+      {vx:0,vy:id==='burn'?-24:-12,life:0.5,col:c.col,sz:2,glow:id==='burn'||id==='shock'}); }
+  if(s.t<=0){ delete e.st[id]; if(id==='freeze') applyStatus(e,'chill',1,0); } }
+ return act; }
+function statusDmgOut(e){ return hasStatus(e,'weak')?0.7:1; }                       // weakened hit softer
+function statusDmgIn(e){ return hasStatus(e,'curse')?(1+(e.st.curse.v||0.15)):1; }  // cursed take more
 function los(x1,y1,x2,y2){
   const d=Math.hypot(x2-x1,y2-y1), steps=Math.ceil(d/14);
   for(let i=1;i<steps;i++){ const t=i/steps;
@@ -20,7 +58,9 @@ function fire(dt){
     if(d<bd && Math.hypot(e.x-player.x,e.y-player.y)<=wRange && los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
   if(best) ang=Math.atan2(best.y-player.y,best.x-player.x);
   if(ang===null) return;
-  player.fireT=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
+  let _rate=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
+  if(player.moveRof&&player._moving) _rate/=(1+player.moveRof);   // Galewalker: faster on the move
+  player.fireT=_rate;
   player.aim=ang;
   player.atkT=0.2;                     // trigger the attack animation
   const de3=player.deadeye>0;
@@ -29,6 +69,7 @@ function fire(dt){
   if(crit) dm*=(player.critMult||1.5);
   let pr=(wt.pierce||0)+(player.pierce||0);
   if(de3){ dm*=3; pr=99; }
+  if(crit&&player.critPierce) pr=99;                 // Sharpshooter: crits pierce everything
   const psp=(wt.spd||520)*(player.projSpd||1);          // DEX -> projectile speed
   const n=Math.min(7,(wt.shots||1)+((player.shots||1)-1));
   // projectile forge key: every (class, weapon type, tier, rarity) combo has its own look
@@ -53,7 +94,7 @@ function eFire(e,ang,spd=200){
   // per-family forged look: each boss by name, mobs by type + level bracket
   const pk='e:'+(e.name?('B_'+e.name):(e.type+'_'+Math.floor((e.lv||1)/12)));
   eShots.push({x:e.x,y:e.y,px:e.x,py:e.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
-    r:e.psize||6,life:3,bd:e.bd||8,col:e.pcol||null,core:e.pcore||null,shape:e.pshape||null,pk:pk});
+    r:e.psize||6,life:3,bd:(e.bd||8)*statusDmgOut(e),col:e.pcol||null,core:e.pcore||null,shape:e.pshape||null,pk:pk});
 }
 function boom(x,y,col,n=10){
   for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=40+Math.random()*120;
