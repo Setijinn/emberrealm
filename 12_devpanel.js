@@ -24,16 +24,56 @@ function devTeleport(k){
  for(let ring=0;ring<10&&solid(cx,cy);ring++){ cx+=TILE; }
  enterRoom(k,cx,cy);
 }
+// Spawn via makeEnemy so the enemy scales to the current zone level (not a flat stat block).
 function devSpawn(t){
- const defs={c:{type:'c',r:15,hp:40,maxhp:40,spd:95,touch:12,col:'#c04a3d'},
-  s:{type:'s',r:16,hp:60,maxhp:60,spd:45,fireT:1,col:'#8a5ac0'},
-  B:{type:'B',r:30,hp:600,maxhp:600,spd:35,fireT:1.5,ang:0,col:'#e07a2e',boss:true}};
- for(let tries=0;tries<60;tries++){
-  const a=Math.random()*6.283, d=140+Math.random()*180;
+ if(!curRoom||!player){return;}
+ const W=(curRoom.w||RW), H=(curRoom.h||RH);
+ for(let tries=0;tries<80;tries++){
+  const a=Math.random()*6.283, d=140+Math.random()*200;
   const x=player.x+Math.cos(a)*d, y=player.y+Math.sin(a)*d;
-  if(x>TILE&&y>TILE&&x<(RW-1)*TILE&&y<(RH-1)*TILE&&!solid(x,y)){
-   const e=Object.assign({x,y},defs[t]); enemies.push(e); curRoom.cleared=false; return; } }
+  if(x>TILE&&y>TILE&&x<(W-1)*TILE&&y<(H-1)*TILE&&!solid(x,y)){
+   const sp={x:x/TILE-0.5,y:y/TILE-0.5,t:t};
+   const e=(typeof makeEnemy==='function')?makeEnemy(sp):null;
+   if(e){ enemies.push(e); curRoom.cleared=false; } return; } }
 }
+// ---- character cheats ----
+function devMax(){ if(!rpg){loadRPG();} if(!rpg){return;}
+ rpg.lvl=150; rpg.xp=0;
+ rpg.wpn=MAXT-1; rpg.arm=MAXT-1; rpg.helm=MAXT-1;
+ rpg.ring={t:MAXT-1,st:RING_STATS[0]};   // armor material is class-derived (CARMOR) in recalcStats
+ // mythical rarity + full affixes on every equipped slot
+ rpg.eqAff=rpg.eqAff||{};
+ rpg.eqAff.wpn=devAff(MAXT-1,5); rpg.eqAff.arm=devAff(MAXT-1,5);
+ rpg.eqAff.helm=devAff(MAXT-1,5); rpg.eqAff.ring=devAff(MAXT-1,5);
+ rpg.gold=(rpg.gold||0)+1000000; rpg.pots=99;
+ if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
+ rpg.perkPts=(rpg.perkPts||0)+75;
+ recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
+ saveRPG(); hudRPG(); devToast('Character maxed');
+}
+// build an {a:affixArray,r:rarity} eqAff entry at a tier+rarity
+function devAff(t,rar){ const keys=Object.keys(AFFIX_PREFIX),used={},a=[];
+ for(let i=0;i<rar;i++){ let k,g=0; do{k=keys[Math.floor(Math.random()*keys.length)];}while(used[k]&&g++<12); used[k]=1;
+  a.push({s:k,v:affixValue(k,t,rar)}); }
+ return {a:a,r:rar}; }
+// spawn a fresh item of a kind at the current dev tier+rarity into the satchel
+let devItemTier=MAXT-1, devItemRar=5;
+const RAR_LBL=['Common','Uncommon','Rare','Epic','Legendary','Mythical'];
+function devMkItem(kind){ const t=devItemTier, rar=devItemRar; let it;
+ const ch=curChar(); if(!ch){return;}
+ const cls=ch.cls;
+ // spawn class-appropriate gear so it's actually equippable (canEquip matches CWEAP/CARMOR)
+ if(kind==='wpn') it={k:'wpn',wt:CWEAP[cls]||'sword',t:t};
+ else if(kind==='arm') it={k:'arm',mt:CARMOR[cls]||'plate',t:t};
+ else if(kind==='helm') it={k:'helm',mt:CARMOR[cls]||'plate',t:t};
+ else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t};
+ it.rar=rar; const aff=devAff(t,rar); it.aff=aff.a;
+ if(!ch.inv)ch.inv=[];
+ if(ch.inv.length>=20){ devToast('Satchel full (20)'); return; }
+ ch.inv.push(it); saveRPG();
+ devToast('+ T'+(t+1)+' '+RAR_LBL[rar]+' '+kind);
+}
+function devToast(t){ if(typeof msg==='function'){ msg('DEV',t); } }
 $s('dGod').onclick=()=>{dev.god=!dev.god;devPaint();};
 $s('dDmg').onclick=()=>{dev.dmg=dev.dmg>=100?1:dev.dmg*10;devPaint();};
 $s('dSpd').onclick=()=>{dev.spd=dev.spd>=4?1:dev.spd*2;devPaint();};
@@ -45,6 +85,23 @@ $s('dReset').onclick=()=>{for(const k in rooms)for(const sp of rooms[k].spawns)s
 $s('dSpawnC').onclick=()=>{devSpawn('c');};
 $s('dSpawnS').onclick=()=>{devSpawn('s');};
 $s('dSpawnB').onclick=()=>{devSpawn('B');};
+$s('dSpawnN').onclick=()=>{devSpawn('N');};
+// character cheats
+$s('dMax').onclick=()=>{devMax();};
+$s('dLvl').onclick=()=>{ if(!rpg)return; rpg.lvl=Math.min(150,rpg.lvl+10); rpg.xp=0;
+ if(typeof grantPerkPoints==='function')grantPerkPoints(rpg);
+ recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp; saveRPG(); hudRPG(); devToast('Lv '+rpg.lvl); };
+$s('dGold').onclick=()=>{ if(!rpg)return; rpg.gold+=100000; saveRPG(); hudRPG(); devToast('+100k gold'); };
+$s('dPots').onclick=()=>{ if(!rpg)return; rpg.pots=Math.min(99,(rpg.pots||0)+25); saveRPG(); hudRPG(); devToast('+25 potions'); };
+$s('dPerk').onclick=()=>{ if(!rpg)return; rpg.perkPts=(rpg.perkPts||0)+20; saveRPG(); devToast('+20 perk pts'); };
+$s('dRefill').onclick=()=>{ if(!player)return; player.hp=player.maxhp; player.mp=player.maxmp; devToast('HP/MP refilled'); };
+// item spawner
+$s('dItemTier').onclick=()=>{ devItemTier=(devItemTier+1)%MAXT; $s('dItemTier').textContent='Tier '+(devItemTier+1); };
+$s('dItemRar').onclick=()=>{ devItemRar=(devItemRar+1)%6; $s('dItemRar').textContent='Rarity: '+RAR_LBL[devItemRar]; };
+$s('dItemW').onclick=()=>{devMkItem('wpn');};
+$s('dItemA').onclick=()=>{devMkItem('arm');};
+$s('dItemH').onclick=()=>{devMkItem('helm');};
+$s('dItemR').onclick=()=>{devMkItem('ring');};
 $s('dWipe').onclick=()=>{ if(confirm('Delete ALL user accounts on this device?')){
  users={}; LS.set('er-users',users); LS.set('er-last',null); isAdmin=false; curUser=null;
  refreshUserList(); show('loginScr'); } };
