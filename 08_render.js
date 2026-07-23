@@ -81,11 +81,12 @@ function drawTileG(x,y){
     const _gset=_groundSet[bd];
     if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
       const hh=(x*131+y*57)>>>0, o=hh&3;   // per-cell flip (4 orientations) breaks the grid
-      // fiery zones (5-8): mix in the dark secondary tile to break the high-contrast lava grid
-      const g=(bd>=5 && hh%100<32)?GROUND_LO:GROUND_UP;
-      // ~1/3 of cells use the zone's variant ground sheet for large-scale variety
+      // EVERY zone mixes its secondary tile in (heavier in the busy fiery zones) —
+      // single-tile fill read too uniform
+      const g=(hh%100 < (bd>=5?32:11))?GROUND_LO:GROUND_UP;
+      // ~40% of cells use the zone's variant ground sheet for large-scale variety
       const _vs=_groundVar[bd];
-      const src=(_vs && _vs.naturalWidth && hh%100>=68)?_vs:_gset;
+      const src=(_vs && _vs.naturalWidth && hh%100>=60)?_vs:_gset;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
       const v=(hh>>2)%5;                    // subtle per-tile brightness noise
@@ -96,7 +97,7 @@ function drawTileG(x,y){
       const _dl=_decal[bd];
       if(_dl && _dl.length && 'tk'.indexOf(c)<0){
         const dh=(x*197+y*263)>>>0;
-        if(dh%100<15){ const im=_dl[dh%_dl.length];
+        if(dh%100<20){ const im=_dl[dh%_dl.length];
           if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
             ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }
     else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }

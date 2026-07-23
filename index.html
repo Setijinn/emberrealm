@@ -51,6 +51,14 @@
  <button class="mbtn" id="classBack">BACK</button>
 </div>
 <button id="mapBtn">🗺️</button>
+<button id="coopBtn">🤝</button>
+<div class="scr" id="coopScr" style="background:rgba(9,7,12,.9);display:none;">
+ <div id="coopCard"><button class="tabX" id="coopX" aria-label="Close">✕</button>
+  <div class="ldTitle" style="text-align:center;">CO-OP</div>
+  <div class="mnote" style="text-align:center;margin-bottom:10px;">play with a friend — same realm, live</div>
+  <div id="coopBody"></div>
+ </div>
+</div>
 <div id="mapScr">
  <div id="mapCard">
   <div id="shHead"><span>THE ASCENT</span><button id="mapClose">✕</button></div>
@@ -140,6 +148,8 @@
 <script src="11_ui.js"></script>
 <script src="12b_abilities.js"></script>
 <script src="13_skills.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="14_coop.js"></script>
 <script src="12_devpanel.js"></script>
 
 </body>

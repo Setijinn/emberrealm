@@ -719,6 +719,7 @@ function render(){
   const phase = player.atkT>0 ? 1-Math.min(1,player.atkT/ATK_DUR) : 0;
   const swng = phase>0 ? Math.sin(phase*Math.PI) : 0;
   const lunge=(style==='thrust'?5:style==='swing'?3:2)*swng;
+  if(typeof drawCoopPeers==='function') drawCoopPeers(pn);   // co-op allies (behind the local hero)
   const lx=Math.cos(aa)*lunge, ly=Math.sin(aa)*lunge;
   shadow(player.x,player.y+player.r*0.85,player.r*1.05);
   // moving = touch stick held OR keyboard direction pressed (PC)

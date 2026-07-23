@@ -65,16 +65,20 @@ const _groundSet={}, _bandTree={}, _bandBoulder={}, _bandTone={};
 const _groundVar={}, _decal={}, _lair={};   // richer terrain: variant ground tiles + scatter decals + boss lairs
 const _lairSet={}, _lairDec={};              // boss-room wall/floor tileset (wall=GROUND_UP, floor=GROUND_LO) + interior decorations
 const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (uniform across tilesets)
-const DECAL_BANDS={0:6, 5:6};                // bands with decal art + how many each (pilot: Roothollow, Emberscar)
+// every band gets decals: forest zones share the grass set (0), stone zones the rocky set (3),
+// ash/fire zones the ember set (5) — richness everywhere without 9 full unique sets
+const DECAL_SRC={0:0,1:0,2:0,3:3,4:3,5:5,6:5,7:5,8:5};
 const LAIR_BANDS=[0,5];                       // bands with a boss-lair structure (pilot)
 (function(){
   if(typeof window==='undefined') return;
   for(const n of _projArt._list) _projArt[n]=_img('assets/proj/'+n+'.png');
   for(let b=0;b<=8;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
   // per-zone variant ground sheet (sampled at GROUND_UP like the base) for large-scale variety
-  for(const b of [0,5]) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
-  // scatter decals (small transparent props laid on the ground) per band
-  for(const b in DECAL_BANDS){ _decal[b]=[]; for(let i=0;i<DECAL_BANDS[b];i++) _decal[b].push(_img('assets/env/decal_'+b+'_'+i+'.png')); }
+  for(let b=0;b<=8;b++) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
+  // scatter decals (small transparent props laid on the ground): shared per theme set
+  const _dsrc={};
+  for(const s of [0,3,5]){ _dsrc[s]=[]; for(let i=0;i<6;i++) _dsrc[s].push(_img('assets/env/decal_'+s+'_'+i+'.png')); }
+  for(let b=0;b<=8;b++) _decal[b]=_dsrc[DECAL_SRC[b]];
   // boss lairs per band: exterior-den centrepiece sprite, wall/floor tileset, interior decorations
   for(const b of LAIR_BANDS) _lair[b]=_img('assets/env/lair_'+b+'.png');
   for(const b of LAIR_BANDS) _lairSet[b]=_img('assets/tiles/lairset_'+b+'.png');

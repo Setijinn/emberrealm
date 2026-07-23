@@ -517,6 +517,8 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  $s('invDrop').style.display = it? '':'none';
 }
 $s('invBtn').addEventListener('click',openInv);
+if($s('coopBtn')) $s('coopBtn').addEventListener('click',function(){ if(typeof openCoop==='function') openCoop(); });
+if($s('coopX')) $s('coopX').addEventListener('click',function(){ $s('coopScr').style.display='none'; });
 $s('loadBtn').addEventListener('click',function(){ if(typeof openLoadout==='function') openLoadout(); });
 $s('skillBtn').addEventListener('click',function(){ if(typeof openSkills==='function') openSkills(); });
 $s('invX').addEventListener('click',()=>{$s('invScr').style.display='none';});
@@ -723,6 +725,8 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
  $s('mapBtn').style.display='none'; $s('mapScr').style.display='none';
+ if($s('coopBtn'))$s('coopBtn').style.display='none';
+ if($s('coopScr'))$s('coopScr').style.display='none';
  if($s('loadBtn'))$s('loadBtn').style.display='none';
  if($s('loadScr'))$s('loadScr').style.display='none';
  if($s('skillBtn'))$s('skillBtn').style.display='none';
@@ -819,6 +823,7 @@ function play(){
  hudRPG();
  hideAll(); $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
  $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex';
+ if($s('coopBtn'))$s('coopBtn').style.display='flex';
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
  if($s('skillBtn'))$s('skillBtn').style.display='flex'; inGame=true;
  const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);

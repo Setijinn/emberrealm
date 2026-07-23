@@ -197,6 +197,16 @@ body.pcmode #loadBtn{top:8px;right:112px;}
 body.pcmode #skillBtn{top:8px;right:162px;}
 #mapBtn{position:fixed;bottom:14px;right:268px;z-index:15;display:none;align-items:center;justify-content:center;
  width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:17px;}
+#coopBtn{position:fixed;bottom:14px;right:324px;z-index:15;display:none;align-items:center;justify-content:center;
+ width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:17px;}
+body.pcmode #coopBtn{bottom:auto;top:8px;right:262px;}
+#coopCard{position:relative;width:min(92vw,360px);background:#141019;border:2px solid #7a4a1e;border-radius:14px;
+ padding:18px 20px 20px;box-shadow:0 14px 40px rgba(0,0,0,.7);}
+#coopCard .mbtn{width:100%;margin-top:6px;}
+.coopCode{font-family:'Pixelify Sans',monospace;font-size:18px;color:#ffce7a;text-align:center;margin:6px 0;}
+.coopCode b{font-size:26px;letter-spacing:.2em;color:#8fd48c;}
+#coopCodeIn{flex:1;min-width:0;background:#1c1626;border:1px solid #39323f;border-radius:8px;color:#f0e8d8;
+ padding:10px;font-family:'Pixelify Sans',monospace;font-size:18px;letter-spacing:.2em;text-transform:uppercase;text-align:center;}
 #mapScr{position:fixed;inset:0;z-index:22;display:none;align-items:center;justify-content:center;background:rgba(5,4,8,.55);}
 #mapCard{width:auto;max-width:97vw;max-height:96vh;overflow:auto;background:#141019;border:2px solid #7a4a1e;border-radius:14px;
  box-shadow:0 14px 50px rgba(0,0,0,.7);padding:10px 12px 12px;}
