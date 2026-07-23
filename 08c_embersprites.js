@@ -30,6 +30,8 @@ if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall
   'floor_walk','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
   'wall','planter','brazier','lamp']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
+// water tile (global — hub pool + grove lakes)
+const _waterImg=(typeof window!=='undefined')?_img('assets/tiles/water.png'):null;
 // Item icon art (PixelLab): 3 tier bands per type/material (crude 0-3 / fine 4-7 / ornate 8-11).
 // key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
 const _itemArt={};

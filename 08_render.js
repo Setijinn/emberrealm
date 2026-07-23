@@ -91,7 +91,11 @@ function drawTileG(x,y){
     ctx.fillStyle='#4f392b'; ctx.fillRect(tx+TILE/2-8,ty+3,16,15);
     ctx.fillStyle='#241812'; ctx.fillRect(tx+TILE/2-6,ty+5,12,11);
   } else if(c==='w'){
-    ctx.fillStyle=(x+y)%2?'#16303f':'#1a3848'; ctx.fillRect(tx,ty,TILE,TILE);
+    if(typeof _waterImg!=='undefined'&&_waterImg&&_waterImg.complete&&_waterImg.naturalWidth){
+      ctx.imageSmoothingEnabled=false; const o=(x*131+y*57)&3;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+      ctx.drawImage(_waterImg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+    } else { ctx.fillStyle=(x+y)%2?'#16303f':'#1a3848'; ctx.fillRect(tx,ty,TILE,TILE); }
     const wn=Math.sin(performance.now()/700+x*0.9+y*1.7);
     if(wn>0.55){ ctx.fillStyle='rgba(200,230,240,0.10)'; ctx.fillRect(tx+6,ty+TILE/2-2,TILE-12,3); }
   } else if(c==='X' || c==='F'){
