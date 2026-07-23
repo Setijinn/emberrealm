@@ -109,6 +109,11 @@ function makeSprite(rows,pal){ const h=rows.length,w=rows[0].length;
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ const ch=rows[y][x];
   if(ch==='.'||!pal[ch]) continue; c.fillStyle=pal[ch]; c.fillRect(x,y,1,1); }
  return cv2; }
+// run a draw callback counter-rotated about (x,y) so world-anchored TEXT stays upright
+// while the camera is rotated (PC view rotation). fn receives the anchor as (0,0)-local coords.
+function upright(x,y,fn){ const rot=(typeof camRot!=='undefined')?camRot:0;
+ if(!rot){ fn(x,y); return; }
+ ctx.save(); ctx.translate(x,y); ctx.rotate(-rot); fn(0,0); ctx.restore(); }
 function blit(sp,x,y,sc,flip){ ctx.save(); ctx.translate(x,y);
  if(flip) ctx.scale(-1,1);
  ctx.imageSmoothingEnabled=false;
@@ -476,10 +481,10 @@ function drawLootBag(lb,pn){
 }
 // Big reusable INTERACT button (screen space) — anchored above the interactable, clamped on-screen.
 function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt) return null;
-  const zoom=H/(viewTilesH()*TILE);
   const w=Math.round(Math.max(150,Math.min(238,W*0.34))), h=Math.round(w*0.403);  // match plate 216x87
-  const cx=Math.max(w/2+8,Math.min(W-w/2-8,(portalPrompt.x-camX)*zoom));
-  const cy=Math.max(h/2+34,(portalPrompt.y-camY)*zoom - h*0.6 - 62);
+  const sp=w2s(portalPrompt.x,portalPrompt.y);    // through the full camera transform (incl. rotation)
+  const cx=Math.max(w/2+8,Math.min(W-w/2-8,sp.x));
+  const cy=Math.max(h/2+34,sp.y - h*0.6 - 62);
   return {cx,cy,w,h,ctx:portalPrompt.ctx||''}; }
 function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
   const x=b.cx-b.w/2, y=b.cy-b.h/2; const pulse=0.6+Math.sin(performance.now()/230)*0.3;
@@ -552,12 +557,13 @@ function drawPortal(pt){
    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.big?7:4,0,6.29); ctx.fill();
  }
  if(pt.label){ const ly=pt.y-R-(pt.big?26:18);
+   upright(pt.x,ly,(lx,lly)=>{
    ctx.font=(pt.big?'bold 16px':'bold 12px')+' "Pixelify Sans",monospace'; ctx.textAlign='center';
    const w=ctx.measureText(pt.label).width+16;
-   ctx.fillStyle='rgba(12,10,16,0.82)'; ctx.fillRect(pt.x-w/2,ly-12,w,17);
-   ctx.strokeStyle=col; ctx.lineWidth=1; ctx.strokeRect(pt.x-w/2,ly-12,w,17);
-   ctx.fillStyle=col; ctx.fillText(pt.label,pt.x,ly);
-   ctx.textAlign='left'; }
+   ctx.fillStyle='rgba(12,10,16,0.82)'; ctx.fillRect(lx-w/2,lly-12,w,17);
+   ctx.strokeStyle=col; ctx.lineWidth=1; ctx.strokeRect(lx-w/2,lly-12,w,17);
+   ctx.fillStyle=col; ctx.fillText(pt.label,lx,lly);
+   ctx.textAlign='left'; }); }
 }
 // draw a PixelLab object scaled to width w with its BASE (feet) at (cx, baseY)
 function drawObjBottom(img,cx,baseY,w){ if(!img||!img.complete||!img.naturalWidth) return false;
@@ -648,9 +654,19 @@ function render(){
   const vw=W/zoom, vh=H/zoom;
   camX = roomW<=vw ? (roomW-vw)/2 : Math.max(0,Math.min(roomW-vw, player.x-vw/2));
   camY = roomH<=vh ? (roomH-vh)/2 : Math.max(0,Math.min(roomH-vh, player.y-vh/2));
-  ctx.save(); ctx.scale(zoom,zoom); ctx.translate(-camX,-camY);
-  const tx0=Math.max(0,Math.floor(camX/TILE)), ty0=Math.max(0,Math.floor(camY/TILE));
-  const tx1=Math.min(curRoom.w-1,Math.ceil((camX+vw)/TILE)), ty1=Math.min(curRoom.h-1,Math.ceil((camY+vh)/TILE));
+  ctx.save(); ctx.scale(zoom,zoom);
+  const rot=(typeof camRot!=='undefined')?camRot:0;
+  if(rot){ ctx.translate(vw/2,vh/2); ctx.rotate(rot); ctx.translate(-vw/2,-vh/2); }
+  ctx.translate(-camX,-camY);
+  // visible tile range — rotated view sweeps a wider box, so use the half-diagonal
+  let tx0,ty0,tx1,ty1;
+  if(rot){ const ccx=camX+vw/2, ccy=camY+vh/2, hd=Math.hypot(vw,vh)/2;
+    tx0=Math.max(0,Math.floor((ccx-hd)/TILE)); ty0=Math.max(0,Math.floor((ccy-hd)/TILE));
+    tx1=Math.min(curRoom.w-1,Math.ceil((ccx+hd)/TILE)); ty1=Math.min(curRoom.h-1,Math.ceil((ccy+hd)/TILE));
+  } else {
+    tx0=Math.max(0,Math.floor(camX/TILE)); ty0=Math.max(0,Math.floor(camY/TILE));
+    tx1=Math.min(curRoom.w-1,Math.ceil((camX+vw)/TILE)); ty1=Math.min(curRoom.h-1,Math.ceil((camY+vh)/TILE));
+  }
   for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++) drawTileG(tx,ty);
   if(typeof drawLairs==='function') drawLairs();
   const pn=performance.now()/1000;
@@ -708,10 +724,11 @@ function render(){
     ctx.fillStyle=e.boss?'#ff9c50':'#7dc47a';
     ctx.fillRect(e.x-e.r-2,e.y-e.r-15,(e.r+2)*2*Math.max(0,e.hp/e.maxhp),4);
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#cfc8bd';
-    if(e.wb){ ctx.fillStyle='#ff6b5a'; ctx.font='12px "Pixelify Sans",monospace';
-      ctx.fillText('\u2620 '+e.name+' \u2620',e.x,e.y-e.r-30);
-      ctx.font='10px monospace'; ctx.fillStyle='#ffd07a'; ctx.fillText('WORLD BOSS · Lv'+e.lv,e.x,e.y-e.r-19); }
-    else ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),e.x,e.y-e.r-19);
+    if(e.wb){ upright(e.x,e.y-e.r-30,(lx,ly)=>{ ctx.fillStyle='#ff6b5a'; ctx.font='12px "Pixelify Sans",monospace';
+      ctx.fillText('\u2620 '+e.name+' \u2620',lx,ly); });
+      upright(e.x,e.y-e.r-19,(lx,ly)=>{
+        ctx.font='10px monospace'; ctx.fillStyle='#ffd07a'; ctx.fillText('WORLD BOSS · Lv'+e.lv,lx,ly); }); }
+    else upright(e.x,e.y-e.r-19,(lx,ly)=>ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),lx,ly));
     ctx.textAlign='left';
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);
@@ -739,7 +756,7 @@ function render(){
   }
   ctx.font='13px monospace'; ctx.textAlign='center';
   for(const t2 of texts){ ctx.globalAlpha=Math.min(1,t2.life*1.4); ctx.fillStyle=t2.col;
-    ctx.fillText(t2.txt,t2.x,t2.y); }
+    upright(t2.x,t2.y,(lx,ly)=>ctx.fillText(t2.txt,lx,ly)); }
   ctx.globalAlpha=1; ctx.textAlign='left';
   const aa=player.aim||0;
   const chW=curChar();

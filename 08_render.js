@@ -1,5 +1,19 @@
 // ---------- render ----------
 let camX=0,camY=0;
+// ---- camera rotation (PC only): hold Z/C to rotate the view, X to reset ----
+// camRotT = target angle (driven by keys in update), camRot = smoothed display angle.
+let camRot=0, camRotT=0;
+// screen <-> world through the full camera transform (zoom + rotation about view centre)
+function s2w(sx,sy){ const zoom=H/(viewTilesH()*TILE);
+  let x=sx/zoom, y=sy/zoom;
+  if(camRot){ const cx=W/zoom/2, cy=H/zoom/2, c=Math.cos(-camRot), s=Math.sin(-camRot),
+    dx=x-cx, dy=y-cy; x=cx+dx*c-dy*s; y=cy+dx*s+dy*c; }
+  return {x:camX+x, y:camY+y}; }
+function w2s(wx,wy){ const zoom=H/(viewTilesH()*TILE);
+  let x=wx-camX, y=wy-camY;
+  if(camRot){ const cx=W/zoom/2, cy=H/zoom/2, c=Math.cos(camRot), s=Math.sin(camRot),
+    dx=x-cx, dy=y-cy; x=cx+dx*c-dy*s; y=cy+dx*s+dy*c; }
+  return {x:x*zoom, y:y*zoom}; }
 const VIEW_TILES_H=10;
 // PC shows a wider slice of the world (mouse+keyboard play felt too zoomed in)
 function viewTilesH(){ return (typeof inputMode!=='undefined' && inputMode==='pc') ? 13.5 : VIEW_TILES_H; }

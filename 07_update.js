@@ -10,6 +10,17 @@ function update(dt){
     const kv=keyMove();
     if(kv) moveCircle(player, kv.x*sp*dt, kv.y*sp*dt);
   }
+  // camera rotation (PC only): hold Z/C to spin the view, X snaps back to north
+  if(typeof camRot!=='undefined'){
+    if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof keys!=='undefined'){
+      const RSPD=2.1;
+      if(keys['z']) camRotT-=RSPD*dt;
+      if(keys['c']) camRotT+=RSPD*dt;
+      if(keys['x']) camRotT=0;
+    } else camRotT=0;                                    // touch mode: always north-up
+    camRot+=(camRotT-camRot)*Math.min(1,dt*10);          // smooth follow
+    if(Math.abs(camRot-camRotT)<0.0008 && camRotT===0) camRot=0;
+  }
   player.inv=Math.max(0,player.inv-dt);
   if(typeof updateAbilCooldowns==='function') updateAbilCooldowns(dt);      // ability cooldowns
   if(player.atkT>0) player.atkT-=dt;                                       // attack animation timer
