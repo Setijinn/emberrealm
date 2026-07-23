@@ -346,7 +346,10 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
   if((player.mp||0)<a.mp){ texts.push({x:player.x,y:player.y-30,txt:'◇ low mana',col:'#7ab8d4',life:0.7}); navigator.vibrate&&navigator.vibrate(20); return; }
   player.mp-=a.mp; player.acd[a.id]=a.cd;
   const ctx={ x:(a.ground&&wx!=null)?wx:player.x, y:(a.ground&&wy!=null)?wy:player.y, aim:player.aim||0, AP:player.abilPow||1, dmg:player.dmg, cls:ch.cls };
+  const _n0=pShots.length;
   try{ a.cast(ctx); }catch(e){ if(typeof showErr==='function') showErr(e); }
+  // tag this cast's projectiles for the forge — every ability has its own projectile look
+  for(let i=_n0;i<pShots.length;i++){ if(!pShots[i].pk) pShots[i].pk='a:'+a.id; }
   navigator.vibrate&&navigator.vibrate(50);
 }
 

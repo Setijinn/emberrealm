@@ -137,7 +137,58 @@ function drawTileG(x,y){
 }
 function shadow(x,y,r){ ctx.fillStyle='rgba(0,0,0,.35)';
  ctx.beginPath(); ctx.ellipse(x,y,r,r*0.45,0,0,6.29); ctx.fill(); }
+// ---------- projectile forge ----------
+// Procedural per-key projectile art: 12 base shapes x hashed palette/size/detail/glow.
+// Every (class,weapon,tier,rarity) combo, every ability, and every enemy family gets its
+// own key -> its own look (hundreds of distinct projectile types), cached as tiny sprites.
+const _projCache={};
+function _pfh(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function projSprite(key, baseCol, coreCol){
+  let c=_projCache[key]; if(c) return c;
+  const h=_pfh(key), S=30;
+  const cv2=document.createElement('canvas'); cv2.width=S; cv2.height=S;
+  const g=cv2.getContext('2d'); g.translate(S/2,S/2);
+  const hue=h%360;
+  const base=baseCol||('hsl('+hue+',74%,56%)');
+  const core=coreCol||('hsl('+((hue+45)%360)+',95%,84%)');
+  const shape=(h>>3)%12, rr=6+((h>>7)%5), sp=4+((h>>10)%5);
+  // soft glow halo
+  const gl=g.createRadialGradient(0,0,1,0,0,S/2);
+  gl.addColorStop(0,base); gl.addColorStop(1,'rgba(0,0,0,0)');
+  g.globalAlpha=0.32; g.fillStyle=gl; g.fillRect(-S/2,-S/2,S,S); g.globalAlpha=1;
+  g.fillStyle=base; g.strokeStyle='rgba(0,0,0,0.4)'; g.lineWidth=1.4;
+  const P=(pts)=>{ g.beginPath(); g.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) g.lineTo(pts[i][0],pts[i][1]); g.closePath(); g.fill(); g.stroke(); };
+  switch(shape){
+    case 0: g.beginPath(); g.arc(0,0,rr,0,6.29); g.fill(); g.stroke(); break;                      // orb
+    case 1: P([[rr*1.5,0],[-rr*0.8,rr*0.8],[-rr*0.4,0],[-rr*0.8,-rr*0.8]]); break;                 // dart
+    case 2: P([[rr*1.35,0],[0,rr*0.85],[-rr*1.35,0],[0,-rr*0.85]]); break;                          // diamond
+    case 3: P([[rr*1.5,0],[rr*0.2,rr*0.5],[-rr*0.6,rr*0.25],[-rr*1.2,rr*0.7],[-rr*0.7,0],[-rr*1.2,-rr*0.7],[-rr*0.6,-rr*0.25],[rr*0.2,-rr*0.5]]); break; // bolt
+    case 4: g.beginPath(); g.arc(0,0,rr,-1.1,1.1); g.arc(rr*0.55,0,rr*0.72,1.25,-1.25,true); g.closePath(); g.fill(); g.stroke(); break; // crescent blade
+    case 5: { g.beginPath(); for(let i=0;i<sp*2;i++){ const a=i*Math.PI/sp, d=(i%2)?rr*0.45:rr*1.15; g.lineTo(Math.cos(a)*d,Math.sin(a)*d);} g.closePath(); g.fill(); g.stroke(); break; } // star
+    case 6: g.beginPath(); g.arc(0,0,rr,0,6.29); g.arc(0,0,rr*0.5,0,6.29,true); g.fill('evenodd'); g.stroke(); break; // ring
+    case 7: P([[rr*1.7,0],[-rr*1.1,rr*0.3],[-rr*1.4,0],[-rr*1.1,-rr*0.3]]); break;                  // needle
+    case 8: P([[rr*1.2,0],[-rr*0.9,rr*0.95],[-rr*0.9,-rr*0.95]]); break;                            // tri shard
+    case 9: g.beginPath(); g.arc(-rr*0.45,0,rr*0.62,0,6.29); g.arc(rr*0.45,0,rr*0.62,0,6.29); g.fill(); g.stroke(); break; // twin orbs
+    case 10:P([[rr*1.3,rr*0.2],[rr*0.3,rr*0.75],[-rr*1.2,rr*0.35],[-rr*0.5,-rr*0.2],[-rr*1.0,-rr*0.8],[rr*0.4,-rr*0.6]]); break; // jagged shard
+    default:{ g.save(); g.rotate(Math.PI/4); g.fillRect(-rr*0.8,-rr*0.8,rr*1.6,rr*1.6); g.strokeRect(-rr*0.8,-rr*0.8,rr*1.6,rr*1.6); g.restore(); break; } // rune square
+  }
+  // core detail
+  g.fillStyle=core;
+  if(shape===6){ g.beginPath(); g.arc(0,0,rr*0.28,0,6.29); g.fill(); }
+  else if(shape===9){ g.beginPath(); g.arc(-rr*0.45,0,rr*0.26,0,6.29); g.arc(rr*0.45,0,rr*0.26,0,6.29); g.fill(); }
+  else { g.beginPath(); g.arc(rr*0.15,0,Math.max(1.6,rr*0.34),0,6.29); g.fill(); }
+  _projCache[key]=cv2; return cv2;
+}
 function drawShot(s,col,core){
+ if(s.pk){                                   // forged projectile: sprite rotated to its heading
+   const sp2=projSprite(s.pk,s.pc,s.pcore), ang=Math.atan2(s.vy,s.vx), sc=Math.max(0.7,(s.r||5)/6);
+   ctx.globalAlpha=0.35; ctx.drawImage(sp2,(s.px+s.x)/2-15*sc*0.7,(s.py+s.y)/2-15*sc*0.7,30*sc*0.7,30*sc*0.7);
+   ctx.globalAlpha=1;
+   ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
+   ctx.drawImage(sp2,-15*sc,-15*sc,30*sc,30*sc); ctx.restore();
+   if(s.crit){ ctx.globalAlpha=0.55; ctx.strokeStyle='#ffd23d'; ctx.lineWidth=2;
+     ctx.beginPath(); ctx.arc(s.x,s.y,9*sc,0,6.29); ctx.stroke(); ctx.globalAlpha=1; }
+   return; }
  ctx.fillStyle=col; ctx.globalAlpha=0.4;
  ctx.fillRect((s.px+s.x)/2-3,(s.py+s.y)/2-3,6,6);
  ctx.globalAlpha=1;

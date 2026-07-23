@@ -253,6 +253,11 @@ const BOSS_ART=[
 const sprBoss=BOSS_ART.map(a=>makeSprite(a.r,a.p));
 // themed enemy projectile
 function drawEShot(s){
+ if(s.pk){ const sp2=projSprite(s.pk,s.col||undefined,s.core||undefined);
+   const ang=Math.atan2(s.vy,s.vx), sc=Math.max(0.75,(s.r||6)/6);
+   ctx.globalAlpha=0.32; ctx.drawImage(sp2,(s.px+s.x)/2-10*sc,(s.py+s.y)/2-10*sc,20*sc,20*sc); ctx.globalAlpha=1;
+   ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
+   ctx.drawImage(sp2,-15*sc,-15*sc,30*sc,30*sc); ctx.restore(); return; }
  const col=s.col||'#e2604c', core=s.core||'#ffc0b0', r=s.r||6, ang=Math.atan2(s.vy,s.vx);
  ctx.globalAlpha=0.3; ctx.fillStyle=col;
  ctx.beginPath(); ctx.arc((s.px+s.x)/2,(s.py+s.y)/2,r*0.7,0,6.29); ctx.fill(); ctx.globalAlpha=1;
@@ -643,6 +648,19 @@ function render(){
     ctx.beginPath(); ctx.arc(z.x,z.y,z.r,0,6.29); ctx.fill();
     ctx.globalAlpha=0.55; ctx.strokeStyle='#ffd07a'; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
   for(const gp of groundPortals){ const pp=performance.now()/220;
+    // dungeon drops render as a miniature of that zone boss's DEN (the lair centrepiece art);
+    // the EXIT portal (and zones whose den art hasn't shipped) keep the swirl rings.
+    const den=(!gp.home && typeof _lair!=='undefined')?_lair[gp.ring]:null;
+    if(den && den.naturalWidth){
+      const w=74, h=w*den.height/den.width, bob=Math.sin(pp*0.9)*2;
+      const glw=0.30+Math.sin(pp*1.6)*0.12;
+      ctx.fillStyle='rgba(192,122,212,'+glw.toFixed(2)+')';
+      ctx.beginPath(); ctx.ellipse(gp.x,gp.y+8,w*0.5,w*0.2,0,0,6.29); ctx.fill();
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(den, gp.x-w/2, gp.y+10-h+bob, w, h);
+      ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#e8d8ff';
+      ctx.fillText(GBOSS[gp.ring]?GBOSS[gp.ring].dn:'DUNGEON',gp.x,gp.y+10-h-6+bob); ctx.textAlign='left';
+      continue; }
     const cols=gp.home?['#7dc47a','#4f8a4c','#d8ffd8']:['#c07ad4','#8a5ac0','#e8d8ff'];
     for(let i=0;i<3;i++){ ctx.strokeStyle=cols[i]; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(gp.x,gp.y,11+i*7+Math.sin(pp+i*2)*3,0,6.29); ctx.stroke(); }
