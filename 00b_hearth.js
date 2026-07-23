@@ -38,10 +38,10 @@
  [[12,5],[12,18],[30,5],[30,18]].forEach(p=>put(hub,p[0],p[1],'l'));
  // south garden: planters framing the spawn
  [[18,18],[24,18],[17,21],[25,21],[20,22],[22,22]].forEach(p=>put(hub,p[0],p[1],'h'));
- // flowers hug each portal — but ONLY on plain floor, never on a walkway,
- // so every portal keeps its road approach clear (runs AFTER the roads are paved)
+ // flowers ring each portal at a small remove (radius 2) — ONLY on plain floor,
+ // never on a walkway, so every portal keeps its road approach clear
  function dressPortal(px,py){
-  for(const [dx,dy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]){
+  for(const [dx,dy] of [[-2,-2],[0,-2],[2,-2],[-2,0],[2,0],[-2,2],[0,2],[2,2]]){
    const nx=px+dx, ny=py+dy;
    if(nx>0&&ny>0&&nx<HW-1&&ny<HH-1&&hub[ny][nx]==='f') put(hub,nx,ny,'h'); } }
  dressPortal(21,2); dressPortal(6,5); dressPortal(35,5); dressPortal(6,20); dressPortal(35,20);
