@@ -683,14 +683,17 @@ function render(){
   for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++) drawTileG(tx,ty);
   if(typeof drawLairs==='function') drawLairs();
   const pn=performance.now()/1000;
+  // light sources: soft additive halos only — the FIRE itself is the sprite art
+  // (brazier/lamp) plus the ember particles; no more painted orange orbs
   if(curRoom.glows) for(const gl of curRoom.glows){
-    const fl=1+Math.sin(pn*9+gl.x)*0.16;
-    if(gl.t==='H'){
-      ctx.fillStyle='#ff8c3a'; ctx.beginPath(); ctx.arc(gl.x,gl.y+2,12*fl,0,6.29); ctx.fill();
-      ctx.fillStyle='#ffd07a'; ctx.beginPath(); ctx.arc(gl.x,gl.y-2,6.5*fl,0,6.29); ctx.fill();
-    } else if(gl.t==='l'){
-      ctx.fillStyle='#fff0c0'; ctx.fillRect(gl.x-4,gl.y-17+Math.sin(pn*11+gl.x),8,9);
-    } }
+    const fl=1+Math.sin(pn*9+gl.x)*0.10, warm=gl.t==='H';
+    const gy2=gl.y-(warm?8:16), rr=(warm?32:24)*fl;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const gh=ctx.createRadialGradient(gl.x,gy2,2,gl.x,gy2,rr);
+    gh.addColorStop(0,warm?'rgba(255,150,60,0.34)':'rgba(255,230,160,0.28)');
+    gh.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gh; ctx.beginPath(); ctx.arc(gl.x,gy2,rr,0,6.29); ctx.fill();
+    ctx.restore(); }
   if(curRoom.portals) for(const pt of curRoom.portals) drawPortal(pt);
   if(curRoom.pillars) for(const pl of curRoom.pillars) drawPillar(pl);
   // dungeon objective props: essence orbs (collect) + dream seals (switch)

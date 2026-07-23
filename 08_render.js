@@ -126,12 +126,25 @@ function drawTileG(x,y){
     ctx.fillStyle='#84422a'; ctx.fillRect(tx,ty,TILE,11);
     ctx.fillStyle='#5c3826'; ctx.fillRect(tx+6,ty+19,13,13);
   } else if(c==='H'){
+    // real brazier sprite everywhere (grove, sub-rooms) — not just town
+    const bimg=(typeof _hearth!=='undefined')?_hearth.brazier:null;
+    if(bimg&&bimg.complete&&bimg.naturalWidth){ ctx.fillStyle='rgba(0,0,0,.25)';
+      ctx.beginPath(); ctx.ellipse(tx+TILE/2,ty+TILE-3,15,5,0,0,6.29); ctx.fill();
+      drawObjBottom(bimg,tx+TILE/2,ty+TILE-1,40);
+    } else {
     ctx.fillStyle='#55402f'; ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2,TILE*0.46,0,6.29); ctx.fill();
     ctx.fillStyle='#2b1f18'; ctx.beginPath(); ctx.arc(tx+TILE/2,ty+TILE/2,TILE*0.32,0,6.29); ctx.fill();
+    }
   } else if(c==='l'){
+    const limg=(typeof _hearth!=='undefined')?_hearth.lamp:null;
+    if(limg&&limg.complete&&limg.naturalWidth){ ctx.fillStyle='rgba(0,0,0,.25)';
+      ctx.beginPath(); ctx.ellipse(tx+TILE/2,ty+TILE-3,12,4,0,0,6.29); ctx.fill();
+      drawObjBottom(limg,tx+TILE/2,ty+TILE-1,34);
+    } else {
     ctx.fillStyle='#3a2a20'; ctx.fillRect(tx+TILE/2-3,ty+10,6,TILE-14);
     ctx.fillStyle='#4f392b'; ctx.fillRect(tx+TILE/2-8,ty+3,16,15);
     ctx.fillStyle='#241812'; ctx.fillRect(tx+TILE/2-6,ty+5,12,11);
+    }
   } else if(c==='w'){
     if(typeof _waterImg!=='undefined'&&_waterImg&&_waterImg.complete&&_waterImg.naturalWidth){
       // NO per-cell flip — the ripple pattern must stay aligned or the pool checkerboards
