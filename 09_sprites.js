@@ -827,9 +827,16 @@ function render(){
       ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
     if(e.flash>0){ ctx.globalAlpha=Math.min(1,e.flash*8); ctx.fillStyle='#fff';
       ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
-    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(e.x-e.r-2,e.y-e.r-15,(e.r+2)*2,4);
-    ctx.fillStyle=e.boss?'#ff9c50':'#7dc47a';
-    ctx.fillRect(e.x-e.r-2,e.y-e.r-15,(e.r+2)*2*Math.max(0,e.hp/e.maxhp),4);
+    // hp bar: plain fill under an ornate display-cover frame, kept upright
+    upright(e.x,e.y-e.r-15,(bx,by)=>{
+      const bw=(e.r+2)*2, bh=e.boss?6:4;
+      ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(bx-bw/2,by-bh/2,bw,bh);
+      ctx.fillStyle=e.boss?'#ff9c50':'#7dc47a';
+      ctx.fillRect(bx-bw/2,by-bh/2,bw*Math.max(0,e.hp/e.maxhp),bh);
+      if(_hpbarImg&&_hpbarImg.complete&&_hpbarImg.naturalWidth){
+        ctx.imageSmoothingEnabled=false;
+        const fw=bw*1.22, fh=Math.max(10,bh*2.4);
+        ctx.drawImage(_hpbarImg,bx-fw/2,by-fh/2,fw,fh); } });
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#cfc8bd';
     if(e.wb){ upright(e.x,e.y-e.r-30,(lx,ly)=>{ ctx.fillStyle='#ff6b5a'; ctx.font='12px "Pixelify Sans",monospace';
       ctx.fillText('\u2620 '+e.name+' \u2620',lx,ly); });
