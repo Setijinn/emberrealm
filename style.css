@@ -286,3 +286,9 @@ body.pcmode #coopBtn{bottom:auto;top:8px;right:262px;}
  background:#0f0c14;border:1px solid #2a2433;border-radius:8px;padding:6px 10px;}
 .shopprice.free{color:#7dc47a;}
 .shopnote{font-size:11px;color:#8a8494;text-align:center;padding:5px 8px;font-style:italic;}
+
+/* ornate borders for every HUD button (user: "give all the buttons a border") */
+#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#devBtn2{
+ border:2px solid #8a6a34;
+ box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
+}

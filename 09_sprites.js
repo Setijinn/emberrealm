@@ -978,8 +978,25 @@ function render(){
   if(typeof drawAbilButtons==='function') drawAbilButtons();
   // floating USE prompt above the hero when near a portal/pillar (button-gated)
   drawPortalPrompt();
+  // big boss bar, top of screen — shows from the first hit on a boss
+  if(typeof bossBar!=='undefined' && bossBar){
+    const bw=Math.min(W*0.62,540), bh=15, bx=W/2, by=34;
+    ctx.textAlign='center'; ctx.font='bold 15px "Pixelify Sans",monospace';
+    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(bossBar.name||'CHAMPION',bx+1,by-8);
+    ctx.fillStyle='#ff9c50'; ctx.fillText(bossBar.name||'CHAMPION',bx,by-9);
+    ctx.fillStyle='rgba(8,6,10,.82)'; ctx.fillRect(bx-bw/2,by,bw,bh);
+    const fr=Math.max(0,bossBar.hp/bossBar.maxhp);
+    const grd=ctx.createLinearGradient(bx-bw/2,0,bx+bw/2,0);
+    grd.addColorStop(0,'#c03a2a'); grd.addColorStop(1,'#ff9c50');
+    ctx.fillStyle=grd; ctx.fillRect(bx-bw/2,by,bw*fr,bh);
+    if(_hpbarImg&&_hpbarImg.complete&&_hpbarImg.naturalWidth){
+      ctx.imageSmoothingEnabled=false;
+      const fw=bw*1.06, fh=bh*2.3;
+      ctx.drawImage(_hpbarImg,bx-fw/2,by+bh/2-fh/2,fw,fh); }
+    ctx.textAlign='left';
+  }
   // dungeon objective banner (screen space): the first unfinished chamber's task
-  if(curRoom.dungeon && curRoom.objs){
+  if(curRoom.dungeon && curRoom.objs && !(typeof bossBar!=='undefined'&&bossBar)){
     const o=curRoom.objs.find(x=>!x.done);
     ctx.textAlign='center';
     if(o){ let prog=o.type==='waves'?'':('  '+o.got+' / '+o.need);

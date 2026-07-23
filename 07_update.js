@@ -241,6 +241,7 @@ function update(dt){
     for(const e of enemies){ if(e!==s.lastHit && Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
       const dmg=Math.round((s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1));
       e.hp-=dmg; e.flash=0.12; s.lastHit=e; chargeRes('hit');
+      if(e.boss) bossBar=e;   // big top-screen bar from the first hit on
       texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:s.crit?dmg+'!':dmg,col:s.crit?'#ffd23d':'#ffe9b0',life:s.crit?0.85:0.55});
       if(player.ls) player.hp=Math.min(player.maxhp,player.hp+dmg*player.ls);
       if(s.slow) e.slowT=1;
@@ -335,6 +336,9 @@ function update(dt){
   // find the nearest interactable portal/pillar and show a USE prompt above the hero.
   // Nothing auto-fires anymore — the player must press the prompt (see usePortalPrompt).
   // portalLock suppresses the prompt right after interacting, until you step clear.
+  // boss bar vanishes when the boss dies, you leave the room, or you get far away
+  if(bossBar && (bossBar.hp<=0 || enemies.indexOf(bossBar)<0
+      || Math.hypot(player.x-bossBar.x,player.y-bossBar.y)>1100)) bossBar=null;
   portalPrompt=null;
   if(!portalLock){ let _pbest=1e9;
     if(curRoom.portals) for(const pt of curRoom.portals){ const d=Math.hypot(pt.x-player.x,pt.y-player.y);

@@ -4,6 +4,7 @@ let curRoom=null, enemies=[], pShots=[], eShots=[], particles=[], embers=[];
 let rpg=null, texts=[], respawnT=1, shopNear=false, loots=[];
 let allies=[], zones=[], fx=[], res=0, lastShotT=99, abT=0, portalLock=false, curRegionN='';
 let portalPrompt=null;   // {kind,x,y,label,...} nearest interactable portal/pillar (USE-gated)
+let bossBar=null;        // boss whose big top-screen hp bar is showing (set on first hit)
 let arenaActive=false, arenaWave=0, arenaCd=0;
 // ---- world bosses + dungeons ----
 // 9 zone bosses (bands 0-8), rethemed for the vertical climb. Sprites: assets/mobs/boss_<band>.png.
