@@ -285,9 +285,21 @@ const DOBJ_NOUN={
  7:{slay:'War Idols',   collect:'Cinder Crowns',switch:'Gate Braziers'},
  8:{slay:'Crown Sigils',collect:'Gold Motes',   switch:'Titan Locks'},
 };
-const DOBJ_PLAN={ 0:['slay','switch'],1:['collect','waves'],2:['switch','slay'],
- 3:['switch','waves'],4:['waves','collect'],5:['slay','waves'],6:['collect','slay'],
- 7:['waves','waves'],8:['waves','slay'] };
+// Every mind has ONE signature puzzle (alternating with combat chambers):
+// regrow / chase / order / simon / hold / relay / candles / ambush / timing.
+const DPUZ=['regrow','chase','order','simon','hold','relay','candles','ambush','timing'];
+const DPUZ_LABEL=[
+ 'Sever the Root-Hearts before the grove reknits',
+ 'Catch the fleeing Wisp',
+ 'Open the Drain Valves — in order',
+ 'Repeat the Rune Plates',
+ 'Channel the Gale Circles',
+ 'Ember Relay — keep the flame moving',
+ 'Keep every Grave Candle lit',
+ 'Shatter the War Idols — survive the ambush',
+ 'Awaken the Titan Locks as they glow'];
+const DOBJ_PLAN={};
+for(let r=0;r<9;r++) DOBJ_PLAN[r]=[DPUZ[r],'waves'];
 function genDungeon(ring){
  const _n=rooms['G'].rings.names[ring];
  // the mind is a step beyond the zone's peak — "matching but a little more difficult"
@@ -345,24 +357,30 @@ function genDungeon(ring){
  }
  const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
   glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:chs[0].cx,py:chs[0].cy,
-  orbs:[], switches:[], objs:[], ddec:[] };
- // objectives: chambers 1..NCH-2 each lock the NEXT gate behind a themed task
- const otypes=DOBJ_PLAN[ring]||['waves','waves'], nouns=DOBJ_NOUN[ring]||{};
+  orbs:[], switches:[], plates:[], circles:[], chases:[], objs:[], ddec:[] };
+ // objectives: chambers 1..NCH-2 alternate the ring's SIGNATURE puzzle with combat
+ const otypes=DOBJ_PLAN[ring]||['waves','waves'];
  for(let ci=1;ci<NCH-1;ci++){ const c=chs[ci], oi=ci-1;
   const type=otypes[oi%otypes.length];
-  const obj={type:type,ch:oi,need:3,got:0,done:false,gateCells:gatesByCh[oi]||[],
+  const obj={type:type,mode:type,ch:oi,need:3,got:0,done:false,gateCells:gatesByCh[oi]||[],
    bounds:{x0:c.cx-c.hw,y0:c.cy-c.hh,x1:c.cx+c.hw,y1:c.cy+c.hh},
-   label:type==='waves'?'Slay every phantom'
-        :((type==='slay'?'Destroy the ':type==='collect'?'Gather the ':'Awaken the ')+(nouns[type]||'Seals'))};
+   label:type==='waves'?'Slay every phantom':DPUZ_LABEL[ring],
+   spots:[], rgT:0, snuffT:0, demoT:0, timer:0};
   if(type!=='waves'){
+   // every puzzle builds on 3 seeded spots (identical rng pattern keeps sim valid)
    for(let q=0;q<3;q++){ const sx=c.cx-c.hw+3+Math.floor(rng()*(c.hw*2-6));
     const sy=c.cy-c.hh+3+Math.floor(rng()*(c.hh*2-6));
     for(let yy=sy-1;yy<=sy+1;yy++)for(let xx=sx-1;xx<=sx+1;xx++)
      if(yy>0&&xx>0&&yy<H2-1&&xx<W2-1&&g[yy][xx]==='W') g[yy][xx]='.';
-    if(type==='slay') room.spawns.push({t:'N',x:sx,y:sy,ch:oi});
-    else if(type==='collect') room.orbs.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,got:false});
-    else room.switches.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,on:false,idx:q}); }
-   if(type==='switch') obj.label+=' — in order';   // seals are an ORDER puzzle
+    const px2=(sx+.5)*TILE, py2=(sy+.5)*TILE;
+    obj.spots.push({tx:sx,ty:sy,x:px2,y:py2});
+    if(type==='regrow'||type==='ambush') room.spawns.push({t:'N',x:sx,y:sy,ch:oi});
+    else if(type==='order'||type==='relay'||type==='timing')
+     room.switches.push({x:px2,y:py2,ch:oi,on:false,idx:q,mode:type});
+    else if(type==='simon'||type==='candles')
+     room.plates.push({x:px2,y:py2,ch:oi,on:false,idx:q,mode:type});
+    else if(type==='hold') room.circles.push({x:px2,y:py2,ch:oi,prog:0,lit:false}); }
+   if(type==='chase') room.chases.push({ch:oi,x:obj.spots[0].x,y:obj.spots[0].y,wt:0});
   } else obj.need=-1;
   // mob packs in this chamber (denser deeper into the mind)
   const nm=3+Math.floor(rng()*2)+Math.floor(ci*0.7);

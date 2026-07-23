@@ -19,19 +19,23 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   if(p.kind!=='loot') portalLock=true;   // teleports suppress re-prompt; loot doesn't
   if(p.kind==='switch'){ const sw=p.sw; if(sw&&!sw.on){
     const ob=curRoom.objs&&curRoom.objs[sw.ch];
-    if(ob&&!ob.done&&sw.idx!==undefined&&sw.idx!==ob.got){
-      // wrong seal — the mind resets the puzzle and sends phantoms
-      for(const s2 of curRoom.switches) if(s2.ch===sw.ch) s2.on=false;
-      ob.got=0; msg('THE SEALS RESET','wrong order — phantoms stir');
-      for(let q=0;q<2;q++){ const a=Math.random()*6.283;
-        const ss=safeSpot(curRoom,sw.x+Math.cos(a)*90,sw.y+Math.sin(a)*90);
-        enemies.push(makeEnemy({t:'c',x:Math.floor(ss.x/TILE),y:Math.floor(ss.y/TILE),ch:sw.ch})); }
-      if(typeof emitP==='function') for(let q=0;q<10;q++){ const a=Math.random()*6.283;
-        emitP(sw.x,sw.y-8,{vx:Math.cos(a)*70,vy:Math.sin(a)*70-20,life:0.5,col:'#ff5a4d',sz:3,glow:true}); }
-      portalLock=false; return; }
-    sw.on=true;
-    if(ob&&!ob.done){ ob.got++;
+    if(ob&&!ob.done){
+      if(sw.mode==='timing'){
+        // Titan Locks: only while the seal glows
+        if(!dunSealLit(sw.idx)){ msg('THE LOCK RESISTS','strike while it glows');
+          _dunPhantoms(sw.x,sw.y,sw.ch,1); portalLock=false; return; } }
+      else if(sw.idx!==undefined&&sw.idx!==ob.got){
+        // wrong seal (order / relay) — the mind resets the chain and sends phantoms
+        for(const s2 of curRoom.switches) if(s2.ch===sw.ch) s2.on=false;
+        ob.got=0; ob.timer=0; msg('THE SEALS RESET','wrong order — phantoms stir');
+        _dunPhantoms(sw.x,sw.y,sw.ch,2);
+        if(typeof emitP==='function') for(let q=0;q<10;q++){ const a=Math.random()*6.283;
+          emitP(sw.x,sw.y-8,{vx:Math.cos(a)*70,vy:Math.sin(a)*70-20,life:0.5,col:'#ff5a4d',sz:3,glow:true}); }
+        portalLock=false; return; }
+      sw.on=true; ob.got++;
+      if(sw.mode==='relay') ob.timer=8;   // the flame is moving — reach the next brazier
       texts.push({x:sw.x,y:sw.y-18,txt:ob.got+'/'+ob.need,col:'#ffe08a',life:1.0}); }
+    else sw.on=true;
     if(typeof emitP==='function') for(let q=0;q<10;q++){ const a=Math.random()*6.283;
       emitP(sw.x,sw.y-8,{vx:Math.cos(a)*60,vy:Math.sin(a)*60-30,life:0.6,col:'#ffd07a',sz:3,glow:true}); } }
     portalLock=false; return; }

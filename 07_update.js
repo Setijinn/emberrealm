@@ -39,15 +39,94 @@ function ambientParts(dt){
 }
 // ---- Awakened-dungeon objective engine ----
 // Checks each locked chamber's objective; completing one melts its gate open.
-function dunObjectives(){ const R=curRoom; if(!R||!R.dungeon||!R.objs) return;
+function _dunSparkle(x,y,col){ if(typeof emitP!=='function') return;
+  for(let q=0;q<8;q++){ const a=Math.random()*6.283;
+    emitP(x,y,{vx:Math.cos(a)*80,vy:Math.sin(a)*80-20,life:0.5,col:col||'#bfe6f5',sz:3,glow:true}); } }
+function _dunPhantoms(x,y,ch,n){ for(let q=0;q<(n||2);q++){ const a=Math.random()*6.283;
+  const ss=safeSpot(curRoom,x+Math.cos(a)*90,y+Math.sin(a)*90);
+  enemies.push(makeEnemy({t:'c',x:Math.floor(ss.x/TILE),y:Math.floor(ss.y/TILE),ch:ch})); } }
+function _chAlive(ch){ let n=0;
+  for(const e of enemies) if(e.ch===ch&&e.type!=='B'&&e.type!=='N'&&!e.summoned) n++; return n; }
+// seal "glow phase" for the Titan Locks timing puzzle (shared with render + interact)
+function dunSealLit(idx){ return ((performance.now()/3000+idx*0.33)%1)<0.45; }
+function dunObjectives(dt){ const R=curRoom; if(!R||!R.dungeon||!R.objs) return;
   for(const o of R.objs){ if(o.done) continue;
     if(o.type==='waves'){
       // only counts once the player is inside that chamber (no pre-clearing from the door)
       const px=player.x/TILE, py=player.y/TILE, b=o.bounds;
       if(!b || px<b.x0||px>b.x1||py<b.y0||py>b.y1) continue;
-      let alive=0; for(const e of enemies) if(e.ch===o.ch&&e.type!=='B'&&e.type!=='N'&&!e.summoned) alive++;
-      if(alive===0) dunOpenGate(o);
-    } else if(o.got>=o.need) dunOpenGate(o); } }
+      if(_chAlive(o.ch)===0) dunOpenGate(o);
+      continue; }
+    const m=o.mode;
+    if(m==='regrow'||m==='ambush'){
+      let aliveN=0; for(const e of enemies) if(e.type==='N'&&e.ch===o.ch) aliveN++;
+      o.got=o.need-aliveN;
+      if(m==='regrow'){
+        if(o.got>0&&o.got<o.need){ o.rgT+=dt;
+          if(o.rgT>9){ o.rgT=0;
+            for(const s of o.spots){ let has=false;
+              for(const e of enemies) if(e.type==='N'&&e.ch===o.ch&&Math.abs(e.x-s.x)<22&&Math.abs(e.y-s.y)<22){has=true;break;}
+              if(!has){ enemies.push(makeEnemy({t:'N',x:s.tx,y:s.ty,ch:o.ch})); _dunSparkle(s.x,s.y,'#9fd08a'); } }
+            msg('THE GROVE REKNITS','sever all three quickly'); continue; } }
+        else o.rgT=0; }
+      if(o.got>=o.need){
+        if(m==='ambush'&&_chAlive(o.ch)>0) continue;   // idols down — now survive it
+        dunOpenGate(o); }
+      continue; }
+    if(m==='chase'){ const cz=R.chases.find(z=>z.ch===o.ch); if(!cz) continue;
+      const d=Math.hypot(player.x-cz.x,player.y-cz.y);
+      cz.wt+=dt;
+      if(d<300){ const a=Math.atan2(cz.y-player.y,cz.x-player.x)+Math.sin(cz.wt*3)*0.6;
+        const nx=cz.x+Math.cos(a)*150*dt, ny=cz.y+Math.sin(a)*150*dt, b=o.bounds;
+        const cx2=Math.max((b.x0+1)*TILE,Math.min((b.x1)*TILE,nx));
+        const cy2=Math.max((b.y0+1)*TILE,Math.min((b.y1)*TILE,ny));
+        if(!solid(cx2,cy2)){ cz.x=cx2; cz.y=cy2; } }
+      if(typeof emitP==='function'&&Math.random()<10*dt)
+        emitP(cz.x,cz.y,{vx:0,vy:0,life:0.5,col:'#bfe6f5',sz:3,glow:true});
+      if(d<32){ o.got++;
+        texts.push({x:cz.x,y:cz.y-16,txt:o.got+'/'+o.need,col:'#ffe08a',life:1});
+        _dunSparkle(cz.x,cz.y);
+        let far=o.spots[0],fd=-1;
+        for(const s of o.spots){ const dd=Math.hypot(s.x-player.x,s.y-player.y); if(dd>fd){fd=dd;far=s;} }
+        cz.x=far.x; cz.y=far.y; }
+      if(o.got>=o.need){ R.chases=R.chases.filter(z=>z!==cz); dunOpenGate(o); }
+      continue; }
+    if(m==='simon'){ o.demoT+=dt;
+      for(const pl of R.plates){ if(pl.ch!==o.ch||pl.on) continue;
+        if(Math.hypot(pl.x-player.x,pl.y-player.y)<28){
+          if(pl.idx===o.got){ pl.on=true; o.got++;
+            texts.push({x:pl.x,y:pl.y-16,txt:o.got+'/'+o.need,col:'#ffe08a',life:1}); _dunSparkle(pl.x,pl.y,'#ffd07a'); }
+          else { for(const p2 of R.plates) if(p2.ch===o.ch) p2.on=false; o.got=0;
+            msg('THE PLATES RESET','watch the sequence'); _dunPhantoms(player.x,player.y,o.ch,2); } } }
+      if(o.got>=o.need) dunOpenGate(o); continue; }
+    if(m==='candles'){
+      for(const pl of R.plates){ if(pl.ch!==o.ch||pl.on) continue;
+        if(Math.hypot(pl.x-player.x,pl.y-player.y)<28){ pl.on=true; _dunSparkle(pl.x,pl.y,'#ffe08a'); } }
+      let lit=0; for(const pl of R.plates) if(pl.ch===o.ch&&pl.on) lit++;
+      o.got=lit;
+      if(lit>=o.need){ dunOpenGate(o); continue; }
+      if(lit>0){ o.snuffT+=dt;
+        if(o.snuffT>3.5){ o.snuffT=0;
+          const cand=R.plates.filter(pl=>pl.ch===o.ch&&pl.on);
+          const pick=cand[Math.floor(Math.random()*cand.length)];
+          if(pick){ pick.on=false;
+            texts.push({x:pick.x,y:pick.y-16,txt:'snuffed',col:'#8a8290',life:0.9}); } } }
+      continue; }
+    if(m==='hold'){
+      for(const cc of R.circles){ if(cc.ch!==o.ch||cc.lit) continue;
+        const d=Math.hypot(cc.x-player.x,cc.y-player.y);
+        if(d<44){ cc.prog+=dt;
+          if(cc.prog>=3){ cc.lit=true; _dunSparkle(cc.x,cc.y,'#bfe6f5');
+            _dunPhantoms(cc.x,cc.y,o.ch,1); } }   // the wind answers
+        else cc.prog=Math.max(0,cc.prog-dt*0.7); }
+      let lit=0; for(const cc of R.circles) if(cc.ch===o.ch&&cc.lit) lit++;
+      o.got=lit; if(lit>=o.need) dunOpenGate(o); continue; }
+    // order / relay / timing complete through the INTERACT seals
+    if(m==='relay'&&o.got>0){ o.timer-=dt;
+      if(o.timer<=0){ for(const sw of R.switches) if(sw.ch===o.ch) sw.on=false;
+        o.got=0; msg('THE FLAME DIES','relight the relay from the first brazier'); } }
+    if(o.got>=o.need) dunOpenGate(o);
+  } }
 function dunOpenGate(o){ const R=curRoom; o.done=true;
   for(const c of (o.gateCells||[])){ R.grid[c.y][c.x]='p';   // path continues through
     if(typeof emitP==='function') for(let q=0;q<3;q++)
@@ -278,7 +357,7 @@ function update(dt){
           texts.push({x:o.x,y:o.y-16,txt:ob.got+'/'+ob.need,col:'#ffe08a',life:1.0}); }
         if(typeof emitP==='function') for(let q=0;q<8;q++){ const a=Math.random()*6.283;
           emitP(o.x,o.y,{vx:Math.cos(a)*70,vy:Math.sin(a)*70-20,life:0.5,col:'#bfe6f5',sz:3,g:120,glow:true}); } } }
-    dunObjectives();
+    dunObjectives(dt);
   }
   // arena wave director
   if(curRoom.arena && arenaActive && enemies.length===0){

@@ -711,13 +711,62 @@ function render(){
       ctx.restore(); ctx.globalAlpha=1;
       ctx.fillStyle='#e8f6fc'; ctx.beginPath(); ctx.arc(o.x,o.y+bob,7,0,6.29); ctx.fill();
       ctx.fillStyle='#8fd0ea'; ctx.beginPath(); ctx.arc(o.x,o.y+bob,4,0,6.29); ctx.fill(); }
+    // fleeing wisps (chase puzzle)
+    if(curRoom.chases) for(const cz of curRoom.chases){
+      const bob=Math.sin(t9*5+cz.wt)*3;
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const gw=ctx.createRadialGradient(cz.x,cz.y+bob,2,cz.x,cz.y+bob,24);
+      gw.addColorStop(0,'#e8f6fc'); gw.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.globalAlpha=0.7; ctx.fillStyle=gw; ctx.beginPath(); ctx.arc(cz.x,cz.y+bob,24,0,6.29); ctx.fill();
+      ctx.restore(); ctx.globalAlpha=1;
+      ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(cz.x,cz.y+bob,6,0,6.29); ctx.fill(); }
+    // rune plates (simon) + grave candles — walk-over props
+    if(curRoom.plates) for(const pl of curRoom.plates){
+      if(pl.mode==='candles'){
+        ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(pl.x,pl.y+8,9,4,0,0,6.29); ctx.fill();
+        ctx.fillStyle='#e8e2d4'; ctx.fillRect(pl.x-3,pl.y-10,6,18);
+        if(pl.on){ ctx.save(); ctx.globalCompositeOperation='lighter';
+          const gc=ctx.createRadialGradient(pl.x,pl.y-14,1,pl.x,pl.y-14,16);
+          gc.addColorStop(0,'#ffe08a'); gc.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.globalAlpha=0.8; ctx.fillStyle=gc; ctx.beginPath(); ctx.arc(pl.x,pl.y-14,16,0,6.29); ctx.fill();
+          ctx.restore(); ctx.globalAlpha=1;
+          ctx.fillStyle='#ffd07a'; ctx.beginPath(); ctx.arc(pl.x,pl.y-14,3.5,0,6.29); ctx.fill(); }
+      } else {
+        // flashing demo shows the order until the sequence is begun
+        const ob=curRoom.objs&&curRoom.objs[pl.ch];
+        const demo=(ob&&!ob.done&&ob.got===0)?Math.floor((ob.demoT/0.7)%4):-1;
+        const flash=demo===pl.idx&&(ob.demoT%0.7)<0.4;
+        ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(pl.x,pl.y+6,15,6,0,0,6.29); ctx.fill();
+        ctx.fillStyle=pl.on?'#8a7442':flash?'#b8d8ea':'#4e4658';
+        ctx.beginPath(); ctx.arc(pl.x,pl.y,13,0,6.29); ctx.fill();
+        ctx.fillStyle=pl.on?'#ffd07a':flash?'#eef8ff':'#241f2e';
+        ctx.beginPath(); ctx.arc(pl.x,pl.y,7,0,6.29); ctx.fill(); } }
+    // gale circles (hold-to-channel)
+    if(curRoom.circles) for(const cc of curRoom.circles){
+      ctx.strokeStyle=cc.lit?'#bfe6f5':'#5a6a78'; ctx.lineWidth=3; ctx.globalAlpha=cc.lit?0.9:0.55;
+      ctx.beginPath(); ctx.arc(cc.x,cc.y,30,0,6.29); ctx.stroke();
+      if(!cc.lit&&cc.prog>0){ ctx.strokeStyle='#e8f6fc'; ctx.globalAlpha=0.9;
+        ctx.beginPath(); ctx.arc(cc.x,cc.y,30,-Math.PI/2,-Math.PI/2+(cc.prog/3)*6.283); ctx.stroke(); }
+      ctx.globalAlpha=1;
+      if(cc.lit){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.4;
+        const gg2=ctx.createRadialGradient(cc.x,cc.y,2,cc.x,cc.y,28);
+        gg2.addColorStop(0,'#bfe6f5'); gg2.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=gg2; ctx.beginPath(); ctx.arc(cc.x,cc.y,28,0,6.29); ctx.fill();
+        ctx.restore(); ctx.globalAlpha=1; } }
     if(curRoom.switches) for(const sw of curRoom.switches){
       ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(sw.x,sw.y+10,14,5,0,0,6.29); ctx.fill();
       ctx.fillStyle=sw.on?'#5a5245':'#6a6255'; ctx.fillRect(sw.x-9,sw.y-14,18,24);
       ctx.fillStyle=sw.on?'#ffd07a':'#39424e';
       ctx.beginPath(); ctx.arc(sw.x,sw.y-4,5,0,6.29); ctx.fill();
-      // order pips: I / II / III — the puzzle wants them awakened in sequence
-      if(sw.idx!==undefined){ ctx.fillStyle=sw.on?'#ffd07a':'#cfc8bd';
+      // Titan Locks pulse while their window is open
+      if(sw.mode==='timing'&&!sw.on&&typeof dunSealLit==='function'&&dunSealLit(sw.idx)){
+        ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.55;
+        const gt=ctx.createRadialGradient(sw.x,sw.y-4,2,sw.x,sw.y-4,22);
+        gt.addColorStop(0,'#ffd07a'); gt.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=gt; ctx.beginPath(); ctx.arc(sw.x,sw.y-4,22,0,6.29); ctx.fill();
+        ctx.restore(); ctx.globalAlpha=1; }
+      // order pips: I / II / III — sequence puzzles read their number
+      if(sw.idx!==undefined&&sw.mode!=='timing'){ ctx.fillStyle=sw.on?'#ffd07a':'#cfc8bd';
         for(let pi=0;pi<=sw.idx;pi++) ctx.fillRect(sw.x-6+pi*5,sw.y-22,3,6); }
       if(sw.on){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.5;
         const g4=ctx.createRadialGradient(sw.x,sw.y-4,2,sw.x,sw.y-4,20);
@@ -923,7 +972,8 @@ function render(){
   if(curRoom.dungeon && curRoom.objs){
     const o=curRoom.objs.find(x=>!x.done);
     ctx.textAlign='center';
-    if(o){ const prog=o.type==='waves'?'':('  '+o.got+' / '+o.need);
+    if(o){ let prog=o.type==='waves'?'':('  '+o.got+' / '+o.need);
+      if(o.mode==='relay'&&o.got>0&&!o.done) prog+='  ·  '+Math.max(0,Math.ceil(o.timer))+'s';
       ctx.font='bold 14px "Pixelify Sans",monospace';
       ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText(o.label+prog, W/2+1, 47);
       ctx.fillStyle='#ffe08a'; ctx.fillText(o.label+prog, W/2, 46); }
