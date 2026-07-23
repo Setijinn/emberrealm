@@ -51,6 +51,13 @@ function drawTileG(x,y){
       const src=(c==='W'||c==='D')?GROUND_UP:GROUND_LO;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      // 'p' = dream-path spine: glowing stepping stones laid OVER the dream floor
+      if(c==='p'&&typeof _dunPath!=='undefined'&&_dunPath&&_dunPath.complete&&_dunPath.naturalWidth){
+        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,1);
+        ctx.drawImage(_dunPath,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+        const pu=0.05+Math.sin(performance.now()/600+x+y)*0.03;
+        ctx.fillStyle='rgba(190,230,245,'+pu.toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+        return; }
       // anti-repetition: fine per-cell brightness buckets PLUS clumped low-frequency
       // blotches (4x4-cell patches) so the dream floor never reads as a uniform grid
       const v=(hh>>2)%9;

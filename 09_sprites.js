@@ -696,6 +696,12 @@ function render(){
   // dungeon objective props: essence orbs (collect) + dream seals (switch)
   if(curRoom.dungeon){
     const t9=performance.now()/1000;
+    // dream decor scattered through the chambers
+    if(curRoom.ddec&&typeof _dunDec!=='undefined') for(const d of curRoom.ddec){
+      const im=_dunDec[d.i];
+      if(im&&im.complete&&im.naturalWidth){
+        ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(d.x,d.y+9,13,5,0,0,6.29); ctx.fill();
+        drawObjBottom(im,d.x,d.y+12,38); } }
     if(curRoom.orbs) for(const o of curRoom.orbs){ if(o.got) continue;
       const bob=Math.sin(t9*3+o.x)*3;
       ctx.save(); ctx.globalCompositeOperation='lighter';
@@ -710,6 +716,9 @@ function render(){
       ctx.fillStyle=sw.on?'#5a5245':'#6a6255'; ctx.fillRect(sw.x-9,sw.y-14,18,24);
       ctx.fillStyle=sw.on?'#ffd07a':'#39424e';
       ctx.beginPath(); ctx.arc(sw.x,sw.y-4,5,0,6.29); ctx.fill();
+      // order pips: I / II / III — the puzzle wants them awakened in sequence
+      if(sw.idx!==undefined){ ctx.fillStyle=sw.on?'#ffd07a':'#cfc8bd';
+        for(let pi=0;pi<=sw.idx;pi++) ctx.fillRect(sw.x-6+pi*5,sw.y-22,3,6); }
       if(sw.on){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.5;
         const g4=ctx.createRadialGradient(sw.x,sw.y-4,2,sw.x,sw.y-4,20);
         g4.addColorStop(0,'#ffd07a'); g4.addColorStop(1,'rgba(0,0,0,0)');

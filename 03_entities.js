@@ -326,22 +326,26 @@ function genDungeon(ring){
    const s2=1+Math.floor(rng()*2);
    for(let yy=py2;yy<py2+s2;yy++)for(let xx=px2;xx<px2+s2;xx++)
     if(Math.abs(xx-c.cx)>3||Math.abs(yy-c.cy)>3) g[yy][xx]='W'; } });
- // corridors + gates between consecutive chambers (entry corridor stays open)
+ // corridors + gates between consecutive chambers (entry corridor stays open).
+ // The corridor spine is laid as 'p' dream-path so the way forward always reads.
  const gatesByCh=[];   // gateCells for objective i (locking chamber i+1's entrance)
+ const lay=(x0,y0,x1,y1)=>{ for(let y=Math.max(1,y0);y<=Math.min(H2-2,y1);y++)
+  for(let x=Math.max(1,x0);x<=Math.min(W2-2,x1);x++) g[y][x]='p'; };
  for(let i=0;i<NCH-1;i++){ const a=chs[i], b=chs[i+1]; const cells=[];
   if(a.out==='E'){ const x0=a.cx+a.hw, x1=b.cx-b.hw, my=a.cy;
-    carve(x0,my-2,x1,my+2);
+    carve(x0,my-2,x1,my+2); lay(a.cx,my-1,b.cx,my+1);
     const gx=Math.floor((x0+x1)/2);
     if(i>0){ for(let y=my-2;y<=my+2;y++){ g[y][gx]='D'; cells.push({x:gx,y:y}); } } }
   else { const s=a.out==='S'?1:-1, y0=a.cy+s*a.hh, y1=b.cy-s*b.hh, mx=a.cx;
     carve(mx-2,Math.min(y0,y1),mx+2,Math.max(y0,y1));
+    lay(mx-1,Math.min(a.cy,b.cy),mx+1,Math.max(a.cy,b.cy));
     const gy=Math.floor((y0+y1)/2);
     if(i>0){ for(let x=mx-2;x<=mx+2;x++){ g[gy][x]='D'; cells.push({x:x,y:gy}); } } }
   if(i>0) gatesByCh.push(cells);
  }
  const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
   glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:chs[0].cx,py:chs[0].cy,
-  orbs:[], switches:[], objs:[] };
+  orbs:[], switches:[], objs:[], ddec:[] };
  // objectives: chambers 1..NCH-2 each lock the NEXT gate behind a themed task
  const otypes=DOBJ_PLAN[ring]||['waves','waves'], nouns=DOBJ_NOUN[ring]||{};
  for(let ci=1;ci<NCH-1;ci++){ const c=chs[ci], oi=ci-1;
@@ -357,7 +361,8 @@ function genDungeon(ring){
      if(yy>0&&xx>0&&yy<H2-1&&xx<W2-1&&g[yy][xx]==='W') g[yy][xx]='.';
     if(type==='slay') room.spawns.push({t:'N',x:sx,y:sy,ch:oi});
     else if(type==='collect') room.orbs.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,got:false});
-    else room.switches.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,on:false}); }
+    else room.switches.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,on:false,idx:q}); }
+   if(type==='switch') obj.label+=' — in order';   // seals are an ORDER puzzle
   } else obj.need=-1;
   // mob packs in this chamber (denser deeper into the mind)
   const nm=3+Math.floor(rng()*2)+Math.floor(ci*0.7);
@@ -371,6 +376,14 @@ function genDungeon(ring){
   if(g[sy][sx]==='.'&&(sx!==chs[0].cx||sy!==chs[0].cy)) room.spawns.push({t:'c',x:sx,y:sy,ch:-1}); }
  const bc=chs[NCH-1];
  room.spawns.push({t:'B',x:bc.cx,y:bc.cy,ch:99});
+ // dream decor scattered through every chamber (crystals, saplings, sunken faces,
+ // spectral braziers, memory shards, rune stumps) — placed LAST so the structural
+ // rng sequence above stays exactly as sim-validated
+ chs.forEach(function(c,i){ const k=2+Math.floor(rng()*3);
+  for(let q=0;q<k;q++){ const dx2=c.cx-c.hw+2+Math.floor(rng()*(c.hw*2-4));
+   const dy2=c.cy-c.hh+2+Math.floor(rng()*(c.hh*2-4));
+   if(g[dy2][dx2]!=='.'||(Math.abs(dx2-c.cx)<3&&Math.abs(dy2-c.cy)<3)) continue;
+   room.ddec.push({x:(dx2+.5)*TILE,y:(dy2+.5)*TILE,i:Math.floor(rng()*6)}); } });
  room.bossRing=ring;
  rooms['DUN']=room;
  return room;

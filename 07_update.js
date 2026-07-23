@@ -49,7 +49,7 @@ function dunObjectives(){ const R=curRoom; if(!R||!R.dungeon||!R.objs) return;
       if(alive===0) dunOpenGate(o);
     } else if(o.got>=o.need) dunOpenGate(o); } }
 function dunOpenGate(o){ const R=curRoom; o.done=true;
-  for(const c of (o.gateCells||[])){ R.grid[c.y][c.x]='.';
+  for(const c of (o.gateCells||[])){ R.grid[c.y][c.x]='p';   // path continues through
     if(typeof emitP==='function') for(let q=0;q<3;q++)
       emitP((c.x+.5)*TILE,(c.y+.5)*TILE,{vx:Math.random()*70-35,vy:Math.random()*70-35,
         life:0.6,col:'#ffe08a',sz:3,glow:true}); }

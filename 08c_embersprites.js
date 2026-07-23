@@ -38,6 +38,10 @@ const _dunSet={}, _awakImg={};
 if(typeof window!=='undefined') for(let b=0;b<=8;b++){
   _dunSet[b]=_img('assets/tiles/dunset_'+b+'.png');
   _awakImg[b]=_img('assets/mobs/awak_'+b+'.png'); }
+// dream-path tile + 6 shared dream decor pieces scattered through every mind
+const _dunPath=(typeof window!=='undefined')?_img('assets/tiles/dunpath.png'):null;
+const _dunDec=[];
+if(typeof window!=='undefined') for(let i=0;i<6;i++) _dunDec.push(_img('assets/env/ddec_'+i+'.png'));
 // Item icon art (PixelLab): 3 tier bands per type/material (crude 0-3 / fine 4-7 / ornate 8-11).
 // key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
 const _itemArt={};
