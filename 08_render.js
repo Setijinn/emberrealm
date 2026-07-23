@@ -89,8 +89,11 @@ function drawTileG(x,y){
     let m=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
     m=Math.imul(m^(m>>>13),1274126177)>>>0; m=(m^(m>>>16))>>>0;
     const ok=im=>im&&im.complete&&im.naturalWidth;
-    const img=(c==='p'&&ok(_hearth.floor_walk))?_hearth.floor_walk
-             :((m%100<11)&&ok(_hearth.floor_broken))?_hearth.floor_broken:_hearth.floor;
+    let img;
+    if(c==='p'){ // walkway: main slab tile mixed with a cracked/pebbled variant (~26%)
+      img=((m%100<26)&&ok(_hearth.floor_walk2))?_hearth.floor_walk2
+         :(ok(_hearth.floor_walk)?_hearth.floor_walk:_hearth.floor); }
+    else img=((m%100<11)&&ok(_hearth.floor_broken))?_hearth.floor_broken:_hearth.floor;
     ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
     ctx.drawImage(img,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
     const v=(hh>>2)%5;

@@ -27,7 +27,7 @@ const _lootChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',
-  'floor_walk','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
+  'floor_walk','floor_walk2','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
   'wall','planter','brazier','lamp']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
 // water tile (global — hub pool + grove lakes)
