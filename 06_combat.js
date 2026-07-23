@@ -57,3 +57,22 @@ function boom(x,y,col,n=10){
   for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=40+Math.random()*120;
     particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4,col}); }
 }
+// ---- richer particle emitters (same `particles` array; extra fields are all optional:
+// maxlife for fade-norm, sz size, g gravity, drag, glow = additive pass, shrink) ----
+const PART_CAP=420;
+function emitP(x,y,o){ if(particles.length>=PART_CAP) return;
+  const life=(o&&o.life)||0.6;
+  particles.push({x,y,vx:(o&&o.vx)||0,vy:(o&&o.vy)||0,life,maxlife:life,
+    col:(o&&o.col)||'#fff',sz:(o&&o.sz)||3,g:(o&&o.g)||0,drag:(o&&o.drag)||0,
+    glow:!!(o&&o.glow),shrink:true}); }
+// combat: glowing spark spray on hit
+function fxHit(x,y,col){ for(let i=0;i<5;i++){ const a=Math.random()*6.28,s=60+Math.random()*130;
+  emitP(x,y,{vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:0.22+Math.random()*0.2,col,sz:2+Math.random()*2,g:180,glow:true}); } }
+// combat: death shower scaled by radius — colored sparks + pale chips + smoke puffs
+function fxDeath(x,y,col,r){ const n=Math.min(26,10+Math.round((r||14)*0.7));
+  for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=30+Math.random()*160;
+    emitP(x,y,{vx:Math.cos(a)*s,vy:Math.sin(a)*s-30,life:0.35+Math.random()*0.45,
+      col:Math.random()<0.7?col:'#f5e9d2',sz:2+Math.random()*3,g:150,drag:1.2,glow:Math.random()<0.5}); }
+  for(let i=0;i<4;i++) emitP(x+(Math.random()*16-8),y+(Math.random()*10-5),
+    {vx:Math.random()*24-12,vy:-24-Math.random()*26,life:0.8+Math.random()*0.5,
+     col:'rgba(120,110,105,0.5)',sz:5+Math.random()*3,drag:1.5}); }

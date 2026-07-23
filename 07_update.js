@@ -1,4 +1,39 @@
 // ---------- update ----------
+// Ambient decoration particles: braziers shed embers+smoke, town lamps warm motes,
+// the fountain sprays droplets, portals leak colored magic, lair dens drift themed bits.
+// Distance-culled; skipped entirely when the pool is near the cap so combat always wins.
+function ambientParts(dt){
+  if(typeof emitP!=='function' || particles.length>340 || !curRoom) return;
+  const px=player.x, py=player.y, CULL=980;
+  const near=(x,y)=>Math.abs(x-px)<CULL && Math.abs(y-py)<CULL;
+  if(curRoom.glows) for(const gl of curRoom.glows){ if(!near(gl.x,gl.y)) continue;
+    if(gl.t==='H'){
+      if(Math.random()<4.5*dt) emitP(gl.x+(Math.random()*14-7),gl.y-6,
+        {vx:Math.random()*16-8,vy:-30-Math.random()*45,life:0.7+Math.random()*0.5,
+         col:Math.random()<0.6?'#ffb347':'#ffe08a',sz:2,drag:0.4,glow:true});
+      if(Math.random()<0.7*dt) emitP(gl.x,gl.y-10,
+        {vx:Math.random()*10-5,vy:-18-Math.random()*14,life:1.4,col:'rgba(110,100,95,0.45)',sz:5,drag:0.8});
+    } else if(gl.t==='l' && curRoom.town){
+      if(Math.random()<1.6*dt) emitP(gl.x+(Math.random()*10-5),gl.y-26,
+        {vx:Math.random()*8-4,vy:-8-Math.random()*10,life:1.2,col:'#ffe9b0',sz:2,glow:true});
+    } }
+  if(curRoom.decor) for(const d of curRoom.decor){ if(d.t!=='fountain') continue;
+    const fx0=d.x*TILE, fy0=d.y*TILE; if(!near(fx0,fy0)) continue;
+    if(Math.random()<14*dt){ const a=Math.random()*6.28;
+      emitP(fx0+(Math.random()*8-4), fy0-40,
+        {vx:Math.cos(a)*(16+Math.random()*22),vy:-70-Math.random()*60,life:0.8,
+         col:Math.random()<0.5?'#bfe6f5':'#8fd0ea',sz:2,g:300,glow:true}); } }
+  if(curRoom.portals) for(const pt of curRoom.portals){ if(!near(pt.x,pt.y)) continue;
+    if(Math.random()<3*dt) emitP(pt.x+(Math.random()*30-15),pt.y+(Math.random()*8-16),
+      {vx:Math.random()*10-5,vy:-16-Math.random()*24,life:0.9+Math.random()*0.6,
+       col:pt.col||'#c07ad4',sz:2,glow:true}); }
+  if(curRoom.lairs) for(const b in curRoom.lairs){ const L=curRoom.lairs[b];
+    if(!L.sprite || !near(L.sprite.x,L.sprite.y)) continue;
+    if(Math.random()<2.2*dt){ const fiery=(+b)>=5;
+      emitP(L.sprite.x+(Math.random()*60-30), L.sprite.y+(Math.random()*20-30),
+        {vx:Math.random()*10-5, vy:fiery?(-22-Math.random()*30):(-8-Math.random()*10),
+         life:1.1, col:fiery?'#ff9a4d':((+b)<3?'#9fd08a':'#c9c2b8'), sz:2, glow:fiery}); } }
+}
 function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
@@ -105,14 +140,14 @@ function update(dt){
       texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:s.crit?dmg+'!':dmg,col:s.crit?'#ffd23d':'#ffe9b0',life:s.crit?0.85:0.55});
       if(player.ls) player.hp=Math.min(player.maxhp,player.hp+dmg*player.ls);
       if(s.slow) e.slowT=1;
-      boom(s.x,s.y,'#ffc94d',4);
+      fxHit(s.x,s.y,'#ffc94d');
       if(s.pierce>0){ s.pierce--; } else { pShots.splice(i,1); }
       break; } }
   }
   // enemy deaths
   for(let i=enemies.length-1;i>=0;i--){ if(enemies[i].hp<=0){
     const de=enemies[i];
-    boom(de.x,de.y,de.col,16);
+    fxDeath(de.x,de.y,de.col,de.r);
     if(de.boss) msg('THRONE SHATTERED','the realm is yours — for now');
     if(de.sref) de.sref.dead=Date.now()+(de.boss?180000:60000);
     enemies.splice(i,1); player.kills++;
@@ -142,9 +177,12 @@ function update(dt){
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
       player.hp-=Math.max(1,Math.round((s.bd||8)*(1-(player.dr||0)))); player.inv=0.35; chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
   }
-  // particles
+  // particles (gravity + drag are optional per-particle fields)
   for(let i=particles.length-1;i>=0;i--){ const p=particles[i];
+    if(p.g) p.vy+=p.g*dt;
+    if(p.drag){ const f=Math.max(0,1-p.drag*dt); p.vx*=f; p.vy*=f; }
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; if(p.life<=0) particles.splice(i,1); }
+  ambientParts(dt);
   // drifting embers in warm places
   if(curRoom.glows&&curRoom.glows.length&&curRoom.town&&Math.random()<dt*16){
     const gl=curRoom.glows[Math.floor(Math.random()*curRoom.glows.length)];

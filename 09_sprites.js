@@ -685,8 +685,19 @@ function render(){
     else if(d.t==='sign') drawSign(dx,dy,d.txt);
     else if(d.t==='chest') drawChest(dx,dy);
     else if(d.t==='banner') drawBanner(dx,dy); }
-  for(const p of particles){ ctx.globalAlpha=p.life/0.4; ctx.fillStyle=p.col;
-    ctx.fillRect(p.x-2,p.y-2,4,4); } ctx.globalAlpha=1;
+  // particles: normal pass, then additive pass for glow ones (embers, magic, sparks)
+  let _anyGlow=false;
+  for(const p of particles){ if(p.glow){ _anyGlow=true; continue; }
+    const ml=p.maxlife||0.4, al=Math.max(0,Math.min(1,p.life/ml));
+    const s=(p.sz||4)*(p.shrink?(0.4+0.6*al):1);
+    ctx.globalAlpha=al; ctx.fillStyle=p.col; ctx.fillRect(p.x-s/2,p.y-s/2,s,s); }
+  if(_anyGlow){ ctx.globalCompositeOperation='lighter';
+    for(const p of particles){ if(!p.glow) continue;
+      const ml=p.maxlife||0.4, al=Math.max(0,Math.min(1,p.life/ml));
+      const s=(p.sz||4)*(p.shrink?(0.4+0.6*al):1);
+      ctx.globalAlpha=al*0.9; ctx.fillStyle=p.col; ctx.fillRect(p.x-s/2,p.y-s/2,s,s); }
+    ctx.globalCompositeOperation='source-over'; }
+  ctx.globalAlpha=1;
   for(const s of pShots) drawShot(s,s.crit?'#ffd23d':'#ffc94d',s.crit?'#fff8d8':'#fff4cc');
   for(const s of eShots) drawEShot(s);
   for(const z of zones){ ctx.globalAlpha=0.20; ctx.fillStyle='#ffd07a';
