@@ -59,29 +59,38 @@ function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return
 // ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
 // 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
 const LAIR_TEMPLATES={
- 0:[ // Heartwood Hollow (13x10) — the Grovewarden's den
-  'XXXXXXXXXXXXX',
-  'X...........X',
-  'X...........X',
-  'X...........X',
-  'X...........X',
-  'X...........X',
-  'X...........X',
-  'X...........X',
-  'X...........X',
-  'XXXXX...XXXXX'],
- 5:[ // Scorch Barrows (15x11) — Magmaw's lair, inner pillars for cover
-  'XXXXXXXXXXXXXXX',
-  'X.............X',
-  'X..X.......X..X',
-  'X.............X',
-  'X.............X',
-  'X.............X',
-  'X.............X',
-  'X.............X',
-  'X..X.......X..X',
-  'X.............X',
-  'XXXXXX...XXXXXX'],
+ 0:[ // Heartwood Hollow (19x14) — the Grovewarden's den, root-clump cover
+  'XXXXXXXXXXXXXXXXXXX',
+  'X.................X',
+  'X.................X',
+  'X.................X',
+  'X....X.......X....X',
+  'X.................X',
+  'X.................X',
+  'X.................X',
+  'X.................X',
+  'X....X.......X....X',
+  'X.................X',
+  'X.................X',
+  'X.................X',
+  'XXXXXXXX...XXXXXXXX'],
+ 5:[ // Scorch Barrows (21x16) — Magmaw's keep, obsidian pillar clusters
+  'XXXXXXXXXXXXXXXXXXXXX',
+  'X...................X',
+  'X..XX.....X.....XX..X',
+  'X...................X',
+  'X...................X',
+  'X.....X.......X.....X',
+  'X...................X',
+  'X...................X',
+  'X...................X',
+  'X.....X.......X.....X',
+  'X...................X',
+  'X...................X',
+  'X..XX...........XX..X',
+  'X...................X',
+  'X...................X',
+  'XXXXXXXXX...XXXXXXXXX'],
 };
 const LAIR_STAMP_BANDS=[0,5];   // pilot; add bands as their art ships
 let _lairsStamped=false;
@@ -107,7 +116,9 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     spawn:{x:(px+TW/2)*TILE, y:(py+TH*0.58)*TILE},          // boss stands in front of the den
     sprite:{x:(px+TW/2)*TILE, y:(py+2.7)*TILE},             // den centrepiece near the back wall
     decos:[ {x:(px+2.4)*TILE,y:(py+2.4)*TILE,i:0}, {x:(px+TW-2.4)*TILE,y:(py+2.4)*TILE,i:1},
-            {x:(px+2.4)*TILE,y:(py+TH-2.4)*TILE,i:2}, {x:(px+TW-2.4)*TILE,y:(py+TH-2.4)*TILE,i:3} ] };
+            {x:(px+2.4)*TILE,y:(py+TH-2.6)*TILE,i:2}, {x:(px+TW-2.4)*TILE,y:(py+TH-2.6)*TILE,i:3},
+            {x:(px+2.2)*TILE,y:(py+TH*0.5)*TILE,i:1}, {x:(px+TW-2.2)*TILE,y:(py+TH*0.5)*TILE,i:0},
+            {x:(px+TW/2-3.2)*TILE,y:(py+4.4)*TILE,i:2}, {x:(px+TW/2+3.2)*TILE,y:(py+4.4)*TILE,i:3} ] };
   // drop any arrival landing points that now fall inside this compound (avoid spawning trapped)
   if(R.arrivals) R.arrivals=R.arrivals.filter(a=>!(a[0]>=px-1&&a[0]<=px+TW&&a[1]>=py-1&&a[1]<=py+TH));
  }
@@ -131,7 +142,7 @@ function spawnRingBoss(b){
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
   if(solid(bx,by)) continue;
   if(grvBandXY(bx/TILE,by/TILE)!==b) continue;
-  const lv=curRoom.rings.names[b].lv;
+  const lv=grvLvAtY(by/TILE);   // boss level matches where its lair sits in the zone
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
   // matched to zone: modest early, monstrous late
   const chaserHp=40*(1+lv*0.55);
@@ -147,7 +158,7 @@ function spawnRingBoss(b){
  }
 }
 function genDungeon(ring){
- const lv=(rooms['G'].rings.names[ring].lv);
+ const _n=rooms['G'].rings.names[ring], lv=Math.round((_n.lv+(_n.lv2||_n.lv))/2);
  const W2=48,H2=30, g=[];
  for(let y=0;y<H2;y++){ const row=[]; for(let x=0;x<W2;x++) row.push('.'); g.push(row); }
  for(let x=0;x<W2;x++){ g[0][x]='W'; g[H2-1][x]='W'; }
@@ -214,6 +225,13 @@ function safeSpot(r,px,py){
 function grvBandY(ty){ const NZ=(curRoom.rings&&curRoom.rings.names.length)||9, H=curRoom.h||1;
  return Math.max(0,Math.min(NZ-1,Math.floor((1-ty/H)*NZ))); }
 function ringInfoAt(tx,ty){ return curRoom.rings.names[grvBandY(ty)]; }
+// Continuous enemy level: interpolates from a zone's entry lv at its bottom to its exit lv
+// at its top — so the top of one zone matches the bottom of the next (no difficulty cliffs).
+function grvLvAtY(ty){ const R=curRoom; if(!R||!R.rings) return (R&&R.lv)||1;
+ const NZ=R.rings.names.length, H=R.h||1;
+ const p=Math.max(0,Math.min(NZ-0.001,(1-ty/H)*NZ)), b=Math.floor(p), f=p-b;
+ const n=R.rings.names[b], lo=n.lv, hi=(n.lv2!==undefined)?n.lv2:((b+1<NZ)?R.rings.names[b+1].lv:n.lv+10);
+ return Math.max(1,Math.round(lo+(hi-lo)*f)); }
 function regionAtPx(px,py){ if(!curRoom) return null;
  if(curRoom.rings) return ringInfoAt(px/TILE,py/TILE);
  if(!curRoom.regions) return null;
@@ -221,7 +239,7 @@ function regionAtPx(px,py){ if(!curRoom) return null;
  for(const rg of curRoom.regions){ if(tx>=rg.x1&&tx<rg.x2&&ty>=rg.y1&&ty<rg.y2) return rg; }
  return null; }
 function roomLvAt(sp){
- if(curRoom&&curRoom.rings) return ringInfoAt(sp.x,sp.y).lv;
+ if(curRoom&&curRoom.rings) return grvLvAtY(sp.y);
  if(curRoom&&curRoom.regions){
   for(const rg of curRoom.regions){ if(sp.x>=rg.x1&&sp.x<rg.x2&&sp.y>=rg.y1&&sp.y<rg.y2) return rg.lv; } }
  return (curRoom&&curRoom.lv)?curRoom.lv:1; }

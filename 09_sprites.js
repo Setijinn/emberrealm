@@ -447,7 +447,7 @@ function drawLootBag(lb,pn){
 }
 // Big reusable INTERACT button (screen space) — anchored above the interactable, clamped on-screen.
 function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt) return null;
-  const zoom=H/(VIEW_TILES_H*TILE);
+  const zoom=H/(viewTilesH()*TILE);
   const w=Math.round(Math.max(150,Math.min(238,W*0.34))), h=Math.round(w*0.403);  // match plate 216x87
   const cx=Math.max(w/2+8,Math.min(W-w/2-8,(portalPrompt.x-camX)*zoom));
   const cy=Math.max(h/2+34,(portalPrompt.y-camY)*zoom - h*0.6 - 62);
@@ -610,7 +610,7 @@ function drawLairs(){
 function render(){
   ctx.fillStyle='#0b0a10'; ctx.fillRect(0,0,W,H);
   const roomW=curRoom.w*TILE, roomH=curRoom.h*TILE;
-  const zoom=H/(VIEW_TILES_H*TILE);
+  const zoom=H/(viewTilesH()*TILE);
   const vw=W/zoom, vh=H/zoom;
   camX = roomW<=vw ? (roomW-vw)/2 : Math.max(0,Math.min(roomW-vw, player.x-vw/2));
   camY = roomH<=vh ? (roomH-vh)/2 : Math.max(0,Math.min(roomH-vh, player.y-vh/2));
@@ -703,15 +703,19 @@ function render(){
   const lunge=(style==='thrust'?5:style==='swing'?3:2)*swng;
   const lx=Math.cos(aa)*lunge, ly=Math.sin(aa)*lunge;
   shadow(player.x,player.y+player.r*0.85,player.r*1.05);
-  const moving=stick.move.id!==null;
+  // moving = touch stick held OR keyboard direction pressed (PC)
+  const _kv=(stick.move.id===null && typeof keyMove==='function')?keyMove():null;
+  const moving=stick.move.id!==null || !!_kv;
   const bob=Math.sin(pn*11)*(moving?1.8:0.5);
   ctx.globalAlpha = player.inv>0 ? (Math.sin(performance.now()/40)>0?0.45:1) : 1;
   const hframe = moving ? (1+(Math.floor(pn*8)%2)) : 0;
-  // While running, face + animate the MOVEMENT direction (dominates auto-aim/auto-fire).
-  // Only show the attack pose when standing still; when moving you keep walking.
-  const _mv=(typeof stick!=='undefined')?stick.move:null;
-  const _moveAng=(moving && _mv && (_mv.dx||_mv.dy))?Math.atan2(_mv.dy,_mv.dx):aa;
-  const faceAng = moving ? _moveAng : aa;
+  // Facing: SHOOTING wins (face the aim while the attack anim is live), otherwise face
+  // the direction you're walking; idle falls back to aim.
+  const _mv=stick.move;
+  const _moveAng = (_mv.id!==null && (_mv.dx||_mv.dy)) ? Math.atan2(_mv.dy,_mv.dx)
+                 : (_kv ? Math.atan2(_kv.y,_kv.x) : aa);
+  const _shooting = player.atkT>0;
+  const faceAng = _shooting ? aa : (moving ? _moveAng : aa);
   const _attacking = player.atkT>0 && !moving;
   const _es = (typeof emberSprite==='function')
     ? emberSprite(player.look||{cls:'knight'}, {aim:faceAng, moving, attacking:_attacking, atkPhase:phase, clock:pn})

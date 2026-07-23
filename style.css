@@ -188,6 +188,13 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .schip.res{grid-column:1/-1;}
 .schip.res b{color:#ffc94d;}
 
+/* PC mode: gather the thumb-scattered HUD buttons into one tidy top-right row
+   (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
+body.pcmode #potBtn{bottom:auto;top:8px;right:12px;}
+body.pcmode #invBtn{bottom:auto;top:8px;right:62px;}
+body.pcmode #mapBtn{bottom:auto;top:8px;right:212px;}
+body.pcmode #loadBtn{top:8px;right:112px;}
+body.pcmode #skillBtn{top:8px;right:162px;}
 #mapBtn{position:fixed;bottom:14px;right:268px;z-index:15;display:none;align-items:center;justify-content:center;
  width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:17px;}
 #mapScr{position:fixed;inset:0;z-index:22;display:none;align-items:center;justify-content:center;background:rgba(5,4,8,.55);}

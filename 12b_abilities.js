@@ -351,11 +351,19 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
 }
 
 // ----- HUD: 3 ability buttons (bottom-left), tap to arm -----
-function abilBtnRects(){ const r=Math.round(Math.min(30,W*0.075)), gap=10, x=W-16-r; const out=[];
-  let y=H-64-r;                          // right edge, above the bottom HUD button row
+function abilBtnRects(){ const out=[];
+  if(typeof inputMode!=='undefined' && inputMode==='pc'){
+    // PC: MMO-style action bar — a horizontal 1/2/3 row right of the MP orb
+    const r=26, gap=12, orbR=Math.round(Math.min(34,W*0.08));
+    let x=W/2+orbR*2+40+r; const y=H-r-24;
+    for(let s=0;s<3;s++){ out.push({slot:s,x:x,y:y,r:r}); x+=(r*2+gap); }
+    return out;
+  }
+  const r=Math.round(Math.min(30,W*0.075)), gap=10, x=W-16-r;
+  let y=H-64-r;                          // touch: right edge, above the bottom HUD button row
   for(let s=0;s<3;s++){ out.push({slot:s,x:x,y:y,r:r}); y-=(r*2+gap); }
   return out; }
-function hitAbilButton(sx,sy){ if(!inGame||!rpg||W<=H) return -1; const rects=abilBtnRects();
+function hitAbilButton(sx,sy){ if(!inGame||!rpg||(W<=H&&(typeof inputMode==='undefined'||inputMode!=='pc'))) return -1; const rects=abilBtnRects();
   for(const b of rects){ if(Math.hypot(sx-b.x,sy-b.y)<=b.r+6) return b.slot; } return -1; }
 function armSlot(s){ if(s>=0&&s<3){ armedSlot=s; navigator.vibrate&&navigator.vibrate(10); } }
 

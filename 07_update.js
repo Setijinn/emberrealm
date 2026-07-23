@@ -173,7 +173,7 @@ function update(dt){
     if(curRoom.big){ for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i];
       if(e.sref && !e.boss && Math.hypot(e.x-player.x,e.y-player.y)>1100) enemies.splice(i,1); } }
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
-      if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv); } }
+      if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv+(rg.lv2?'–'+rg.lv2:'')); } }
   }
   // find the nearest interactable portal/pillar and show a USE prompt above the hero.
   // Nothing auto-fires anymore — the player must press the prompt (see usePortalPrompt).

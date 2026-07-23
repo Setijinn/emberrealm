@@ -4,11 +4,13 @@
 // E interact, Q potion, I equipment, K skills, L abilities, M map, Esc closes menus.
 // inputMode follows the LAST input used, so hybrid devices switch seamlessly.
 let inputMode=(typeof matchMedia==='function' && matchMedia('(pointer:fine)').matches)?'pc':'touch';
+function _setMode(m){ inputMode=m; if(document.body) document.body.classList.toggle('pcmode', m==='pc'); }
+addEventListener('DOMContentLoaded',()=>_setMode(inputMode));
 const stick={move:{id:null,ox:0,oy:0,dx:0,dy:0}};
 const mouse={x:0,y:0};
-function mouseWorld(){ const zoom=H/(VIEW_TILES_H*TILE); return {x:camX+mouse.x/zoom, y:camY+mouse.y/zoom}; }
+function mouseWorld(){ const zoom=H/(viewTilesH()*TILE); return {x:camX+mouse.x/zoom, y:camY+mouse.y/zoom}; }
 addEventListener('pointerdown',e=>{
-  if(e.pointerType==='touch') inputMode='touch'; else inputMode='pc';
+  _setMode(e.pointerType==='touch'?'touch':'pc');
   if(!inGame || (inputMode==='touch' && W<=H)) return;
   if(e.target && e.target!==cv) return;      // taps on HUD buttons handle themselves
   // the floating USE prompt (portal/pillar) takes top precedence
@@ -17,7 +19,7 @@ addEventListener('pointerdown',e=>{
   // ability loadout buttons (bottom-left) take precedence: tap to arm a slot
   if(typeof hitAbilButton==='function'){ const hs=hitAbilButton(e.clientX,e.clientY);
     if(hs>=0){ armSlot(hs); return; } }
-  const zoom=H/(VIEW_TILES_H*TILE);
+  const zoom=H/(viewTilesH()*TILE);
   if(e.pointerType!=='touch'){
     // mouse/pen: ANY canvas click casts at the cursor (movement is on the keyboard)
     if(typeof doAbility==='function') doAbility(camX+e.clientX/zoom, camY+e.clientY/zoom);
@@ -47,7 +49,7 @@ const keys={};
 addEventListener('pointermove',e=>{ if(e.pointerType!=='touch'){ mouse.x=e.clientX; mouse.y=e.clientY; } });
 addEventListener('keydown',e=>{
   if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;   // never swallow typing in fields
-  inputMode='pc';
+  _setMode('pc');
   const k=e.key.toLowerCase(); keys[k]=true;
   if(e.repeat) return;
   if(k==='escape'){

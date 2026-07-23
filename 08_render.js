@@ -1,6 +1,8 @@
 // ---------- render ----------
 let camX=0,camY=0;
 const VIEW_TILES_H=10;
+// PC shows a wider slice of the world (mouse+keyboard play felt too zoomed in)
+function viewTilesH(){ return (typeof inputMode!=='undefined' && inputMode==='pc') ? 13.5 : VIEW_TILES_H; }
 const roomCV=document.createElement('canvas');
 function h2(x,y){const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);}
 function buildRoomCache(){} // rooms render live now
@@ -63,8 +65,15 @@ function drawTileG(x,y){
       const hh=(x*131+y*57)>>>0, o=hh&3;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      // per-block variety: brightness noise + weathering chips so no two blocks read identical
+      const v=(hh>>2)%7;
+      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.07)'; ctx.fillRect(tx,ty,TILE,TILE); }
       if(c==='X'){ ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(tx,ty,TILE,3);
-        ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5); }
+        ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5);
+        if(v>=5){ ctx.fillStyle='rgba(0,0,0,0.35)';                    // cracked / chipped blocks
+          ctx.fillRect(tx+4+((hh>>5)%18), ty+7+((hh>>8)%20), 2, 5+((hh>>11)%6));
+          ctx.fillRect(tx+7+((hh>>6)%16), ty+16+((hh>>9)%14), 4, 2); } }
     } else { ctx.fillStyle=(c==='X')?'#3a3340':'#241f2a'; ctx.fillRect(tx,ty,TILE,TILE);
       if(c==='X'){ ctx.fillStyle='#4a4350'; ctx.fillRect(tx,ty,TILE,9); ctx.fillStyle='#181420'; ctx.fillRect(tx,ty+TILE-5,TILE,5); } }
   } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
