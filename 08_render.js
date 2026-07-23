@@ -51,9 +51,17 @@ function drawTileG(x,y){
       const src=(c==='W'||c==='D')?GROUND_UP:GROUND_LO;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-      const v=(hh>>2)%6;
-      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // anti-repetition: fine per-cell brightness buckets PLUS clumped low-frequency
+      // blotches (4x4-cell patches) so the dream floor never reads as a uniform grid
+      const v=(hh>>2)%9;
+      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.20)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(v===1){ ctx.fillStyle='rgba(0,0,0,0.11)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(v===2){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(v===3){ ctx.fillStyle='rgba(255,240,210,0.09)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      let bh=(Math.imul(x>>2,2246822519)+Math.imul(y>>2,3266489917))>>>0;
+      bh=(bh^(bh>>>15))>>>0;
+      if(bh%100<20){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(bh%100>=90){ ctx.fillStyle='rgba(255,245,220,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
       if(c==='W'){ ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(tx,ty,TILE,3);
         ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5); }
       if(c==='D'){ const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null, pu=0.30+Math.sin(performance.now()/300)*0.18;

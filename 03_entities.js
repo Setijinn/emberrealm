@@ -292,46 +292,85 @@ function genDungeon(ring){
  const _n=rooms['G'].rings.names[ring];
  // the mind is a step beyond the zone's peak — "matching but a little more difficult"
  const lv=Math.min(160,(_n.lv2!==undefined?_n.lv2:_n.lv)+5);
- const W2=96,H2=30, g=[];
- for(let y=0;y<H2;y++){ const row=[]; for(let x=0;x<W2;x++) row.push('.'); g.push(row); }
- for(let x=0;x<W2;x++){ g[0][x]='W'; g[H2-1][x]='W'; }
- for(let y=0;y<H2;y++){ g[y][0]='W'; g[y][W2-1]='W'; }
- // chamber gates: solid wall columns with a lockable 'D' doorway (rows 12..17)
- const GX=[22,46,70];
- for(const gx of GX){ for(let y=1;y<H2-1;y++) g[y][gx]=(y>=12&&y<=17)?'D':'W'; }
- for(let y=12;y<=17;y++) g[y][GX[0]]='.';         // the entry arch stands open
- // pillars / clutter
- for(let i=0;i<26;i++){ const w=1+((i*7)%3), h=1+((i*5)%3);
-  const x=3+((i*13)%(W2-8)), y=4+((i*11)%(H2-9));
-  if(Math.abs(x-GX[0])<3||Math.abs(x-GX[1])<3||Math.abs(x-GX[2])<3) continue;
-  if(x>6&&x<W2-8) for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++) g[yy][xx]='W'; }
- // clear the boss arena (clutter must never wall in the Awakened)
- for(let yy=10;yy<=20;yy++)for(let xx=78;xx<=93;xx++) if(g[yy][xx]==='W') g[yy][xx]='.';
- // minion packs per chamber (denser deeper into the mind), boss arena far right
- const packs=[[10,8],[10,20],[18,14], [27,7],[33,22],[40,10],[36,16], [51,8],[57,20],[63,12],[52,16],[60,6]];
- for(const sp of packs){ if(g[sp[1]][sp[0]]==='.') g[sp[1]][sp[0]]=Math.random()<0.4?'s':'c'; }
- g[15][88]='B';
+ // seeded PRNG — every ring gets its OWN layout, stable across visits
+ let _s=(ring*7919+1013)>>>0;
+ const rng=function(){ _s=(_s+0x6D2B79F5)>>>0;
+  let t=Math.imul(_s^(_s>>>15),1|_s); t=(t+Math.imul(t^(t>>>7),61|t))^t;
+  return ((t^(t>>>14))>>>0)/4294967296; };
+ // carve 5-7 chambers snaking east with vertical jogs through a solid grid:
+ // entry -> objective-locked chambers -> the Awakened's arena. Long by design.
+ const W2=170,H2=64, g=[];
+ for(let y=0;y<H2;y++){ const row=[]; for(let x=0;x<W2;x++) row.push('W'); g.push(row); }
+ const NCH=5+Math.floor(rng()*2.99);            // 5..7 chambers
+ const chs=[]; let cx=14, cy=32;
+ for(let i=0;i<NCH;i++){
+  const hw=7+Math.floor(rng()*5), hh=6+Math.floor(rng()*4);   // half-extents
+  chs.push({cx:cx,cy:cy,hw:hw,hh:hh,dir:'E'});
+  if(i===NCH-1) break;
+  // pick the walk direction to the next chamber (east bias, vertical jogs for shape)
+  let d=rng(); let dir=(d<0.56||i===NCH-2)?'E':(d<0.78?'N':'S');
+  if(dir==='N'&&cy-(hh+16)<10) dir='S'; if(dir==='S'&&cy+(hh+16)>H2-10) dir='N';
+  const nhw=7+Math.floor(rng()*5), nhh=6+Math.floor(rng()*4), COR=7;
+  if(dir==='E') cx+=hw+COR+nhw; else cy+=(dir==='S'?1:-1)*(hh+COR+nhh);
+  if(cx+nhw>W2-2){ cx=W2-2-nhw; }
+  chs[i].out=dir;
+ }
+ const carve=(x0,y0,x1,y1)=>{ for(let y=Math.max(1,y0);y<=Math.min(H2-2,y1);y++)
+  for(let x=Math.max(1,x0);x<=Math.min(W2-2,x1);x++) g[y][x]='.'; };
+ for(const c of chs) carve(c.cx-c.hw,c.cy-c.hh,c.cx+c.hw,c.cy+c.hh);
+ // clutter pillars inside chambers (unique per ring via rng)
+ chs.forEach(function(c,i){ if(i===NCH-1) return;   // boss arena stays open
+  const k=2+Math.floor(rng()*3);
+  for(let q=0;q<k;q++){ const px2=c.cx-c.hw+2+Math.floor(rng()*(c.hw*2-4));
+   const py2=c.cy-c.hh+2+Math.floor(rng()*(c.hh*2-4));
+   const s2=1+Math.floor(rng()*2);
+   for(let yy=py2;yy<py2+s2;yy++)for(let xx=px2;xx<px2+s2;xx++)
+    if(Math.abs(xx-c.cx)>3||Math.abs(yy-c.cy)>3) g[yy][xx]='W'; } });
+ // corridors + gates between consecutive chambers (entry corridor stays open)
+ const gatesByCh=[];   // gateCells for objective i (locking chamber i+1's entrance)
+ for(let i=0;i<NCH-1;i++){ const a=chs[i], b=chs[i+1]; const cells=[];
+  if(a.out==='E'){ const x0=a.cx+a.hw, x1=b.cx-b.hw, my=a.cy;
+    carve(x0,my-2,x1,my+2);
+    const gx=Math.floor((x0+x1)/2);
+    if(i>0){ for(let y=my-2;y<=my+2;y++){ g[y][gx]='D'; cells.push({x:gx,y:y}); } } }
+  else { const s=a.out==='S'?1:-1, y0=a.cy+s*a.hh, y1=b.cy-s*b.hh, mx=a.cx;
+    carve(mx-2,Math.min(y0,y1),mx+2,Math.max(y0,y1));
+    const gy=Math.floor((y0+y1)/2);
+    if(i>0){ for(let x=mx-2;x<=mx+2;x++){ g[gy][x]='D'; cells.push({x:x,y:gy}); } } }
+  if(i>0) gatesByCh.push(cells);
+ }
  const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
-  glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:4,py:15,
-  gates:GX, orbs:[], switches:[], objs:[] };
- // the two locked chambers get their themed objective (design: fight AND solve)
- const plan=DOBJ_PLAN[ring]||['waves','waves'], nouns=DOBJ_NOUN[ring]||{};
- const CH=[[GX[0]+2,GX[1]-2],[GX[1]+2,GX[2]-2]];
- plan.forEach(function(type,ci){
-  const x0=CH[ci][0], x1=CH[ci][1];
-  const obj={type:type,ch:ci,gate:GX[ci+1],need:3,got:0,done:false,
+  glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:chs[0].cx,py:chs[0].cy,
+  orbs:[], switches:[], objs:[] };
+ // objectives: chambers 1..NCH-2 each lock the NEXT gate behind a themed task
+ const otypes=DOBJ_PLAN[ring]||['waves','waves'], nouns=DOBJ_NOUN[ring]||{};
+ for(let ci=1;ci<NCH-1;ci++){ const c=chs[ci], oi=ci-1;
+  const type=otypes[oi%otypes.length];
+  const obj={type:type,ch:oi,need:3,got:0,done:false,gateCells:gatesByCh[oi]||[],
+   bounds:{x0:c.cx-c.hw,y0:c.cy-c.hh,x1:c.cx+c.hw,y1:c.cy+c.hh},
    label:type==='waves'?'Slay every phantom'
         :((type==='slay'?'Destroy the ':type==='collect'?'Gather the ':'Awaken the ')+(nouns[type]||'Seals'))};
-  const spots=[[x0+3,6],[x0+8,23],[Math.floor((x0+x1)/2),15]];
-  for(const s of spots){ for(let yy=s[1]-1;yy<=s[1]+1;yy++)for(let xx=s[0]-1;xx<=s[0]+1;xx++)
-    if(yy>0&&xx>0&&yy<H2-1&&xx<W2-1&&g[yy][xx]==='W') g[yy][xx]='.'; }
-  if(type==='slay'){ for(const s of spots) room.spawns.push({t:'N',x:s[0],y:s[1],ch:ci}); }
-  else if(type==='collect'){ for(const s of spots) room.orbs.push({x:(s[0]+.5)*TILE,y:(s[1]+.5)*TILE,ch:ci,got:false}); }
-  else if(type==='switch'){ for(const s of spots) room.switches.push({x:(s[0]+.5)*TILE,y:(s[1]+.5)*TILE,ch:ci,on:false}); }
-  else obj.need=-1;                                  // waves: cleared when the chamber is empty
-  room.objs.push(obj); });
- for(let y=0;y<H2;y++)for(let x=0;x<W2;x++){ const c=g[y][x];
-  if(c==='c'||c==='s'||c==='B'){ room.spawns.push({t:c,x:x,y:y,ch:x<GX[1]?0:x<GX[2]?1:2}); g[y][x]='.'; } }
+  if(type!=='waves'){
+   for(let q=0;q<3;q++){ const sx=c.cx-c.hw+3+Math.floor(rng()*(c.hw*2-6));
+    const sy=c.cy-c.hh+3+Math.floor(rng()*(c.hh*2-6));
+    for(let yy=sy-1;yy<=sy+1;yy++)for(let xx=sx-1;xx<=sx+1;xx++)
+     if(yy>0&&xx>0&&yy<H2-1&&xx<W2-1&&g[yy][xx]==='W') g[yy][xx]='.';
+    if(type==='slay') room.spawns.push({t:'N',x:sx,y:sy,ch:oi});
+    else if(type==='collect') room.orbs.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,got:false});
+    else room.switches.push({x:(sx+.5)*TILE,y:(sy+.5)*TILE,ch:oi,on:false}); }
+  } else obj.need=-1;
+  // mob packs in this chamber (denser deeper into the mind)
+  const nm=3+Math.floor(rng()*2)+Math.floor(ci*0.7);
+  for(let q=0;q<nm;q++){ const sx=c.cx-c.hw+2+Math.floor(rng()*(c.hw*2-4));
+   const sy=c.cy-c.hh+2+Math.floor(rng()*(c.hh*2-4));
+   if(g[sy][sx]==='.') room.spawns.push({t:rng()<0.4?'s':'c',x:sx,y:sy,ch:oi}); }
+  room.objs.push(obj); }
+ // a light welcome pack in the entry chamber
+ for(let q=0;q<2;q++){ const c=chs[0];
+  const sx=c.cx-c.hw+3+Math.floor(rng()*(c.hw*2-6)), sy=c.cy-c.hh+3+Math.floor(rng()*(c.hh*2-6));
+  if(g[sy][sx]==='.'&&(sx!==chs[0].cx||sy!==chs[0].cy)) room.spawns.push({t:'c',x:sx,y:sy,ch:-1}); }
+ const bc=chs[NCH-1];
+ room.spawns.push({t:'B',x:bc.cx,y:bc.cy,ch:99});
  room.bossRing=ring;
  rooms['DUN']=room;
  return room;

@@ -43,16 +43,17 @@ function dunObjectives(){ const R=curRoom; if(!R||!R.dungeon||!R.objs) return;
   for(const o of R.objs){ if(o.done) continue;
     if(o.type==='waves'){
       // only counts once the player is inside that chamber (no pre-clearing from the door)
-      const px=player.x/TILE; if(px<=R.gates[o.ch]+1) continue;
+      const px=player.x/TILE, py=player.y/TILE, b=o.bounds;
+      if(!b || px<b.x0||px>b.x1||py<b.y0||py>b.y1) continue;
       let alive=0; for(const e of enemies) if(e.ch===o.ch&&e.type!=='B'&&e.type!=='N'&&!e.summoned) alive++;
       if(alive===0) dunOpenGate(o);
     } else if(o.got>=o.need) dunOpenGate(o); } }
 function dunOpenGate(o){ const R=curRoom; o.done=true;
-  for(let y=12;y<=17;y++) R.grid[y][o.gate]='.';
-  msg('THE WAY OPENS', o.label+' — done');
-  if(typeof emitP==='function') for(let y=12;y<=17;y++) for(let q=0;q<3;q++)
-    emitP((o.gate+.5)*TILE,(y+.5)*TILE,{vx:Math.random()*70-35,vy:Math.random()*70-35,
-      life:0.6,col:'#ffe08a',sz:3,glow:true}); }
+  for(const c of (o.gateCells||[])){ R.grid[c.y][c.x]='.';
+    if(typeof emitP==='function') for(let q=0;q<3;q++)
+      emitP((c.x+.5)*TILE,(c.y+.5)*TILE,{vx:Math.random()*70-35,vy:Math.random()*70-35,
+        life:0.6,col:'#ffe08a',sz:3,glow:true}); }
+  msg('THE WAY OPENS', o.label+' — done'); }
 // Fire ONE volley of a boss shot pattern; returns that pattern's cooldown.
 // Kept separate so patterns can be layered (combined) on independent timers.
 function bossVolley(e,pat,base,spd,enraged){
