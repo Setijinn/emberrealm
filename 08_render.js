@@ -143,15 +143,68 @@ function shadow(x,y,r){ ctx.fillStyle='rgba(0,0,0,.35)';
 // own key -> its own look (hundreds of distinct projectile types), cached as tiny sprites.
 const _projCache={};
 function _pfh(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+// --- colour helpers for the PixelLab tinting path ---
+function _rgb2hsl(r,g,b){ r/=255;g/=255;b/=255; const mx=Math.max(r,g,b),mn=Math.min(r,g,b); let h2=0,s=0,l=(mx+mn)/2;
+ if(mx!==mn){ const d=mx-mn; s=l>0.5?d/(2-mx-mn):d/(mx+mn);
+  h2= mx===r ? (g-b)/d+(g<b?6:0) : mx===g ? (b-r)/d+2 : (r-g)/d+4; h2*=60; }
+ return [h2,s,l]; }
+function _hsl2rgb(h2,s,l){ h2=((h2%360)+360)%360/360;
+ const q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q, f=t=>{ if(t<0)t+=1; if(t>1)t-=1;
+  return t<1/6 ? p+(q-p)*6*t : t<1/2 ? q : t<2/3 ? p+(q-p)*(2/3-t)*6 : p; };
+ return [Math.round(f(h2+1/3)*255),Math.round(f(h2)*255),Math.round(f(h2-1/3)*255)]; }
+function _colHue(col){ if(!col) return null;
+ if(col[0]==='#'){ const n=parseInt(col.slice(1),16); return _rgb2hsl((n>>16)&255,(n>>8)&255,n&255)[0]; }
+ const m=/hsl\((\d+)/.exec(col); return m?+m[1]:null; }
+const _projArtHue={};
+function _domHue(name,img){ if(_projArtHue[name]!==undefined) return _projArtHue[name];
+ const c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+ const g=c.getContext('2d'); g.drawImage(img,0,0);
+ const d=g.getImageData(0,0,c.width,c.height).data; let vx=0,vy=0;
+ for(let i=0;i<d.length;i+=4){ if(d[i+3]<40) continue; const [h2,s]=_rgb2hsl(d[i],d[i+1],d[i+2]);
+  if(s<0.2) continue; const a=h2*Math.PI/180; vx+=Math.cos(a)*s; vy+=Math.sin(a)*s; }
+ const hue=(vx||vy)?((Math.atan2(vy,vx)*180/Math.PI)+360)%360:0;
+ _projArtHue[name]=hue; return hue; }
+// PixelLab-art projectile: pick a base shape by hash, hue-shift its pixels (12 steps, or to
+// the caller's theme colour), pad square, add a glow. Falls back to the procedural forge
+// until the art decodes. 24 shapes x 12 hues x sizes/rarity glows = hundreds of looks.
 function projSprite(key, baseCol, coreCol){
   let c=_projCache[key]; if(c) return c;
+  const h=_pfh(key);
+  if(typeof _projArt!=='undefined'){
+    const name=_projArt._list[(h>>>3)%_projArt._list.length], img=_projArt[name];
+    if(img && img.complete && img.naturalWidth){
+      const tgt=_colHue(baseCol), delta=(tgt!==null)?(tgt-_domHue(name,img)):(((h>>>9)%12)*30);
+      const w=img.naturalWidth, hh2=img.naturalHeight, S=Math.max(w,hh2)+10;
+      const cv2=document.createElement('canvas'); cv2.width=S; cv2.height=S;
+      const g=cv2.getContext('2d');
+      const glowHue=(tgt!==null)?tgt:((_domHue(name,img)+delta)%360);
+      const gl=g.createRadialGradient(S/2,S/2,1,S/2,S/2,S/2);
+      gl.addColorStop(0,'hsla('+Math.round(glowHue)+',85%,62%,0.4)'); gl.addColorStop(1,'rgba(0,0,0,0)');
+      g.fillStyle=gl; g.fillRect(0,0,S,S);
+      // tinted art, centred
+      const tc=document.createElement('canvas'); tc.width=w; tc.height=hh2;
+      const tg=tc.getContext('2d'); tg.drawImage(img,0,0);
+      if(Math.abs(delta)>4){ const id=tg.getImageData(0,0,w,hh2), d=id.data;
+        for(let i=0;i<d.length;i+=4){ if(d[i+3]<8) continue;
+          const [h3,s3,l3]=_rgb2hsl(d[i],d[i+1],d[i+2]); if(s3<0.14) continue;   // keep outlines/greys
+          const rgb=_hsl2rgb(h3+delta,s3,l3); d[i]=rgb[0]; d[i+1]=rgb[1]; d[i+2]=rgb[2]; }
+        tg.putImageData(id,0,0); }
+      g.imageSmoothingEnabled=false;
+      g.drawImage(tc,(S-w)/2,(S-hh2)/2);
+      _projCache[key]=cv2; return cv2;
+    }
+  }
+  return _projProc(key, baseCol, coreCol);   // art not decoded yet — procedural stand-in (uncached key)
+}
+function _projProc(key, baseCol, coreCol){
+  let c=_projCache['p:'+key]; if(c) return c;
   const h=_pfh(key), S=30;
   const cv2=document.createElement('canvas'); cv2.width=S; cv2.height=S;
   const g=cv2.getContext('2d'); g.translate(S/2,S/2);
   const hue=h%360;
   const base=baseCol||('hsl('+hue+',74%,56%)');
   const core=coreCol||('hsl('+((hue+45)%360)+',95%,84%)');
-  const shape=(h>>3)%12, rr=6+((h>>7)%5), sp=4+((h>>10)%5);
+  const shape=(h>>>3)%12, rr=6+((h>>>7)%5), sp=4+((h>>>10)%5);
   // soft glow halo
   const gl=g.createRadialGradient(0,0,1,0,0,S/2);
   gl.addColorStop(0,base); gl.addColorStop(1,'rgba(0,0,0,0)');
@@ -177,7 +230,7 @@ function projSprite(key, baseCol, coreCol){
   if(shape===6){ g.beginPath(); g.arc(0,0,rr*0.28,0,6.29); g.fill(); }
   else if(shape===9){ g.beginPath(); g.arc(-rr*0.45,0,rr*0.26,0,6.29); g.arc(rr*0.45,0,rr*0.26,0,6.29); g.fill(); }
   else { g.beginPath(); g.arc(rr*0.15,0,Math.max(1.6,rr*0.34),0,6.29); g.fill(); }
-  _projCache[key]=cv2; return cv2;
+  _projCache['p:'+key]=cv2; return cv2;
 }
 function drawShot(s,col,core){
  if(s.pk){                                   // forged projectile: sprite rotated to its heading

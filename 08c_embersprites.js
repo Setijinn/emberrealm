@@ -57,6 +57,10 @@ function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
+// PixelLab projectile art — 24 base shapes; the forge hue-shifts each into many variants
+const _projArt={_list:['arrow','fireball','ice_shard','lightning','magic_orb','skull','note','leaf',
+ 'dagger','chakram','spear','void_orb','holy_star','bone','wind_slash','crystal',
+ 'thorn','ember','wisp','rune','shuriken','axe','meteor','feather']};
 const _groundSet={}, _bandTree={}, _bandBoulder={}, _bandTone={};
 const _groundVar={}, _decal={}, _lair={};   // richer terrain: variant ground tiles + scatter decals + boss lairs
 const _lairSet={}, _lairDec={};              // boss-room wall/floor tileset (wall=GROUND_UP, floor=GROUND_LO) + interior decorations
@@ -65,6 +69,7 @@ const DECAL_BANDS={0:6, 5:6};                // bands with decal art + how many 
 const LAIR_BANDS=[0,5];                       // bands with a boss-lair structure (pilot)
 (function(){
   if(typeof window==='undefined') return;
+  for(const n of _projArt._list) _projArt[n]=_img('assets/proj/'+n+'.png');
   for(let b=0;b<=8;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
   // per-zone variant ground sheet (sampled at GROUND_UP like the base) for large-scale variety
   for(const b of [0,5]) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
