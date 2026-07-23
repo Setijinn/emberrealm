@@ -147,7 +147,8 @@ function bossVolley(e,pat,base,spd,enraged){
       const alive=enemies.filter(function(m){return m.summoned;}).length;
       if(alive<6){ for(let q=0;q<3;q++){ const a=Math.random()*6.283;
         const mlv=e.lv||10, mh=40*eHpScale(mlv);   // minions ride the unified curve too
-        enemies.push({type:'c',summoned:true,x:e.x+Math.cos(a)*40,y:e.y+Math.sin(a)*40,
+        const ss=safeSpot(curRoom,e.x+Math.cos(a)*40,e.y+Math.sin(a)*40);   // never in a wall
+        enemies.push({type:'c',summoned:true,x:ss.x,y:ss.y,
          r:15,hp:Math.round(mh),maxhp:Math.round(mh),spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:e.lv}); } } }
     for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); return 2.2; }
   for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); return 0.9;

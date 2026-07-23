@@ -517,6 +517,10 @@ function makeEnemy(sp){
      name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
      chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
+  // NEVER spawn inside a wall — grove lairs stamp 'X' over old spawn spots, and any
+  // future caller might pass a bad tile; relocate to the nearest open cell.
+  if(typeof solid==='function'&&curRoom&&solid(e.x,e.y)){
+    const ss=safeSpot(curRoom,e.x,e.y); e.x=ss.x; e.y=ss.y; }
   // group scaling: enemies grow with how many heroes are actually here (co-op)
   const cn=(typeof coopNearCount==='function')?coopNearCount(e.x,e.y):1;
   if(cn>1){ e.hp*=1+0.65*(cn-1);
@@ -528,7 +532,7 @@ function makeEnemy(sp){
 function slowF(e){return e.slowT>0?0.55:1;}
 function safeSpot(r,px,py){
  function sol(tx,ty){ if(ty<1||ty>=r.h-1||tx<1||tx>=r.w-1) return true;
-  return 'WhlHwtk'.indexOf(r.grid[ty][tx])>=0; }
+  return 'WhlHwtkXD'.indexOf(r.grid[ty][tx])>=0; }   // incl. lair walls + dream gates
  const t0x=Math.floor(px/TILE), t0y=Math.floor(py/TILE);
  for(let rad=0;rad<14;rad++){
   for(let dy=-rad;dy<=rad;dy++)for(let dx=-rad;dx<=rad;dx++){
