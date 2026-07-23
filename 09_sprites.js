@@ -526,20 +526,25 @@ function drawPillar(pl){
 }
 function drawPortal(pt){
  const t=performance.now()/1000, col=pt.col||'#c07ad4', R=pt.big?36:20;
- const pimg=(typeof _hearth!=='undefined')?_hearth.portal:null;
+ // destination-themed portal art in the hub (smaller than the shared arch); shared arch elsewhere
+ const dkey=pt.to==='G'?'realm':pt.to==='COSMETICS'?'cos':pt.to==='VAULT'?'vault':pt.to==='GUILD'?'guild':pt.to==='ARENA'?'arena':null;
+ const ded=(dkey&&typeof _hearth!=='undefined')?_hearth['portal_'+dkey]:null;
+ const hasDed=!!(ded&&ded.complete&&ded.naturalWidth);
+ const pimg=hasDed?ded:(typeof _hearth!=='undefined')?_hearth.portal:null;
  // colored ground glow (behind the arch)
  const g=ctx.createRadialGradient(pt.x,pt.y,2,pt.x,pt.y,R*1.9);
  g.addColorStop(0,col); g.addColorStop(0.45,col+'66'); g.addColorStop(1,'rgba(0,0,0,0)');
  ctx.globalAlpha=(0.5+Math.sin(t*3)*0.12)*(pimg&&pimg.complete&&pimg.naturalWidth?0.7:1); ctx.fillStyle=g;
  ctx.beginPath(); ctx.arc(pt.x,pt.y,R*1.9,0,6.29); ctx.fill(); ctx.globalAlpha=1;
  if(pimg&&pimg.complete&&pimg.naturalWidth){
-   const w=pt.big?106:76, h=pimg.naturalHeight*(w/pimg.width);
+   const w=hasDed?(pt.big?88:60):(pt.big?106:76), h=pimg.naturalHeight*(w/pimg.width);
    ctx.imageSmoothingEnabled=false; ctx.drawImage(pimg,Math.round(pt.x-w/2),Math.round(pt.y-h*0.64),Math.round(w),Math.round(h));
-   // tint the vortex toward the portal's colour (additive pulse)
+   // shared arch only: tint the vortex toward the portal's colour (dedicated art has its own)
+   if(!hasDed){
    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.32+Math.sin(t*3)*0.16;
    const vy=pt.y-h*0.14, vg=ctx.createRadialGradient(pt.x,vy,1,pt.x,vy,w*0.32);
    vg.addColorStop(0,col); vg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=vg;
-   ctx.beginPath(); ctx.arc(pt.x,vy,w*0.32,0,6.29); ctx.fill(); ctx.restore();
+   ctx.beginPath(); ctx.arc(pt.x,vy,w*0.32,0,6.29); ctx.fill(); ctx.restore(); }
  } else {
    for(let i=0;i<3;i++){ ctx.strokeStyle=col; ctx.lineWidth=pt.big?4:3; ctx.globalAlpha=0.85-i*0.22;
      ctx.beginPath(); ctx.arc(pt.x,pt.y,R-i*7+Math.sin(t*4+i*2)*3,0,6.29); ctx.stroke(); }

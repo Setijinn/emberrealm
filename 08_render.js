@@ -25,11 +25,17 @@ function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
   ctx.fillRect(tx,ty,TILE,TILE);
-  // town cobblestone floor (PixelLab) for walkable cells, per-cell flip for variety
+  // town floor (PixelLab): cobble base, 'p' = paved walkway, ~11% broken variant
+  // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes)
   if(t && typeof _hearth!=='undefined' && _hearth.floor && _hearth.floor.complete && _hearth.floor.naturalWidth && 'WwhHl'.indexOf(c)<0){
     ctx.imageSmoothingEnabled=false; const hh=(x*131+y*57)>>>0, o=hh&3;
+    let m=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
+    m=Math.imul(m^(m>>>13),1274126177)>>>0; m=(m^(m>>>16))>>>0;
+    const ok=im=>im&&im.complete&&im.naturalWidth;
+    const img=(c==='p'&&ok(_hearth.floor_walk))?_hearth.floor_walk
+             :((m%100<11)&&ok(_hearth.floor_broken))?_hearth.floor_broken:_hearth.floor;
     ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
-    ctx.drawImage(_hearth.floor,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+    ctx.drawImage(img,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
     const v=(hh>>2)%5;
     if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
     else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }

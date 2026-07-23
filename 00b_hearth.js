@@ -14,27 +14,44 @@
   for(let y=y0;y<=y1;y++){put(g,x0,y,ch);put(g,x1,y,ch);} }
 
  // ------------------------------------------------------------- THE HEARTH (hub)
- const HW=52, HH=30;
+ // Town-square layout: fountain plaza centre, market pairs flanking east/west,
+ // walkway roads ('p' floor) linking every portal + stall, portals in stone alcoves.
+ const HW=42, HH=26;
  const hub=room(HW,HH,'f');
- // central fountain — a solid water pool with a stone rim
- block(hub,23,12,28,17,'w');
- border(hub,22,11,29,18,'h');           // stone rim (solid)
- // corner braziers (glow) + wall lamps
- [[7,6],[44,6],[7,23],[44,23]].forEach(p=>put(hub,p[0],p[1],'H'));
- [[16,4],[35,4],[16,25],[35,25]].forEach(p=>put(hub,p[0],p[1],'l'));
- // planter clusters for a lived-in look
- [[10,14],[41,14]].forEach(p=>{ put(hub,p[0],p[1],'h'); put(hub,p[0],p[1]+1,'h'); });
- put(hub,26,25,'P');                     // spawn near the bottom, facing the fountain & realm portal
+ // central fountain — snug pool + stone rim the fountain art fills
+ block(hub,19,10,23,13,'w');
+ border(hub,18,9,24,14,'h');
+ // brazier-lined avenue up to THE REALM portal
+ [[18,5],[24,5],[18,7],[24,7]].forEach(p=>put(hub,p[0],p[1],'H'));
+ // corner portal alcoves: 3-wide stone back wall + side stubs, open toward the plaza
+ function alcove(px,py,dy){ for(const d of [-1,0,1]) put(hub,px+d,py+dy,'h');
+  put(hub,px-2,py,'h'); put(hub,px+2,py,'h'); }
+ alcove(6,5,-1); alcove(35,5,-1); alcove(6,20,1); alcove(35,20,1);
+ // walkway roads (only pave plain floor; stones/braziers stay)
+ function walk(x0,y0,x1,y1){ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)
+  if(hub[y][x]==='f') put(hub,x,y,'p'); }
+ walk(20,3,22,8);     // avenue: REALM portal -> plaza
+ walk(20,15,22,21);   // plaza -> south garden
+ walk(7,4,35,5);      // top road: COSMETICS - REALM - VAULT
+ walk(7,19,35,20);    // bottom road: GUILD - garden - ARENA
+ walk(11,11,17,12);   // west stall spur
+ walk(25,11,31,12);   // east stall spur
+ // plaza corner braziers + lamps by the stalls
+ [[16,9],[26,9],[16,14],[26,14]].forEach(p=>put(hub,p[0],p[1],'H'));
+ [[12,5],[12,18],[30,5],[30,18]].forEach(p=>put(hub,p[0],p[1],'l'));
+ // south garden: planters framing the spawn
+ [[18,18],[24,18],[17,21],[25,21],[20,22],[22,22]].forEach(p=>put(hub,p[0],p[1],'h'));
+ put(hub,21,17,'P');                     // spawn south of the fountain, facing the realm
  ROOM_DEFS['0,0']={ name:'The Hearth', town:true, hub:true, map:hub,
   portalDefs:[
-   {tx:26, ty:4,  to:'G',         label:'THE REALM',  col:'#ff9c50', big:true},
-   {tx:8,  ty:9,  to:'COSMETICS', label:'COSMETICS',  col:'#e07ad4'},
-   {tx:43, ty:9,  to:'VAULT',     label:'VAULT',      col:'#e8b34b'},
-   {tx:8,  ty:21, to:'GUILD',     label:'GUILD HALL', col:'#7ab8d4'},
-   {tx:43, ty:21, to:'ARENA',     label:'ARENA',      col:'#e2604c'},
+   {tx:21, ty:2,  to:'G',         label:'THE REALM',  col:'#ff9c50', big:true},
+   {tx:6,  ty:5,  to:'COSMETICS', label:'COSMETICS',  col:'#e07ad4'},
+   {tx:35, ty:5,  to:'VAULT',     label:'VAULT',      col:'#e8b34b'},
+   {tx:6,  ty:20, to:'GUILD',     label:'GUILD HALL', col:'#7ab8d4'},
+   {tx:35, ty:20, to:'ARENA',     label:'ARENA',      col:'#e2604c'},
   ],
-  decor:[{t:'fountain',x:25.5,y:14.5}],
-  stalls:[ {id:'bram', x:19,y:26.5}, {id:'sella',x:23.5,y:26.5}, {id:'maren',x:28,y:26.5}, {id:'odo',x:32.5,y:26.5} ],
+  decor:[{t:'fountain',x:21.5,y:12}],
+  stalls:[ {id:'bram', x:9.5,y:10.8}, {id:'sella',x:9.5,y:18.3}, {id:'maren',x:32.5,y:10.8}, {id:'odo',x:32.5,y:18.3} ],
  };
 
  // ------------------------------------------------------------- ARENA
