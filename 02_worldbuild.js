@@ -39,7 +39,7 @@ for(const key in rooms){
   if(pd) for(const p of pd){
     const fl=r.town?'f':'.';
     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){ const tx=p.tx+dx,ty=p.ty+dy;
-      if(tx>0&&ty>0&&tx<r.grid[0].length-1&&ty<r.grid.length-1&&'Whl H'.indexOf(r.grid[ty][tx])<0) r.grid[ty][tx]=fl; }
+      if(tx>0&&ty>0&&tx<r.grid[0].length-1&&ty<r.grid.length-1&&'Whl Hp'.indexOf(r.grid[ty][tx])<0) r.grid[ty][tx]=fl; }
     r.portals.push({x:(p.tx+.5)*TILE,y:(p.ty+.5)*TILE,to:p.to,label:p.label,col:p.col,big:!!p.big}); }
   for(let y=0;y<r.h;y++)for(let x=0;x<r.w;x++){
     const c=r.grid[y][x];

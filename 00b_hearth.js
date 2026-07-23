@@ -23,10 +23,6 @@
  block(hub,19,10,23,13,'w');
  // brazier-lined avenue up to THE REALM portal
  [[18,5],[24,5],[18,7],[24,7]].forEach(p=>put(hub,p[0],p[1],'H'));
- // corner portal alcoves: 3-wide stone back wall + side stubs, open toward the plaza
- function alcove(px,py,dy){ for(const d of [-1,0,1]) put(hub,px+d,py+dy,'h');
-  put(hub,px-2,py,'h'); put(hub,px+2,py,'h'); }
- alcove(6,5,-1); alcove(35,5,-1); alcove(6,20,1); alcove(35,20,1);
  // walkway roads (only pave plain floor; stones/braziers stay)
  function walk(x0,y0,x1,y1){ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)
   if(hub[y][x]==='f') put(hub,x,y,'p'); }
@@ -42,6 +38,13 @@
  [[12,5],[12,18],[30,5],[30,18]].forEach(p=>put(hub,p[0],p[1],'l'));
  // south garden: planters framing the spawn
  [[18,18],[24,18],[17,21],[25,21],[20,22],[22,22]].forEach(p=>put(hub,p[0],p[1],'h'));
+ // flowers hug each portal — but ONLY on plain floor, never on a walkway,
+ // so every portal keeps its road approach clear (runs AFTER the roads are paved)
+ function dressPortal(px,py){
+  for(const [dx,dy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]){
+   const nx=px+dx, ny=py+dy;
+   if(nx>0&&ny>0&&nx<HW-1&&ny<HH-1&&hub[ny][nx]==='f') put(hub,nx,ny,'h'); } }
+ dressPortal(21,2); dressPortal(6,5); dressPortal(35,5); dressPortal(6,20); dressPortal(35,20);
  put(hub,21,17,'P');                     // spawn south of the fountain, facing the realm
  ROOM_DEFS['0,0']={ name:'The Hearth', town:true, hub:true, map:hub,
   portalDefs:[
