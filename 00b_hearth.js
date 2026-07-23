@@ -18,9 +18,9 @@
  // walkway roads ('p' floor) linking every portal + stall, portals in stone alcoves.
  const HW=42, HH=26;
  const hub=room(HW,HH,'f');
- // central fountain — snug pool + stone rim the fountain art fills
+ // central fountain — open water pool, fountain art dead centre, no stone rim
+ // (water is solid in collision, so the pool needs no blocking border)
  block(hub,19,10,23,13,'w');
- border(hub,18,9,24,14,'h');
  // brazier-lined avenue up to THE REALM portal
  [[18,5],[24,5],[18,7],[24,7]].forEach(p=>put(hub,p[0],p[1],'H'));
  // corner portal alcoves: 3-wide stone back wall + side stubs, open toward the plaza
@@ -30,6 +30,7 @@
  // walkway roads (only pave plain floor; stones/braziers stay)
  function walk(x0,y0,x1,y1){ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)
   if(hub[y][x]==='f') put(hub,x,y,'p'); }
+ walk(17,8,25,15);    // plaza apron: 2-wide paved ring wrapped around the pool
  walk(20,3,22,8);     // avenue: REALM portal -> plaza
  walk(20,15,22,21);   // plaza -> south garden
  walk(7,4,35,5);      // top road: COSMETICS - REALM - VAULT
