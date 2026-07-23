@@ -32,6 +32,12 @@ if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
 // water tile (global — hub pool + grove lakes)
 const _waterImg=(typeof window!=='undefined')?_img('assets/tiles/water.png'):null;
+// Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
+// (render falls back to lairset / normal boss art until these land)
+const _dunSet={}, _awakImg={};
+if(typeof window!=='undefined') for(let b=0;b<=8;b++){
+  _dunSet[b]=_img('assets/tiles/dunset_'+b+'.png');
+  _awakImg[b]=_img('assets/mobs/awak_'+b+'.png'); }
 // Item icon art (PixelLab): 3 tier bands per type/material (crude 0-3 / fine 4-7 / ornate 8-11).
 // key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
 const _itemArt={};

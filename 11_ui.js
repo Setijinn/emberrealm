@@ -17,6 +17,12 @@ function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov
 // USE-button handler for the portal/pillar prompt (see 07_update portalPrompt detection)
 function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=null;
   if(p.kind!=='loot') portalLock=true;   // teleports suppress re-prompt; loot doesn't
+  if(p.kind==='switch'){ const sw=p.sw; if(sw&&!sw.on){ sw.on=true;
+    const ob=curRoom.objs&&curRoom.objs[sw.ch]; if(ob&&!ob.done){ ob.got++;
+      texts.push({x:sw.x,y:sw.y-18,txt:ob.got+'/'+ob.need,col:'#ffe08a',life:1.0}); }
+    if(typeof emitP==='function') for(let q=0;q<10;q++){ const a=Math.random()*6.283;
+      emitP(sw.x,sw.y-8,{vx:Math.cos(a)*60,vy:Math.sin(a)*60-30,life:0.6,col:'#ffd07a',sz:3,glow:true}); } }
+    portalLock=false; return; }
   if(p.kind==='portal'){ usePortal(p.to); }
   else if(p.kind==='ground'){ const gp=p.gp;
     if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};

@@ -270,25 +270,68 @@ function spawnRingBoss(b){
   return;
  }
 }
+// ---- Awakened dungeons: the slain boss's CONSCIOUSNESS ----
+// A long 4-chamber gauntlet — each middle chamber locks the next gate behind a themed
+// objective (destroy nodes / gather essences / awaken seals / slay every phantom),
+// ending in the AWAKENED boss's arena. Themed nouns keep each mind distinct.
+const DOBJ_NOUN={
+ 0:{slay:'Root-Hearts',collect:'Spirit Seeds', switch:'Grove Seals'},
+ 1:{slay:'Fog Anchors', collect:'Wisp Lights',  switch:'Antler Shrines'},
+ 2:{slay:'Spore Sacs',  collect:'Marsh Pearls', switch:'Drain Valves'},
+ 3:{slay:'Rune Cores',  collect:'Vault Shards', switch:'Rune Seals'},
+ 4:{slay:'Wind Totems', collect:'Storm Feathers',switch:'Gale Horns'},
+ 5:{slay:'Ember Hearts',collect:'Magma Tears',  switch:'Fire Seals'},
+ 6:{slay:'Soul Urns',   collect:'Grave Candles',switch:'Crypt Bells'},
+ 7:{slay:'War Idols',   collect:'Cinder Crowns',switch:'Gate Braziers'},
+ 8:{slay:'Crown Sigils',collect:'Gold Motes',   switch:'Titan Locks'},
+};
+const DOBJ_PLAN={ 0:['slay','switch'],1:['collect','waves'],2:['switch','slay'],
+ 3:['switch','waves'],4:['waves','collect'],5:['slay','waves'],6:['collect','slay'],
+ 7:['waves','waves'],8:['waves','slay'] };
 function genDungeon(ring){
- const _n=rooms['G'].rings.names[ring], lv=Math.round((_n.lv+(_n.lv2||_n.lv))/2);
- const W2=48,H2=30, g=[];
+ const _n=rooms['G'].rings.names[ring];
+ // the mind is a step beyond the zone's peak — "matching but a little more difficult"
+ const lv=Math.min(160,(_n.lv2!==undefined?_n.lv2:_n.lv)+5);
+ const W2=96,H2=30, g=[];
  for(let y=0;y<H2;y++){ const row=[]; for(let x=0;x<W2;x++) row.push('.'); g.push(row); }
  for(let x=0;x<W2;x++){ g[0][x]='W'; g[H2-1][x]='W'; }
  for(let y=0;y<H2;y++){ g[y][0]='W'; g[y][W2-1]='W'; }
+ // chamber gates: solid wall columns with a lockable 'D' doorway (rows 12..17)
+ const GX=[22,46,70];
+ for(const gx of GX){ for(let y=1;y<H2-1;y++) g[y][gx]=(y>=12&&y<=17)?'D':'W'; }
+ for(let y=12;y<=17;y++) g[y][GX[0]]='.';         // the entry arch stands open
  // pillars / clutter
- for(let i=0;i<14;i++){ const w=1+((i*7)%3), h=1+((i*5)%3);
+ for(let i=0;i<26;i++){ const w=1+((i*7)%3), h=1+((i*5)%3);
   const x=3+((i*13)%(W2-8)), y=4+((i*11)%(H2-9));
+  if(Math.abs(x-GX[0])<3||Math.abs(x-GX[1])<3||Math.abs(x-GX[2])<3) continue;
   if(x>6&&x<W2-8) for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++) g[yy][xx]='W'; }
- // minion packs (left/mid), boss chamber (right)
- const spots=[[10,8],[10,20],[18,14],[26,7],[26,22],[34,14]];
- for(const sp of spots){ if(g[sp[1]][sp[0]]==='.') g[sp[1]][sp[0]]=Math.random()<0.4?'s':'c'; }
- g[15][42]='B';
- // entry portal (left) + return marker placed at runtime
+ // clear the boss arena (clutter must never wall in the Awakened)
+ for(let yy=10;yy<=20;yy++)for(let xx=78;xx<=93;xx++) if(g[yy][xx]==='W') g[yy][xx]='.';
+ // minion packs per chamber (denser deeper into the mind), boss arena far right
+ const packs=[[10,8],[10,20],[18,14], [27,7],[33,22],[40,10],[36,16], [51,8],[57,20],[63,12],[52,16],[60,6]];
+ for(const sp of packs){ if(g[sp[1]][sp[0]]==='.') g[sp[1]][sp[0]]=Math.random()<0.4?'s':'c'; }
+ g[15][88]='B';
  const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
-  glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:4,py:15};
+  glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,px:4,py:15,
+  gates:GX, orbs:[], switches:[], objs:[] };
+ // the two locked chambers get their themed objective (design: fight AND solve)
+ const plan=DOBJ_PLAN[ring]||['waves','waves'], nouns=DOBJ_NOUN[ring]||{};
+ const CH=[[GX[0]+2,GX[1]-2],[GX[1]+2,GX[2]-2]];
+ plan.forEach(function(type,ci){
+  const x0=CH[ci][0], x1=CH[ci][1];
+  const obj={type:type,ch:ci,gate:GX[ci+1],need:3,got:0,done:false,
+   label:type==='waves'?'Slay every phantom'
+        :((type==='slay'?'Destroy the ':type==='collect'?'Gather the ':'Awaken the ')+(nouns[type]||'Seals'))};
+  const spots=[[x0+3,6],[x0+8,23],[Math.floor((x0+x1)/2),15]];
+  for(const s of spots){ for(let yy=s[1]-1;yy<=s[1]+1;yy++)for(let xx=s[0]-1;xx<=s[0]+1;xx++)
+    if(yy>0&&xx>0&&yy<H2-1&&xx<W2-1&&g[yy][xx]==='W') g[yy][xx]='.'; }
+  if(type==='slay'){ for(const s of spots) room.spawns.push({t:'N',x:s[0],y:s[1],ch:ci}); }
+  else if(type==='collect'){ for(const s of spots) room.orbs.push({x:(s[0]+.5)*TILE,y:(s[1]+.5)*TILE,ch:ci,got:false}); }
+  else if(type==='switch'){ for(const s of spots) room.switches.push({x:(s[0]+.5)*TILE,y:(s[1]+.5)*TILE,ch:ci,on:false}); }
+  else obj.need=-1;                                  // waves: cleared when the chamber is empty
+  room.objs.push(obj); });
  for(let y=0;y<H2;y++)for(let x=0;x<W2;x++){ const c=g[y][x];
-  if(c==='c'||c==='s'||c==='B'){ room.spawns.push({t:c,x:x,y:y}); g[y][x]='.'; } }
+  if(c==='c'||c==='s'||c==='B'){ room.spawns.push({t:c,x:x,y:y,ch:x<GX[1]?0:x<GX[2]?1:2}); g[y][x]='.'; } }
  room.bossRing=ring;
  rooms['DUN']=room;
  return room;
@@ -322,13 +365,19 @@ function makeEnemy(sp){
   let e;
   if(sp.t==='c') e={type:'c',r:15,hp:40*hm,spd:95+Math.min(60,lv*0.6),touch:12+dm,col:'#c04a3d'};
   else if(sp.t==='s') e={type:'s',r:16,hp:60*hm,spd:45,fireT:1,bd:8+dm*0.63,col:'#8a5ac0'};
+  else if(sp.t==='N'){ // dungeon objective node: stationary, harmless, must be destroyed
+    const th=GBOSS[(curRoom&&curRoom.ring)||0];
+    e={type:'N',r:16,hp:Math.round(46*hm),spd:0,touch:0,col:th?th.col:'#7ab8d4',node:true}; }
   else { const dr=(curRoom&&curRoom.dungeon)?curRoom.bossRing:-1;
     const GB=dr>=0?GBOSS[dr]:null;
-    e={type:'B',r:GB?30+(lv/150)*14:30,hp:Math.round(600*hm*(GB?1.4:1)),spd:38,fireT:1.5,ang:0,
-     col:GB?GB.col:'#e07a2e',boss:true,bd:8+dm*0.63,
-     name:GB?GB.n:null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',chargeT:0,sumT:3,wb:!!GB}; }
+    // dungeon boss = the AWAKENED consciousness: tougher than the flesh it wore,
+    // and it always layers both its shot patterns (e.awk bypasses the Lv60 gate)
+    e={type:'B',r:GB?32+(lv/150)*16:30,hp:Math.round(600*hm*(GB?1.9:1)),spd:GB?44:38,fireT:1.5,ang:0,
+     col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?1.25:1),
+     name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
+     chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
   e.hp=Math.round(e.hp); e.maxhp=e.hp;
-  e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv;
+  e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
   return e;
 }
 function slowF(e){return e.slowT>0?0.55:1;}

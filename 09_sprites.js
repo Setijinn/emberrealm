@@ -370,6 +370,16 @@ function _enemyFrame(anim,e,pn){
 }
 function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
+ if(e.type==='N'){ // dungeon objective node: pulsing dream-heart
+   const t=performance.now()/1000, pu=1+Math.sin(t*5+e.x)*0.15;
+   ctx.save(); ctx.globalCompositeOperation='lighter';
+   const g2=ctx.createRadialGradient(e.x,e.y,2,e.x,e.y,e.r*2.2);
+   g2.addColorStop(0,e.col); g2.addColorStop(1,'rgba(0,0,0,0)');
+   ctx.globalAlpha=0.45; ctx.fillStyle=g2;
+   ctx.beginPath(); ctx.arc(e.x,e.y,e.r*2.2,0,6.29); ctx.fill(); ctx.restore(); ctx.globalAlpha=1;
+   ctx.fillStyle=e.col; ctx.beginPath(); ctx.arc(e.x,e.y,e.r*0.8*pu,0,6.29); ctx.fill();
+   ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(e.x,e.y,e.r*0.34*pu,0,6.29); ctx.fill();
+   return; }
  const bd=enemyBand(e);
  if(e.type==='c'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.c:null,e,pn);
    if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
@@ -381,7 +391,10 @@ function drawEnemySprite(e,pn){
    else { const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
      if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
- else { const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[e.ring]:null,e,pn);
+ else { // awakened dungeon bosses use their spectral sprite when it exists
+   if(e.awk && typeof _awakImg!=='undefined'){ const ai=_awakImg[e.ring];
+     if(ai&&ai.complete&&ai.naturalWidth){ blit(ai,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/ai.width,flip); return; } }
+   const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[e.ring]:null,e,pn);
    if(fr) blit(fr,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/fr.width,flip);
    else { const im=(typeof _bossImg!=='undefined')?_bossImg[e.ring]:null;
      if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/im.width,flip);
@@ -680,6 +693,28 @@ function render(){
     } }
   if(curRoom.portals) for(const pt of curRoom.portals) drawPortal(pt);
   if(curRoom.pillars) for(const pl of curRoom.pillars) drawPillar(pl);
+  // dungeon objective props: essence orbs (collect) + dream seals (switch)
+  if(curRoom.dungeon){
+    const t9=performance.now()/1000;
+    if(curRoom.orbs) for(const o of curRoom.orbs){ if(o.got) continue;
+      const bob=Math.sin(t9*3+o.x)*3;
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const g3=ctx.createRadialGradient(o.x,o.y+bob,2,o.x,o.y+bob,26);
+      g3.addColorStop(0,'#bfe6f5'); g3.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.globalAlpha=0.6; ctx.fillStyle=g3; ctx.beginPath(); ctx.arc(o.x,o.y+bob,26,0,6.29); ctx.fill();
+      ctx.restore(); ctx.globalAlpha=1;
+      ctx.fillStyle='#e8f6fc'; ctx.beginPath(); ctx.arc(o.x,o.y+bob,7,0,6.29); ctx.fill();
+      ctx.fillStyle='#8fd0ea'; ctx.beginPath(); ctx.arc(o.x,o.y+bob,4,0,6.29); ctx.fill(); }
+    if(curRoom.switches) for(const sw of curRoom.switches){
+      ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(sw.x,sw.y+10,14,5,0,0,6.29); ctx.fill();
+      ctx.fillStyle=sw.on?'#5a5245':'#6a6255'; ctx.fillRect(sw.x-9,sw.y-14,18,24);
+      ctx.fillStyle=sw.on?'#ffd07a':'#39424e';
+      ctx.beginPath(); ctx.arc(sw.x,sw.y-4,5,0,6.29); ctx.fill();
+      if(sw.on){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.5;
+        const g4=ctx.createRadialGradient(sw.x,sw.y-4,2,sw.x,sw.y-4,20);
+        g4.addColorStop(0,'#ffd07a'); g4.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=g4; ctx.beginPath(); ctx.arc(sw.x,sw.y-4,20,0,6.29); ctx.fill(); ctx.restore(); ctx.globalAlpha=1; } }
+  }
   if(curRoom.decor) for(const d of curRoom.decor){ const dx=d.x*TILE, dy=d.y*TILE;
     if(d.t==='fountain') drawFountain(dx,dy);
     else if(d.t==='sign') drawSign(dx,dy,d.txt);
@@ -739,7 +774,7 @@ function render(){
       ctx.fillText('\u2620 '+e.name+' \u2620',lx,ly); });
       upright(e.x,e.y-e.r-19,(lx,ly)=>{
         ctx.font='10px monospace'; ctx.fillStyle='#ffd07a'; ctx.fillText('WORLD BOSS · Lv'+e.lv,lx,ly); }); }
-    else upright(e.x,e.y-e.r-19,(lx,ly)=>ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),lx,ly));
+    else if(e.type!=='N') upright(e.x,e.y-e.r-19,(lx,ly)=>ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),lx,ly));
     ctx.textAlign='left';
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);
@@ -875,6 +910,19 @@ function render(){
   if(typeof drawAbilButtons==='function') drawAbilButtons();
   // floating USE prompt above the hero when near a portal/pillar (button-gated)
   drawPortalPrompt();
+  // dungeon objective banner (screen space): the first unfinished chamber's task
+  if(curRoom.dungeon && curRoom.objs){
+    const o=curRoom.objs.find(x=>!x.done);
+    ctx.textAlign='center';
+    if(o){ const prog=o.type==='waves'?'':('  '+o.got+' / '+o.need);
+      ctx.font='bold 14px "Pixelify Sans",monospace';
+      ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText(o.label+prog, W/2+1, 47);
+      ctx.fillStyle='#ffe08a'; ctx.fillText(o.label+prog, W/2, 46); }
+    else { ctx.font='bold 14px "Pixelify Sans",monospace';
+      ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText('FACE THE AWAKENED', W/2+1, 47);
+      ctx.fillStyle='#ff6b5a'; ctx.fillText('FACE THE AWAKENED', W/2, 46); }
+    ctx.textAlign='left';
+  }
   // arena wave banner
   if(curRoom.arena){ ctx.textAlign='center';
     ctx.font='bold 18px "Pixelify Sans",monospace'; ctx.fillStyle='rgba(0,0,0,.6)';

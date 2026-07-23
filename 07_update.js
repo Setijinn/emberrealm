@@ -27,6 +27,9 @@ function ambientParts(dt){
     if(Math.random()<3*dt) emitP(pt.x+(Math.random()*30-15),pt.y+(Math.random()*8-16),
       {vx:Math.random()*10-5,vy:-16-Math.random()*24,life:0.9+Math.random()*0.6,
        col:pt.col||'#c07ad4',sz:2,glow:true}); }
+  if(curRoom.dungeon){ const GB=GBOSS[curRoom.ring||0];   // drifting dream motes in the mind
+    if(Math.random()<6*dt) emitP(player.x+(Math.random()*760-380), player.y+(Math.random()*460-230),
+      {vx:Math.random()*8-4,vy:-10-Math.random()*12,life:1.6,col:GB?GB.col:'#8fb0d0',sz:2,glow:true}); }
   if(curRoom.lairs) for(const b in curRoom.lairs){ const L=curRoom.lairs[b];
     if(!L.sprite || !near(L.sprite.x,L.sprite.y)) continue;
     if(Math.random()<2.2*dt){ const fiery=(+b)>=5;
@@ -34,6 +37,22 @@ function ambientParts(dt){
         {vx:Math.random()*10-5, vy:fiery?(-22-Math.random()*30):(-8-Math.random()*10),
          life:1.1, col:fiery?'#ff9a4d':((+b)<3?'#9fd08a':'#c9c2b8'), sz:2, glow:fiery}); } }
 }
+// ---- Awakened-dungeon objective engine ----
+// Checks each locked chamber's objective; completing one melts its gate open.
+function dunObjectives(){ const R=curRoom; if(!R||!R.dungeon||!R.objs) return;
+  for(const o of R.objs){ if(o.done) continue;
+    if(o.type==='waves'){
+      // only counts once the player is inside that chamber (no pre-clearing from the door)
+      const px=player.x/TILE; if(px<=R.gates[o.ch]+1) continue;
+      let alive=0; for(const e of enemies) if(e.ch===o.ch&&e.type!=='B'&&e.type!=='N'&&!e.summoned) alive++;
+      if(alive===0) dunOpenGate(o);
+    } else if(o.got>=o.need) dunOpenGate(o); } }
+function dunOpenGate(o){ const R=curRoom; o.done=true;
+  for(let y=12;y<=17;y++) R.grid[y][o.gate]='.';
+  msg('THE WAY OPENS', o.label+' — done');
+  if(typeof emitP==='function') for(let y=12;y<=17;y++) for(let q=0;q<3;q++)
+    emitP((o.gate+.5)*TILE,(y+.5)*TILE,{vx:Math.random()*70-35,vy:Math.random()*70-35,
+      life:0.6,col:'#ffe08a',sz:3,glow:true}); }
 // Fire ONE volley of a boss shot pattern; returns that pattern's cooldown.
 // Kept separate so patterns can be layered (combined) on independent timers.
 function bossVolley(e,pat,base,spd,enraged){
@@ -126,8 +145,9 @@ function update(dt){
         e.fireT=bossVolley(e,pat,Math.atan2(dy,dx),spd,enraged); }
       // design rule 5: high-level bosses LAYER their two patterns into one crazier
       // combined pattern — the second pattern fires on its own (slower) timer.
+      // Awakened dungeon bosses (e.awk) ALWAYS layer, whatever their level.
       const other=(pat===e.pat2)?e.pat:e.pat2;
-      if((e.lv||1)>=60 && other && other!==pat && other!=='charge' && other!=='summon'){
+      if(((e.lv||1)>=60||e.awk) && other && other!==pat && other!=='charge' && other!=='summon'){
         e.fireT2=(e.fireT2===undefined?1.2:e.fireT2)-dt;
         if(e.fireT2<=0){ e.animAtk=0.5;
           e.fireT2=bossVolley(e,other,Math.atan2(dy,dx),spd,enraged)*1.5; } }
@@ -155,7 +175,11 @@ function update(dt){
     if(de.sref) de.sref.dead=Date.now()+(de.boss?180000:60000);
     enemies.splice(i,1); player.kills++;
     document.getElementById('killTxt').textContent='Kills '+player.kills;
-    const rwB={c:{xp:8,g:3},s:{xp:14,g:6},B:{xp:220,g:120}}[de.type];
+    if(de.type==='N' && curRoom.dungeon && curRoom.objs){   // objective node destroyed
+      const o=curRoom.objs[de.ch]; if(o&&!o.done){ o.got++;
+        texts.push({x:de.x,y:de.y-18,txt:o.got+'/'+o.need,col:'#ffe08a',life:1.0}); }
+      if(typeof fxDeath==='function') fxDeath(de.x,de.y,de.col,22); }
+    const rwB={c:{xp:8,g:3},s:{xp:14,g:6},N:{xp:26,g:10},B:{xp:220,g:120}}[de.type];
     if(rpg&&rwB){ const lm=1+(de.lv||1)*0.35, gm=1+(de.lv||1)*0.30;
       const rx=Math.round(rwB.xp*lm), rg2=Math.round(rwB.g*gm);
       texts.push({x:de.x,y:de.y-8,txt:'+'+rx+'xp',col:'#7ab8d4',life:1.1});
@@ -170,7 +194,7 @@ function update(dt){
         for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2)));
         loots.push(bagAt(de,{k:'pot'}));
         groundPortals.push({x:de.x+TILE,y:de.y,ring:-1,life:600,home:true});
-        msg('LAIR CLEARED','step through to return'); }
+        msg('THE CONSCIOUSNESS SHATTERS','its mind falls quiet — step through to return'); }
       else rollLoot(de);
     } } }
   // enemy shots
@@ -241,6 +265,19 @@ function update(dt){
     for(const lb of loots){ const rar=(lb.item&&lb.item.rar)||0; if(rar<2||lb.item.k==='pot') continue;
       const d=Math.hypot(lb.x-player.x,lb.y-player.y);
       if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'loot',x:lb.x,y:lb.y,bag:lb,ctx:(RAR_NAMES[rar]||'')}; } }
+    if(curRoom.switches) for(const sw of curRoom.switches){ if(sw.on) continue;
+      const d=Math.hypot(sw.x-player.x,sw.y-player.y);
+      if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'switch',x:sw.x,y:sw.y,sw:sw,ctx:'Awaken'}; } }
+  }
+  // dungeon: objective progress + orb pickup + dream motes
+  if(curRoom.dungeon){
+    if(curRoom.orbs) for(const o of curRoom.orbs){ if(o.got) continue;
+      if(Math.hypot(o.x-player.x,o.y-player.y)<34){ o.got=true;
+        const ob=curRoom.objs[o.ch]; if(ob&&!ob.done){ ob.got++;
+          texts.push({x:o.x,y:o.y-16,txt:ob.got+'/'+ob.need,col:'#ffe08a',life:1.0}); }
+        if(typeof emitP==='function') for(let q=0;q<8;q++){ const a=Math.random()*6.283;
+          emitP(o.x,o.y,{vx:Math.cos(a)*70,vy:Math.sin(a)*70-20,life:0.5,col:'#bfe6f5',sz:3,g:120,glow:true}); } } }
+    dunObjectives();
   }
   // arena wave director
   if(curRoom.arena && arenaActive && enemies.length===0){

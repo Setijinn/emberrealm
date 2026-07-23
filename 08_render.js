@@ -39,6 +39,33 @@ function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
   ctx.fillRect(tx,ty,TILE,TILE);
+  // Awakened dungeon: the boss's consciousness — themed wall/floor sampled from
+  // dunset_<ring> (falls back to that boss's lair tileset, then procedural).
+  // 'D' = locked dream-gate: wall block + pulsing boss-colored seal.
+  if(curRoom.dungeon){
+    const rg=curRoom.ring||0;
+    const set=(typeof _dunSet!=='undefined'&&_dunSet[rg]&&_dunSet[rg].complete&&_dunSet[rg].naturalWidth)?_dunSet[rg]
+             :(typeof _lairSet!=='undefined'&&_lairSet[rg]&&_lairSet[rg].complete&&_lairSet[rg].naturalWidth)?_lairSet[rg]:null;
+    if(set){
+      ctx.imageSmoothingEnabled=false; const hh=(x*131+y*57)>>>0, o=hh&3;
+      const src=(c==='W'||c==='D')?GROUND_UP:GROUND_LO;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+      ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      const v=(hh>>2)%6;
+      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      if(c==='W'){ ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(tx,ty,TILE,3);
+        ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5); }
+      if(c==='D'){ const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null, pu=0.30+Math.sin(performance.now()/300)*0.18;
+        ctx.globalAlpha=pu; ctx.fillStyle=GB?GB.col:'#ffd07a'; ctx.fillRect(tx,ty,TILE,TILE); ctx.globalAlpha=1;
+        ctx.fillStyle='rgba(255,255,255,0.75)';
+        ctx.fillRect(tx+TILE/2-2,ty+TILE/2-7,4,14); ctx.fillRect(tx+TILE/2-7,ty+TILE/2-2,14,4); }
+      return;
+    }
+    if(c==='D'){ ctx.fillStyle='#3a3344'; ctx.fillRect(tx,ty,TILE,TILE);
+      const pu=0.30+Math.sin(performance.now()/300)*0.18; ctx.globalAlpha=pu;
+      ctx.fillStyle='#ffd07a'; ctx.fillRect(tx,ty,TILE,TILE); ctx.globalAlpha=1; return; }
+  }
   // town floor (PixelLab): cobble base, 'p' = paved walkway, ~11% broken variant
   // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes).
   // Decor cells (h planter / H brazier / l lamp) draw floor UNDER their sprite.
