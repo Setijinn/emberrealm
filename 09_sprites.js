@@ -881,19 +881,33 @@ function render(){
     else blit(al.spr==='wolf'?sprWolf:al.spr==='skel'?sprSkel:sprWisp,al.x,al.y,al.spr==='wisp'?2.2:1.6,player.x<al.x); }
   // ascension shield (Bishop/Warden/Guardian/Soulflayer): cyan ward ring while charged
   if((player.shield||0)>0){ const sf=Math.min(1,player.shield/(player.maxhp*0.2));
-    ctx.save(); ctx.globalAlpha=0.25+sf*0.35; ctx.strokeStyle='#9ad4ef'; ctx.lineWidth=2.5;
-    ctx.beginPath(); ctx.arc(player.x,player.y-8,26+Math.sin(performance.now()/200)*2,0,6.29); ctx.stroke();
-    ctx.restore(); ctx.globalAlpha=1; }
+    const r=26+Math.sin(performance.now()/200)*2, n=Math.max(20,Math.round(r*0.9)), base=0.25+sf*0.35;
+    ctx.fillStyle='#9ad4ef';   // ward ring drawn from orbiting pixels, not a solid stroke
+    for(let i=0;i<n;i++){ const hh=hmix(i*3+2,(r|0)+i), a=(i/n)*6.283+performance.now()/1400+((hh&15)/15-0.5)*0.15, jr=r+((hh>>4)%3)-1;
+      ctx.globalAlpha=base*(0.5+0.5*((hh>>8)&3)/3); ctx.fillRect((player.x+Math.cos(a)*jr)|0,(player.y-8+Math.sin(a)*jr)|0,2,2); }
+    ctx.globalAlpha=1; }
   if(player.spiritT>0){ for(let i=0;i<8;i++){ const a2=performance.now()/300+i*Math.PI/4;
     const ox=player.x+Math.cos(a2)*62, oy=player.y+Math.sin(a2)*62;
     ctx.fillStyle='#7ab8d4'; ctx.fillRect(ox-4,oy-4,8,8);
     ctx.fillStyle='#d8f0fa'; ctx.fillRect(ox-2,oy-2,4,4); } }
-  for(const f of fx){ if(f.t==='ring'){ ctx.globalAlpha=Math.min(1,f.life*2.5); ctx.strokeStyle=f.col; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.arc(f.x,f.y,f.r*(1.4-f.life*2),0,6.29); ctx.stroke(); ctx.globalAlpha=1; }
-    else if(f.t==='bolt'){ ctx.globalAlpha=Math.min(1,f.life*3); ctx.strokeStyle=f.col; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(f.pts[0].x,f.pts[0].y);
-      for(let i=1;i<f.pts.length;i++) ctx.lineTo(f.pts[i].x,f.pts[i].y);
-      ctx.stroke(); ctx.globalAlpha=1; }
+  for(const f of fx){ if(f.t==='ring'){
+      // ability shock-ring built from a BUNCH OF PIXELS, not a solid stroke (user rule for
+      // projectiles/abilities): jittered 2x2 dots around the expanding circumference.
+      const al=Math.min(1,f.life*2.5), r=Math.max(2,f.r*(1.4-f.life*2)), n=Math.max(18,Math.round(r*0.55));
+      ctx.fillStyle=f.col;
+      for(let i=0;i<n;i++){ const hh=hmix(i*3+1,(r|0)+i), a=(i/n)*6.283+((hh&15)/15-0.5)*0.18;
+        const jr=r+((hh>>4)%5)-2, px=(f.x+Math.cos(a)*jr)|0, py=(f.y+Math.sin(a)*jr)|0;
+        ctx.globalAlpha=al*(0.55+0.45*((hh>>8)&3)/3); ctx.fillRect(px,py,2,2); }
+      ctx.globalAlpha=1; }
+    else if(f.t==='bolt'){
+      // lightning/chain as a scatter of jittered pixels along each segment (no solid line)
+      const al=Math.min(1,f.life*3); ctx.fillStyle=f.col;
+      for(let s=0;s<f.pts.length-1;s++){ const a=f.pts[s], b=f.pts[s+1];
+        const steps=Math.max(2,Math.round(Math.hypot(b.x-a.x,b.y-a.y)/3));
+        for(let i=0;i<=steps;i++){ const t=i/steps, hh=hmix(s*17+i,(a.x|0)+(b.y|0));
+          const px=(a.x+(b.x-a.x)*t+((hh&7)-3))|0, py=(a.y+(b.y-a.y)*t+(((hh>>3)&7)-3))|0;
+          ctx.globalAlpha=al*(0.5+0.5*((hh>>6)&3)/3); ctx.fillRect(px,py,2,2); } }
+      ctx.globalAlpha=1; }
     else if(f.t==='img'&&f.img&&f.img.naturalWidth){ // sprite flash (slash arcs, glyphs)
       const al=Math.max(0,f.life/(f.max||0.3));
       ctx.save(); ctx.globalAlpha=al; ctx.imageSmoothingEnabled=false;

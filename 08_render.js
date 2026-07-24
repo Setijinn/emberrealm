@@ -267,11 +267,11 @@ function drawTileG(x,y){
           if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
             ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }
     else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }
-    // ring boundary: a stippled pixel seam where the neighbour is a different band (no solid line)
-    if(x>0 && grvBandXY(x-1,y)!==bd) pxV(tx,ty,TILE,'rgba(0,0,0,0.55)',0.6);
-    if(y>0 && grvBandXY(x,y-1)!==bd) pxH(tx,ty,TILE,'rgba(0,0,0,0.55)',0.6);
-    if(x>0 && grvBandXY(x-1,y)>bd) pxV(tx+1,ty,TILE,'rgba(255,201,77,0.42)',0.4);
-    if(y>0 && grvBandXY(x,y-1)>bd) pxH(tx,ty+1,TILE,'rgba(255,201,77,0.42)',0.4);
+    // ring boundary lines: darker edge where the neighbour is a different band
+    if(x>0 && grvBandXY(x-1,y)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,2,TILE); }
+    if(y>0 && grvBandXY(x,y-1)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,TILE,2); }
+    if(x>0 && grvBandXY(x-1,y)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,2,TILE); }
+    if(y>0 && grvBandXY(x,y-1)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,TILE,2); }
     // terrain features layered on the band tint
     if(c==='d'){ if(h2(x*3,y*5)>0.7){ ctx.fillStyle='rgba(90,70,40,0.30)'; ctx.fillRect(tx+(x*13)%30+4,ty+(y*17)%30+4,3,3); } }
     else if(c==='g'){ if(h2(x,y*3)>0.72){ ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(tx+8,ty+12,3,6); ctx.fillRect(tx+24,ty+22,3,6); } }
@@ -280,8 +280,7 @@ function drawTileG(x,y){
       ctx.fillRect(tx+4+(rh%13),ty+5+((rh>>4)%13),2,1); ctx.fillRect(tx+19+((rh>>8)%15),ty+21+((rh>>12)%15),1,2);
       ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(tx+10+((rh>>16)%18),ty+9+((rh>>20)%20),1,1); }
     else if(c==='e'){ if(h2(x*7,y)>0.72){ const gl=0.5+Math.sin(performance.now()/300+x+y)*0.35;
-      ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')';   // ember vent: glowing specks, not a bar
-      for(let i=2;i<TILE-20;i+=3){ const yy=ty+TILE/2+((hmix(tx+i,ty+7)%3)-1); if(hmix(tx+i,ty)&1) ctx.fillRect(tx+10+i,yy,1,1); } } }
+      ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')'; ctx.fillRect(tx+10,ty+TILE/2,TILE-20,3); } }
     else if(c==='t'){
       const _tr=_bandTree[bd], _o=featOffset(x,y), _bx=tx+TILE/2+_o[0], _by=ty+TILE-6+_o[1];
       if(_tr && _tr.naturalWidth){ ctx.imageSmoothingEnabled=false;
@@ -411,8 +410,10 @@ function drawShot(s,col,core){
    ctx.globalAlpha=1;
    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
    ctx.drawImage(sp2,-15*sc,-15*sc,30*sc,30*sc); ctx.restore();
-   if(s.crit){ ctx.globalAlpha=0.55; ctx.strokeStyle='#ffd23d'; ctx.lineWidth=2;
-     ctx.beginPath(); ctx.arc(s.x,s.y,9*sc,0,6.29); ctx.stroke(); ctx.globalAlpha=1; }
+   if(s.crit){ const rr=9*sc, n=Math.max(10,Math.round(rr*0.9)); ctx.fillStyle='#ffd23d';  // crit halo as pixels
+     for(let i=0;i<n;i++){ const hh=hmix(i*5+1,(rr|0)+i), a=(i/n)*6.283+((hh&15)/15-0.5)*0.25, jr=rr+((hh>>4)%3)-1;
+       ctx.globalAlpha=0.5*(0.5+0.5*((hh>>8)&3)/3); ctx.fillRect((s.x+Math.cos(a)*jr)|0,(s.y+Math.sin(a)*jr)|0,2,2); }
+     ctx.globalAlpha=1; }
    return; }
  ctx.fillStyle=col; ctx.globalAlpha=0.4;
  ctx.fillRect((s.px+s.x)/2-3,(s.py+s.y)/2-3,6,6);
