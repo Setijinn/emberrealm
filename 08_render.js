@@ -71,23 +71,19 @@ function drawTileG(x,y){
       const src=(c==='W'||c==='D')?GROUND_UP:GROUND_LO;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-      // 'p' = dream-path spine. The old stepping-stone sprite read like a random trail of
-      // river stones; a boss's consciousness should show a GLOWING spectral path instead.
-      // Draw it as a soft luminous ribbon over the dream floor: adjacent 'p' cells' glows
-      // merge into a continuous flowing trail, with a gentle pulse travelling along it.
+      // 'p' = dream-path spine. NOT an obvious road (the old stepping stones read as river
+      // stones) — a faint 1x1 SPRINKLE of motes over the dream floor: a mysterious trail you
+      // have to look for, never a highlighted path. A couple of tiny dim points per cell,
+      // each with its own slow twinkle so the sprinkle shimmers rather than marches.
       if(c==='p'){
-        const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null;
-        const cr=GB?GB.col:'#9ad4ef', cx=tx+TILE/2, cy=ty+TILE/2;
-        const flow=0.5+Math.sin(performance.now()/430-(x+y)*0.55)*0.5;   // wave runs along the path
-        ctx.save(); ctx.globalCompositeOperation='lighter';
-        const gg=ctx.createRadialGradient(cx,cy,1,cx,cy,TILE*0.62);
-        gg.addColorStop(0,'rgba(200,235,248,'+(0.30+0.16*flow).toFixed(3)+')');
-        gg.addColorStop(0.55,_hexA(cr,(0.14+0.10*flow).toFixed(3)));
-        gg.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,cy,TILE*0.62,0,6.29); ctx.fill();
-        // bright travelling core
-        ctx.globalAlpha=0.35+0.45*flow; ctx.fillStyle='rgba(220,244,252,1)';
-        ctx.beginPath(); ctx.arc(cx,cy,2.4+1.6*flow,0,6.29); ctx.fill();
+        const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null, cr=GB?GB.col:'#9ad4ef';
+        const hp=hmix(x*7+3,y*5+11), nd=1+(hp&1);        // 1-2 motes
+        ctx.save();
+        for(let i=0;i<nd;i++){
+          const px=tx+3+((hp>>(i*7))%(TILE-6)), py=ty+3+((hp>>(i*7+3))%(TILE-6));
+          const tw=0.06+0.16*(0.5+0.5*Math.sin(performance.now()/760+(x*3+y*7)+i*2.1));
+          ctx.fillStyle=_hexA(cr,tw.toFixed(3)); ctx.fillRect(px,py,1,1);
+        }
         ctx.restore();
         return; }
       // anti-repetition: fine per-cell brightness buckets PLUS clumped low-frequency

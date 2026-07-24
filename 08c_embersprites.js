@@ -124,6 +124,11 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
 // Enemy sprites (PixelLab). Mobs (hound=c, cultist=s) + per-band boss images.
 const _mobHound = _img('assets/mobs/hound.png');
 const _mobCultist = _img('assets/mobs/cultist.png');
+// Summoned allies / pets (wolf, skeleton, wisp) — real PixelLab art, procedural fallback.
+const _allyImg = (typeof window!=='undefined') ? {
+  wolf:_img('assets/mobs/ally_wolf.png'),
+  skel:_img('assets/mobs/ally_skel.png'),
+  wisp:_img('assets/mobs/ally_wisp.png') } : {};
 const _bossImg = {};
 if(typeof window!=='undefined') for(let b=0;b<=8;b++) _bossImg[b]=_img('assets/mobs/boss_'+b+'.png');
 

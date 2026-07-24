@@ -173,6 +173,9 @@ function ringSpr(st,t){ const k=st+'_'+t;
  if(!_ringC[k]){ const gem=(typeof RING_DEF!=='undefined'&&RING_DEF[st])?RING_DEF[st].col:'#ffc94d';
    _ringC[k]=makeSprite(RING_A,{O:'#140d08',G:tierCol(t),E:gem}); }
  return _ringC[k]; }
+// prefer the real PixelLab ally art (08c _allyImg), fall back to the procedural sprite
+function allyImg(spr){ const im=(typeof _allyImg!=='undefined')?_allyImg[spr]:null;
+  return (im&&im.complete&&im.naturalWidth)?im:null; }
 function petSprite(p){ return p==='wolf'?sprWolf:p==='skel'?sprSkel:sprWisp; }
 // Draw an item's icon into a 2d context box (cw x ch), centered. Prefers the real
 // PixelLab tier-band art (fractional fit); falls back to the procedural sprite (pixel
@@ -870,7 +873,12 @@ function render(){
     ctx.textAlign='left';
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);
-    blit(al.spr==='wolf'?sprWolf:al.spr==='skel'?sprSkel:sprWisp,al.x,al.y,al.spr==='wisp'?2.2:1.6,player.x<al.x); }
+    const aim=allyImg(al.spr);
+    if(aim){ const bob=Math.sin(pn*4+al.x)*(al.spr==='wisp'?2.5:1);
+      // scale by the LONGER side so a tall skeleton and a wide wolf both land ~small & even
+      const tsz=al.spr==='wisp'?26:al.spr==='wolf'?36:32;
+      blit(aim,al.x,al.y+bob,tsz/Math.max(aim.width,aim.height),player.x<al.x); }
+    else blit(al.spr==='wolf'?sprWolf:al.spr==='skel'?sprSkel:sprWisp,al.x,al.y,al.spr==='wisp'?2.2:1.6,player.x<al.x); }
   // ascension shield (Bishop/Warden/Guardian/Soulflayer): cyan ward ring while charged
   if((player.shield||0)>0){ const sf=Math.min(1,player.shield/(player.maxhp*0.2));
     ctx.save(); ctx.globalAlpha=0.25+sf*0.35; ctx.strokeStyle='#9ad4ef'; ctx.lineWidth=2.5;
