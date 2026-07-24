@@ -332,7 +332,7 @@ function update(dt){
       // combined pattern — the second pattern fires on its own (slower) timer.
       // Awakened dungeon bosses (e.awk) ALWAYS layer, whatever their level.
       const other=(pat===e.pat2)?e.pat:e.pat2;
-      if(((e.lv||1)>=60||e.awk) && other && other!==pat && other!=='charge' && other!=='summon'){
+      if(((e.lv||1)>=25||e.awk) && other && other!==pat && other!=='charge' && other!=='summon'){   // layer patterns from mid-game (cap 50)
         e.fireT2=(e.fireT2===undefined?1.2:e.fireT2)-dt;
         if(e.fireT2<=0){ e.animAtk=0.5;
           e.fireT2=bossVolley(e,other,Math.atan2(dy,dx),spd,enraged)*1.5; } }
@@ -408,10 +408,10 @@ function update(dt){
       gainXP(rx,rg2); chargeRes('kill');
       if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null; ringBossCd[de.ring]=32+Math.random()*20;
         groundPortals.push({x:de.x,y:de.y,ring:de.ring,life:45});
-        for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/12.5)+1))));
+        for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/4.2)+1))));
         msg('A PORTAL TEARS OPEN',GBOSS[de.ring].dn+' awaits'); }
       else if(curRoom.dungeon && de.boss){
-        const rt2=Math.min(11,Math.round((curRoom.lv||10)/12.5)+2);
+        const rt2=Math.min(11,Math.round((curRoom.lv||10)/4.2)+2);
         for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2)));
         loots.push(bagAt(de,{k:'pot'}));
         groundPortals.push({x:de.x+TILE,y:de.y,ring:-1,life:600,home:true});

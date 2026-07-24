@@ -38,7 +38,7 @@ function devSpawn(t){
 }
 // ---- character cheats ----
 function devMax(){ if(!rpg){loadRPG();} if(!rpg){return;}
- rpg.lvl=150; rpg.xp=0;
+ rpg.lvl=LV_CAP; rpg.xp=0;
  rpg.wpn=MAXT-1; rpg.arm=MAXT-1; rpg.helm=MAXT-1;
  rpg.ring={t:MAXT-1,st:RING_STATS[0]};   // armor material is class-derived (CARMOR) in recalcStats
  // mythical rarity + full affixes on every equipped slot
@@ -88,7 +88,7 @@ $s('dSpawnB').onclick=()=>{devSpawn('B');};
 $s('dSpawnN').onclick=()=>{devSpawn('N');};
 // character cheats
 $s('dMax').onclick=()=>{devMax();};
-$s('dLvl').onclick=()=>{ if(!rpg)return; rpg.lvl=Math.min(150,rpg.lvl+10); rpg.xp=0;
+$s('dLvl').onclick=()=>{ if(!rpg)return; rpg.lvl=Math.min(LV_CAP,rpg.lvl+10); rpg.xp=0;
  if(typeof grantPerkPoints==='function')grantPerkPoints(rpg);
  recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp; saveRPG(); hudRPG(); devToast('Lv '+rpg.lvl); };
 $s('dGold').onclick=()=>{ if(!rpg)return; rpg.gold+=100000; saveRPG(); hudRPG(); devToast('+100k gold'); };

@@ -193,12 +193,15 @@ function classBaseStats(c){
   dex:Math.round(Math.max(4,Math.min(24,(0.30/c.fr)*8))),
   spd:c.spd, luck:(c.id==='rogue'||c.id==='hunter')?9:5, fort:5 };
 }
+// Per-level stat growth ×3 vs the old Lv150 game — the level axis is compressed 150->50, so a
+// Lv50 hero reaches the same level-stats an old Lv150 hero had (gear tier + tree power reach cap
+// at 50 too). This keeps the whole power/difficulty relationship intact, just 3x steeper.
 function levelStats(c,lvl){ const L=Math.max(0,lvl-1); const mt=CARMOR[c.id]||'plate';
  const cast=mt==='robe', agile=mt==='leather';
- return { atk:Math.round(L*1.6), def:Math.round(L*0.35), hp:Math.round(L*10),
-  mp:Math.round(L*(cast?1.4:0.7)), vit:Math.round(L*0.5),
-  wis:Math.round(L*(cast?0.6:0.3)), dex:Math.round(L*(cast?0.26:agile?0.26:0.22)),
-  spd:Math.round(L*0.6), luck:Math.round(L*0.15), fort:Math.round(L*0.12) };
+ return { atk:Math.round(L*4.8), def:Math.round(L*1.05), hp:Math.round(L*30),
+  mp:Math.round(L*(cast?4.2:2.1)), vit:Math.round(L*1.5),
+  wis:Math.round(L*(cast?1.8:0.9)), dex:Math.round(L*(cast?0.78:agile?0.78:0.66)),
+  spd:Math.round(L*1.8), luck:Math.round(L*0.45), fort:Math.round(L*0.36) };
 }
 // fixed base stats for a gear piece by slot + tier (+ material / ring type)
 function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
@@ -294,7 +297,7 @@ function rollLoot(e){
  const lv=e.lv||1;
  const F=(typeof player!=='undefined'&&player.fortune)||0;
  const fmul=1+F*0.012;                 // fortune: more drops
- const tb=Math.max(0,Math.min(11,Math.round(lv/12.5)));
+ const tb=Math.max(0,Math.min(11,Math.round(lv/4.2)));   // Lv50 -> tier ~12 (MAXT); was lv/12.5 for Lv150
  let tier=Math.max(0,Math.min(11,tb+Math.floor(Math.random()*3)-1));
  if(Math.random()<F*0.004) tier=Math.min(11,tier+1);  // fortune: better tier
  const r=Math.random();
@@ -623,7 +626,9 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[];
  if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null;
  if(rpg.arenaBest===undefined) rpg.arenaBest=0; }
-function xpNeed(l){return Math.floor(50*Math.pow(l,1.5));}
+// Steepened for the Lv50 cap so reaching max is a real grind (the outer grind zones), not a
+// sprint. Tunable — cumulative to 50 ≈ what the old 1.5 curve needed to reach the 60s.
+function xpNeed(l){return Math.floor(60*Math.pow(l,1.7));}
 function eqAffArr(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.a:null; }
 function eqRar(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.r:0; }
 // Global scale on the derived HP/MP pools — trims the big numbers without touching
@@ -738,7 +743,7 @@ function hcCheck(){ const ch=curChar(); if(!ch||!rpg) return false;
  navigator.vibrate&&navigator.vibrate([40,60,40]);
  return true; }
 function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
- while(rpg.lvl<150 && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
+ while(rpg.lvl<LV_CAP && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;
   msg('LEVEL '+rpg.lvl,'the ember grows'); }

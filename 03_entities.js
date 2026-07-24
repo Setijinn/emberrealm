@@ -285,9 +285,9 @@ function spawnRingBoss(b){
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
   // matched to zone: modest early, monstrous late — on the unified difficulty curve
   const chaserHp=40*eHpScale(lv);
-  const size=24+ (lv/150)*22;          // small on the sands, huge at the core
+  const size=24+ (lv/LV_CAP)*22;       // small on the sands, huge at the core
   const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:Math.round(chaserHp*6),maxhp:Math.round(chaserHp*6),
-   spd:34+(lv/150)*26,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,
+   spd:34+(lv/LV_CAP)*26,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,
    pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3,
    pcol:PJ.col,pcore:PJ.core,pshape:PJ.shape,psize:PJ.size||7};
   enemies.push(boss);
@@ -536,7 +536,12 @@ let curShopNear=null;
 // enemies are tankier and hit harder across the board. hp +9% base / more late, damage +15%
 // base — every zone bites now, not only the endgame. Deaths still come from patterns, not
 // one-shots (rule 5b), so dmg is raised via the linear term rather than the quadratic.
-const DIFF={hpLin:0.60, hpQuad:0.024, dmLin:0.95, dmQuad:0.016};
+// LEVEL-AXIS COMPRESSION 150->50 (world rework): the level axis shrank 3x, so an enemy at the
+// new lv reads the same as the old enemy at 3*lv. eHpScale/eDmgScale(lv) ~= old(3*lv) means the
+// LINEAR terms ×3 and the QUADRATIC terms ×9 (since (3lv)^2 = 9lv^2). Player level-stats/tree/
+// gear-tier were scaled to match, so a Lv50 hero vs a Lv50 enemy == the old Lv150 matchup. Then
+// verified/nudged with the TTK harness. Old (Lv150): {0.60,0.024,0.95,0.016}.
+const DIFF={hpLin:1.80, hpQuad:0.216, dmLin:2.85, dmQuad:0.144};
 function eHpScale(lv){ return 1 + lv*DIFF.hpLin + lv*lv*DIFF.hpQuad; }
 function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
 // ---- enemy BEHAVIOURS (user, 2026-07-24) — each is a personality that changes how the
@@ -560,7 +565,7 @@ const EBEH={
 // deterministic per-spawn so a given spot keeps its character across respawns (a guarded
 // chokepoint stays guarded). Variety + danger rise with the band.
 function pickBehaviour(sp,lv,type){
-  const b=Math.max(0,Math.min(8,Math.round(lv/18)));
+  const b=Math.max(0,Math.min(8,Math.round(lv/5.5)));   // behaviour-variety band (Lv50 -> full set)
   const h=(Math.imul(sp.x|0,374761393)+Math.imul(sp.y|0,668265263))>>>0;
   const roll=(h^(h>>>13))%100;
   if(type==='s'){
@@ -588,7 +593,7 @@ function makeEnemy(sp){
     const GB=dr>=0?GBOSS[dr]:null;
     // dungeon boss = the AWAKENED consciousness: tougher than the flesh it wore,
     // and it always layers both its shot patterns (e.awk bypasses the Lv60 gate)
-    e={type:'B',r:GB?32+(lv/150)*16:30,hp:Math.round(600*hm*(GB?1.9:1)),spd:GB?44:38,fireT:1.5,ang:0,
+    e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hm*(GB?1.9:1)),spd:GB?44:38,fireT:1.5,ang:0,
      col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?1.25:1),
      name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
      chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
@@ -688,7 +693,7 @@ function startArena(){ arenaActive=true; arenaWave=0; arenaCd=1.6; enemies=[]; e
   msg('THE PROVING GROUNDS', (rpg&&rpg.arenaBest)?'best: wave '+rpg.arenaBest:'survive as long as you can'); }
 function arenaSpawnWave(){ const a=rooms['ARENA']; if(!a) return;
   arenaWave++;
-  a.lv=Math.min(150, 2+arenaWave*4);
+  a.lv=Math.min(LV_CAP, 2+arenaWave*1.3);   // arena scales to the Lv50 cap over its waves
   const boss=(arenaWave%5===0);
   const n=boss?1:Math.min(22, 3+Math.floor(arenaWave*1.6));
   for(let i=0;i<n;i++){

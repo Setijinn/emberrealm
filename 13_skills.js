@@ -11,8 +11,10 @@
 
 // Bump whenever node IDs/meanings change: every save is refunded to a clean slate on load,
 // because rewritten trees would otherwise leave points stranded on ids that no longer exist.
-const TREE_VER=3;
-function perkTotalFor(lvl){ return Math.floor((lvl||1)/2); }        // total points earned by level
+const TREE_VER=4;
+// Rescaled for the Lv50 cap (was floor(lvl/2)=75 pts at Lv150). ~0.7/level -> ~35 pts at cap:
+// enough to nearly complete one 3-branch tree + dip a second, keeping build diversity + respec.
+function perkTotalFor(lvl){ return Math.floor((lvl||1)*0.7); }      // total points earned by level
 function xpTreeInit(rpg){
   if(rpg.perkEarned===undefined) rpg.perkEarned=0;
   if(rpg.perkPts===undefined) rpg.perkPts=0;
@@ -949,8 +951,8 @@ function treeStats(cls,rpg){
   const asc=ascendInfo(cls,rpg); if(asc) add(asc.eff,1);
   // Flat stat/rate bonuses scale with LEVEL so tree investment stays relevant end-game
   // (the % nodes — hpPct/atkPct/spd/crit/dr/... and count flags — already scale or are
-  //  intentionally level-invariant). ~1x at Lv1 -> ~3x at Lv150.
-  const lm=1+Math.max(0,(rpg.lvl||1)-1)*0.014;
+  //  intentionally level-invariant). ~1x at Lv1 -> ~3x at the Lv50 cap (was *0.014 for Lv150).
+  const lm=1+Math.max(0,(rpg.lvl||1)-1)*0.042;
   for(const k of ['atk','def','hp','mp','dex','wis','vit','luck','fort','regen','mpregen'])
     d[k]=Math.round(d[k]*lm*10)/10;
   return d;
