@@ -208,21 +208,38 @@ const LAIR_TEMPLATES={
 };
 const LAIR_STAMP_BANDS=[0,1,2,3,4,5,6,7,8];   // all 9 zones have lairs
 let _lairsStamped=false;
+// Per-band lair anchor angles (radians, 0 = due east from the core). Spread so the lairs ring
+// the island instead of lining up; chosen to dodge the waypoint pillars and the portal ruins.
+// Starter bands (0-2) ring the starter centre (any angle, kept off the west spawn). Main bands
+// (3-8) MUST point east (cos>0) onto the island, with the lateral (sin) offset shrinking as the
+// radius grows so the far rings stay on land instead of swinging off the north/south coasts.
+const LAIR_ANG={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3};
 function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return; _lairsStamped=true; R.lairs={};
- const NZ=(R.rings&&R.rings.names.length)||9;
+ const RG=R.rings, NZ=(RG&&RG.names.length)||9;
+ const P=(RG&&RG.portal)||null;
  for(const b of LAIR_STAMP_BANDS){ const T=LAIR_TEMPLATES[b]; if(!T) continue;
   const TH=T.length, TW=T[0].length;
-  const cyBand=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ))));
+  // RADIAL anchor: starter bands (0-2) ring the starter centre; main bands (3-8) sit at rising
+  // radius from the core. Non-radial (old vertical) worlds fall back to the band-Y row.
+  let tcx, tcy;
+  if(RG&&RG.radial){ const ang=(LAIR_ANG[b]!==undefined?LAIR_ANG[b]:b*0.9);
+    if(b<=2){ const f=0.30+b*0.26; tcx=RG.starter.cx+Math.cos(ang)*RG.starter.r*f; tcy=RG.starter.cy+Math.sin(ang)*RG.starter.r*f; }
+    else { const f=(b-2)/6*(RG.rmax)*0.84; tcx=RG.core.cx+Math.cos(ang)*f; tcy=RG.core.cy+Math.sin(ang)*f; }
+  } else { tcx=R.w/2; tcy=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ)))); }
   const clear=(px,py)=>{ if(px<1||py<1||px+TW>=R.w-1||py+TH>=R.h-1) return false;
     for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){ const row=R.grid[ty]; const c=row&&row[tx];
-      if(c==null||'wWhHlXF'.indexOf(c)>=0) return false; }
-    for(const pl of (R.pillars||[])){ const plx=pl.x/TILE,ply=pl.y/TILE; if(plx>px-2&&plx<px+TW+2&&ply>py-2&&ply<py+TH+2) return false; }
+      if(c==null||'wWhHlXFb'.indexOf(c)>=0) return false; }                      // no ocean/bridge/other-lair footprint
+    if(P){ const cx2=px+TW/2, cy2=py+TH/2; if(Math.hypot(cx2-P.x,cy2-P.y)<TW) return false; }  // keep clear of the portal ruins
+    for(const pl of (R.pillars||[])){ const plx=(pl.x!=null?pl.x/TILE:pl.tx),ply=(pl.y!=null?pl.y/TILE:pl.ty);
+      if(plx>px-2&&plx<px+TW+2&&ply>py-2&&ply<py+TH+2) return false; }
     for(const pt of (R.portals||[])){ const ptx=pt.x/TILE,pty=pt.y/TILE; if(ptx>px-2&&ptx<px+TW+2&&pty>py-2&&pty<py+TH+2) return false; }
     return true; };
-  let place=null; const cx0=Math.round(R.w/2-TW/2);
-  for(let r=0;r<8 && !place;r++)for(const dy of (r?[0,-r,r]:[0]))for(const dx of (r?[0,-r,r]:[0])){
-    const px=cx0+dx*2, py=cyBand-Math.round(TH/2)+dy*2; if(clear(px,py)) place={px,py}; }
-  if(!place) place={px:cx0, py:cyBand-Math.round(TH/2)};
+  // spiral outward from the radial anchor for a clear footprint
+  let place=null; const cx0=Math.round(tcx-TW/2), cy0=Math.round(tcy-TH/2);
+  for(let r=0;r<20 && !place;r++)for(let dy=-r;dy<=r&&!place;dy++)for(let dx=-r;dx<=r&&!place;dx++){
+    if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;                        // ring at radius r only
+    const px=cx0+dx*2, py=cy0+dy*2; if(clear(px,py)) place={px,py}; }
+  if(!place) place={px:Math.max(1,Math.min(R.w-TW-1,cx0)), py:Math.max(1,Math.min(R.h-TH-1,cy0))};
   const {px,py}=place;
   // ORGANIC arena (user: "boss arenas less square — almost nothing should be perfect squares").
   // Instead of stamping the rectangular template, carve an irregular LOBED cavern inside the
@@ -265,12 +282,15 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
 // Boss spawn anchor = its lair interior (falls back to band centre if unstamped).
 function grvLairXY(b){ const R=rooms['G']; if(!R) return null;
  if(R.lairs && R.lairs[b]) return R.lairs[b].spawn;
- if(!R.rings) return null;
- const NZ=R.rings.names.length, tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
+ const RG=R.rings; if(!RG) return null;
+ if(RG.radial){ const ang=(typeof LAIR_ANG!=='undefined'&&LAIR_ANG[b]!==undefined?LAIR_ANG[b]:b*0.9);
+   let x,y; if(b<=2){ const f=0.30+b*0.26; x=RG.starter.cx+Math.cos(ang)*RG.starter.r*f; y=RG.starter.cy+Math.sin(ang)*RG.starter.r*f; }
+   else { const f=(b-2)/6*RG.rmax*0.84; x=RG.core.cx+Math.cos(ang)*f; y=RG.core.cy+Math.sin(ang)*f; }
+   return {x:x*TILE, y:y*TILE}; }
+ const NZ=RG.names.length, tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
  return {x:(R.w/2)*TILE, y:(tyc+0.5)*TILE}; }
-// lairs are stamped by vertical band today; SKIP for the new radial world (Phase 3 reworks
-// stampLairs to place them radially — until then ring bosses use the spawn-near-player fallback)
-if(typeof rooms!=='undefined' && rooms['G'] && !(rooms['G'].rings&&rooms['G'].rings.radial)) stampLairs();
+// lairs are stamped once the world exists — radially for the new isles, band-Y for old worlds
+if(typeof rooms!=='undefined' && rooms['G']) stampLairs();
 // each ring has its own unique mini-boss; only one of a given ring's boss lives at a time
 function spawnRingBoss(b){
  if(!curRoom||!curRoom.rings) return;

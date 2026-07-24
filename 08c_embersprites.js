@@ -44,6 +44,8 @@ const _corruptDec=(typeof window!=='undefined')?[_img('assets/env/corrupt_0.png'
 // The infection portal was once a town portal — a ring of now-broken, crumbling stone pillars
 // surrounds it, drawn as a stone circle around the rift in drawWorldFeatures().
 const _portalPillars=(typeof window!=='undefined')?[_img('assets/env/pillar_0.png'),_img('assets/env/pillar_1.png'),_img('assets/env/pillar_2.png')]:null;
+// Waypoint (fast-travel) pillar — a beautiful light-magic shrine; drawn base-anchored in drawPillar.
+const _waypointImg=(typeof window!=='undefined')?_img('assets/env/waypoint.png'):null;
 // Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
 // (render falls back to lairset / normal boss art until these land)
 const _dunSet={}, _awakImg={};

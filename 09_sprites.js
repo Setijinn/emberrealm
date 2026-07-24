@@ -539,16 +539,35 @@ function hitPortalPrompt(sx,sy){ const b=portalPromptRect(); if(!b) return false
   return Math.abs(sx-b.cx)<=b.w/2+10 && Math.abs(sy-b.cy)<=b.h/2+12; }
 function drawPillar(pl){
   const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
-  const t=performance.now()/1000, col=un?'#c9a24d':'#5a6070', gy=pl.y-24;
-  ctx.fillStyle='#241f2b'; ctx.fillRect(pl.x-7,pl.y-4,14,20);
-  ctx.fillStyle='#3a3442'; ctx.fillRect(pl.x-6,pl.y-22,12,20);
-  ctx.fillStyle='#4a4452'; ctx.fillRect(pl.x-6,pl.y-22,12,2);
-  const pulse=0.55+0.45*Math.sin(t*3), rad=un?16:9;
-  const g=ctx.createRadialGradient(pl.x,gy,1,pl.x,gy,rad);
-  g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.globalAlpha=un?0.85*pulse:0.4; ctx.fillStyle=g;
-  ctx.beginPath(); ctx.arc(pl.x,gy,rad,0,6.29); ctx.fill(); ctx.globalAlpha=1;
-  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(pl.x,gy,3.5,0,6.29); ctx.fill();
+  const t=performance.now()/1000, pulse=0.55+0.45*Math.sin(t*3);
+  const img=(typeof _waypointImg!=='undefined'&&_waypointImg&&_waypointImg.complete&&_waypointImg.naturalWidth)?_waypointImg:null;
+  if(img){
+    const w=TILE*1.55, h=w*img.height/img.width, gy=pl.y-h*0.55;
+    // radiant light-magic aura (bright when unlocked, dim when dormant), + a couple of orbiting motes
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const rad=un?TILE*1.5:TILE*0.7, ga=(un?0.34*pulse:0.12);
+    const g=ctx.createRadialGradient(pl.x,gy,1,pl.x,gy,rad);
+    g.addColorStop(0,'rgba(255,244,200,'+ga.toFixed(3)+')'); g.addColorStop(0.5,'rgba(210,190,255,'+(ga*0.6).toFixed(3)+')'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(pl.x,gy,rad,0,6.29); ctx.fill();
+    if(un) for(let i=0;i<3;i++){ const a=t*1.4+i*2.09, rr=TILE*0.6;
+      ctx.fillStyle='rgba(255,250,225,'+(0.5+0.4*Math.sin(t*4+i)).toFixed(3)+')';
+      ctx.fillRect(pl.x+Math.cos(a)*rr-1, gy+Math.sin(a)*rr*0.6-1, 2, 2); }
+    ctx.restore();
+    ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(pl.x,pl.y-2,w*0.32,w*0.12,0,0,6.29); ctx.fill();
+    ctx.imageSmoothingEnabled=false;
+    ctx.globalAlpha=un?1:0.7; ctx.drawImage(img, pl.x-w/2, pl.y-h, w, h); ctx.globalAlpha=1;
+  } else {
+    const col=un?'#c9a24d':'#5a6070', gy=pl.y-24;
+    ctx.fillStyle='#241f2b'; ctx.fillRect(pl.x-7,pl.y-4,14,20);
+    ctx.fillStyle='#3a3442'; ctx.fillRect(pl.x-6,pl.y-22,12,20);
+    ctx.fillStyle='#4a4452'; ctx.fillRect(pl.x-6,pl.y-22,12,2);
+    const rad=un?16:9;
+    const g=ctx.createRadialGradient(pl.x,gy,1,pl.x,gy,rad);
+    g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.globalAlpha=un?0.85*pulse:0.4; ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(pl.x,gy,rad,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(pl.x,gy,3.5,0,6.29); ctx.fill();
+  }
   ctx.font='9px monospace'; ctx.textAlign='center';
   ctx.fillStyle=un?'#ffd07a':'#8a8290';
   ctx.fillText(un?'WAYPOINT':'✦ dormant', pl.x, pl.y+28); ctx.textAlign='left';
@@ -687,8 +706,8 @@ function drawWorldFeatures(){
   gr.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(px,py,TILE*3.6,0,6.29); ctx.fill();
   ctx.restore();
-  const w=TILE*5.0, h=w*_portalImg.height/_portalImg.width;
-  ctx.save(); ctx.translate(px,py); ctx.rotate(t*0.10);          // slow ominous swirl
+  const w=TILE*5.0, h=w*_portalImg.height/_portalImg.width, RISE=TILE*1.6;  // lift the rift so it stands within the ring
+  ctx.save(); ctx.translate(px,py-RISE); ctx.rotate(t*0.10);      // slow ominous swirl
   ctx.globalAlpha=0.92+pul*0.08;
   ctx.drawImage(_portalImg,-w/2,-h/2,w,h); ctx.restore();
   // The ruined stone circle: a ring of crumbling pillars around the rift, back-to-front so the
