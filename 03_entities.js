@@ -307,9 +307,12 @@ function spawnRingBoss(b){
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
   // matched to zone: modest early, monstrous late — on the unified difficulty curve
   const chaserHp=40*eHpScale(lv);
+  const edef=eDef(lv), edr=eDR(edef), edex=eDex(lv), espd=eSpdMul(lv), emp=eMp(lv);  // scaling stat block
   const size=24+ (lv/LV_CAP)*22;       // small on the sands, huge at the core
-  const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:Math.round(chaserHp*6),maxhp:Math.round(chaserHp*6),
-   spd:34+(lv/LV_CAP)*26,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,
+  const bhp=Math.round(chaserHp*6*(1-edr));   // TTK-neutral hp (def mitigation applied in dealDamage)
+  const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:bhp,maxhp:bhp,
+   spd:(34+(lv/LV_CAP)*26)*espd,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,
+   def:edef,dr:edr,dex:edex,maxmp:emp,mp:emp,
    pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3,
    pcol:PJ.col,pcore:PJ.core,pshape:PJ.shape,psize:PJ.size||7};
   enemies.push(boss);
@@ -566,6 +569,20 @@ let curShopNear=null;
 const DIFF={hpLin:1.80, hpQuad:0.216, dmLin:2.85, dmQuad:0.144};
 function eHpScale(lv){ return 1 + lv*DIFF.hpLin + lv*lv*DIFF.hpQuad; }
 function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
+// ---- enemy RPG STAT BLOCK (user, 2026-07-24): every enemy carries a real spread that scales
+// with level, so higher-level foes are tougher across MULTIPLE axes, not just hp sponges.
+//   DEF  -> % damage reduction in dealDamage. TTK-NEUTRAL by construction: makeEnemy pre-divides
+//           hp by (1-dr), so kills-to-die is unchanged and the measured DIFF curve is preserved;
+//           def just re-expresses tankiness as armour (and lets armour-piercing/DoT matter).
+//   DEX  -> attack speed + projectile speed for shooters.
+//   SPD  -> movement-speed multiplier (bounded so fast foes stay kiteable).
+//   MP   -> caster pool: shooters spend it per volley and regen it, so low-level casters can't
+//           sustain fire while high-level ones pour it on.
+function eDef(lv){ return Math.round(1 + lv*1.3); }
+function eDR(def){ return Math.min(0.5, def/(def+120)); }
+function eDex(lv){ return Math.round(2 + lv*1.0); }
+function eSpdMul(lv){ return 1 + Math.min(0.45, lv*0.010); }
+function eMp(lv){ return Math.round(12 + lv*4); }
 // ---- enemy BEHAVIOURS (user, 2026-07-24) — each is a personality that changes how the
 // enemy SPAWNS (dormant? anchored? in a pack?) and ROAMS (chase / kite / guard / wander),
 // consumed by the movement code in 07_update via enemyAI(). Difficulty comes from these +
@@ -605,21 +622,26 @@ function pickBehaviour(sp,lv,type){
 function makeEnemy(sp){
   const lv=roomLvAt(sp);
   const hm=eHpScale(lv), dm=eDmgScale(lv);
+  // enemy stat block (scales with level) — see eDef/eDR/eDex/eSpdMul/eMp above
+  const edef=eDef(lv), edr=eDR(edef), edex=eDex(lv), espd=eSpdMul(lv), emp=eMp(lv);
+  const hpm=hm*(1-edr);   // TTK-neutral: (base*hpm)/(1-edr) == base*hm, so kills-to-die is unchanged
   let e;
-  if(sp.t==='c') e={type:'c',r:15,hp:40*hm,spd:95+Math.min(60,lv*0.6),touch:12+dm,col:'#c04a3d'};
-  else if(sp.t==='s') e={type:'s',r:16,hp:60*hm,spd:45,fireT:1,bd:8+dm*0.63,col:'#8a5ac0'};
+  if(sp.t==='c') e={type:'c',r:15,hp:40*hpm,spd:95*espd,touch:12+dm,col:'#c04a3d'};
+  else if(sp.t==='s') e={type:'s',r:16,hp:60*hpm,spd:46*espd,fireT:1,bd:8+dm*0.63,col:'#8a5ac0'};
   else if(sp.t==='N'){ // dungeon objective node: stationary, harmless, must be destroyed
     const th=GBOSS[(curRoom&&curRoom.ring)||0];
     e={type:'N',r:16,hp:Math.round(46*hm),spd:0,touch:0,col:th?th.col:'#7ab8d4',node:true}; }
-  else { const dr=(curRoom&&curRoom.dungeon)?curRoom.bossRing:-1;
-    const GB=dr>=0?GBOSS[dr]:null;
+  else { const bring=(curRoom&&curRoom.dungeon)?curRoom.bossRing:-1;
+    const GB=bring>=0?GBOSS[bring]:null;
     // dungeon boss = the AWAKENED consciousness: tougher than the flesh it wore,
     // and it always layers both its shot patterns (e.awk bypasses the Lv60 gate)
-    e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hm*(GB?1.9:1)),spd:GB?44:38,fireT:1.5,ang:0,
+    e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hpm*(GB?1.9:1)),spd:(GB?44:38)*espd,fireT:1.5,ang:0,
      col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?1.25:1),
      name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
      chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
+  // attach the scaling stat block (nodes stay armour-free so their timed destruction is exact)
+  e.def=(sp.t==='N')?0:edef; e.dr=(sp.t==='N')?0:edr; e.dex=edex; e.maxmp=emp; e.mp=emp;
   // assign a behaviour to roaming enemies (not dungeon nodes / bosses) and apply its spawn-time
   // tweaks. home = spawn point (sentinels leash to it); ambushers begin dormant.
   if(e.type==='c'||e.type==='s'){

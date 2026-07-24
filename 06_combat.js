@@ -46,6 +46,7 @@ function dealDamage(e,amount,src){
   if(!e||e.hp<=0) return 0;
   src=src||{};
   let dmg=Math.round(amount);
+  if(e.dr) dmg=Math.max(1,Math.round(dmg*(1-e.dr)));                                        // enemy DEFENSE (armour)
   if(player.execute&&e.hp<e.maxhp*0.15) dmg=Math.round(dmg*(1+player.execute));            // Executioner
   if(player.shatter&&(e.slowT>0||hasStatus(e,'freeze'))) dmg=Math.round(dmg*(1+player.shatter)); // Cryomancer
   dmg=Math.max(1,Math.round(dmg*statusDmgIn(e)));                                          // cursed foes

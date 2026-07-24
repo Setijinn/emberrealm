@@ -306,9 +306,13 @@ function update(dt){
         const ax=ai.tx-e.x, ay=ai.ty-e.y, al=Math.hypot(ax,ay)||1;
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt);
       }
+      if(e.maxmp){ e.mp=Math.min(e.maxmp,(e.mp||0)+e.maxmp*0.35*dt); }   // caster MP regen (~35%/s)
       e.fireT-=dt;
-      if(e.fireT<=0){ e.fireT=1.4; e.animAtk=0.45; const base=Math.atan2(dy,dx);
-        for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, 210); }
+      if(e.fireT<=0 && (e.mp||0)>=8){ e.mp-=8;                           // MP-gated: low-lv casters can't sustain
+        e.fireT=1.4/(1+(e.dex||0)*0.010);                               // DEX -> attack speed (Lv50 ~0.92s)
+        e.animAtk=0.45; const base=Math.atan2(dy,dx);
+        const psp=210*(1+(e.dex||0)*0.006);                             // DEX -> projectile speed
+        for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, psp); }
     }
     if(e.type==='B'){
       const enraged=e.hp<e.maxhp*0.45;
