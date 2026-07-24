@@ -357,7 +357,7 @@ function drawTileG(x,y){
       // CORRUPTION: the infection bleeding out from the portal. A violet/black stain rising
       // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
       if(typeof corruptAt==='function'){ const cor=corruptAt(x,y);
-        if(cor>0.03){ ctx.fillStyle='rgba(38,8,48,'+(cor*0.6).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+        if(cor>0.06){ ctx.fillStyle='rgba(38,8,48,'+(cor*cor*0.6).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
           if(cor>0.35){ const gv=0.10+0.10*(0.5+0.5*Math.sin(performance.now()/700+x*1.3+y*0.7));
             ctx.fillStyle='rgba(190,60,210,'+(cor*gv).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
           if(cor>0.45 && typeof _corruptDec!=='undefined' && _corruptDec){

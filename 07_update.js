@@ -440,7 +440,13 @@ function update(dt){
   for(let i=enemies.length-1;i>=0;i--){ if(enemies[i].hp<=0){
     const de=enemies[i];
     fxDeath(de.x,de.y,de.col,de.r);
-    if(de.boss) msg('THRONE SHATTERED','the realm is yours — for now');
+    if(de.corrupt && typeof emitP==='function')                       // corrupted foe -> violet burst
+      for(let q=0;q<16;q++){ const a=Math.random()*6.283, sp=60+Math.random()*150;
+        emitP(de.x,de.y,{vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.55+Math.random()*0.3,col:'#b030d0',sz:3,glow:true}); }
+    if(de.boss){ // freeing a boss from the dream ends it — it speaks a couple words of truth
+      const gb=(de.ring!=null&&de.ring>=0&&typeof GBOSS!=='undefined')?GBOSS[de.ring]:null;
+      if(gb&&gb.death&&typeof bossSayDeath==='function') bossSayDeath(gb.death);
+      else msg('THRONE SHATTERED','the realm is yours — for now'); }
     if(de.sref) de.sref.dead=Date.now()+(de.boss?180000:60000);
     enemies.splice(i,1); player.kills++;
     if(player.killHeal) healPlayer(player.maxhp*player.killHeal);          // Reaper

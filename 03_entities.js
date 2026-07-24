@@ -18,47 +18,65 @@ const GBOSS=[
   title:'root-lord who anchored the rift',
   desc:'A patient colossus that erupts in rings of thorns. Weave the gaps and wear it down.',
   lore:'In the dying world it was the root-lord; its living lattice became the anchor the rift grew from. The corruption blooms through it still, seeding this land with the same rot that drowned its own.',
-  bark:['You guard soil already dead — I have seen where this ends.','I anchored the door. Let it root here too, as it rooted in us.']},
+  bark:['You guard soil already dead — I have seen where this ends.','I anchored the door. Let it root here too, as it rooted in us.'],
+  death:'Thank you... the dream lets go. I remember green — before the rot took it all.',
+  home:'the Everbloom Canopy, before the blight'},
  {n:'The Mistantler',dn:'The Fogbound Glade',col:'#6aae7a',pat:'spread5',pat2:'charge',mech:'clones',
   title:'scout that parted the veil',
   desc:'Swift and wary, it strafes then lowers its antlers to charge. Punish between its rushes.',
   lore:'It scouted the void between worlds and parted the veil for the exodus. The corruption came through wearing its face — now it is countless mirages, and cannot tell which reflection is itself.',
-  bark:['Which of us is real, little warden? Even I have forgotten.','I mapped the fog between worlds. You cannot hide from what I already walked.']},
+  bark:['Which of us is real, little warden? Even I have forgotten.','I mapped the fog between worlds. You cannot hide from what I already walked.'],
+  death:'You found the real me. I can stop... running now. Tell them we were only afraid.',
+  home:'the Silvermist Vale, where its herd once ran free'},
  {n:'The Bog Horror',dn:'The Sunken Warren',col:'#5a7a3a',pat:'aimed3',pat2:'spiral',mech:'pools',
   title:'brewer of the corroding reagent',
   desc:'It rises from the muck and flails vine and spore. Bait its lunge, then flank.',
   lore:'It brewed the reagent that ate through the wall between worlds. Where it wades the ground rots to bog, seeding your land with the very blight that dissolved the sky of its own.',
-  bark:['I brewed the rot that ate our sky. Taste a little of it.','The wall between worlds melted in my hands. So will you.']},
+  bark:['I brewed the rot that ate our sky. Taste a little of it.','The wall between worlds melted in my hands. So will you.'],
+  death:'We never meant to carry it here. We only wanted to live. Forgive—',
+  home:'the Lotus Fens, when the water still ran clear'},
  {n:'Stonefist',dn:'The Shattered Vault',col:'#8a8f88',pat:'nova',pat2:'charge',mech:'bloom',
   title:'gate-stone that holds the rift open',
   desc:'Heavy shockwave rings and a crushing charge. Strike hard in the recovery after it lunges.',
   lore:'Forged as the gate-stone that holds the rift open, it cracked under the weight of two worlds. Each blow splits the earth into glowing fissures — the door itself tearing wider.',
-  bark:['I am the stone that holds the door. I do not tire.','Crack me and the gate cracks with me — is that the price you want?']},
+  bark:['I am the stone that holds the door. I do not tire.','Crack me and the gate cracks with me — is that the price you want?'],
+  death:'The door... I held it shut. Or open. I forget which one was ever mercy.',
+  home:'the Highstone Bastion it was carved to guard'},
  {n:'The Crag Gargoyle',dn:'The Windward Roost',col:'#9aa0a8',pat:'spread5',pat2:'aimed3',mech:'pools',
   title:'herald that flew the first scouts through',
   desc:'It dives in erratic passes, raking with claws. Keep moving and answer between the swoops.',
   lore:'The herald that carried the first scouts through the tear. Infected in flight, it falls in tar-black dives, marking this sky for the swarm that follows the trail it left.',
-  bark:['We flew ahead. Thousands more follow the way I marked.','Your sky is next — I have already watched it burn.']},
+  bark:['We flew ahead. Thousands more follow the way I marked.','Your sky is next — I have already watched it burn.'],
+  death:'There are so many more of us. Frightened. Not evil — only fleeing. Spare them...',
+  home:'the Windspire Aeries, above a living sea'},
  {n:'Magmaw',dn:'The Scorch Barrows',col:'#c85a2a',pat:'ring8',pat2:'charge',mech:'pools',
   title:'furnace that burned the rift open',
   desc:'Rings of cinder-fire and a molten charge. Orbit the safe lane; do not stand still.',
   lore:'It was the furnace — a world’s worth of fire spent to burn the way open. What survived boils with molten corruption that bursts from the ground it crosses.',
-  bark:['It cost a world of fire to tear the way. I am what is left of it.','Burn — so your ashes may feed the next door we open.']},
+  bark:['It cost a world of fire to tear the way. I am what is left of it.','Burn — so your ashes may feed the next door we open.'],
+  death:'It burned everything. We had nowhere left. So we made a door. I am sorry.',
+  home:'the Emberdeep, warm and whole, before the fire turned'},
  {n:'The Ash Wraith',dn:'The Cinder Crypt',col:'#8a857e',pat:'spiral',pat2:'aimed3',mech:'clones',
   title:'the dead burned to fuel the ritual',
   desc:'A blinding spiral of ash with sudden aimed scythes. Find the one gap and stay in it.',
   lore:'All that is left of the people burned to fuel the ritual that opened the door — a drifting grief of ash, copied endlessly, unsure which cinder among them ever lived.',
-  bark:['We paid in our own dead to open it. Do not mourn me — I am only the smoke.','So many of us... which ash was ever truly me?']},
+  bark:['We paid in our own dead to open it. Do not mourn me — I am only the smoke.','So many of us... which ash was ever truly me?'],
+  death:'I remember my name now. Just for a moment. And then... quiet. Thank you.',
+  home:'the village of Ashenhold, before the night it burned'},
  {n:'The Cinder Demon',dn:'The Ashen Keep',col:'#d4522a',pat:'ring8',pat2:'spiral',mech:'bloom',
   title:'first claimed — it taught them the way',
   desc:'Spinning fire-rings tighten around you. Match its rotation and thread the orbit.',
   lore:'The first of them wholly claimed by the corruption — the demon that taught the others how to open the way. It floods the ground with the rift’s own fire, sparing only the warded few.',
-  bark:['It whispered how to open the door. I had only to say yes.','Your kind will make the same bargain. They always do.']},
+  bark:['It whispered how to open the door. I had only to say yes.','Your kind will make the same bargain. They always do.'],
+  death:'It lied to us. The bargain was never escape — it only wanted a new world to eat.',
+  home:'the Obsidian Sanctum, before the whisper found it'},
  {n:'The Molten Titan',dn:'The Core Sanctum',col:'#ff7a3d',pat:'spiral',pat2:'summon',mech:'clones',
   title:'the king who ordered the rift torn open',
   desc:'Everything at once: spiral fire, summoned horrors, relentless pressure. The final trial.',
   lore:'Their crowned king, who ordered the portal torn open to flee a world already seven-tenths devoured, and gave his molten core to power it. Wholly corrupted now, he shatters into false idols — the dead world’s last lie.',
-  bark:['I gave my crown to open the way, to save what remained of us.','I am the last lie of a dying world. Kneel — or join it.']},
+  bark:['I gave my crown to open the way, to save what remained of us.','I am the last lie of a dying world. Kneel — or join it.'],
+  death:'We fled a dying world and carried its death here on our backs. The rift still bleeds it. Close it, human — before your world becomes the next dream we drown in.',
+  home:'the Molten Crown, at the heart of a world now gone'},
 ];
 // per-ring projectile themes (colour/core/shape/size) — suited to each biome & creature
 const BOSS_PROJ=[
@@ -555,7 +573,9 @@ function enterDungeon(ring){
  genDungeon(ring);
  curRoom=rooms['DUN']; // set so makeEnemy reads dungeon lv
  enterRoom('DUN',(rooms['DUN'].px+.5)*TILE,(rooms['DUN'].py+.5)*TILE);
- msg(GBOSS[ring].dn,'clear it to the end');
+ // the dungeon IS the boss's corruption-dream: it dreams of the home it lost before the rift
+ const gb=GBOSS[ring];
+ msg(gb.dn, gb.n+' dreams of '+(gb.home||'a world now lost'));
 }
 
 const SHOPNPCS=[
@@ -674,6 +694,13 @@ function makeEnemy(sp){
     if(B.spdMul) e.spd*=B.spdMul;
     if(B.touchMul&&e.touch) e.touch*=B.touchMul;
     if(e.beh==='ambusher') e.dormant=true;
+    // CORRUPTED VARIANTS: the infection mutates creatures more the nearer the rift. A corrupted
+    // foe is buffed, violet-stained, and fires violet — the world visibly rots as you push east.
+    if(typeof corruptAt==='function'){ const cor=corruptAt(sp.x,sp.y);
+      if(Math.random() < cor*0.65){ e.corrupt=true; e.corLvl=cor;
+        e.hp*=1.45; e.spd*=1.14; if(e.touch) e.touch*=1.30; if(e.bd) e.bd*=1.30;
+        if(e.def){ e.def=Math.round(e.def*1.3); e.dr=eDR(e.def); }
+        e.pcol='#b030d0'; e.pcore='#f0c0ff'; e.col='#7a2a8a'; } }
   }
   // NEVER spawn inside a wall — grove lairs stamp 'X' over old spawn spots, and any
   // future caller might pass a bad tile; relocate to the nearest open cell.
@@ -755,9 +782,18 @@ function ringInfoAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG) return null;
  let t=T[zoneAt(tx,ty)];
  if(!t){ let bi=0,bd=1e18; for(let i=0;i<T.length;i++){ const dx=tx-T[i].cx,dy=ty-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} } t=T[bi]; }
  return {n:t.name, lv:t.lvmin, lv2:t.lvmax}; }
-// 0..1 corruption, rising toward the infection portal (tint + future enemy variants)
+// 0..1 corruption — a WORLD-WIDE gradient (drives the ground stain + corrupted enemy spread).
+// The safe western starter island is barely touched; the main island ramps from the bridge
+// landing out to the rift, with an intense local bloom right at the portal. Matches the canon:
+// the infection is eating this world from the rift outward, worse the closer you press east.
 function corruptAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.portal) return 0;
- const dd=Math.hypot(tx-R.portal.x,ty-R.portal.y); return Math.max(0,Math.min(1,1-dd/70)); }
+ const dd=Math.hypot(tx-R.portal.x,ty-R.portal.y);
+ const local=Math.max(0,1-dd/70);                       // fierce bloom at the rift itself
+ let grad=0.04;                                         // starter island: a faint taint only
+ if(R.core && !(R.bridge && tx<R.bridge.x0)){
+   const f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/(R.rmax||300));
+   grad=0.10+f*0.78; }                                  // main island: deepens core -> rift
+ return Math.max(0,Math.min(1, Math.max(local,grad))); }
 function regionAtPx(px,py){ if(!curRoom) return null;
  if(curRoom.rings) return ringInfoAt(px/TILE,py/TILE);
  if(!curRoom.regions) return null;

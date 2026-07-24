@@ -15,6 +15,29 @@
 
 function bossPunishDmg(e){ return Math.min((player&&player.maxhp?player.maxhp*0.30:9999), (e.bd||10)*1.8); }
 
+// ---- DYING WORDS: killing a boss frees it from the corruption-dream (which also ends it); it
+// speaks a couple words of TRUTH as it goes. Shown as a slow, sombre centred quote (separate from
+// the action banner). The final boss's line drops the whole reveal. (user, 2026-07-24) ----
+let bossQuote=null;
+function bossSayDeath(line){ if(!line) return; bossQuote={line:line, born:performance.now(), dur:6200}; }
+function drawBossQuote(){
+  if(!bossQuote) return;
+  const el=performance.now()-bossQuote.born;
+  if(el>bossQuote.dur){ bossQuote=null; return; }
+  const a=Math.min(1, el/500)*Math.min(1,(bossQuote.dur-el)/900);   // fade in / out
+  ctx.save(); ctx.globalAlpha=a; ctx.textAlign='center';
+  ctx.font='italic 20px "Pixelify Sans",serif';
+  const maxw=Math.min(W*0.82,760); const words=bossQuote.line.split(' '); let lines=[],cur='';
+  for(const w of words){ const test=cur?cur+' '+w:w;
+    if(ctx.measureText(test).width>maxw){ if(cur)lines.push(cur); cur=w; } else cur=test; }
+  if(cur) lines.push(cur);
+  const y0=H*0.70;
+  for(let i=0;i<lines.length;i++){ const yy=y0+i*27;
+    ctx.fillStyle='rgba(0,0,0,.72)'; ctx.fillText(lines[i],W/2+1,yy+1);
+    ctx.fillStyle='#d6c2ec'; ctx.fillText(lines[i],W/2,yy); }
+  ctx.restore(); ctx.textAlign='left';
+}
+
 function bossMechTick(e, dt){
   if(!e || !e.mech || e.decoy) return;
   if(e.mech==='pools'){ _poolsTick(e, dt); return; }

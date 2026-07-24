@@ -938,6 +938,11 @@ function render(){
   for(const e of enemies){
     if(e.hidden) continue;                                     // boss hidden during a clone puzzle
     shadow(e.x,e.y+e.r*0.8,e.r*1.05);
+    if(e.corrupt){ const _ct=performance.now()/1000;           // violet corruption aura
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.30+0.14*Math.sin(_ct*3+e.x);
+      const cg=ctx.createRadialGradient(e.x,e.y,2,e.x,e.y,e.r*1.9);
+      cg.addColorStop(0,'rgba(176,48,208,0.55)'); cg.addColorStop(1,'rgba(176,48,208,0)');
+      ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(e.x,e.y,e.r*1.9,0,6.29); ctx.fill(); ctx.restore(); }
     // clone-puzzle TELL: false idols render slightly dim + greyed; the TRUE image stays crisp
     if(e.decoy && !e.realClone){ ctx.save(); ctx.globalAlpha=0.84; drawEnemySprite(e,pn); ctx.restore();
       ctx.save(); ctx.globalAlpha=0.15; ctx.fillStyle='#3a3a46';
@@ -1184,6 +1189,7 @@ function render(){
       ctx.save(); ctx.translate(dx,dy); ctx.rotate(Math.PI/4); ctx.fillRect(-4,-4,8,8); ctx.restore(); }
     ctx.textAlign='left';
   }
+  if(typeof drawBossQuote==='function') drawBossQuote();       // a slain boss's dying words of truth
   // dungeon objective banner (screen space): the first unfinished chamber's task
   if(curRoom.dungeon && curRoom.objs && !(typeof bossBar!=='undefined'&&bossBar)){
     const o=curRoom.objs.find(x=>!x.done);
