@@ -497,7 +497,16 @@ let curShopNear=null;
 // Linear early (unchanged feel in the first zones) + quadratic late: player power
 // compounds (tier² weapons × rarity × tree × attack speed), so enemies must too —
 // with only the old linear curve the realm got EASIER as you climbed.
-const DIFF={hpLin:0.55, hpQuad:0.012, dmLin:0.8, dmQuad:0.012};
+// RETUNED for the perk trees + ascension ultimates (rule 8c: the curve must assume capstone
+// AND ultimate power at endgame). Measured: this curve was calibrated against a hero with NO
+// tree investment (TTK 1.2s at Lv1 -> 5.44s at Lv150, matching its design intent), but a
+// fully-specced ascended hero cut endgame TTK to 3.10s — the trees alone made the late game
+// ~1.75x easier than designed, before ultimates added ~40% more effective DPS.
+// hpQuad carries the correction because it is ~nil early and dominant late: enemy HP is
+// untouched in the first zones, +36% by Lv40, +60% by Lv150 — tracking how perk points
+// actually accumulate. dmQuad rises only slightly: with permadeath from Lv20, death should
+// come from readable pattern pressure (rule 5b), not from single hits turning lethal.
+const DIFF={hpLin:0.55, hpQuad:0.0215, dmLin:0.8, dmQuad:0.015};
 function eHpScale(lv){ return 1 + lv*DIFF.hpLin + lv*lv*DIFF.hpQuad; }
 function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
 function makeEnemy(sp){

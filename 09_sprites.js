@@ -1017,6 +1017,7 @@ function render(){
     ctx.textAlign='left'; }
   // ability loadout buttons (bottom-left) + "tap right to cast" hint
   if(typeof drawAbilButtons==='function') drawAbilButtons();
+  if(typeof drawUltButton==='function') drawUltButton();
   // floating USE prompt above the hero when near a portal/pillar (button-gated)
   drawPortalPrompt();
   // big boss bar, top of screen — shows from the first hit on a boss

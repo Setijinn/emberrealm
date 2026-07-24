@@ -155,13 +155,22 @@ function bossVolley(e,pat,base,spd,enraged){
 }
 // ---- ascension capstone helpers ----
 // heals that respect Bishop/Soulflayer (overflow -> shield) and Bloodlord (overheal nova)
+let _inBloodNova=false;
 function healPlayer(amt){ if(!amt||amt<=0) return;
   const over=Math.max(0,(player.hp+amt)-player.maxhp);
   player.hp=Math.min(player.maxhp,player.hp+amt);
   if(over>0.5){
-    if(player.overshield) player.shield=Math.min(player.maxhp*0.20,(player.shield||0)+over);
-    if(player.bloodNova&&over>4&&(player._bnCd||0)<=0){ player._bnCd=1.5;
-      aoe(player.x,player.y,90,Math.round(over*2),'#c0392b'); } } }
+    // overshield caps what THIS overheal contributes (20% max HP) — it must not clamp a
+    // shield you already have, or a Guardian's 90% ultimate ward was being cut to 20%
+    if(player.overshield) player.shield=Math.min(player.maxhp,(player.shield||0)+Math.min(player.maxhp*0.20,over));
+    // Bloodlord: overheal detonates. Two guards — the nova's OWN damage lifesteals back into
+    // healPlayer, which at full HP is pure overheal, which would detonate again, larger each
+    // time (a runaway worth ~400s of DPS in testing). Re-entrancy is blocked and the blast
+    // is capped, so it stays a burst rather than a feedback loop.
+    if(player.bloodNova&&over>4&&(player._bnCd||0)<=0&&!_inBloodNova){ player._bnCd=1.5;
+      _inBloodNova=true;
+      try{ aoe(player.x,player.y,90,Math.round(Math.min(over*2,player.maxhp*0.45)),'#c0392b'); }
+      finally{ _inBloodNova=false; } } } }
 // damage to the player through Juggernaut (less while moving), shields, Nightblade (vanish)
 function damagePlayer(raw){ let hit=raw;
   if(player.moveDr&&player._moving) hit*=(1-player.moveDr);
@@ -312,8 +321,8 @@ function update(dt){
       if(s.crit&&player.critBolt){ const bd3=Math.round(dmg*player.critBolt); e.hp-=bd3;
         fx.push({t:'bolt',pts:[{x:e.x,y:e.y-120},{x:e.x,y:e.y}],life:0.3,col:'#9ad4ef'});
         texts.push({x:e.x,y:e.y-e.r-14,txt:bd3,col:'#9ad4ef',life:0.6}); }
-      if(s.crit&&player.critDashCd&&player.acd){
-        for(const k in player.acd) if(player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-0.6); }
+      if(s.crit&&player.critDashCd&&player.acd){    // __-prefixed keys (the ultimate) are exempt
+        for(const k in player.acd) if(k.charAt(0)!=='_'&&player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-0.6); }
       if(player.fork&&!s.forked){ const ba=Math.atan2(s.vy,s.vx), sp3=Math.hypot(s.vx,s.vy);
         for(const off of [-0.5,0.5]) pShots.push({x:s.x,y:s.y,px:s.x,py:s.y,
           vx:Math.cos(ba+off)*sp3,vy:Math.sin(ba+off)*sp3,r:s.r,life:0.45,

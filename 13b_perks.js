@@ -247,8 +247,10 @@ function perkDo(d,ctx,src){
     if(d.shield){ const cap=player.maxhp*0.35;
       player.shield=Math.min(cap,(player.shield||0)+player.maxhp*(d.shield.pct||0.1)*r); }
     if(d.res) resAdd((d.res.n||0)*(d.res.perRank===false?1:r));
+    // cooldown refunds never touch the ULTIMATE (player.acd.__ult) — a build that cuts
+    // cooldowns on kill/crit would otherwise keep a 60s ultimate permanently available.
     if(d.cdCut&&player.acd){ const s=(d.cdCut.s||0.5)*r;
-      for(const k in player.acd) if(player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-s); }
+      for(const k in player.acd) if(k.charAt(0)!=='_'&&player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-s); }
     if(d.buff){ const o=d.buff; player[o.f+'T']=o.dur||3; player[o.f+'M']=o.m||1.3;
       if(typeof abilFx==='function') abilFx('buff',player.x,player.y,o.col||'#ffd07a'); }
     if(d.stack) perkStack(d.stack.id,(d.stack.n||1),d.stack.max||10,d.stack.dur||5);

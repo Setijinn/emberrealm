@@ -17,6 +17,8 @@ addEventListener('pointerdown',e=>{
   // the floating USE prompt (portal/pillar) takes top precedence
   if(typeof hitPortalPrompt==='function' && hitPortalPrompt(e.clientX,e.clientY)){
     if(typeof usePortalPrompt==='function') usePortalPrompt(); return; }
+  // the ULT button fires on press — no arming, no aiming (rule 5b: a thumb must manage it)
+  if(typeof hitUltButton==='function' && hitUltButton(e.clientX,e.clientY)){ castUlt(); return; }
   // ability loadout buttons (bottom-left) take precedence: tap to arm a slot
   if(typeof hitAbilButton==='function'){ const hs=hitAbilButton(e.clientX,e.clientY);
     if(hs>=0){ armSlot(hs); return; } }
@@ -64,6 +66,7 @@ addEventListener('keydown',e=>{
     if(typeof armSlot==='function') armSlot(+k-1);
     const mw=mouseWorld(); if(typeof doAbility==='function') doAbility(mw.x,mw.y);
   }
+  else if(k==='4'||k==='r'){ if(typeof castUlt==='function') castUlt(); }    // ascension ultimate
   else if(k==='e'){ if(typeof portalPrompt!=='undefined' && portalPrompt && typeof usePortalPrompt==='function') usePortalPrompt(); }
   else if(k==='q'){ const b=document.getElementById('potBtn'); if(b) b.click(); }
   else if(k==='i'||k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
