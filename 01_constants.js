@@ -40,7 +40,10 @@ function resize(){ W=_vpW(); H=_vpH();
 resize(); addEventListener('resize',resize);
 // re-measure once the mobile viewport settles (address bar collapse etc.)
 addEventListener('load',()=>{ resize(); setTimeout(resize,150); setTimeout(resize,600); });
-addEventListener('orientationchange',()=>setTimeout(resize,300));
+// Mobile viewport metrics settle a few frames LATE after a rotation, and later still if the
+// rotation happens WHILE the app is loading — a single 300ms re-measure could catch a stale value
+// and leave the canvas short (a black band along the bottom in landscape). Re-measure on a burst.
+addEventListener('orientationchange',()=>{ resize(); for(const d of [80,200,350,550,800,1200]) setTimeout(resize,d); });
 // Entering/leaving fullscreen changes the visible area but the viewport metrics settle a
 // few frames LATER on mobile — re-measure across the transition. This is the correction
 // that orientationchange used to provide by accident, and it fires whether or not the
@@ -51,3 +54,8 @@ addEventListener('visibilitychange',()=>{ if(!document.hidden){ resize(); setTim
 if(window.visualViewport){ visualViewport.addEventListener('resize',resize); visualViewport.addEventListener('scroll',resize); }
 // safety net: some in-app viewers never fire events — poll every frame
 function checkSize(){ if(_vpW()!==W||_vpH()!==H) resize(); }
+// Boot heal: the per-frame checkSize() only starts once the main loop is running, and a rotation
+// mid-load can leave the canvas sized to the stale/portrait viewport before then. Poll for the
+// first few seconds (independent of the loop) so a rotate-while-loading always heals the black
+// band once the landscape metrics settle. Uses checkSize (no needless canvas clears).
+(function _bootHeal(n){ checkSize(); if(n<50) setTimeout(()=>_bootHeal(n+1),100); })(0);
