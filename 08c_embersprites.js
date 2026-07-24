@@ -32,6 +32,18 @@ if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
 // water tile (global â€” hub pool + grove lakes)
 const _waterImg=(typeof window!=='undefined')?_img('assets/tiles/water.png'):null;
+// Ocean variants — 4 seamless-compatible wave tiles (same tileset) mixed per-cell to break the
+// grid repetition of a single tile. Index 0 is _waterImg (kept for hub pools / grove lakes).
+const _waterVar=(typeof window!=='undefined')?[_waterImg,_img('assets/tiles/water_1.png'),_img('assets/tiles/water_2.png'),_img('assets/tiles/water_3.png')]:null;
+// World-rework Phase 2 art: the great bridge deck, the sandy shore, the infection portal
+// landmark, and corrupted-ground decals (drawn where corruptAt() is high, toward the portal).
+const _bridgeImg=(typeof window!=='undefined')?_img('assets/tiles/bridge_deck.png'):null;
+const _shoreImg =(typeof window!=='undefined')?_img('assets/tiles/shore_sand.png'):null;
+const _portalImg=(typeof window!=='undefined')?_img('assets/env/portal_infect.png'):null;
+const _corruptDec=(typeof window!=='undefined')?[_img('assets/env/corrupt_0.png'),_img('assets/env/corrupt_1.png')]:null;
+// The infection portal was once a town portal — a ring of now-broken, crumbling stone pillars
+// surrounds it, drawn as a stone circle around the rift in drawWorldFeatures().
+const _portalPillars=(typeof window!=='undefined')?[_img('assets/env/pillar_0.png'),_img('assets/env/pillar_1.png'),_img('assets/env/pillar_2.png')]:null;
 // Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
 // (render falls back to lairset / normal boss art until these land)
 const _dunSet={}, _awakImg={};

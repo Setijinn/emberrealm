@@ -132,6 +132,7 @@ function drawTileG(x,y){
   if(c==='b'){
     const bimg=(typeof _bridgeImg!=='undefined'&&_bridgeImg&&_bridgeImg.complete&&_bridgeImg.naturalWidth)?_bridgeImg:null;
     if(bimg){ ctx.imageSmoothingEnabled=false; const o=hmix(x,y)&1;
+      ctx.fillStyle='#5a3f28'; ctx.fillRect(tx,ty,TILE,TILE);   // timber base so any alpha never shows the void
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o?-1:1,1);
       ctx.drawImage(bimg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
     else { ctx.fillStyle='#5a3f28'; ctx.fillRect(tx,ty,TILE,TILE);
@@ -209,21 +210,40 @@ function drawTileG(x,y){
     ctx.fillStyle='#241812'; ctx.fillRect(tx+TILE/2-6,ty+5,12,11);
     }
   } else if(c==='w'){
-    if(typeof _waterImg!=='undefined'&&_waterImg&&_waterImg.complete&&_waterImg.naturalWidth){
-      // NO per-cell flip — the ripple pattern must stay aligned or the pool checkerboards
-      ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(_waterImg,tx,ty,TILE,TILE);
-      ctx.fillStyle='rgba(6,10,20,0.25)'; ctx.fillRect(tx,ty,TILE,TILE);   // sit in the palette
-      // dark bank edge where water meets land -> reads as a pool rim
-      const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
-      ctx.fillStyle='rgba(4,8,14,0.55)';
-      if(!wat(x,y-1)) ctx.fillRect(tx,ty,TILE,4);
-      if(!wat(x,y+1)) ctx.fillRect(tx,ty+TILE-4,TILE,4);
-      if(!wat(x-1,y)) ctx.fillRect(tx,ty,4,TILE);
-      if(!wat(x+1,y)) ctx.fillRect(tx+TILE-4,ty,4,TILE);
+    // OCEAN: base tile + drifting wave crests + shoreline surf. Waves/foam are drawn as pixel
+    // scatter (pxH/pxV), never solid lines (user rule), and animate so the sea actually moves.
+    const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
+    // Pick one of the seamless ocean variants per cell (mix breaks the single-tile repetition).
+    // NO per-cell flip — these tiles are edge-matched, flipping would break the seams.
+    let _wimg=_waterImg;
+    if(typeof _waterVar!=='undefined'&&_waterVar){ const wv=_waterVar[hmix(x,y)%_waterVar.length];
+      if(wv&&wv.complete&&wv.naturalWidth) _wimg=wv; }
+    if(_wimg&&_wimg.complete&&_wimg.naturalWidth){
+      ctx.imageSmoothingEnabled=false; ctx.drawImage(_wimg,tx,ty,TILE,TILE);
     } else { ctx.fillStyle=(x+y)%2?'#16303f':'#1a3848'; ctx.fillRect(tx,ty,TILE,TILE); }
-    const wn=Math.sin(performance.now()/700+x*0.9+y*1.7);
-    if(wn>0.55){ ctx.fillStyle='rgba(200,230,240,0.10)'; ctx.fillRect(tx+6,ty+TILE/2-2,TILE-12,3); }
+    ctx.fillStyle='rgba(6,12,26,0.30)'; ctx.fillRect(tx,ty,TILE,TILE);      // deepen into the palette
+    const t=performance.now()/1000;
+    // rolling wave crests: a scrolling sine+noise field; where it peaks, lay a foam ridge of
+    // scattered pixels across the row -> a wave front drifting slowly north.
+    for(let iy=0; iy<TILE; iy+=3){
+      const wy=ty+iy;
+      const ph=Math.sin(wy*0.10 - t*1.3 + x*0.35 + vnoise(x*3,(wy>>3)+y*3,5)*6.0);
+      if(ph>0.88)      pxH(tx,ty+iy, TILE, 'rgba(205,232,244,0.22)', 0.55);
+      else if(ph>0.74) pxH(tx,ty+iy, TILE, 'rgba(150,196,216,0.13)', 0.4);
+    }
+    // occasional sun-glint sparkle (drifts with a coarse time bucket)
+    const gh=hmix(x*3+((t*1.5)|0), y*5);
+    if((gh&255)<22){ ctx.fillStyle='rgba(224,242,251,0.20)'; ctx.fillRect(tx+(gh%TILE), ty+((gh>>5)%TILE),1,1); }
+    // SHORELINE SURF: bright pulsing foam on the water edge that touches land, with a wet band
+    // just inside it -> a lively coastline instead of a flat dark rim.
+    if(!wat(x,y-1)||!wat(x,y+1)||!wat(x-1,y)||!wat(x+1,y)){
+      const fa=(0.30+0.16*Math.sin(t*3.0+x*1.3+y*0.7)).toFixed(3), foam='rgba(236,248,252,'+fa+')';
+      ctx.fillStyle='rgba(4,10,20,0.42)';
+      if(!wat(x,y-1)){ ctx.fillRect(tx,ty+2,TILE,2); pxH(tx,ty,TILE,foam,0.7); }
+      if(!wat(x,y+1)){ ctx.fillRect(tx,ty+TILE-4,TILE,2); pxH(tx,ty+TILE-1,TILE,foam,0.7); }
+      if(!wat(x-1,y)){ ctx.fillRect(tx+2,ty,2,TILE); pxV(tx,ty,TILE,foam,0.7); }
+      if(!wat(x+1,y)){ ctx.fillRect(tx+TILE-4,ty,2,TILE); pxV(tx+TILE-1,ty,TILE,foam,0.7); }
+    }
   } else if(c==='X' || c==='F'){
     // boss-room wall ('X', sampled from tileset upper) / floor ('F', lower), themed per zone
     const bd=curRoom.rings?grvBandXY(x,y):8;
@@ -245,6 +265,22 @@ function drawTileG(x,y){
       if(c==='X'){ ctx.fillStyle='#4a4350'; ctx.fillRect(tx,ty,TILE,9); ctx.fillStyle='#181420'; ctx.fillRect(tx,ty+TILE-5,TILE,5); } }
   } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
     const bd=grvBandXY(x,y);
+    // SHORE: a sandy beach ring wherever land meets the ocean. Land cells touching 'w' draw the
+    // sand tile instead of ground, with a wet-sand rim on the water side -> reads as a coastline.
+    if(curRoom.rings.radial && typeof _shoreImg!=='undefined' && _shoreImg && _shoreImg.complete && _shoreImg.naturalWidth){
+      const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
+      if(wat(x-1,y)||wat(x+1,y)||wat(x,y-1)||wat(x,y+1)){
+        ctx.imageSmoothingEnabled=false; const hh=hmix(x,y), o=hh&3;
+        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+        ctx.drawImage(_shoreImg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+        const v=(hh>>2)%5;
+        if(v===0){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
+        else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
+        ctx.fillStyle='rgba(70,110,120,0.30)';   // wet darker sand on the water-facing edge(s)
+        if(wat(x,y-1)) ctx.fillRect(tx,ty,TILE,4); if(wat(x,y+1)) ctx.fillRect(tx,ty+TILE-4,TILE,4);
+        if(wat(x-1,y)) ctx.fillRect(tx,ty,4,TILE); if(wat(x+1,y)) ctx.fillRect(tx+TILE-4,ty,4,TILE);
+        return; }
+    }
     const _gset=_groundSet[bd];
     if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
       const hh=hmix(x,y), o=hh&3;   // mixed hash -> flip is random per-cell, not parity-checkerboard
@@ -272,6 +308,17 @@ function drawTileG(x,y){
       if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
       else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
       if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
+      // CORRUPTION: the infection bleeding out from the portal. A violet/black stain rising
+      // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
+      if(typeof corruptAt==='function'){ const cor=corruptAt(x,y);
+        if(cor>0.03){ ctx.fillStyle='rgba(38,8,48,'+(cor*0.6).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+          if(cor>0.35){ const gv=0.10+0.10*(0.5+0.5*Math.sin(performance.now()/700+x*1.3+y*0.7));
+            ctx.fillStyle='rgba(190,60,210,'+(cor*gv).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+          if(cor>0.45 && typeof _corruptDec!=='undefined' && _corruptDec){
+            const ch=hmix(x+701,y+229);
+            if(ch%100 < cor*30){ const im=_corruptDec[ch%_corruptDec.length];
+              if(im&&im.naturalWidth){ const ds=TILE*0.72, ox=((ch>>3)%10)-5, oy=((ch>>9)%10)-5;
+                ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE-ds+2+oy, ds, ds); } } } } }
       // scatter a ground decal (deterministic) on plain ground only — breaks repetition
       const _dl=_decal[bd];
       if(_dl && _dl.length && 'tk'.indexOf(c)<0){

@@ -671,6 +671,45 @@ function drawLairs(){
       ctx.drawImage(cp, L.sprite.x-w/2, L.sprite.y+12-h, w, h); }
   }
 }
+// The infection portal — the corrupting rift landmark on the far shore (lore only, no
+// interaction). Base-anchored like a lair den, with a pulsing violet ground-glow beneath it.
+function drawWorldFeatures(){
+  const R=curRoom; if(!R||!R.rings||!R.rings.radial||R.dungeon||R.town) return;
+  const P=R.rings.portal; if(!P) return;
+  if(typeof _portalImg==='undefined'||!_portalImg||!_portalImg.complete||!_portalImg.naturalWidth) return;
+  ctx.imageSmoothingEnabled=false;
+  const px=P.x*TILE, py=P.y*TILE, t=performance.now()/1000;
+  const pul=0.5+0.5*Math.sin(t*1.6);
+  // ground bloom of corruption
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const gr=ctx.createRadialGradient(px,py,4,px,py,TILE*3.6);
+  gr.addColorStop(0,'rgba(150,40,180,'+(0.20+pul*0.14).toFixed(3)+')');
+  gr.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(px,py,TILE*3.6,0,6.29); ctx.fill();
+  ctx.restore();
+  const w=TILE*5.0, h=w*_portalImg.height/_portalImg.width;
+  ctx.save(); ctx.translate(px,py); ctx.rotate(t*0.10);          // slow ominous swirl
+  ctx.globalAlpha=0.92+pul*0.08;
+  ctx.drawImage(_portalImg,-w/2,-h/2,w,h); ctx.restore();
+  // The ruined stone circle: a ring of crumbling pillars around the rift, back-to-front so the
+  // near ones overlap the far ones. Each was a town-portal monument, now cracked and corrupted.
+  if(typeof _portalPillars!=='undefined'&&_portalPillars){
+    const N=8, rx=TILE*3.6, ry=TILE*2.5;
+    const ring=[]; for(let i=0;i<N;i++){ const a=t*0.02 + i*(6.2832/N);   // barely-perceptible drift
+      ring.push({a, ppx:px+Math.cos(a)*rx, ppy:py+Math.sin(a)*ry, im:_portalPillars[i%_portalPillars.length]}); }
+    ring.sort((A,B)=>A.ppy-B.ppy);   // painter's order: far (small y) first
+    for(const p of ring){ const im=p.im; if(!im||!im.naturalWidth) continue;
+      const pw=TILE*1.7, ph=pw*im.height/im.width;
+      ctx.fillStyle='rgba(30,6,40,0.45)'; ctx.beginPath(); ctx.ellipse(p.ppx,p.ppy,pw*0.34,pw*0.13,0,0,6.29); ctx.fill();
+      const gy=0.10+0.08*Math.sin(t*1.6+p.a*3);   // violet base glow seeping from the cracks
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      const pg=ctx.createRadialGradient(p.ppx,p.ppy-ph*0.3,1,p.ppx,p.ppy-ph*0.3,pw*0.7);
+      pg.addColorStop(0,'rgba(150,50,190,'+gy.toFixed(3)+')'); pg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(p.ppx,p.ppy-ph*0.3,pw*0.7,0,6.29); ctx.fill();
+      ctx.restore();
+      ctx.drawImage(im, p.ppx-pw/2, p.ppy-ph, pw, ph); }
+  }
+}
 function render(){
   ctx.fillStyle='#0b0a10'; ctx.fillRect(0,0,W,H);
   const roomW=curRoom.w*TILE, roomH=curRoom.h*TILE;
@@ -693,6 +732,7 @@ function render(){
   }
   for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++) drawTileG(tx,ty);
   if(typeof drawLairs==='function') drawLairs();
+  if(typeof drawWorldFeatures==='function') drawWorldFeatures();
   const pn=performance.now()/1000;
   // light sources: soft additive halos only — the FIRE itself is the sprite art
   // (brazier/lamp) plus the ember particles; no more painted orange orbs
