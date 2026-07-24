@@ -181,6 +181,47 @@ function damagePlayer(raw){ let hit=raw;
   if(player.vanishHurt) player.inv=Math.max(player.inv,1.1);
   if(typeof perkFire==='function') perkFire('hurt',{dmg:hit,x:player.x,y:player.y});
   return hit; }
+// ---- enemy behaviour AI (see EBEH / pickBehaviour in 03_entities) ----
+// Returns where the enemy WANTS to move this frame: {tx,ty target point, smul speed×, move}.
+// The type-specific code (chase / kite / fire) in update() consumes it. One behaviour per
+// enemy, so only one branch ever applies.
+function enemyAI(e,dx,dy,dd,dt){
+  const B=(typeof EBEH!=='undefined'&&EBEH[e.beh])||{};
+  let tx=player.x, ty=player.y, smul=1;
+  // AMBUSHER: dormant (inert) until you step into range, then a short fast lunge
+  if(e.beh==='ambusher'){
+    if(e.dormant){
+      if(dd<B.wake){ e.dormant=false; e.burstT=B.burstT; e.flash=0.25;
+        if(typeof boom==='function') boom(e.x,e.y,e.col,10); }
+      else return {tx:e.x,ty:e.y,smul:0,move:false};
+    }
+    if(e.burstT>0){ e.burstT-=dt; smul=B.burst||1; }
+  }
+  // SENTINEL: guards home. Once you leave its territory it disengages and patrols a small circle.
+  if(e.beh==='sentinel'){
+    const hd=Math.hypot(player.x-e.home.x,player.y-e.home.y);
+    if(hd>(B.leash||360)){
+      if(Math.hypot(e.x-e.home.x,e.y-e.home.y)<40){ e.roamA+=dt*1.1;
+        tx=e.home.x+Math.cos(e.roamA)*46; ty=e.home.y+Math.sin(e.roamA)*46; smul=0.5; }
+      else { tx=e.home.x; ty=e.home.y; smul=0.85; }
+    }
+  }
+  // ROAMER: wanders the ground when you're far off, hunts when you close in
+  if(e.beh==='roamer' && dd>(B.engage||540)){
+    e.roamA+=(Math.random()-0.5)*dt*3;
+    tx=e.x+Math.cos(e.roamA)*120; ty=e.y+Math.sin(e.roamA)*120; smul=B.wander||0.42;
+  }
+  // PACK: blend your position with the local pack centroid so they clump and flank together,
+  // and hit a little harder in numbers
+  if(e.beh==='pack'){
+    let cx=0,cy=0,n=0;
+    for(const o of enemies){ if(o!==e && o.beh==='pack'){
+      const d2=Math.hypot(o.x-e.x,o.y-e.y); if(d2<(B.cohesion||150)){ cx+=o.x; cy+=o.y; n++; } } }
+    if(n){ cx/=n; cy/=n; tx=player.x*0.72+cx*0.28; ty=player.y*0.72+cy*0.28;
+      smul=1+(B.packBuff||0.16)*Math.min(3,n); }
+  }
+  return {tx,ty,smul,move:true};
+}
 let _pmove=false;   // true only while the PLAYER is being moved (Pathwarden terrain ghost)
 function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
@@ -244,14 +285,27 @@ function update(dt){
     if(!tickStatuses(e,dt)) continue;          // frozen / stunned foes cannot act
     const dx=player.x-e.x, dy=player.y-e.y, dd=Math.hypot(dx,dy)||1;
     if(e.type==='c'){
-      moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
+      const ai=enemyAI(e,dx,dy,dd,dt);
+      if(ai.move){ const ax=ai.tx-e.x, ay=ai.ty-e.y, al=Math.hypot(ax,ay)||1;
+        moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt); }
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
       if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e)*(1-(player.dr||0)));
         player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
         if(player.thorns>0){ const rf=Math.round(hit*player.thorns*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
     }
     if(e.type==='s'){
-      if(dd>200) moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
+      const ai=enemyAI(e,dx,dy,dd,dt);
+      if(e.beh==='skirmisher'){
+        // kite: back off when crowded, close the gap when out of range, strafe in the pocket
+        const B=EBEH.skirmisher; let mvx,mvy;
+        if(dd<B.kiteMin){ mvx=-dx/dd; mvy=-dy/dd; }
+        else if(dd>B.kiteMax){ mvx=dx/dd; mvy=dy/dd; }
+        else { mvx=-dy/dd; mvy=dx/dd; }
+        moveCircle(e,mvx*e.spd*slowF(e)*dt,mvy*e.spd*slowF(e)*dt);
+      } else if(ai.move && dd>200){
+        const ax=ai.tx-e.x, ay=ai.ty-e.y, al=Math.hypot(ax,ay)||1;
+        moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt);
+      }
       e.fireT-=dt;
       if(e.fireT<=0){ e.fireT=1.4; e.animAtk=0.45; const base=Math.atan2(dy,dx);
         for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, 210); }

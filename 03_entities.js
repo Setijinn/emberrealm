@@ -506,9 +506,50 @@ let curShopNear=null;
 // untouched in the first zones, +36% by Lv40, +60% by Lv150 — tracking how perk points
 // actually accumulate. dmQuad rises only slightly: with permadeath from Lv20, death should
 // come from readable pattern pressure (rule 5b), not from single hits turning lethal.
-const DIFF={hpLin:0.55, hpQuad:0.0215, dmLin:0.8, dmQuad:0.015};
+// HARDER PASS (user, 2026-07-24 — "make the game overall more difficult"): on top of a ~50%
+// spawn-density increase (more enemies = more bullets = the fun, dodgeable axis of harder),
+// enemies are tankier and hit harder across the board. hp +9% base / more late, damage +15%
+// base — every zone bites now, not only the endgame. Deaths still come from patterns, not
+// one-shots (rule 5b), so dmg is raised via the linear term rather than the quadratic.
+const DIFF={hpLin:0.60, hpQuad:0.024, dmLin:0.95, dmQuad:0.016};
 function eHpScale(lv){ return 1 + lv*DIFF.hpLin + lv*lv*DIFF.hpQuad; }
 function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
+// ---- enemy BEHAVIOURS (user, 2026-07-24) — each is a personality that changes how the
+// enemy SPAWNS (dormant? anchored? in a pack?) and ROAMS (chase / kite / guard / wander),
+// consumed by the movement code in 07_update via enemyAI(). Difficulty comes from these +
+// the DIFF stat curve, NOT from spawning more of them. Params are tunable here.
+//   hunter     relentless straight-line chase (the classic)
+//   pack       steers toward nearby pack-mates AND you -> coordinated swarms, faster in numbers
+//   ambusher   DORMANT until you step close, then a fast lunge burst (spawn: sits inert)
+//   sentinel   guards its spawn point; chases only within a leash, else returns and patrols; tankier
+//   roamer     wanders the ground when you're far, hunts when you're near (the map feels alive)
+//   skirmisher (shooters) KITES — backs off when you close in, holds at range and fires
+const EBEH={
+  hunter:    {},
+  pack:      {cohesion:150, packBuff:0.16},
+  ambusher:  {wake:200, burst:1.95, burstT:1.4, hpMul:0.85, touchMul:1.35},
+  sentinel:  {leash:360, hpMul:1.55, spdMul:0.9},
+  roamer:    {engage:540, wander:0.42},
+  skirmisher:{kiteMin:175, kiteMax:300, spdMul:2.4},
+};
+// deterministic per-spawn so a given spot keeps its character across respawns (a guarded
+// chokepoint stays guarded). Variety + danger rise with the band.
+function pickBehaviour(sp,lv,type){
+  const b=Math.max(0,Math.min(8,Math.round(lv/18)));
+  const h=(Math.imul(sp.x|0,374761393)+Math.imul(sp.y|0,668265263))>>>0;
+  const roll=(h^(h>>>13))%100;
+  if(type==='s'){
+    if(roll < 26+b*4) return 'skirmisher';
+    if(roll < 42+b*2) return 'sentinel';
+    if(roll < 55)     return 'roamer';
+    return 'hunter';
+  }
+  if(roll < 16+b*3) return 'pack';
+  if(roll < 30+b*4) return 'ambusher';
+  if(roll < 44+b*2) return 'sentinel';
+  if(roll < 58)     return 'roamer';
+  return 'hunter';
+}
 function makeEnemy(sp){
   const lv=roomLvAt(sp);
   const hm=eHpScale(lv), dm=eDmgScale(lv);
@@ -527,6 +568,16 @@ function makeEnemy(sp){
      name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
      chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
+  // assign a behaviour to roaming enemies (not dungeon nodes / bosses) and apply its spawn-time
+  // tweaks. home = spawn point (sentinels leash to it); ambushers begin dormant.
+  if(e.type==='c'||e.type==='s'){
+    e.beh=pickBehaviour(sp,lv,e.type); const B=EBEH[e.beh]||EBEH.hunter;
+    e.home={x:e.x,y:e.y}; e.roamA=Math.random()*6.283;
+    if(B.hpMul) e.hp*=B.hpMul;
+    if(B.spdMul) e.spd*=B.spdMul;
+    if(B.touchMul&&e.touch) e.touch*=B.touchMul;
+    if(e.beh==='ambusher') e.dormant=true;
+  }
   // NEVER spawn inside a wall — grove lairs stamp 'X' over old spawn spots, and any
   // future caller might pass a bad tile; relocate to the nearest open cell.
   if(typeof solid==='function'&&curRoom&&solid(e.x,e.y)){

@@ -37,6 +37,13 @@ const GBANDCOL=[
 // Vertical band: bottom of the map (high y) = band 0 (easy), top (y=0) = highest.
 function grvBandXY(x,y){ const R=curRoom, NZ=R.rings.names.length, H=R.h||1;
  return Math.max(0,Math.min(NZ-1,Math.floor((1-y/H)*NZ))); }
+// Well-avalanched per-cell hash. The old `(x*131+y*57)` has its low bit == (x+y)&1, so
+// anything keyed off its low bits (the tile FLIP `&3`, tile choice `%100`) alternated on a
+// checkerboard — with directionally-lit ground art that read as a bright/dark grid across the
+// whole map. This mixes the bits so orientation and tile choice are decorrelated from
+// position parity (same lesson as the town-floor hash).
+function hmix(x,y){ let h=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
+  h=Math.imul(h^(h>>>13),1274126177)>>>0; return (h^(h>>>16))>>>0; }
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -189,13 +196,16 @@ function drawTileG(x,y){
     const bd=grvBandXY(x,y);
     const _gset=_groundSet[bd];
     if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
-      const hh=(x*131+y*57)>>>0, o=hh&3;   // per-cell flip (4 orientations) breaks the grid
+      const hh=hmix(x,y), o=hh&3;   // mixed hash -> flip is random per-cell, not parity-checkerboard
       // EVERY zone mixes its secondary tile in (heavier in the busy fiery zones) —
       // single-tile fill read too uniform
-      const g=(hh%100 < (bd>=5?32:11))?GROUND_LO:GROUND_UP;
-      // ~40% of cells use the zone's variant ground sheet for large-scale variety
+      const g=((hh>>4)%100 < (bd>=5?32:11))?GROUND_LO:GROUND_UP;
+      // Variant sheet in COARSE 3x3-tile patches (was per-tile), so the ground reads as
+      // natural regions of grass vs dirt instead of high-frequency two-tone noise — the same
+      // low-frequency-blotch trick the dungeon floor uses. bh is a mixed block hash.
       const _vs=_groundVar[bd];
-      const src=(_vs && _vs.naturalWidth && hh%100>=60)?_vs:_gset;
+      const bh=hmix(x/3|0, y/3|0);
+      const src=(_vs && _vs.naturalWidth && bh%100>=55)?_vs:_gset;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
       const v=(hh>>2)%5;                    // subtle per-tile brightness noise
@@ -205,7 +215,7 @@ function drawTileG(x,y){
       // scatter a ground decal (deterministic) on plain ground only — breaks repetition
       const _dl=_decal[bd];
       if(_dl && _dl.length && 'tk'.indexOf(c)<0){
-        const dh=(x*197+y*263)>>>0;
+        const dh=hmix(x+911,y+53);   // mixed (own offset) so decals don't parity-align either
         if(dh%100<20){ const im=_dl[dh%_dl.length];
           if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
             ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }

@@ -111,8 +111,12 @@ function fire(dt){
   // projectile forge key: every (class, weapon type, tier, rarity) combo has its own look
   const _cls=(typeof curChar==='function'&&curChar())?curChar().cls:'x';
   const _rar=(typeof eqRar==='function')?(eqRar('wpn')||0):0;
-  const pk='w:'+_cls+':'+((typeof CWEAP!=='undefined'&&CWEAP[_cls])||'sword')+':'+(rpg?rpg.wpn:0)+':'+_rar;
-  const pcore=(_rar>0&&typeof RAR_COL!=='undefined')?RAR_COL[_rar]:undefined;
+  let pk='w:'+_cls+':'+((typeof CWEAP!=='undefined'&&CWEAP[_cls])||'sword')+':'+(rpg?rpg.wpn:0)+':'+_rar;
+  let pcore=(_rar>0&&typeof RAR_COL!=='undefined')?RAR_COL[_rar]:undefined;
+  // status builds recolour the shot to the effect it inflicts (recalcStats -> player.shotStat).
+  // The '|st:' suffix gives the forge a distinct cached sprite so the tint sticks per status.
+  const _ss=player.shotStat, _sc=_ss?_ss.col:undefined;
+  if(_ss){ pk+='|st:'+_ss.id; pcore=_sc; }
   for(let i=0;i<n;i++){
     let sx=player.x, sy=player.y, sa=ang;
     if(wt.par && n>1){ const off=(i-(n-1)/2)*wt.par;
@@ -121,7 +125,7 @@ function fire(dt){
     pShots.push({x:sx,y:sy,px:sx,py:sy,
       vx:Math.cos(sa)*psp,vy:Math.sin(sa)*psp,
       r:wt.size||5,life:wt.life||1,dmg:dm,crit:crit,
-      pierce:pr,lastHit:null,slow:player.slowShot,pk:pk,pcore:pcore});
+      pierce:pr,lastHit:null,slow:player.slowShot,pk:pk,pc:_sc,pcore:pcore});
   }
   if(de3) player.deadeye--;
   chargeRes('shot'); lastShotT=0;

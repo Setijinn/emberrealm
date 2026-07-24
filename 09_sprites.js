@@ -370,6 +370,14 @@ function _enemyFrame(anim,e,pn){
 }
 function drawEnemySprite(e,pn){
  const flip = player.x < e.x;
+ // A DORMANT ambusher is drawn dark and still (a coiled shape, no bob) so the ambush is a
+ // fair surprise you could have spotted, not a cheap hit (rule 5b). It wakes on approach.
+ if(e.dormant){ ctx.save(); ctx.globalAlpha=0.5;
+   ctx.fillStyle='rgba(20,16,24,0.85)';
+   ctx.beginPath(); ctx.ellipse(e.x,e.y+e.r*0.4,e.r*0.95,e.r*0.7,0,0,6.29); ctx.fill();
+   ctx.fillStyle='rgba(200,60,60,'+(0.25+0.2*Math.sin(pn*3+e.x)).toFixed(2)+')';   // faint watching glint
+   ctx.beginPath(); ctx.arc(e.x-3,e.y,1.6,0,6.29); ctx.arc(e.x+3,e.y,1.6,0,6.29); ctx.fill();
+   ctx.restore(); return; }
  if(e.type==='N'){ // dungeon objective node: pulsing dream-heart
    const t=performance.now()/1000, pu=1+Math.sin(t*5+e.x)*0.15;
    ctx.save(); ctx.globalCompositeOperation='lighter';

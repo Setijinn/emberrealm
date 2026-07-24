@@ -696,6 +696,15 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
     'summonX2','homing','terrainGhost','stun3','groundHeal','allyDot','allyHaste',
     'echoCast','spiritDur','dashBlast','poisonHit','shockHit','bleedHit','weakHit']) player[k]=T[k]||0; }
  if(player.shield===undefined) player.shield=0;
+ // projectile colour reflects the STATUS your shots inflict (user, 2026-07-24): a burn build
+ // fires orange, poison green, frost blue... read off the on-hit flags, highest-signal first
+ // (control > elemental DoT > debuff). Consumed by fire() -> the projectile forge.
+ player.shotStat=null;
+ if(typeof STATUS!=='undefined'){
+   const _so=[['slowShot','chill'],['burnHit','burn'],['shockHit','shock'],['poisonHit','poison'],
+     ['bleedHit','bleed'],['curse','curse'],['weakHit','weak']];
+   for(const [fl,id] of _so){ if(player[fl] && STATUS[id]){ player.shotStat={id:id,col:STATUS[id].col}; break; } }
+ }
  // perk engine: re-aggregate the owned nodes' cond/trig/mod entries (13b_perks.js)
  if(typeof perkAgg==='function') player._perk=perkAgg(ch.cls,rpg);
  player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht, asc:(rpg.ascension||null)};
