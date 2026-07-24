@@ -153,6 +153,36 @@ function bossVolley(e,pat,base,spd,enraged){
     for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); return 2.2; }
   for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); return 0.9;
 }
+// ---- BOSS PHASES (user, 2026-07-24): crossing an HP threshold triggers a dramatic beat —
+// a brief invulnerability, a telegraphed shockwave you must dodge, a screen shake + burst, a
+// banner, and (from phase 2) summoned adds. Each phase then fires faster and layers harder, so
+// the fight escalates instead of being one static pattern. Called once per threshold crossed.
+function bossEnterPhase(e, ph){
+  e.phaseInv=Math.max(e.phaseInv||0, 0.9);   // immune during the transition so it reads as a beat
+  e.phaseFlash=0.7;
+  const spd=(170+(e.lv||10)*0.7)*(1+ph*0.12);
+  // telegraphed double shockwave — two offset rings expanding outward
+  const n=14+ph*4;
+  for(let i=0;i<n;i++) eFire(e,(i/n)*6.283, spd*0.7);
+  for(let i=0;i<n;i++) eFire(e,(i/n)*6.283 + Math.PI/n, spd*1.05);
+  // particle burst + screen shake + banner
+  if(typeof emitP==='function') for(let q=0;q<28;q++){ const a=Math.random()*6.283, sp2=130+Math.random()*230;
+    emitP(e.x,e.y,{vx:Math.cos(a)*sp2,vy:Math.sin(a)*sp2,life:0.55+Math.random()*0.45,
+      col:e.col||'#ff9c50',sz:3+Math.random()*3,g:60,glow:true}); }
+  if(typeof addShake==='function') addShake(11+ph*4);
+  const titles=['','ENRAGED','FINAL STAND'];
+  if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), titles[ph]||'');
+  navigator.vibrate&&navigator.vibrate([30,40,30]);
+  // summon adds from phase 2 onward to change the fight's shape
+  if(ph>=1 && typeof enemies!=='undefined'){
+    const mlv=e.lv||10, edr=(typeof eDR==='function')?eDR(eDef(mlv)):0, mh=40*eHpScale(mlv)*(1-edr);
+    const alive=enemies.filter(m=>m.summoned).length, nAdd=ph+1;
+    for(let q=0; q<nAdd && alive+q<8; q++){ const a=Math.random()*6.283;
+      const ss=(typeof safeSpot==='function')?safeSpot(curRoom,e.x+Math.cos(a)*62,e.y+Math.sin(a)*62):{x:e.x,y:e.y};
+      enemies.push({type:'c',summoned:true,x:ss.x,y:ss.y,r:15,hp:Math.round(mh),maxhp:Math.round(mh),
+        spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:mlv,
+        def:eDef(mlv),dr:edr,dex:eDex(mlv),maxmp:eMp(mlv),mp:eMp(mlv)}); } }
+}
 // ---- ascension capstone helpers ----
 // heals that respect Bishop/Soulflayer (overflow -> shield) and Bloodlord (overheal nova)
 let _inBloodNova=false;
@@ -315,31 +345,40 @@ function update(dt){
         for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, psp); }
     }
     if(e.type==='B'){
-      const enraged=e.hp<e.maxhp*0.45;
-      const pat=(enraged&&e.pat2)?e.pat2:(e.pat||'ring8');
-      const spd=170+ (e.lv||10)*0.7;   // projectile speed scales with zone
-      e.ang+=dt*(enraged?3.2:2.2);
-      // movement: charge bosses lunge, others drift toward the player
+      // --- PHASES: escalating stages at 66% / 33% HP, each with a dramatic transition beat ---
+      if(e.phase===undefined) e.phase=0;
+      const frac=e.hp/e.maxhp, np = frac>0.66?0 : frac>0.33?1 : 2;
+      if(np>e.phase){ e.phase=np; bossEnterPhase(e,np); }
+      if(e.phaseInv>0) e.phaseInv-=dt;
+      if(e.phaseFlash>0) e.phaseFlash-=dt;
+      const ph=e.phase, enraged=ph>=1;            // enrage behaviours from phase 2 on
+      const fireMul=[1,0.78,0.6][ph]||0.6;        // attacks come faster each phase
+      const pat=(ph>=1&&e.pat2)?e.pat2:(e.pat||'ring8');
+      const spd=(170+ (e.lv||10)*0.7)*(1+ph*0.12);   // projectiles speed up per phase
+      e.ang+=dt*(2.2+ph*0.6);
+      // movement: charge bosses lunge, others drift toward the player (a touch faster each phase)
+      const mv=1+ph*0.14;
       if(pat==='charge'){
         e.chargeT-=dt;
-        if(e.chargeT<=0){ e.chargeT=1.6+Math.random();
+        if(e.chargeT<=0){ e.chargeT=(1.6+Math.random())/mv;
           e.cvx=(dx/dd)*e.spd*4.2; e.cvy=(dy/dd)*e.spd*4.2; e.cdur=0.45; }
         if(e.cdur>0){ e.cdur-=dt; moveCircle(e,e.cvx*dt,e.cvy*dt); }
         else moveCircle(e,(dx/dd)*e.spd*0.4*slowF(e)*dt,(dy/dd)*e.spd*0.4*slowF(e)*dt);
       } else {
-        moveCircle(e,(dx/dd)*e.spd*slowF(e)*dt,(dy/dd)*e.spd*slowF(e)*dt);
+        moveCircle(e,(dx/dd)*e.spd*mv*slowF(e)*dt,(dy/dd)*e.spd*mv*slowF(e)*dt);
       }
-      e.fireT-=dt;
-      if(e.fireT<=0){ e.animAtk=0.5;
-        e.fireT=bossVolley(e,pat,Math.atan2(dy,dx),spd,enraged); }
-      // design rule 5: high-level bosses LAYER their two patterns into one crazier
-      // combined pattern — the second pattern fires on its own (slower) timer.
-      // Awakened dungeon bosses (e.awk) ALWAYS layer, whatever their level.
-      const other=(pat===e.pat2)?e.pat:e.pat2;
-      if(((e.lv||1)>=25||e.awk) && other && other!==pat && other!=='charge' && other!=='summon'){   // layer patterns from mid-game (cap 50)
-        e.fireT2=(e.fireT2===undefined?1.2:e.fireT2)-dt;
-        if(e.fireT2<=0){ e.animAtk=0.5;
-          e.fireT2=bossVolley(e,other,Math.atan2(dy,dx),spd,enraged)*1.5; } }
+      // during the transition beat the boss holds fire (you're dodging the shockwave)
+      if((e.phaseInv||0)<=0){
+        e.fireT-=dt;
+        if(e.fireT<=0){ e.animAtk=0.5;
+          e.fireT=bossVolley(e,pat,Math.atan2(dy,dx),spd,enraged)*fireMul; }
+        // LAYER the second pattern from phase 2 on (awakened bosses always) — fires on its own timer
+        const other=(pat===e.pat2)?e.pat:e.pat2;
+        if((ph>=1||e.awk) && other && other!==pat && other!=='charge' && other!=='summon'){
+          e.fireT2=(e.fireT2===undefined?1.2:e.fireT2)-dt;
+          if(e.fireT2<=0){ e.animAtk=0.5;
+            e.fireT2=bossVolley(e,other,Math.atan2(dy,dx),spd,enraged)*1.5*fireMul; } }
+      }
     }
   }
   // player shots

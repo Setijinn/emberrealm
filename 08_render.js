@@ -1,5 +1,9 @@
 // ---------- render ----------
 let camX=0,camY=0;
+// screen shake — impulse magnitude that decays each frame; camX/camY are jittered by it in
+// render() so w2s and every draw follow. addShake(mag) is called by big beats (boss phases).
+let _shake=0;
+function addShake(m){ _shake=Math.max(_shake, m||0); }
 // ---- camera rotation (PC only): hold Z/C to rotate the view, X to reset ----
 // camRotT = target angle (driven by keys in update), camRot = smoothed display angle.
 let camRot=0, camRotT=0;

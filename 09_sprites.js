@@ -767,6 +767,9 @@ function render(){
   const vw=W/zoom, vh=H/zoom;
   camX = roomW<=vw ? (roomW-vw)/2 : Math.max(0,Math.min(roomW-vw, player.x-vw/2));
   camY = roomH<=vh ? (roomH-vh)/2 : Math.max(0,Math.min(roomH-vh, player.y-vh/2));
+  if(typeof _shake!=='undefined' && _shake>0.2){                 // boss-phase screen shake
+    camX+=(Math.random()*2-1)*_shake; camY+=(Math.random()*2-1)*_shake; _shake*=0.85; }
+  else if(typeof _shake!=='undefined') _shake=0;
   ctx.save(); ctx.scale(zoom,zoom);
   const rot=(typeof camRot!=='undefined')?camRot:0;
   if(rot){ ctx.translate(vw/2,vh/2); ctx.rotate(rot); ctx.translate(-vw/2,-vh/2); }
@@ -1158,10 +1161,21 @@ function render(){
     const grd=ctx.createLinearGradient(bx-bw/2,0,bx+bw/2,0);
     grd.addColorStop(0,'#c03a2a'); grd.addColorStop(1,'#ff9c50');
     ctx.fillStyle=grd; ctx.fillRect(bx-bw/2,by,bw*fr,bh);
+    // phase threshold ticks at 66% / 33% — you can SEE the next phase coming
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    ctx.fillRect(bx-bw/2+bw*0.66-1,by,2,bh); ctx.fillRect(bx-bw/2+bw*0.33-1,by,2,bh);
+    // a bright flash sweeps the bar the moment a phase breaks
+    if(bossBar.phaseFlash>0){ ctx.fillStyle='rgba(255,255,255,'+(0.5*Math.min(1,bossBar.phaseFlash/0.7)).toFixed(2)+')';
+      ctx.fillRect(bx-bw/2,by,bw,bh); }
     if(_hpbarImg&&_hpbarImg.complete&&_hpbarImg.naturalWidth){
       ctx.imageSmoothingEnabled=false;
       const fw=bw*1.06, fh=bh*2.3;
       ctx.drawImage(_hpbarImg,bx-fw/2,by+bh/2-fh/2,fw,fh); }
+    // phase pips beside the name (filled = reached), 3 stages
+    const pph=(bossBar.phase||0);
+    for(let i=0;i<3;i++){ const dx=bx+bw/2-14-i*15, dy=by-16;
+      ctx.fillStyle = i<=pph ? '#ffd23d' : 'rgba(255,255,255,.22)';
+      ctx.save(); ctx.translate(dx,dy); ctx.rotate(Math.PI/4); ctx.fillRect(-4,-4,8,8); ctx.restore(); }
     ctx.textAlign='left';
   }
   // dungeon objective banner (screen space): the first unfinished chamber's task

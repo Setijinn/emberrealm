@@ -44,6 +44,9 @@ function statusDmgIn(e){ return hasStatus(e,'curse')?(1+(e.st.curse.v||0.15)):1;
 //   src {crit, ability, zone, ally, perk, silent, col}  — silent skips the damage number
 function dealDamage(e,amount,src){
   if(!e||e.hp<=0) return 0;
+  if(e.phaseInv>0){ e.flash=Math.max(e.flash||0,0.1);                                       // immune mid phase-transition
+    if(!src||!src.silent){ if(typeof texts!=='undefined') texts.push({x:e.x+(Math.random()*16-8),y:e.y-e.r-2,txt:'IMMUNE',col:'#9ad4ef',life:0.5}); }
+    return 0; }
   src=src||{};
   let dmg=Math.round(amount);
   if(e.dr) dmg=Math.max(1,Math.round(dmg*(1-e.dr)));                                        // enemy DEFENSE (armour)
