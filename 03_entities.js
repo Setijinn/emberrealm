@@ -699,13 +699,14 @@ function grvBandAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) r
  if(_onBridge(RG,tx,ty)) return 3;                       // bridge/water: theme unused, approximate radially
  if(tx<RG.bridge.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
  const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
-// zone identity: the clump's name + its actual level range (min..max of the smooth curve within it)
+// zone identity: the clump's name + its actual level range (min..max of the smooth curve within it).
+// Off-land tiles (bridge/coast) have no territory, so fall back to the NEAREST clump — never the
+// old angular-sector guess, which mislabelled the bridge as a random grind zone.
 function ringInfoAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG) return null;
- const T=_territories(R), zi=zoneAt(tx,ty);
- if(zi>=0){ const t=T[zi]; return {n:t.name, lv:t.lvmin, lv2:t.lvmax}; }
- const a=Math.atan2(ty-RG.core.cy,tx-RG.core.cx), g=RG.grind||['Molten Crown'];
- const i=Math.max(0,Math.min(g.length-1,Math.floor(((a+Math.PI)/(2*Math.PI))*g.length)));
- return {n:g[i],lv:50,lv2:50}; }
+ const T=_territories(R); if(!T||!T.length) return null;
+ let t=T[zoneAt(tx,ty)];
+ if(!t){ let bi=0,bd=1e18; for(let i=0;i<T.length;i++){ const dx=tx-T[i].cx,dy=ty-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} } t=T[bi]; }
+ return {n:t.name, lv:t.lvmin, lv2:t.lvmax}; }
 // 0..1 corruption, rising toward the infection portal (tint + future enemy variants)
 function corruptAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.portal) return 0;
  const dd=Math.hypot(tx-R.portal.x,ty-R.portal.y); return Math.max(0,Math.min(1,1-dd/70)); }

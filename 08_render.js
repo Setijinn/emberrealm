@@ -98,10 +98,11 @@ function drawTileG(x,y){
       else if(v===1){ ctx.fillStyle='rgba(0,0,0,0.11)'; ctx.fillRect(tx,ty,TILE,TILE); }
       else if(v===2){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
       else if(v===3){ ctx.fillStyle='rgba(255,240,210,0.09)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      let bh=(Math.imul(x>>2,2246822519)+Math.imul(y>>2,3266489917))>>>0;
-      bh=(bh^(bh>>>15))>>>0;
-      if(bh%100<20){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(bh%100>=90){ ctx.fillStyle='rgba(255,245,220,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // large-scale brightness blotches via smooth value noise -> organic pools, NOT the old 4x4
+      // square blocks (matches the overworld ground rework; user: kill the remaining square patches)
+      const nb=vnoise(x+37,y+91,5.5);
+      if(nb<0.30){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(nb>0.80){ ctx.fillStyle='rgba(255,245,220,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
       // Inaccessible cells (walls / locked gates) = the VOID of the boss's consciousness.
       // Darken them hard so the lit dream-floor is unmistakably the play space (user: fill the
       // inaccessible areas so the playable area is highlighted), with sparse drifting motes so
