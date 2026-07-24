@@ -502,6 +502,9 @@ function update(dt){
       for(const w of petWanderers){ if(_pu&&_pu.activePet===w.def.uid) continue;
         const d=Math.hypot(w.x-player.x,w.y-player.y);
         if(d<40 && d<_pbest){ _pbest=d; portalPrompt={kind:'petpick',x:w.x,y:w.y-8,wuid:w.def.uid,ctx:'Make '+w.def.name+' your follower'}; } } }
+    // Sanctuary stations: incubator (open eggs) + fusion altar (evolve)
+    if(curRoom.petRoom && curRoom.petStations) for(const st of curRoom.petStations){ const d=Math.hypot(st.x-player.x,st.y-player.y);
+      if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'petstation',x:st.x,y:st.y-24,st:st,ctx:st.kind==='incubator'?'Open the Incubator':'Use the Fusion Altar'}; } }
   }
   // dungeon: objective progress + orb pickup + dream motes
   if(curRoom.dungeon){

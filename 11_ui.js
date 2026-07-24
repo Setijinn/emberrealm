@@ -43,6 +43,7 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   if(p.kind==='petpick'){ if(typeof setActivePet==='function') setActivePet(p.wuid); if(typeof spawnActivePet==='function') spawnActivePet();
     const _pn=(typeof activePet==='function'&&activePet())?activePet().name:'Pet'; if(typeof msg==='function') msg('🐾 '+_pn,'now your follower');
     navigator.vibrate&&navigator.vibrate(20); return; }
+  if(p.kind==='petstation'){ if(typeof openPets==='function') openPets(p.st.kind==='incubator'?'collection':'fuse'); navigator.vibrate&&navigator.vibrate(20); return; }
   if(p.kind==='portal'){ usePortal(p.to); }
   else if(p.kind==='ground'){ const gp=p.gp;
     if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
