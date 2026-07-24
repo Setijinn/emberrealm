@@ -47,9 +47,10 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   if(p.kind==='portal'){ usePortal(p.to); }
   else if(p.kind==='ground'){ const gp=p.gp;
     if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
-      const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('THE CLIMB','back to the vale'); }
-    else enterDungeon(gp.ring);
-    groundPortals.length=0; }
+      const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('THE CLIMB','back to the vale'); groundPortals.length=0; }
+    else if(!rpg||!rpg.ascension){    // Awakened Dungeons are ascension-gated (max all stats -> ascend)
+      msg('THE RIFT RESISTS','Ascend to enter the awakened depths'); navigator.vibrate&&navigator.vibrate([20,40,20]); }
+    else { enterDungeon(gp.ring); groundPortals.length=0; } }
   else if(p.kind==='pillar'){ const pl=p.pl;
     if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
     openFastTravel(); }
@@ -255,7 +256,7 @@ function rollAffixes(it,fortune){ it.rar=rollRarity(it.t,fortune); it.aff=[];
  return it; }
 function affStats(aff){ const s=newStats(); if(aff) for(const a of aff) s[a.s]=(s[a.s]||0)+a.v; return s; }
 // full stat block an item contributes (base + its own affixes)
-function itemStats(it,cls){ if(!it||it.k==='pot') return newStats();
+function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll') return newStats();
  if(it.k==='coin') return newStats();   // coins boost via the carried total, not per-item
  let base;
  if(it.k==='wpn') base=gearBaseStats('wpn',it.t);
@@ -277,6 +278,7 @@ function itemBaseName(it){
  if(it.k==='coin')return (COIN_NAMES[it.t||0])+' Fortune Coin';
  return p; }
 function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
+ if(it.k==='scroll')return (typeof scrollName==='function')?scrollName(it.st):'Scroll';
  let nm=itemBaseName(it);
  if(it.rar && it.aff && it.aff.length) nm=AFFIX_PREFIX[it.aff[0].s]+' '+nm;
  return nm; }
@@ -286,6 +288,7 @@ function canEquip(it,ch){ if(!it||it.k==='pot')return false;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
 function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
+ if(it.k==='scroll') return 40;
  return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*rarMult(it.rar))); }
 function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
  if(r<0.5){ const keys=Object.keys(WTYPE).filter(k=>k!=='fists');
@@ -307,6 +310,7 @@ function rollLoot(e){
  const r=Math.random();
  // rare Fortune Coin (bronze) — its own roll, can drop alongside gear
  if(Math.random() < (e.type==='B'?0.85:0.04)) loots.push(bagAt(e,{k:'coin'}));
+ if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) loots.push(bagAt(e,sc)); }  // max-stat scrolls
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
  if(e.type==='B'){ loots.push(bagAt(e,mkDrop(Math.min(11,tb+1))));
    if(typeof spawnEggDrop==='function') spawnEggDrop(e);  // pet egg drops as a loose EGG on the ground (not a bag)
@@ -627,6 +631,7 @@ if($s('coopBtn')) $s('coopBtn').addEventListener('click',function(){ if(typeof o
 if($s('coopX')) $s('coopX').addEventListener('click',function(){ $s('coopScr').style.display='none'; });
 $s('loadBtn').addEventListener('click',function(){ if(typeof openLoadout==='function') openLoadout(); });
 $s('skillBtn').addEventListener('click',function(){ if(typeof openSkills==='function') openSkills(); });
+if($s('statsBtn')) $s('statsBtn').addEventListener('click',function(){ if(typeof openStats==='function') openStats(); });
 $s('invX').addEventListener('click',()=>{$s('invScr').style.display='none';});
 $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it||!canEquip(it,ch)) return;
@@ -657,7 +662,8 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.legends===undefined)rpg.legends=[]; if(rpg.wpnL===undefined)rpg.wpnL=null;
  if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[];
  if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null;
- if(rpg.arenaBest===undefined) rpg.arenaBest=0; }
+ if(rpg.arenaBest===undefined) rpg.arenaBest=0;
+ if(typeof initTrain==='function') initTrain(rpg); }   // max-stat scrolls/training (16_maxstats.js)
 // Steepened for the Lv50 cap so reaching max is a real grind (the outer grind zones), not a
 // sprint. Tunable — cumulative to 50 ≈ what the old 1.5 curve needed to reach the 60s.
 function xpNeed(l){return Math.floor(60*Math.pow(l,1.7));}
@@ -690,6 +696,8 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const T=(typeof treeStats==='function')?treeStats(ch.cls,rpg):null;
  if(T){ st.atk+=T.atk; st.def+=T.def; st.hp+=T.hp; st.mp+=T.mp; st.dex+=T.dex; st.wis+=T.wis; st.vit+=T.vit;
    st.luck+=T.luck; st.fort+=T.fort; st.spd=st.spd*(1+T.spd); }
+ // ---- permanent max-stat training (scrolls) folds in as a flat layer (16_maxstats.js)
+ if(typeof trainedStats==='function'){ const TR=trainedStats(ch.cls,rpg); for(const k of STATS) st[k]+=(TR[k]||0); }
  for(const k of STATS) st[k]=Math.max(0,Math.round(st[k]));
  player.stats=st;
  // ---- derive combat values from the 10 stats
@@ -920,6 +928,8 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  if($s('loadScr'))$s('loadScr').style.display='none';
  if($s('skillBtn'))$s('skillBtn').style.display='none';
  if($s('skillScr'))$s('skillScr').style.display='none';
+ if($s('statsBtn'))$s('statsBtn').style.display='none';
+ if($s('statsScr'))$s('statsScr').style.display='none';
  if($s('sheetScr'))$s('sheetScr').style.display='none'; shopNear=false;}
 function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display='none';}
 function refreshUserList(){
@@ -1044,6 +1054,7 @@ function showGameHud(){
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
  if($s('skillBtn'))$s('skillBtn').style.display='flex';
  if($s('petBtn'))$s('petBtn').style.display='flex';
+ if($s('statsBtn')){ $s('statsBtn').style.display='flex'; if(typeof updateStatsBtn==='function') updateStatsBtn(); }
 }
 if(typeof document!=='undefined'){ const _pb=document.getElementById('petBtn');
  if(_pb) _pb.addEventListener('click',function(){ if(typeof openPets==='function') openPets(); }); }

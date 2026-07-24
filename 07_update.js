@@ -546,6 +546,10 @@ function update(dt){
         texts.push({x:lb.x,y:lb.y-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); }
       else if(lb.item.k==='pot'){ rpg.pots++; hudRPG();
         texts.push({x:lb.x,y:lb.y-14,txt:'+Tonic',col:'#7dc47a',life:1}); }
+      else if(lb.item.k==='scroll'){ const st=lb.item.st;
+        if(typeof grantScroll==='function') grantScroll(rpg,st,1);
+        const col=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].col:'#e6c76a';
+        texts.push({x:lb.x,y:lb.y-14,txt:'📜 '+((typeof scrollName==='function')?scrollName(st):'Scroll'),col:col,life:1.5}); }
       else if(ch.inv.length<20){ ch.inv.push(lb.item);
         texts.push({x:lb.x,y:lb.y-14,txt:itemName(lb.item),col:itemRarCol(lb.item),life:1.3}); }
       else { continue; }

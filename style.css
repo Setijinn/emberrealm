@@ -81,7 +81,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .istats{margin-top:5px;font-size:10px;line-height:1.5;letter-spacing:.02em;}
 #eqStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:9px;}
 
-#loadBtn,#skillBtn,#petBtn{display:none;align-items:center;justify-content:center;
+#loadBtn,#skillBtn,#petBtn,#statsBtn{display:none;align-items:center;justify-content:center;
  width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
 /* skill tree screen */
 #skillScr{position:fixed;inset:0;z-index:40;display:none;background:rgba(9,7,12,.95);overflow-y:auto;
@@ -291,10 +291,37 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .shopnote{font-size:11px;color:#8a8494;text-align:center;padding:5px 8px;font-style:italic;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#devBtn2{
+#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
+
+/* ---------- attributes / max-stat training screen ---------- */
+.msCard{position:relative;width:min(96vw,560px);background:#14111b;border:2px solid #3a3040;
+ border-radius:14px;padding:14px 14px 16px;display:flex;flex-direction:column;
+ box-shadow:0 10px 40px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,208,122,.08);}
+.msTitle{font-family:'Pixelify Sans',monospace;font-size:19px;color:#ffc94d;text-align:center;letter-spacing:1px;}
+.msStatus{font-size:12.5px;color:#c9c2b6;text-align:center;margin:5px 0 10px;line-height:1.4;}
+.msRows{display:flex;flex-direction:column;gap:5px;}
+.msRow{display:grid;grid-template-columns:82px 62px 1fr 46px auto auto;align-items:center;gap:7px;
+ background:#1b1724;border:1px solid #2c2633;border-radius:9px;padding:5px 8px;}
+.msName{font-size:12.5px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.msAbbr{font-size:9px;color:#8a8494;font-weight:normal;}
+.msVal{font-size:12px;color:#e8e2d6;text-align:right;font-family:'Pixelify Sans',monospace;}
+.msBarWrap{position:relative;height:16px;background:#0d0b12;border:1px solid #2c2633;border-radius:5px;overflow:hidden;}
+.msBar{position:absolute;left:0;top:0;bottom:0;border-radius:4px 0 0 4px;opacity:.85;transition:width .18s;}
+.msBarTxt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ font-size:10px;color:#fff;text-shadow:0 1px 2px #000;font-family:'Pixelify Sans',monospace;}
+.msBank{font-size:11px;color:#e6c76a;text-align:right;white-space:nowrap;}
+.msBtn{background:#26202f;border:1px solid #5a4a2e;color:#ffc94d;border-radius:7px;
+ font-size:11px;font-weight:bold;padding:5px 8px;min-width:34px;cursor:pointer;}
+.msBtn:disabled{opacity:.32;cursor:default;color:#8a8494;border-color:#3a3444;}
+.msBtn:not(:disabled):active{background:#3a3020;}
+.msFoot{display:flex;align-items:center;gap:10px;margin-top:11px;}
+.msHint{flex:1;font-size:10.5px;color:#8a8494;font-style:italic;line-height:1.35;text-align:left;}
+.msFoot .mbtn{flex:0 0 auto;}
+@media(max-width:520px){ .msRow{grid-template-columns:70px 50px 1fr 40px auto auto;gap:5px;padding:5px 6px;}
+ .msName{font-size:11px;} .msVal{font-size:11px;} .msBtn{padding:5px 6px;min-width:30px;font-size:10px;} }
 
 /* ---------- settings screen ---------- */
 .setCard{background:#17141d;border:2px solid #39323f;border-radius:12px;padding:8px 16px;
@@ -327,4 +354,5 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #potBtn,#shopBtn{min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
 #invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #loadBtn,#skillBtn,#petBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#statsBtn{min-width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(7px*var(--uis));}
 #mapBtn,#coopBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}

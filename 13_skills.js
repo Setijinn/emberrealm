@@ -766,11 +766,21 @@ function unlockNode(cls,rpg,id){ const n=nodeById(cls,id); if(!n||!nodeUnlockabl
 function spentPoints(cls,rpg){ const t=treeOf(cls); if(!t)return 0; let s=0;
   for(const b of t.branches) for(const n of b.nodes) s+=nodeRank(rpg,n.id)*n.cost; return s; }
 function respec(cls,rpg){ xpTreeInit(rpg); rpg.perkPts+=spentPoints(cls,rpg); rpg.tree={}; }  // keeps ascension
-// Ascension available once you've invested enough of the tree AND hit Lv 40.
-function ascendReady(cls,rpg){ return rpg.lvl>=40 && spentPoints(cls,rpg)>=14 && !rpg.ascension; }
+// Ascension is the reward for MAXING EVERY STAT at the level cap (Lv50). The max-stat grind
+// (16_maxstats.js) is the gate; if that module is absent, fall back to the old Lv40+points gate.
+function ascendReady(cls,rpg){ if(rpg.ascension) return false;
+  if(typeof allStatsMaxed==='function') return rpg.lvl>=50 && allStatsMaxed(cls,rpg);
+  return rpg.lvl>=40 && spentPoints(cls,rpg)>=14; }
+// short reason shown on a locked ASCEND button
+function ascendReq(cls,rpg){ if(typeof allStatsMaxed!=='function') return 'Lv40 + 14 pts';
+  if(rpg.lvl<50) return 'Reach Lv 50';
+  const n=(typeof statsMaxedCount==='function')?statsMaxedCount(cls,rpg):0;
+  return 'Max all stats ('+n+'/10)'; }
 function doAscend(cls,rpg,ascId){ const t=treeOf(cls); if(!t||rpg.ascension) return false;
   if(!t.ascend.some(a=>a.id===ascId)) return false; if(!ascendReady(cls,rpg)) return false;
-  rpg.ascension=ascId; return true; }
+  rpg.ascension=ascId;
+  rpg.prestige=(rpg.prestige||0)+1;   // prestige tier: raises every stat cap so training continues
+  return true; }
 function ascendInfo(cls,rpg){ const t=treeOf(cls); if(!t||!rpg.ascension) return null;
   return t.ascend.find(a=>a.id===rpg.ascension)||null; }
 
@@ -921,7 +931,7 @@ function _skDetailBar(){ const el=document.getElementById('skDetail'); const ch=
         info='<div class="skDname" style="color:'+a.color+'">✦ '+a.name+'</div><div class="skDdesc">'+a.desc+'</div>';
         act = isC?'<button class="mbtn go" disabled>ASCENDED</button>'
           : (chosen?'<button class="mbtn" disabled>already ascended</button>'
-          : '<button class="mbtn go" id="skAsc"'+(ready?'':' disabled')+'>'+(ready?'ASCEND':'Lv40 + 14 pts')+'</button>'); } } }
+          : '<button class="mbtn go" id="skAsc"'+(ready?'':' disabled')+'>'+(ready?'ASCEND':ascendReq(ch.cls,rpg))+'</button>'); } } }
   el.innerHTML='<div class="skDinfo">'+info+'</div><div class="skDact">'+act+'</div>';
   const lb=document.getElementById('skLearn'); if(lb) lb.onclick=()=>{ if(unlockNode(ch.cls,rpg,sel)){ recalcStats(); saveRPG(); _skRefresh(); navigator.vibrate&&navigator.vibrate(12);} else navigator.vibrate&&navigator.vibrate(15); };
   const ab=document.getElementById('skAsc'); if(ab) ab.onclick=()=>{ const a=treeOf(ch.cls).ascend.find(x=>x.id===sel); if(a&&confirm('Ascend to '+a.name+'? This is permanent.')){ if(doAscend(ch.cls,rpg,sel)){ recalcStats(); saveRPG(); _skRefresh(); } } };

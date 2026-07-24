@@ -193,7 +193,27 @@ function itemSprite(it){ if(!it) return null;
  if(it.k==='arm') return armorSpr(it.mt,it.t);
  if(it.k==='helm') return helmSpr(it.mt,it.t);
  if(it.k==='ring') return ringSpr(it.st,it.t);
+ if(it.k==='scroll') return scrollSpr(it.st);
  return null; }
+// procedural per-stat scroll icon: a rolled parchment with a stat-coloured wax seal + rune.
+const _scrollCache={};
+function scrollSpr(st){ if(_scrollCache[st]) return _scrollCache[st];
+ const col=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].col:'#e6c76a';
+ const abbr=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].s:'?';
+ const S=20, cv=document.createElement('canvas'); cv.width=cv.height=S; const g=cv.getContext('2d');
+ g.imageSmoothingEnabled=false;
+ // parchment body
+ g.fillStyle='#e8d6a8'; g.fillRect(5,3,10,14);
+ g.fillStyle='#d8c085'; g.fillRect(5,3,10,2); g.fillRect(5,15,10,2);   // top/bottom shade
+ g.fillStyle='#f2e6c4'; g.fillRect(6,5,8,10);
+ // rolled ends
+ g.fillStyle='#c9a75e'; g.fillRect(3,2,14,3); g.fillRect(3,15,14,3);
+ g.fillStyle='#a9873e'; g.fillRect(3,2,2,16); g.fillRect(15,2,2,16);
+ // stat-coloured wax seal
+ g.fillStyle=col; g.beginPath(); g.arc(10,10,3.2,0,6.29); g.fill();
+ g.fillStyle='rgba(0,0,0,.35)'; g.font='bold 5px monospace'; g.textAlign='center'; g.textBaseline='middle';
+ g.fillText(abbr[0]||'?',10,10.5);
+ _scrollCache[st]=cv; return cv; }
 
 // ---------- 15 unique ring mini-boss sprites ----------
 const BOSS_ART=[
@@ -472,6 +492,17 @@ function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
 // Loot bag: rarity-signaled art + glow + light beam + floating label.
 // rar 0 common (drab sack, no glow) climbing to a tall radiant beam for Mythical.
 function drawLootBag(lb,pn){
+  if(lb.item&&lb.item.k==='scroll'){ const st=lb.item.st;
+    const col=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].col:'#e6c76a';
+    const t=performance.now()/1000, pulse=0.5+Math.sin(t*2.6+lb.x*0.05)*0.5;
+    const g=ctx.createRadialGradient(lb.x,lb.y+5,1,lb.x,lb.y+5,16);
+    g.addColorStop(0,col+'77'); g.addColorStop(1,col+'00');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(lb.x,lb.y+5,16,8,0,0,6.29); ctx.fill();
+    shadow(lb.x,lb.y+7,8);
+    const sp=scrollSpr(st), bob=Math.sin(t*2.4+lb.x*0.03)*1.4;
+    ctx.save(); ctx.imageSmoothingEnabled=false; ctx.shadowColor=col; ctx.shadowBlur=6*pulse;
+    blit(sp,lb.x,lb.y-2+bob,1.7,false); ctx.restore();
+    return; }
   const isPot=lb.item&&lb.item.k==='pot';
   const rar=isPot?0:((lb.item&&lb.item.rar)||0);
   const col=isPot?'#7dc47a':(RAR_COL[rar]||'#cfc8bd');
