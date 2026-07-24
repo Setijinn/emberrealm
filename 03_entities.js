@@ -658,24 +658,52 @@ function safeSpot(r,px,py){
 // distance from its spawn centre; the bridge is the Lv20 gate; the main island (east) is
 // Lv20-50 by distance from the CORE (bridge landing), with a flat Lv50 grind ring at the rim.
 function _onBridge(R,tx,ty){ const B=R.bridge; return tx>=B.x0&&tx<=B.x1&&Math.abs(ty-B.cy)<=(B.w>>1); }
-function grvBandAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return 0;
- if(_onBridge(R,tx,ty)) return 2;
- if(tx<R.bridge.x0){ const f=Math.min(1,Math.hypot(tx-R.starter.cx,ty-R.starter.cy)/R.starter.r);
-   return Math.max(0,Math.min(2,Math.floor(f*3))); }
- const f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/R.rmax);
- return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
-function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return (curRoom&&curRoom.lv)||1;
- if(_onBridge(R,tx,ty)) return 20;
- if(tx<R.bridge.x0){ const f=Math.min(1,Math.hypot(tx-R.starter.cx,ty-R.starter.cy)/R.starter.r);
+// LEVEL is still smooth-radial (danger climbs outward), computed from the rings geometry.
+function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
+ if(_onBridge(RG,tx,ty)) return 20;
+ if(tx<RG.bridge.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r);
    return Math.max(1,Math.min(20,Math.round(1+f*19))); }
- const gR=R.grindR||0.8, f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/R.rmax);
+ const gR=RG.grindR||0.8, f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax);
  if(f>=gR) return 50;                                   // flat Lv50 grind ring
  return Math.max(20,Math.min(50,Math.round(20+(f/gR)*29))); }
-// zone identity: radial band name; the outer grind ring (band 8) is named by angular sector
-function ringInfoAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R) return null;
- const b=grvBandAt(tx,ty);
- if(b<8 && R.names[b]) return R.names[b];
- const a=Math.atan2(ty-R.core.cy,tx-R.core.cx), g=R.grind||['Molten Crown'];
+function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return (curRoom&&curRoom.lv)||1;
+ return grvLvAtR(R,tx,ty); }
+// ----- Clumped zones (territories) -----
+// The named zones are ORGANIC CLUMPS, not concentric rings: ~13 seeds (3 starter + 5 inner main +
+// 5 grind) partition the land into Voronoi provinces with a wavy warp so borders are irregular.
+// Seeds are placed inner->outer, so each clump's THEME-BAND (tileset/tone) still trends green->red
+// while difficulty (grvLvAt above) climbs smoothly outward. Built once per world, cached on rings.
+function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; if(RG._terr) return RG._terr;
+ const S=RG.starter, C=RG.core, Rm=RG.rmax, nm=RG.names, gr=RG.grind||[], T=[];
+ const add=(cx,cy,name,band,gi)=>{ T.push({cx,cy,name,band,gi:(gi==null?-1:gi),lvmin:99,lvmax:0,sx:0,sy:0,n:0}); };
+ add(S.cx-7,S.cy+3, nm[0].n,0); add(S.cx+3,S.cy-15,nm[1].n,1); add(S.cx+17,S.cy+12,nm[2].n,2);   // starter clumps
+ const iAng=[0.5,-0.7,0.95,-0.35,0.35];                                                            // main inner (bands 3-7)
+ for(let i=0;i<5;i++){ const b=3+i, f=(b-2.4)/6; add(Math.round(C.cx+Math.cos(iAng[i])*Rm*f),Math.round(C.cy+Math.sin(iAng[i])*Rm*f),nm[3+i].n,b); }
+ const gAng=[-0.8,-0.35,0.05,0.45,0.85];                                                           // grind clumps (band 8)
+ for(let i=0;i<gr.length;i++){ add(Math.round(C.cx+Math.cos(gAng[i])*Rm*0.9),Math.round(C.cy+Math.sin(gAng[i])*Rm*0.9),gr[i],8,i); }
+ const W=R.w,H=R.h,grid=R.grid,zg=new Array(H);
+ for(let ty=0;ty<H;ty++){ const row=grid[ty], zr=new Int8Array(W); zg[ty]=zr;
+   for(let tx=0;tx<W;tx++){ const ch=row&&row[tx];
+     if(ch==null||ch==='w'||ch==='b'){ zr[tx]=-1; continue; }
+     const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
+     let bi=0,bd=1e18; for(let i=0;i<T.length;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
+     zr[tx]=bi; const t=T[bi], lv=grvLvAtR(RG,tx,ty);
+     if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; t.sx+=tx; t.sy+=ty; t.n++; } }
+ RG._zg=zg; RG._terr=T; return T; }
+function zoneAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return -1;
+ _territories(R); const zr=RG._zg&&RG._zg[ty]; return (zr&&tx>=0&&tx<zr.length)?zr[tx]:-1; }
+// THEME band from the clump the tile sits in (drives tileset/tone/tree/boulder + map colour).
+function grvBandAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return 0;
+ const T=_territories(R), zi=zoneAt(tx,ty);
+ if(zi>=0) return T[zi].band;
+ if(_onBridge(RG,tx,ty)) return 3;                       // bridge/water: theme unused, approximate radially
+ if(tx<RG.bridge.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
+ const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
+// zone identity: the clump's name + its actual level range (min..max of the smooth curve within it)
+function ringInfoAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG) return null;
+ const T=_territories(R), zi=zoneAt(tx,ty);
+ if(zi>=0){ const t=T[zi]; return {n:t.name, lv:t.lvmin, lv2:t.lvmax}; }
+ const a=Math.atan2(ty-RG.core.cy,tx-RG.core.cx), g=RG.grind||['Molten Crown'];
  const i=Math.max(0,Math.min(g.length-1,Math.floor(((a+Math.PI)/(2*Math.PI))*g.length)));
  return {n:g[i],lv:50,lv2:50}; }
 // 0..1 corruption, rising toward the infection portal (tint + future enemy variants)

@@ -356,60 +356,78 @@ function slotLabel(kind){ const ch=curChar(); if(!ch||!rpg)return '—';
  if(kind==='ring') return rpg.ring ? eqPrefix('ring')+'T'+(rpg.ring.t+1)+' '+RINGN[rpg.ring.st] : 'No ring';
  return '—'; }
 let mapInt=null;
-const MAPCOL={w:'#16303f',d:'#c0a870',g:'#33502f',t:'#22391f',r:'#4a4550',k:'#5d5666',e:'#3a1f14',W:'#100d14'};
-// ---------- world map ----------
-// The Ascent is 64x864 tiles (1:13.5). Drawn as one strip it rendered as a ~56px-wide
-// sliver on a landscape screen \u2014 unreadable. Instead each ZONE is its own panel, laid out
-// bottom row first, left->right = the order you climb, so the map fits the screen shape
-// and every zone gets ~2.8px per tile instead of 0.87.
-const MAP_W=980, MAP_M=16, MAP_GAP=10, MAP_HEAD=30, MAP_LBL=26, MAP_ROWGAP=10, MAP_FOOT=26;
+// ---------- world map (top-down island minimap) ----------
+// The Sundered Isles is one 300x190 grid, drawn as a single top-down minimap scaled to the card:
+// ocean/bridge/land per tile, land tinted by radial band (+ a corruption bleed toward the portal),
+// with the bridge, the infection portal, boss lairs, waypoints, and a "you" marker on top.
+const MAP_W=980, MAP_PAD=18, MAP_TOP=34, MAP_BOT=30;
+const MAP_OCEAN='#16303f', MAP_BRIDGE='#6e4d31';
 const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e'];
-function mapLayout(G){
-  const NZ=G.rings.names.length, zh=G.h/NZ;
-  const cols=Math.ceil(NZ/2), botN=cols, topN=NZ-cols;
-  const pw=(MAP_W-2*MAP_M-(cols-1)*MAP_GAP)/cols, s=pw/G.w, ph=zh*s;
-  const rowH=ph+MAP_LBL;
-  const H=Math.round(MAP_HEAD+(topN>0?rowH+MAP_ROWGAP:0)+rowH+MAP_FOOT);
-  const panel=(i)=>{ const top=i>=cols, col=top?i-cols:i, n=top?topN:botN;
-    const rowW=n*pw+(n-1)*MAP_GAP;
-    return {x:(MAP_W-rowW)/2+col*(pw+MAP_GAP),
-            y:MAP_HEAD+(top?0:(topN>0?rowH+MAP_ROWGAP:0)),
-            w:pw,h:ph, ty0:G.h-(i+1)*zh, ty1:G.h-i*zh}; };
-  return {NZ,zh,s,pw,ph,H,panel};
-}
-// terrain is static \u2014 render every panel once into an offscreen canvas and blit it,
-// so the live redraw only paints the moving marker
+function mapLayout(G){ const s=(MAP_W-2*MAP_PAD)/G.w, gridH=G.h*s;
+  return {s, ox:MAP_PAD, oy:MAP_TOP, gridH, H:Math.round(MAP_TOP+gridH+MAP_BOT)}; }
+// band + corruption straight from the room's rings metadata (no curRoom dependency — the map can
+// be open while you stand in a dungeon). Mirrors grvBandAt / corruptAt.
+function _mBand(RG,tx,ty){ if(!RG||!RG.radial) return 0;
+  const B=RG.bridge; if(tx>=B.x0&&tx<=B.x1&&Math.abs(ty-B.cy)<=(B.w>>1)) return 2;
+  if(tx<B.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
+  const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
+function _mCorrupt(RG,tx,ty){ if(!RG||!RG.portal) return 0;
+  const dd=Math.hypot(tx-RG.portal.x,ty-RG.portal.y); return Math.max(0,Math.min(1,1-dd/70)); }
+// zone id: bands 0-7 are the radial rings; band 8 (the grind ring) is split into angular sectors
+// (id 8 + sector) \u2014 mirrors ringInfoAt so the map matches the region banner.
+function _mZone(RG,tx,ty){ const b=_mBand(RG,tx,ty); if(b<8) return b;
+  const a=Math.atan2(ty-RG.core.cy,tx-RG.core.cx), n=(RG.grind&&RG.grind.length)||5;
+  return 8+Math.max(0,Math.min(n-1,Math.floor(((a+Math.PI)/(2*Math.PI))*n))); }
+function _mZoneName(RG,z){ if(z<8) return (RG.names[z]&&RG.names[z].n)||''; return (RG.grind&&RG.grind[z-8])||''; }
+// a representative label point (world tiles) for the radial bands (rings \u2014 a centroid would fall
+// in the ring's hole, so place at mid-radius on a staggered angle); grind sectors use a centroid.
+function _mBandLabelPos(RG,z){
+  if(z<3){ const midf=(z+0.5)/3, ang=-1.15+z*0.7; return [RG.starter.cx+Math.cos(ang)*RG.starter.r*midf, RG.starter.cy+Math.sin(ang)*RG.starter.r*midf]; }
+  const midf=((z-3)+0.5)/6, ang=(z%2?0.30:-0.30); return [RG.core.cx+Math.cos(ang)*RG.rmax*midf, RG.core.cy+Math.sin(ang)*RG.rmax*midf]; }
+// subtle per-sector tints so the 5 Lv50 grind "states" read distinctly on the red rim
+const _GRIND_TINT=['rgba(255,175,60,0.13)','rgba(255,110,45,0.13)','rgba(205,55,150,0.15)','rgba(255,80,55,0.13)','rgba(235,150,55,0.13)'];
+// terrain + zone borders + labels are static \u2014 render once into an offscreen canvas and blit it,
+// so the live redraw only paints the moving markers
 let _mapCache=null;
 function mapTerrain(G,L){
   const key=G.w+'x'+G.h+':'+MAP_W;
   if(_mapCache&&_mapCache.key===key) return _mapCache.cv;
   const off=document.createElement('canvas'); off.width=MAP_W; off.height=L.H;
-  const c=off.getContext('2d');
-  c.fillStyle='#0f0c14'; c.fillRect(0,0,MAP_W,L.H);
-  for(let i=0;i<L.NZ;i++){ const p=L.panel(i);
-    c.fillStyle='#14110e'; c.fillRect(p.x,p.y,p.w,p.h);
-    for(let ty=p.ty0;ty<p.ty1;ty++){ const row=G.grid[ty]; if(!row) continue;
-      const bd=Math.max(0,Math.min(L.NZ-1,Math.floor((1-ty/G.h)*L.NZ)));
-      for(let tx=0;tx<G.w;tx++){ const ch=row[tx];
-        if(ch==='W') continue;
-        c.fillStyle=(ch==='t')?'rgba(20,40,20,0.9)':(ch==='k')?'#5d5666':(ch==='w')?'#16303f':(MRAMP[bd]||'#547a44');
-        c.fillRect(p.x+tx*L.s,p.y+(ty-p.ty0)*L.s,L.s+0.6,L.s+0.6); } }
-    // panel frame + zone label beneath
-    c.strokeStyle='#39323f'; c.lineWidth=1; c.strokeRect(p.x-0.5,p.y-0.5,p.w+1,p.h+1);
-    const rg=G.rings.names[i];
-    c.textAlign='center';
-    c.font='bold 12px "Pixelify Sans",monospace'; c.fillStyle='#f0e8d8';
-    c.fillText(rg.n,p.x+p.w/2,p.y+p.h+14);
-    c.font='10px "Pixelify Sans",monospace'; c.fillStyle='#ffc94d';
-    c.fillText('Lv '+rg.lv+(rg.lv2?'\u2013'+rg.lv2:''),p.x+p.w/2,p.y+p.h+25); }
+  const c=off.getContext('2d'); const RG=G.rings, s=L.s;
+  c.fillStyle='#0b0a10'; c.fillRect(0,0,MAP_W,L.H);
+  const T=(typeof _territories==='function')?_territories(G):null, zg=RG._zg;
+  const zAt=(tx,ty)=>{ const zr=zg&&zg[ty]; return (zr&&tx>=0&&tx<zr.length)?zr[tx]:-1; };
+  for(let ty=0;ty<G.h;ty++){ const row=G.grid[ty]; if(!row) continue;
+    for(let tx=0;tx<G.w;tx++){ const ch=row[tx]; if(ch==null) continue;
+      const px=L.ox+tx*s, py=L.oy+ty*s;
+      if(ch==='w'){ c.fillStyle=MAP_OCEAN; c.fillRect(px,py,s+0.6,s+0.6); continue; }
+      if(ch==='b'){ c.fillStyle=MAP_BRIDGE; c.fillRect(px,py,s+0.6,s+0.6); continue; }
+      const zi=zAt(tx,ty), tt=(T&&zi>=0)?T[zi]:null, band=tt?tt.band:0;
+      c.fillStyle=MRAMP[band]||'#547a44'; c.fillRect(px,py,s+0.6,s+0.6);
+      if(tt&&tt.gi>=0&&_GRIND_TINT[tt.gi]){ c.fillStyle=_GRIND_TINT[tt.gi]; c.fillRect(px,py,s+0.6,s+0.6); }
+      const cor=_mCorrupt(RG,tx,ty);
+      if(cor>0.05){ c.fillStyle='rgba(150,40,180,'+(cor*0.55).toFixed(3)+')'; c.fillRect(px,py,s+0.6,s+0.6); }
+      // clump border: darken where a 4-neighbour is a DIFFERENT territory -> a province line
+      if((zAt(tx-1,ty)>=0&&zAt(tx-1,ty)!==zi)||(zAt(tx+1,ty)>=0&&zAt(tx+1,ty)!==zi)
+       ||(zAt(tx,ty-1)>=0&&zAt(tx,ty-1)!==zi)||(zAt(tx,ty+1)>=0&&zAt(tx,ty+1)!==zi)){
+        c.fillStyle='rgba(14,9,16,0.55)'; c.fillRect(px,py,s+0.6,s+0.6); } } }
+  // zone name labels \u2014 bands at a representative ring point, grind sectors at their centroid
+  c.textAlign='center'; c.textBaseline='middle';
+  if(T) for(const tt of T){ if(tt.n<60) continue;
+    const lx=L.ox+(tt.sx/tt.n)*s, ly=L.oy+(tt.sy/tt.n)*s;
+    const lvs=(tt.lvmax&&tt.lvmax!==tt.lvmin)?('Lv '+tt.lvmin+'-'+tt.lvmax):('Lv '+tt.lvmin);
+    c.font='bold 11px "Pixelify Sans",monospace';
+    c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(tt.name,lx,ly-5);
+    c.fillStyle='#f4ecdc'; c.fillText(tt.name,lx,ly-5);
+    c.font='9px "Pixelify Sans",monospace';
+    c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(lvs,lx,ly+7);
+    c.fillStyle='#ffc94d'; c.fillText(lvs,lx,ly+7); }
+  c.textBaseline='alphabetic';
   _mapCache={key:key,cv:off};
   return off;
 }
-// a world point -> its panel + pixel position on the map
-function mapPos(G,L,wx,wy){ const tx=wx/TILE, ty=wy/TILE;
-  const i=Math.max(0,Math.min(L.NZ-1,Math.floor((1-ty/G.h)*L.NZ)));
-  const p=L.panel(i);
-  return {i:i,x:p.x+tx*L.s,y:p.y+(ty-p.ty0)*L.s}; }
+// a world point -> its pixel position on the minimap
+function mapPos(G,L,wx,wy){ return {x:L.ox+(wx/TILE)*L.s, y:L.oy+(wy/TILE)*L.s}; }
 function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  if($s('mapScr').style.display==='none'||!$s('mapScr').style.display){
   if(mapInt){clearInterval(mapInt);mapInt=null;} return; }
@@ -419,43 +437,51 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  if(cv2.height!==L.H) cv2.height=L.H;
  c.imageSmoothingEnabled=false;
  c.drawImage(mapTerrain(G,L),0,0);
+ const t=performance.now();
  c.textAlign='center';
- c.font='bold 13px "Pixelify Sans",monospace'; c.fillStyle='#8a8494';
- c.fillText('THE ASCENT  \u00b7  bottom row first, left to right \u2014 you climb toward the Molten Crown',MAP_W/2,19);
- // waypoint pillars (attuned = gold, locked = grey)
- if(G.pillars) for(const pl of G.pillars){ const q=mapPos(G,L,pl.tx*TILE,pl.ty*TILE);
+ c.font='bold 15px "Pixelify Sans",monospace'; c.fillStyle='#e9dfce';
+ c.fillText('THE SUNDERED ISLES',MAP_W/2,22);
+ // boss lairs \u2014 small pale skull dots
+ if(G.lairs) for(const b in G.lairs){ const La=G.lairs[b]; if(!La.spawn) continue; const q=mapPos(G,L,La.spawn.x,La.spawn.y);
+   c.fillStyle='#ded0d4'; c.beginPath(); c.arc(q.x,q.y,2.6,0,6.29); c.fill();
+   c.fillStyle='#20161c'; c.fillRect(q.x-1.1,q.y-0.6,0.9,0.9); c.fillRect(q.x+0.3,q.y-0.6,0.9,0.9); }
+ // the infection portal (violet, pulsing)
+ if(G.rings.portal){ const q=mapPos(G,L,G.rings.portal.x*TILE,G.rings.portal.y*TILE), pu=0.5+0.5*Math.sin(t/300);
+   c.save(); c.globalCompositeOperation='lighter';
+   const g=c.createRadialGradient(q.x,q.y,1,q.x,q.y,15); g.addColorStop(0,'rgba(180,60,210,'+(0.4+pu*0.3)+')'); g.addColorStop(1,'rgba(0,0,0,0)');
+   c.fillStyle=g; c.beginPath(); c.arc(q.x,q.y,15,0,6.29); c.fill(); c.restore();
+   c.save(); c.translate(q.x,q.y); c.rotate(t/1400); c.fillStyle='#e79bff'; c.fillRect(-3.2,-3.2,6.4,6.4); c.restore(); }
+ // waypoint pillars (attuned = gold, dormant = grey)
+ if(G.pillars) for(const pl of G.pillars){ const q=mapPos(G,L,(pl.x!=null?pl.x:pl.tx*TILE),(pl.y!=null?pl.y:pl.ty*TILE));
    const on=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
    c.save(); c.translate(q.x,q.y); c.rotate(Math.PI/4);
-   c.fillStyle=on?'#ffd07a':'#4a4454'; c.fillRect(-4,-4,8,8);
-   c.strokeStyle='#14100c'; c.lineWidth=1; c.strokeRect(-4,-4,8,8); c.restore(); }
+   c.fillStyle=on?'#ffe08a':'#5a6472'; c.fillRect(-3.5,-3.5,7,7);
+   c.strokeStyle='#14100c'; c.lineWidth=1; c.strokeRect(-3.5,-3.5,7,7); c.restore(); }
  // return portals
  if(G.portals) for(const gp of G.portals){ const q=mapPos(G,L,gp.x,gp.y);
-   c.strokeStyle='#c07ad4'; c.lineWidth=1.5;
-   c.beginPath(); c.arc(q.x,q.y,4,0,6.29); c.stroke();
+   c.strokeStyle='#c07ad4'; c.lineWidth=1.5; c.beginPath(); c.arc(q.x,q.y,4,0,6.29); c.stroke();
    c.fillStyle='#e8d8ff'; c.fillRect(q.x-1.5,q.y-1.5,3,3); }
- // you (and a gold frame around the zone you're standing in)
- if(curRoom&&curRoom.key==='G'){
-  const q=mapPos(G,L,player.x,player.y), p=L.panel(q.i);
-  c.strokeStyle='#ffc94d'; c.lineWidth=2; c.strokeRect(p.x-1,p.y-1,p.w+2,p.h+2);
-  const pu=(Math.sin(performance.now()/250)+1)/2;
+ // you
+ if(curRoom&&curRoom.rings&&curRoom.rings.radial){
+  const q=mapPos(G,L,player.x,player.y), pu=(Math.sin(t/250)+1)/2;
   c.strokeStyle='rgba(255,201,77,'+(0.9-pu*0.5)+')'; c.lineWidth=2;
   c.beginPath(); c.arc(q.x,q.y,5+pu*6,0,6.29); c.stroke();
-  c.fillStyle='#fff'; c.beginPath(); c.arc(q.x,q.y,3.5,0,6.29); c.fill();
+  c.fillStyle='#fff'; c.beginPath(); c.arc(q.x,q.y,3.2,0,6.29); c.fill();
   c.strokeStyle='#101c26'; c.lineWidth=1; c.stroke(); }
  // footer: legend + where you are
  const fy=L.H-9;
- c.textAlign='left'; c.font='10px "Pixelify Sans",monospace';
- c.fillStyle='#ffd07a'; c.fillRect(MAP_M,fy-8,8,8);
- c.fillStyle='#cfc8bd'; c.fillText('waypoint',MAP_M+13,fy);
- c.fillStyle='#c07ad4'; c.beginPath(); c.arc(MAP_M+82,fy-4,4,0,6.29); c.fill();
- c.fillStyle='#cfc8bd'; c.fillText('portal home',MAP_M+92,fy);
+ c.textAlign='left'; c.font='11px "Pixelify Sans",monospace';
+ c.fillStyle='#ffe08a'; c.fillRect(MAP_PAD,fy-8,8,8);
+ c.fillStyle='#cfc8bd'; c.fillText('waypoint',MAP_PAD+13,fy);
+ c.fillStyle='#e79bff'; c.fillRect(MAP_PAD+82,fy-8,8,8);
+ c.fillStyle='#cfc8bd'; c.fillText('portal',MAP_PAD+95,fy);
+ c.fillStyle='#ded0d4'; c.beginPath(); c.arc(MAP_PAD+152,fy-4,3,0,6.29); c.fill();
+ c.fillStyle='#cfc8bd'; c.fillText('boss lair',MAP_PAD+160,fy);
  c.textAlign='right';
- if(curRoom&&curRoom.key==='G'){ const rg=regionAtPx(player.x,player.y);
-  // ringInfoAt returns {n,lv,lv2} \u2014 there is no .band field (the old footer printed
-  // "Lv undefined"); the live level here comes from the continuous curve instead.
+ if(curRoom&&curRoom.rings&&curRoom.rings.radial){ const rg=regionAtPx(player.x,player.y);
   const lv=(typeof grvLvAt==='function')?grvLvAt(player.x/TILE,player.y/TILE):null;
-  c.fillStyle='#ffc94d'; c.fillText(rg?('you are in '+rg.n+(lv?' \u00b7 Lv '+lv:'')):'',MAP_W-MAP_M,fy); }
- else { c.fillStyle='#8a8494'; c.fillText('you are in '+(curRoom?curRoom.name:'')+' \u2014 take the portal in the plaza',MAP_W-MAP_M,fy); }
+  c.fillStyle='#ffc94d'; c.fillText(rg?('you are in '+rg.n+(lv?' \u00b7 Lv '+lv:'')):'',MAP_W-MAP_PAD,fy); }
+ else { c.fillStyle='#8a8494'; c.fillText('you are in '+(curRoom?curRoom.name:'')+' \u2014 take the portal home',MAP_W-MAP_PAD,fy); }
 }
 $s('mapBtn').addEventListener('click',function(){ $s('mapScr').style.display='flex';
  drawMap(); if(mapInt)clearInterval(mapInt); mapInt=setInterval(drawMap,120); });
