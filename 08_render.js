@@ -103,8 +103,21 @@ function drawTileG(x,y){
       bh=(bh^(bh>>>15))>>>0;
       if(bh%100<20){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
       else if(bh%100>=90){ ctx.fillStyle='rgba(255,245,220,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      if(c==='W'){ ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(tx,ty,TILE,3);
-        ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5); }
+      // Inaccessible cells (walls / locked gates) = the VOID of the boss's consciousness.
+      // Darken them hard so the lit dream-floor is unmistakably the play space (user: fill the
+      // inaccessible areas so the playable area is highlighted), with sparse drifting motes so
+      // the void is "filled", not flat black. Playable floor touching the void gets a faint
+      // stippled rim (no solid lines) so the arena edge glows.
+      if(c==='W'||c==='D'){
+        ctx.fillStyle='rgba(6,5,14,0.56)'; ctx.fillRect(tx,ty,TILE,TILE);
+        const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null, wh=hmix(x*5+2,y*9+4);
+        if(wh%6===0){ const tw=0.07+0.11*(0.5+0.5*Math.sin(performance.now()/900+(x*2+y*3)));
+          ctx.fillStyle=_hexA(GB?GB.col:'#6a6aa0',tw.toFixed(3));
+          ctx.fillRect(tx+3+(wh%(TILE-6)),ty+3+((wh>>5)%(TILE-6)),1,1); } }
+      else { const G=curRoom.grid, vd=(xx,yy)=>{ const rr=G[yy]; const cc=rr&&rr[xx]; return cc==='W'||cc==='D'||cc==null; };
+        const rc='rgba(255,238,200,0.16)';
+        if(vd(x,y-1)) pxH(tx,ty,TILE,rc,0.5); if(vd(x,y+1)) pxH(tx,ty+TILE-1,TILE,rc,0.5);
+        if(vd(x-1,y)) pxV(tx,ty,TILE,rc,0.5); if(vd(x+1,y)) pxV(tx+TILE-1,ty,TILE,rc,0.5); }
       if(c==='D'){ const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null, pu=0.30+Math.sin(performance.now()/300)*0.18;
         ctx.globalAlpha=pu; ctx.fillStyle=GB?GB.col:'#ffd07a'; ctx.fillRect(tx,ty,TILE,TILE); ctx.globalAlpha=1;
         ctx.fillStyle='rgba(255,255,255,0.75)';
