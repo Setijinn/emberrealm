@@ -433,6 +433,7 @@ function update(dt){
   ambientParts(dt);
   if(typeof updateEggDrops==='function') updateEggDrops(dt);   // pet eggs on the ground: walk-over to collect
   if(typeof updatePet==='function') updatePet(dt);             // active pet: follow + auto-cast its utility kit
+  if(typeof updatePetRoom==='function') updatePetRoom(dt);     // sanctuary: pets wander
   // drifting embers in warm places
   if(curRoom.glows&&curRoom.glows.length&&curRoom.town&&Math.random()<dt*16){
     const gl=curRoom.glows[Math.floor(Math.random()*curRoom.glows.length)];
@@ -496,6 +497,11 @@ function update(dt){
     if(curRoom.switches) for(const sw of curRoom.switches){ if(sw.on) continue;
       const d=Math.hypot(sw.x-player.x,sw.y-player.y);
       if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'switch',x:sw.x,y:sw.y,sw:sw,ctx:'Awaken'}; } }
+    // Sanctuary: stand on a pet to make it your follower
+    if(curRoom.petRoom && typeof petWanderers!=='undefined'){ const _pu=(typeof petStore==='function')?petStore():null;
+      for(const w of petWanderers){ if(_pu&&_pu.activePet===w.def.uid) continue;
+        const d=Math.hypot(w.x-player.x,w.y-player.y);
+        if(d<40 && d<_pbest){ _pbest=d; portalPrompt={kind:'petpick',x:w.x,y:w.y-8,wuid:w.def.uid,ctx:'Make '+w.def.name+' your follower'}; } } }
   }
   // dungeon: objective progress + orb pickup + dream motes
   if(curRoom.dungeon){

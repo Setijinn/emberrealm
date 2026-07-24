@@ -64,6 +64,35 @@ function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
   ctx.fillRect(tx,ty,TILE,TILE);
+  // The Sanctuary (pet room): meadow floor + hedge border (PixelLab art, procedural fallback)
+  if(curRoom.petRoom){
+    if(c==='W'){                                             // hedge border (tiled art, procedural fallback)
+      const hd=(typeof _roomHedgeImg!=='undefined')?_roomHedgeImg:null;
+      if(hd&&hd.complete&&hd.naturalWidth){ ctx.imageSmoothingEnabled=false; const o=hmix(x,y)&3;
+        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1); ctx.drawImage(hd,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
+      else { ctx.fillStyle='#2c4a2a'; ctx.fillRect(tx,ty,TILE,TILE); }
+      return; }
+    if(c==='w'){                                             // lake / pond / waterfall pool
+      if(typeof _waterImg!=='undefined'&&_waterImg&&_waterImg.complete&&_waterImg.naturalWidth){ ctx.imageSmoothingEnabled=false; ctx.drawImage(_waterImg,tx,ty,TILE,TILE); ctx.fillStyle='rgba(24,64,116,0.20)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else { ctx.fillStyle=(x+y)&1?'#3f7fb8':'#4a8ec6'; ctx.fillRect(tx,ty,TILE,TILE); }
+      const G=curRoom.grid, wat=(xx,yy)=>{const r=G[yy];return r&&r[xx]==='w';};
+      ctx.fillStyle='rgba(38,74,40,0.55)';                   // grassy rim where the pool meets the lawn
+      if(!wat(x,y-1))ctx.fillRect(tx,ty,TILE,3); if(!wat(x,y+1))ctx.fillRect(tx,ty+TILE-3,TILE,3);
+      if(!wat(x-1,y))ctx.fillRect(tx,ty,3,TILE); if(!wat(x+1,y))ctx.fillRect(tx+TILE-3,ty,3,TILE);
+      const wn=Math.sin(performance.now()/700+x*0.9+y*1.7); if(wn>0.6){ ctx.fillStyle='rgba(220,240,250,0.12)'; ctx.fillRect(tx+6,ty+TILE/2-1,TILE-12,2); }
+      return; }
+    // CLEAN PROCEDURAL LAWN — organic value-noise green (no repeating tile), sparse grass blades,
+    // faint highlights, and the occasional daisy. Looks like a natural meadow, not a stamped grid.
+    const nz=vnoise(x,y,5.5)*0.6+vnoise(x+40,y+80,2.3)*0.4, gv=100+Math.round((nz-0.5)*48);
+    ctx.fillStyle='rgb('+Math.round(gv*0.45)+','+gv+','+Math.round(gv*0.38)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+    const bh=hmix(x*3+1,y*7+2);
+    ctx.fillStyle='rgba(26,62,26,0.5)';                      // a few darker grass blades
+    for(let i=0;i<3;i++){ if(((bh>>(i*4))&7)<4) ctx.fillRect(tx+2+((bh>>(i*3))%(TILE-4)), ty+2+((bh>>(i*3+2))%(TILE-4)), 1, 2); }
+    if(((bh>>9)&7)<2){ ctx.fillStyle='rgba(255,255,235,0.07)'; ctx.fillRect(tx+((bh>>2)%TILE), ty+((bh>>5)%TILE),1,1); }
+    if(vnoise(x+11,y+5,3.2)>0.84){ const dh=hmix(x+50,y+90), dx2=tx+7+(dh%18), dy2=ty+7+((dh>>5)%18);
+      ctx.fillStyle=(dh&1)?'rgba(246,246,228,0.9)':'rgba(232,212,84,0.85)'; ctx.fillRect(dx2,dy2,2,2);
+      ctx.fillStyle='rgba(70,140,60,0.7)'; ctx.fillRect(dx2,dy2+2,2,1); }
+    return; }
   // Awakened dungeon: the boss's consciousness — themed wall/floor sampled from
   // dunset_<ring> (falls back to that boss's lair tileset, then procedural).
   // 'D' = locked dream-gate: wall block + pulsing boss-colored seal.

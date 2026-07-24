@@ -743,6 +743,7 @@ function msg(t,sub=''){ const m=document.getElementById('msg');
 
 // ---- portal routing: every portal carries a destination `to` ----
 function usePortal(to){
+  if(to==='_petback'){ if(typeof leavePetRoom==='function') leavePetRoom(); return; }   // exit the Sanctuary
   if(curRoom&&curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
   if(to==='G'){ const gv=rooms['G']; if(!gv) return;
     // arrive on the STARTER island — the designated spawn (P) so you always begin safe in the west

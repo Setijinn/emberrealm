@@ -899,6 +899,7 @@ function render(){
   for(const lb of loots) drawLootBag(lb,pn);
   if(typeof drawEggDrops==='function') drawEggDrops();
   if(typeof drawPet==='function') drawPet();                   // active companion pet
+  if(typeof drawPetRoom==='function') drawPetRoom();           // sanctuary decor + wandering pets
   for(const e of enemies){
     shadow(e.x,e.y+e.r*0.8,e.r*1.05);
     drawEnemySprite(e,pn);

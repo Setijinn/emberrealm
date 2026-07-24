@@ -40,6 +40,9 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
     if(typeof emitP==='function') for(let q=0;q<10;q++){ const a=Math.random()*6.283;
       emitP(sw.x,sw.y-8,{vx:Math.cos(a)*60,vy:Math.sin(a)*60-30,life:0.6,col:'#ffd07a',sz:3,glow:true}); } }
     portalLock=false; return; }
+  if(p.kind==='petpick'){ if(typeof setActivePet==='function') setActivePet(p.wuid); if(typeof spawnActivePet==='function') spawnActivePet();
+    const _pn=(typeof activePet==='function'&&activePet())?activePet().name:'Pet'; if(typeof msg==='function') msg('🐾 '+_pn,'now your follower');
+    navigator.vibrate&&navigator.vibrate(20); return; }
   if(p.kind==='portal'){ usePortal(p.to); }
   else if(p.kind==='ground'){ const gp=p.gp;
     if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};

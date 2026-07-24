@@ -180,9 +180,12 @@ function devEgg(cond,cat){ giveEgg(cond||0, cat||PET_CAT_KEYS[(Math.random()*9)|
 
 // ---- sprite loaders (08c's _img is defined by the time this file runs) ----
 const _petImg={}, _eggImg={};
+let _roomFloorImg=null,_roomFloor2Img=null,_roomHedgeImg=null; const _roomDecor={};
 if(typeof window!=='undefined' && typeof _img==='function'){
   for(const p of PET_DB) _petImg[p.spr]=_img('assets/pets/'+p.spr+'.png');
   for(const c of PET_CAT_KEYS) _eggImg[c]=_img('assets/pets/egg_'+c+'.png');
+  _roomFloorImg=_img('assets/pets/room_floor.png'); _roomFloor2Img=_img('assets/pets/room_floor2.png'); _roomHedgeImg=_img('assets/pets/room_hedge.png');
+  for(const d of ['pond','hay','shelter','barn','trough','apple','picket']) _roomDecor[d]=_img('assets/pets/room_'+d+'.png');
 }
 
 // ================= Phase 2: the active pet in combat =================
@@ -204,7 +207,9 @@ function petSpark(x,y,col,n){ if(typeof emitP!=='function') return; n=n||6;
   for(let i=0;i<n;i++){ const a=Math.random()*6.283, s=20+Math.random()*40;
     emitP(x,y,{vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:0.5+Math.random()*0.3,col:col,sz:2,g:60,drag:2,glow:true}); } }
 
-function updatePet(dt){ if(!petEnt||!petEnt.def||typeof player==='undefined') return; const p=petEnt.def;
+function updatePet(dt){ if(!petEnt||!petEnt.def||typeof player==='undefined') return;
+  if(curRoom&&curRoom.petRoom) return;                         // in the Sanctuary every pet wanders instead
+  const p=petEnt.def;
   petEnt.t+=dt;
   // follow: trail slightly behind/beside the hero, lerped so it drifts naturally
   const tx=player.x-22, ty=player.y+14;
@@ -269,7 +274,8 @@ function _petPaint(ov,u){
   let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
     +'<div style="font:bold 17px monospace;color:#ffd07a;letter-spacing:.08em;">🐾 PETS</div>'
     +'<button id="petClose" style="background:#2a1f16;border:1px solid #7a4a1e;color:#ffd07a;border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer;">✕</button></div>'
-    +'<div style="font-size:11px;color:#8a8494;margin-bottom:12px;">Kept across deaths. Eggs drop from bosses &amp; hatch as you fight. Equip one to fight beside you.</div>';
+    +'<div style="font-size:11px;color:#8a8494;margin-bottom:10px;">Kept across deaths. Eggs drop from bosses &amp; hatch as you fight. Equip one to fight beside you.</div>'
+    +(u.pets.length?'<button id="petSanctuary" style="'+_PBTNG+'width:100%;padding:8px;margin-bottom:12px;">🏡 VISIT THE SANCTUARY — watch your '+u.pets.length+' pet'+(u.pets.length===1?'':'s')+' roam</button>':'');
   // ---- EGGS ----
   h+='<div style="font:bold 12px monospace;color:#c9a04a;margin:4px 0 6px;letter-spacing:.1em;">EGGS ('+u.eggs.length+')</div>';
   if(!u.eggs.length) h+='<div style="font-size:11px;color:#6a6472;margin-bottom:10px;">No eggs yet — defeat bosses to find them.</div>';
@@ -318,6 +324,7 @@ function _petPaint(ov,u){
   } else if(!_petFuse) h+='<div style="font-size:10px;color:#6a6472;margin-top:8px;">Tap a pet to inspect, equip, evolve or fuse it.</div>';
   card.innerHTML=h; ov.appendChild(card);
   document.getElementById('petClose').onclick=closePets;
+  { const sanc=document.getElementById('petSanctuary'); if(sanc) sanc.onclick=function(){ if(typeof enterPetRoom==='function') enterPetRoom(); }; }
   card.querySelectorAll('.petOpen').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
     const i=+b.getAttribute('data-i'); const pet=hatchEgg(i); if(pet){ _petSel=pet.uid; if(typeof spawnActivePet==='function'&&u.activePet===pet.uid) spawnActivePet(); } _petPaint(ov,u); });
   card.querySelectorAll('.petCard').forEach(c=>c.onclick=()=>{ const uid=+c.getAttribute('data-uid');
@@ -328,7 +335,9 @@ function _petPaint(ov,u){
   const ev2=document.getElementById('petEvolve'); if(ev2) ev2.onclick=()=>{ petEvolve(_petSel); _petPaint(ov,u); };
   const fb=document.getElementById('petFuseBtn'); if(fb) fb.onclick=()=>{ _petFuse=true; _petPaint(ov,u); };
 }
-function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return; const p=petEnt.def;
+function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return;
+  if(curRoom&&curRoom.petRoom) return;                         // suppressed in the Sanctuary (all pets wander there)
+  const p=petEnt.def;
   const im=_petImg[p.spr], x=petEnt.x, y=petEnt.y, t=performance.now()/1000;
   const bob=Math.sin(t*3+x*0.05)*2;
   if(typeof shadow==='function') shadow(x,y,8);
@@ -343,4 +352,95 @@ function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return; c
     const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
     ctx.translate(x,y+bob); ctx.scale(petEnt.face<0?-1:1,1);
     ctx.drawImage(im,-w/2,-h,w,h); ctx.restore();
+  } }
+
+// ================= The Sanctuary — a room where your whole collection roams =================
+let petWanderers=[], _petReturn=null;
+function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['PETS']) return rooms['PETS'];
+  const W=36,H=25, grid=[];
+  for(let y=0;y<H;y++){ const row=[]; for(let x=0;x<W;x++) row.push((x===0||y===0||x===W-1||y===H-1)?'W':'.'); grid.push(row); }
+  const cx=W>>1;
+  // LAKE across the top (rows 1-3) that the waterfall spills from
+  for(let y=1;y<=3;y++) for(let x=1;x<W-1;x++) grid[y][x]='w';
+  // WATERFALL column (rows 4-5, 3 wide)
+  for(let y=4;y<=5;y++) for(let x=cx-1;x<=cx+1;x++) grid[y][x]='w';
+  // POND it feeds (oval, centre cx/9)
+  const pcx=cx, pcy=9, prx=6, pry=3;
+  for(let y=pcy-pry;y<=pcy+pry;y++) for(let x=pcx-prx;x<=pcx+prx;x++){ if(y<1||y>=H-1||x<1||x>=W-1) continue;
+    const nx=(x-pcx)/prx, ny=(y-pcy)/pry; if(nx*nx+ny*ny<=1.04) grid[y][x]='w'; }
+  const ex=cx;                                               // south doorway + exit
+  grid[H-1][ex]='.'; grid[H-1][ex-1]='.'; grid[H-1][ex+1]='.';
+  const room={ id:'PETS', name:'The Sanctuary', w:W, h:H, grid, petRoom:true, town:false, big:false,
+    spawns:[], glows:[], pillars:[], px:ex, py:H-3,
+    waterfall:{ cx:pcx, x0:cx-1.35, x1:cx+1.35, topY:3.5, pcx, pcy, prx, pry },
+    portals:[{x:(ex+0.5)*TILE, y:(H-1.5)*TILE, to:'_petback', col:'#8ee0a0', big:false}],
+    petDecor:[ {img:'barn',    x:6.5*TILE,   y:16*TILE,    s:3.2},   // barn, lower-left
+               {img:'shelter', x:11*TILE,    y:15*TILE,    s:2.0},   // pet den beside it
+               {img:'picket',  x:5*TILE,     y:19.5*TILE,  s:2.0},   // paddock fence in FRONT of the barn
+               {img:'picket',  x:8.4*TILE,   y:19.5*TILE,  s:2.0},
+               {img:'picket',  x:11.8*TILE,  y:19.5*TILE,  s:2.0},
+               {img:'apple',   x:31*TILE,    y:15*TILE,    s:2.8},   // apple trees, right + corners
+               {img:'apple',   x:3.5*TILE,   y:23*TILE,    s:2.4},
+               {img:'trough',  x:25*TILE,    y:19*TILE,    s:1.9},   // trough, lower-right
+               {img:'hay',     x:16*TILE,    y:22*TILE,    s:1.6},
+               {img:'hay',     x:29*TILE,    y:22*TILE,    s:1.4} ] };
+  rooms['PETS']=room; return room; }
+// pets roam the LAWN below the pond, not the water
+function _petRoomBounds(){ const R=rooms['PETS']; const wf=R.waterfall;
+  const y0=(wf?(wf.pcy+wf.pry+1.5):2.5); return {x0:2.4*TILE,y0:y0*TILE,x1:(R.w-2.4)*TILE,y1:(R.h-2.4)*TILE}; }
+function spawnWanderers(){ petWanderers=[]; const u=petStore(); if(!u||!rooms['PETS']) return; const b=_petRoomBounds();
+  for(const p of u.pets){ const x=b.x0+Math.random()*(b.x1-b.x0), y=b.y0+Math.random()*(b.y1-b.y0);
+    petWanderers.push({def:p, x, y, tx:x, ty:y, spd:16+Math.random()*16, face:Math.random()<0.5?-1:1, wait:Math.random()*3, ph:Math.random()*6.28}); } }
+function enterPetRoom(){ const u=petStore(); if(!u||typeof enterRoom!=='function') return;
+  const key=Object.keys(rooms).find(k=>rooms[k]===curRoom)||'0,0';
+  _petReturn={key, x:player.x, y:player.y};
+  buildPetRoom(); if(typeof closePets==='function') closePets();
+  const R=rooms['PETS']; enterRoom('PETS',(R.px+0.5)*TILE,(R.py+0.5)*TILE);
+  if(typeof portalLock!=='undefined') portalLock=false;
+  spawnWanderers();
+  if(typeof msg==='function') msg('THE SANCTUARY', u.pets.length+' pet'+(u.pets.length===1?'':'s')+' roaming'); }
+function leavePetRoom(){ petWanderers=[]; const r=_petReturn||{key:'0,0'};
+  if(typeof enterRoom==='function' && rooms[r.key]) enterRoom(r.key, r.x||(rooms[r.key].px+0.5)*TILE, r.y||(rooms[r.key].py+0.5)*TILE);
+  else if(typeof usePortal==='function') usePortal('0,0'); }
+function updatePetRoom(dt){ if(!curRoom||!curRoom.petRoom||!petWanderers.length) return; const b=_petRoomBounds();
+  for(const w of petWanderers){ const dx=w.tx-w.x, dy=w.ty-w.y, d=Math.hypot(dx,dy);
+    if(d<4){ w.wait-=dt; if(w.wait<=0){ w.tx=b.x0+Math.random()*(b.x1-b.x0); w.ty=b.y0+Math.random()*(b.y1-b.y0); w.wait=0.8+Math.random()*3.2; } }
+    else { const mv=Math.min(d,w.spd*dt); w.x+=dx/d*mv; w.y+=dy/d*mv; if(Math.abs(dx)>2) w.face=dx<0?-1:1; } } }
+function drawWaterfall(){ const wf=curRoom&&curRoom.waterfall; if(!wf||typeof ctx==='undefined') return;
+  const t=performance.now(), x0=wf.x0*TILE, x1=wf.x1*TILE, w=x1-x0, y0=wf.topY*TILE, y1=(wf.pcy-0.2)*TILE;
+  ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,w,y1-y0); ctx.clip();     // falling water column
+  ctx.fillStyle='#4f8ac4'; ctx.fillRect(x0,y0,w,y1-y0);
+  ctx.fillStyle='rgba(120,180,220,0.5)'; ctx.fillRect(x0,y0,3,y1-y0); ctx.fillRect(x1-3,y0,3,y1-y0);
+  const per=11, sc=(t*0.22)%per;
+  for(let yy=y0-per; yy<y1+per; yy+=per){ const py=yy+sc;
+    ctx.fillStyle='rgba(214,240,252,0.6)'; ctx.fillRect(x0+3,py,w-6,3);
+    ctx.fillStyle='rgba(160,210,238,0.45)'; ctx.fillRect(x0+3,py+5,w-6,2); }
+  ctx.restore();
+  ctx.fillStyle='rgba(244,252,255,0.9)'; ctx.fillRect(x0-2,y0-2,w+4,3);   // white lip at the lake edge
+  for(let i=0;i<8;i++) ctx.fillRect(x0+Math.random()*w, y0-3+Math.random()*4,1,1);
+  const by=y1;                                                            // splash where it hits the pond
+  for(let i=0;i<16;i++){ const px=wf.cx*TILE+(Math.random()*w*1.5-w*0.75); ctx.fillStyle='rgba(244,252,255,'+(0.4+Math.random()*0.45).toFixed(2)+')'; ctx.fillRect(px, by-2+Math.random()*6,1,1); }
+  if(typeof emitP==='function' && Math.random()<0.7) emitP(wf.cx*TILE+(Math.random()*w-w/2), by, {vx:Math.random()*34-17, vy:-22-Math.random()*22, life:0.5+Math.random()*0.4, col:'#e6f4ff', sz:2, g:80, drag:1, glow:true});
+}
+function drawPetRoom(){ if(!curRoom||!curRoom.petRoom||typeof ctx==='undefined') return;
+  drawWaterfall();
+  const t=performance.now()/1000, items=[]; const _au=(typeof petStore==='function')?petStore():null, _active=_au?_au.activePet:null;
+  for(const d of (curRoom.petDecor||[])){ const im=_roomDecor[d.img]; if(im&&im.complete&&im.naturalWidth) items.push({y:d.y,k:'d',im,x:d.x,s:d.s}); }
+  for(const w of petWanderers) items.push({y:w.y,k:'w',w});
+  items.sort((a,b)=>a.y-b.y);
+  for(const it of items){
+    if(it.k==='d'){ const w2=TILE*it.s, h2=w2*it.im.naturalHeight/it.im.naturalWidth;
+      ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(it.x,it.y,w2*0.32,w2*0.11,0,0,6.29); ctx.fill();
+      ctx.imageSmoothingEnabled=false; ctx.drawImage(it.im, it.x-w2/2, it.y-h2, w2, h2); }
+    else { const w=it.w, im=_petImg[w.def.spr]; if(!im||!im.complete||!im.naturalWidth) continue;
+      const moving=Math.hypot(w.tx-w.x,w.ty-w.y)>=4, bob=moving?Math.abs(Math.sin(t*8+w.ph))*2:Math.sin(t*2+w.ph)*1;
+      if(w.def.rar>=3){ const col=PET_RAR_COL[w.def.rar]||'#fff', pu=0.4+0.3*Math.sin(t*2.5+w.ph);
+        ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createRadialGradient(w.x,w.y-6,1,w.x,w.y-6,16+w.def.rar*3);
+        g.addColorStop(0,col+Math.round(pu*80).toString(16).padStart(2,'0')); g.addColorStop(1,col+'00');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(w.x,w.y-6,16+w.def.rar*3,0,6.29); ctx.fill(); ctx.restore(); }
+      if(typeof shadow==='function') shadow(w.x,w.y,7);
+      if(w.def.uid===_active){ ctx.save(); ctx.strokeStyle='rgba(255,201,77,'+(0.6+0.3*Math.sin(t*4)).toFixed(2)+')'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.ellipse(w.x,w.y,11,5,0,0,6.29); ctx.stroke(); ctx.restore(); }   // your follower
+      const sc=(TILE*0.6*(w.def.size||1))/Math.max(im.naturalWidth,im.naturalHeight), ww=im.naturalWidth*sc, hh=im.naturalHeight*sc;
+      ctx.save(); ctx.imageSmoothingEnabled=false; ctx.translate(w.x,w.y+bob); ctx.scale(w.face<0?-1:1,1); ctx.drawImage(im,-ww/2,-hh,ww,hh); ctx.restore(); }
   } }
