@@ -526,7 +526,7 @@ function update(dt){
     // Lv1 starter stays sparse (~5) and only the Lv50 grind zones get busy (~15). Bosses/nodes exempt.
     const _lLv = (typeof grvLvAt==='function' && curRoom.rings) ? grvLvAt(player.x/TILE,player.y/TILE)
                : (curRoom.band||10);
-    const roamCap = curRoom.big ? Math.max(5, Math.min(15, 5 + Math.floor(_lLv/5))) : 1e9;
+    const roamCap = curRoom.big ? Math.max(3, Math.min(8, 3 + Math.floor(_lLv/9))) : 1e9;
     let roamN=0; for(const e of enemies) if(e.type==='c'||e.type==='s') roamN++;
     for(const sp of curRoom.spawns){
       if(enemies.some(e=>e.sref===sp)) continue;

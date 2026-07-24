@@ -40,14 +40,20 @@ function drawBossQuote(){
 
 function bossMechTick(e, dt){
   if(!e || !e.mech || e.decoy) return;
-  if(e.mech==='pools'){ _poolsTick(e, dt); return; }
-  if(e.mechT===undefined) e.mechT = 6 + Math.random()*3;
+  // Only START a mechanic once the player is ACTUALLY in this fight — i.e. has HIT this boss
+  // (bossBar is set on the first hit) and is still nearby. A world boss that merely spawned near
+  // you must NOT spam safe-circles + screen shake across the overworld (the "random circles").
+  // Already-active events still resolve regardless so nothing gets stuck.
+  const engaged = (typeof bossBar!=='undefined' && bossBar===e) && (typeof player!=='undefined') &&
+    !e.dormant && Math.hypot(e.x-player.x, e.y-player.y) < 720;
+  if(e.mechT===undefined) e.mechT = 8 + Math.random()*4;
+  if(e.mech==='pools'){ if(engaged) _poolsTick(e, dt); return; }
   if(e.mech==='bloom'){
     if(e.bloom) _bloomTick(e, dt);
-    else { e.mechT-=dt; if(e.mechT<=0){ e.mechT=7.5+Math.random()*3.5; _bloomStart(e); } }
+    else if(engaged){ e.mechT-=dt; if(e.mechT<=0){ e.mechT=9+Math.random()*4; _bloomStart(e); } }
   } else if(e.mech==='clones'){
     if(e.cloneOn) _clonesTick(e, dt);
-    else { e.mechT-=dt; if(e.mechT<=0){ e.mechT=11+Math.random()*4; _clonesStart(e); } }
+    else if(engaged){ e.mechT-=dt; if(e.mechT<=0){ e.mechT=13+Math.random()*5; _clonesStart(e); } }
   }
 }
 // forced event on a phase break — a dramatic beat that also introduces the mechanic early
