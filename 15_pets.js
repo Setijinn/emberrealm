@@ -129,14 +129,21 @@ function petGainXp(amt){ const p=activePet(); if(!p||!amt) return; const mx=petM
 function petCanFuse(a,b){ return !!(a&&b&&a.uid!==b.uid&&a.rar===b.rar&&a.rar<4); }
 function petFuse(aUid,bUid){ const u=petStore(); if(!u) return null;
   const a=u.pets.find(p=>p.uid===aUid), b=u.pets.find(p=>p.uid===bUid); if(!petCanFuse(a,b)) return null;
-  const cat=Math.random()<0.5?a.cat:b.cat, nr=a.rar+1, fam=PET_DB.filter(p=>p.cat===cat);
-  const def=fam.find(p=>p.rar===nr) || fam.slice().sort((x,y)=>Math.abs(x.rar-nr)-Math.abs(y.rar-nr))[0] || PET_DB[0];
-  const pet={ uid:u.petSeq++, spr:def.spr, name:def.name, cat, rar:nr,
+  const nr=a.rar+1;
+  // 50/50 which parent's category — but the result must be a GENUINE next-tier creature. Prefer the
+  // chosen parent's family if it reaches this tier, else the other parent's family, else (both cap
+  // out lower) any creature of the next tier. Never a lower-tier creature mislabelled as higher.
+  const fam=c=>PET_DB.filter(p=>p.cat===c&&p.rar===nr);
+  const order=Math.random()<0.5?[a.cat,b.cat]:[b.cat,a.cat];
+  let choices=null; for(const c of order){ const f=fam(c); if(f.length){ choices=f; break; } }
+  if(!choices) choices=PET_DB.filter(p=>p.rar===nr);
+  const def=choices[(Math.random()*choices.length)|0];
+  const pet={ uid:u.petSeq++, spr:def.spr, name:def.name, cat:def.cat, rar:nr,
     lvl:1, xp:0, abilLvl:Math.max(a.abilLvl||1,b.abilLvl||1), feedXp:0, kit:rollKit(), size:petSizeFor(nr) };
   u.pets=u.pets.filter(p=>p.uid!==aUid&&p.uid!==bUid); u.pets.push(pet);
   if(u.activePet===aUid||u.activePet===bUid) u.activePet=pet.uid;
   savePets(); if(typeof spawnActivePet==='function'&&u.activePet===pet.uid) spawnActivePet();
-  if(typeof msg==='function') msg('✨ EVOLVED!', PET_RAR_NAME[nr]+' '+def.name+' — '+(PET_CATS[cat]?PET_CATS[cat].name:'')); return pet; }
+  if(typeof msg==='function') msg('✨ EVOLVED!', PET_RAR_NAME[nr]+' '+def.name+' — '+(PET_CATS[def.cat]?PET_CATS[def.cat].name:'')); return pet; }
 // FEEDING: give a pet an item -> ability XP -> raises its ability level (abilLvl), which powers all its abilities.
 const PET_ABIL_MAX=12;
 function petFeedNeed(lvl){ return 2+(lvl||1); }
