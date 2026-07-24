@@ -72,14 +72,26 @@ function drawTileG(x,y){
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1); ctx.drawImage(hd,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
       else { ctx.fillStyle='#2c4a2a'; ctx.fillRect(tx,ty,TILE,TILE); }
       return; }
-    if(c==='w'){                                             // lake / pond / waterfall pool
-      if(typeof _waterImg!=='undefined'&&_waterImg&&_waterImg.complete&&_waterImg.naturalWidth){ ctx.imageSmoothingEnabled=false; ctx.drawImage(_waterImg,tx,ty,TILE,TILE); ctx.fillStyle='rgba(24,64,116,0.20)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else { ctx.fillStyle=(x+y)&1?'#3f7fb8':'#4a8ec6'; ctx.fillRect(tx,ty,TILE,TILE); }
+    if(c==='w'){                                             // freshwater lake / pond / waterfall pool
+      // bright pond tile (mix of recoloured seamless variants), procedural fallback
+      let wimg=null; if(typeof _pondVar!=='undefined'&&_pondVar){ const pv=_pondVar[hmix(x,y)%_pondVar.length]; if(pv&&pv.complete&&pv.naturalWidth) wimg=pv; }
+      if(wimg){ ctx.imageSmoothingEnabled=false; ctx.drawImage(wimg,tx,ty,TILE,TILE); }
+      else { ctx.fillStyle=(x+y)&1?'#2f9fb2':'#3ab0c4'; ctx.fillRect(tx,ty,TILE,TILE); }
       const G=curRoom.grid, wat=(xx,yy)=>{const r=G[yy];return r&&r[xx]==='w';};
-      ctx.fillStyle='rgba(38,74,40,0.55)';                   // grassy rim where the pool meets the lawn
-      if(!wat(x,y-1))ctx.fillRect(tx,ty,TILE,3); if(!wat(x,y+1))ctx.fillRect(tx,ty+TILE-3,TILE,3);
-      if(!wat(x-1,y))ctx.fillRect(tx,ty,3,TILE); if(!wat(x+1,y))ctx.fillRect(tx+TILE-3,ty,3,TILE);
-      const wn=Math.sin(performance.now()/700+x*0.9+y*1.7); if(wn>0.6){ ctx.fillStyle='rgba(220,240,250,0.12)'; ctx.fillRect(tx+6,ty+TILE/2-1,TILE-12,2); }
+      // DEPTH: darker toward the pond centre so it reads as deep water
+      const wf=curRoom.waterfall;
+      if(wf){ const dd=Math.hypot((x-wf.pcx)/Math.max(1,wf.prx),(y-wf.pcy)/Math.max(1,wf.pry)), deep=Math.max(0,Math.min(1,1-dd));
+        ctx.fillStyle='rgba(6,44,72,'+(deep*0.42).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // shore: white foam + a thin grassy lip where the pool meets the lawn
+      if(!wat(x,y-1)||!wat(x,y+1)||!wat(x-1,y)||!wat(x+1,y)){
+        const foam='rgba(232,248,250,0.6)';
+        if(!wat(x,y-1)){ pxH(tx,ty+1,TILE,foam,0.6); ctx.fillStyle='rgba(34,70,38,0.4)'; ctx.fillRect(tx,ty,TILE,2); }
+        if(!wat(x,y+1)){ pxH(tx,ty+TILE-2,TILE,foam,0.6); ctx.fillStyle='rgba(34,70,38,0.4)'; ctx.fillRect(tx,ty+TILE-2,TILE,2); }
+        if(!wat(x-1,y)){ pxV(tx+1,ty,TILE,foam,0.6); ctx.fillStyle='rgba(34,70,38,0.4)'; ctx.fillRect(tx,ty,2,TILE); }
+        if(!wat(x+1,y)){ pxV(tx+TILE-2,ty,TILE,foam,0.6); ctx.fillStyle='rgba(34,70,38,0.4)'; ctx.fillRect(tx+TILE-2,ty,2,TILE); } }
+      // drifting ripples + sun-glint sparkles
+      const wn=Math.sin(performance.now()/700+x*0.9+y*1.7); if(wn>0.62){ ctx.fillStyle='rgba(235,250,252,0.14)'; ctx.fillRect(tx+6,ty+TILE/2-1,TILE-12,2); }
+      const gh=hmix(x*3+((performance.now()/500)|0), y*5); if((gh&255)<16){ ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.fillRect(tx+(gh%TILE),ty+((gh>>5)%TILE),1,1); }
       return; }
     // CLEAN PROCEDURAL LAWN — organic value-noise green (no repeating tile), sparse grass blades,
     // faint highlights, and the occasional daisy. Looks like a natural meadow, not a stamped grid.

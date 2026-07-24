@@ -180,12 +180,15 @@ function devEgg(cond,cat){ giveEgg(cond||0, cat||PET_CAT_KEYS[(Math.random()*9)|
 
 // ---- sprite loaders (08c's _img is defined by the time this file runs) ----
 const _petImg={}, _eggImg={};
-let _roomFloorImg=null,_roomFloor2Img=null,_roomHedgeImg=null; const _roomDecor={};
+let _roomFloorImg=null,_roomFloor2Img=null,_roomHedgeImg=null,_pondVar=null,_koiImg=null; const _roomDecor={};
 if(typeof window!=='undefined' && typeof _img==='function'){
   for(const p of PET_DB) _petImg[p.spr]=_img('assets/pets/'+p.spr+'.png');
   for(const c of PET_CAT_KEYS) _eggImg[c]=_img('assets/pets/egg_'+c+'.png');
   _roomFloorImg=_img('assets/pets/room_floor.png'); _roomFloor2Img=_img('assets/pets/room_floor2.png'); _roomHedgeImg=_img('assets/pets/room_hedge.png');
   for(const d of ['pond','hay','shelter','barn','trough','apple','picket','rock','rocks']) _roomDecor[d]=_img('assets/pets/room_'+d+'.png');
+  _pondVar=[_img('assets/pets/pond_0.png'),_img('assets/pets/pond_1.png'),_img('assets/pets/pond_2.png'),_img('assets/pets/pond_3.png')];
+  _koiImg=_img('assets/pets/pond_koi.png');
+  _roomDecor.lily=_img('assets/pets/pond_lily.png'); _roomDecor.lily2=_img('assets/pets/pond_lily2.png'); _roomDecor.reeds=_img('assets/pets/pond_reeds.png');
 }
 
 // ================= Phase 2: the active pet in combat =================
@@ -355,7 +358,11 @@ function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return;
   } }
 
 // ================= The Sanctuary — a room where your whole collection roams =================
-let petWanderers=[], _petReturn=null;
+let petWanderers=[], petKoi=[], _petReturn=null;
+function spawnKoi(){ petKoi=[]; const R=rooms['PETS'], wf=R&&R.waterfall; if(!wf) return;
+  for(let i=0;i<5;i++){ const a=Math.random()*6.28, rr=0.2+Math.random()*0.55;
+    const x=(wf.pcx+Math.cos(a)*wf.prx*rr)*TILE, y=(wf.pcy+0.6+Math.sin(a)*wf.pry*rr)*TILE;
+    petKoi.push({x,y,tx:x,ty:y,spd:16+Math.random()*12,face:1,ang:0,ph:Math.random()*6.28}); } }
 function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['PETS']) return rooms['PETS'];
   const W=36,H=25, grid=[];
   for(let y=0;y<H;y++){ const row=[]; for(let x=0;x<W;x++) row.push((x===0||y===0||x===W-1||y===H-1)?'W':'.'); grid.push(row); }
@@ -380,6 +387,10 @@ function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['P
                {img:'rock',  x:11.4*TILE, y:9.6*TILE,  s:1.6},  {img:'rock',  x:24.6*TILE, y:9.6*TILE,  s:1.6},
                {img:'rocks', x:13.3*TILE, y:12.2*TILE, s:1.6},  {img:'rocks', x:22.7*TILE, y:12.2*TILE, s:1.6},
                {img:'rock',  x:18*TILE,   y:12.7*TILE, s:1.5},
+               // lily pads floating on the pond (flat) + cattail reeds at the water's edge
+               {img:'lily',  x:14.5*TILE, y:10*TILE,   s:1.1, flat:true}, {img:'lily2', x:21*TILE,  y:8.8*TILE, s:1.2, flat:true},
+               {img:'lily',  x:19.5*TILE, y:11*TILE,   s:1.0, flat:true}, {img:'lily2', x:15.5*TILE,y:8.4*TILE, s:1.0, flat:true},
+               {img:'reeds', x:11.2*TILE, y:7*TILE,    s:1.6}, {img:'reeds', x:25*TILE, y:11.6*TILE, s:1.5},
                {img:'barn',    x:6.5*TILE,   y:16*TILE,    s:3.2},   // barn, lower-left
                {img:'shelter', x:11*TILE,    y:15*TILE,    s:2.0},   // pet den beside it
                {img:'picket',  x:5*TILE,     y:19.5*TILE,  s:2.0},   // paddock fence in FRONT of the barn
@@ -403,15 +414,19 @@ function enterPetRoom(){ const u=petStore(); if(!u||typeof enterRoom!=='function
   buildPetRoom(); if(typeof closePets==='function') closePets();
   const R=rooms['PETS']; enterRoom('PETS',(R.px+0.5)*TILE,(R.py+0.5)*TILE);
   if(typeof portalLock!=='undefined') portalLock=false;
-  spawnWanderers();
+  spawnWanderers(); spawnKoi();
   if(typeof msg==='function') msg('THE SANCTUARY', u.pets.length+' pet'+(u.pets.length===1?'':'s')+' roaming'); }
 function leavePetRoom(){ petWanderers=[]; const r=_petReturn||{key:'0,0'};
   if(typeof enterRoom==='function' && rooms[r.key]) enterRoom(r.key, r.x||(rooms[r.key].px+0.5)*TILE, r.y||(rooms[r.key].py+0.5)*TILE);
   else if(typeof usePortal==='function') usePortal('0,0'); }
-function updatePetRoom(dt){ if(!curRoom||!curRoom.petRoom||!petWanderers.length) return; const b=_petRoomBounds();
+function updatePetRoom(dt){ if(!curRoom||!curRoom.petRoom) return; const b=_petRoomBounds();
   for(const w of petWanderers){ const dx=w.tx-w.x, dy=w.ty-w.y, d=Math.hypot(dx,dy);
     if(d<4){ w.wait-=dt; if(w.wait<=0){ w.tx=b.x0+Math.random()*(b.x1-b.x0); w.ty=b.y0+Math.random()*(b.y1-b.y0); w.wait=0.8+Math.random()*3.2; } }
-    else { const mv=Math.min(d,w.spd*dt); w.x+=dx/d*mv; w.y+=dy/d*mv; if(Math.abs(dx)>2) w.face=dx<0?-1:1; } } }
+    else { const mv=Math.min(d,w.spd*dt); w.x+=dx/d*mv; w.y+=dy/d*mv; if(Math.abs(dx)>2) w.face=dx<0?-1:1; } }
+  const wf=curRoom.waterfall;
+  if(wf) for(const k of petKoi){ const dx=k.tx-k.x, dy=k.ty-k.y, d=Math.hypot(dx,dy);
+    if(d<6){ const a=Math.random()*6.28, rr=0.2+Math.random()*0.58; k.tx=(wf.pcx+Math.cos(a)*wf.prx*rr)*TILE; k.ty=(wf.pcy+0.6+Math.sin(a)*wf.pry*rr)*TILE; }
+    else { const mv=k.spd*dt; k.x+=dx/d*mv; k.y+=dy/d*mv; k.ang=Math.atan2(dy,dx); if(Math.abs(dx)>1) k.face=dx<0?-1:1; } } }
 function drawWaterfall(){ const wf=curRoom&&curRoom.waterfall; if(!wf||typeof ctx==='undefined') return;
   const t=performance.now(), x0=wf.x0*TILE, x1=wf.x1*TILE, w=x1-x0, y0=wf.topY*TILE, y1=(wf.pcy-0.1)*TILE, hgt=y1-y0;
   // shaded channel behind the falling water so it reads as a recessed spillway
@@ -439,11 +454,17 @@ function drawWaterfall(){ const wf=curRoom&&curRoom.waterfall; if(!wf||typeof ct
 function drawPetRoom(){ if(!curRoom||!curRoom.petRoom||typeof ctx==='undefined') return;
   drawWaterfall();
   const t=performance.now()/1000, items=[]; const _au=(typeof petStore==='function')?petStore():null, _active=_au?_au.activePet:null;
-  for(const d of (curRoom.petDecor||[])){ const im=_roomDecor[d.img]; if(im&&im.complete&&im.naturalWidth) items.push({y:d.y,k:'d',im,x:d.x,s:d.s}); }
+  // koi glide just under the pond surface (drawn before decor so lily pads/rocks sit over them)
+  if(typeof _koiImg!=='undefined'&&_koiImg&&_koiImg.complete&&_koiImg.naturalWidth) for(const k of petKoi){
+    const bob=Math.sin(t*3+k.ph); ctx.save(); ctx.globalAlpha=0.8; ctx.imageSmoothingEnabled=false;
+    const s=20/Math.max(_koiImg.naturalWidth,_koiImg.naturalHeight), w=_koiImg.naturalWidth*s, h=_koiImg.naturalHeight*s;
+    ctx.translate(k.x,k.y+bob); ctx.scale(k.face<0?-1:1,1); ctx.drawImage(_koiImg,-w/2,-h/2,w,h); ctx.restore(); }
+  for(const d of (curRoom.petDecor||[])){ const im=_roomDecor[d.img]; if(im&&im.complete&&im.naturalWidth) items.push({y:d.y,k:'d',im,x:d.x,s:d.s,flat:d.flat}); }
   for(const w of petWanderers) items.push({y:w.y,k:'w',w});
   items.sort((a,b)=>a.y-b.y);
   for(const it of items){
     if(it.k==='d'){ const w2=TILE*it.s, h2=w2*it.im.naturalHeight/it.im.naturalWidth;
+      if(it.flat){ ctx.imageSmoothingEnabled=false; ctx.globalAlpha=0.92; ctx.drawImage(it.im, it.x-w2/2, it.y-h2/2, w2, h2); ctx.globalAlpha=1; continue; }   // lily pads float flat, no shadow
       ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(it.x,it.y,w2*0.32,w2*0.11,0,0,6.29); ctx.fill();
       ctx.imageSmoothingEnabled=false; ctx.drawImage(it.im, it.x-w2/2, it.y-h2, w2, h2); }
     else { const w=it.w, im=_petImg[w.def.spr]; if(!im||!im.complete||!im.naturalWidth) continue;
