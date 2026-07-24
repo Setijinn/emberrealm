@@ -19,14 +19,52 @@
 //   trig:{on,filter,chance,icd,do:{...},emits}
 //   mod :{kind|abil,pre:{...},do:{...}}
 
+// ---- what makes each class different (design rule 2). No two share a fill rule, and no
+// two share a payout, so the meter itself is class identity rather than a reskinned bar:
+//   knight    Defiance  hurt            -> shockwaves that stun and feed themselves
+//   berserker Rage      hit+hurt, fast  -> Frenzy: attack speed while it drains
+//   necro     Souls     kills, no decay -> spent doubling summons / soul nova
+//   ranger    Focus     hits landed     -> free volley; rewards standing still + untouched
+//   pyro      Heat      shots, fast     -> Combust: the hotter you run the harder you burn
+//   rogue     Combo     hits, very fast -> Finisher: a blade fan, then vanish
+//   assassin  Malice    kills mostly    -> Deathmark: brand ONE victim; wants isolation
+//   cleric    Grace     seconds unhurt  -> Blessing: shield + smite; punished by being hit
+//   warlock   Essence   hits+kills      -> Soulburst drain; stronger the lower YOUR hp
+//   frost     Rime      hits            -> Absolute Zero: freeze the field, then shatter it
+//   storm     Charge    TIME (passive)  -> Discharge on a metronome, not on performance
+//   hunter    Instinct  kills           -> the pack; damage walks on four legs
+//   monk      Flow      MOVING          -> Hundred Hands; drains if you stand still
+//   paladin   Faith     time + hurt     -> Judgment: consecrated ground you hold
+//   bard      Tempo     shots fired     -> Crescendo: buffs the Bard AND allies
+//   shaman    Spirits   CASTING         -> totems and a spirit legion
+//   dragoon   Wind-up   STANDING STILL  -> Skyfall crater (the exact inverse of Monk)
+//
 // ===== class resource =====
 // Repurposes the (previously vestigial) `res` global from 03_entities and the resource
 // name/colour already defined per class in ABIL (11_ui). Classes without an entry here keep
 // the old chargeRes behaviour and draw no meter.
+// gain{} is per EVENT (shot/hit/kill/hurt/cast). regen/moveGain/calm are per SECOND
+// (calm only ticks while you have not been hurt recently). hurtLoss is knocked off when
+// you take a hit. decay drains out of combat. Every class gets its own rule so the meter
+// itself is part of the class fantasy, not a reskinned bar.
 const PERK_RES = {
   knight:    {gain:{hurt:15, hit:0.5},            decay:2.2, max:100},
   berserker: {gain:{hurt:12, hit:2.0, kill:7},    decay:6.0, max:100},
   necro:     {gain:{kill:16, hit:0.35},           decay:0,   max:100},
+  ranger:    {gain:{hit:3.4},                     decay:3.5, max:100},
+  pyro:      {gain:{shot:2.6, hit:1.2},           decay:7.0, max:100},
+  rogue:     {gain:{hit:4.5, kill:6},             decay:9.0, max:100},
+  assassin:  {gain:{hit:3.0, kill:14},            decay:5.0, max:100},
+  cleric:    {gain:{kill:4},   calm:6.5, hurtLoss:35, decay:0, max:100},
+  warlock:   {gain:{hit:2.2, kill:10},            decay:2.5, max:100},
+  frost:     {gain:{hit:3.2},                     decay:2.0, max:100},
+  storm:     {gain:{shot:1.1}, regen:6.0,         decay:0,   max:100},
+  hunter:    {gain:{kill:18, hit:0.4},            decay:1.5, max:100},
+  monk:      {gain:{hit:2.0}, moveGain:11,        decay:14,  max:100},
+  paladin:   {gain:{hurt:6},   regen:4.5,         decay:0,   max:100},
+  bard:      {gain:{shot:3.0}, decay:8.0,                    max:100},
+  shaman:    {gain:{cast:22},  regen:3.2,         decay:0,   max:100},
+  dragoon:   {gain:{shot:1.0}, stillGain:16,      decay:0,   max:100},
 };
 function perkResDef(cls){ if(!cls){ const ch=(typeof curChar==='function')&&curChar(); cls=ch&&ch.cls; }
   return cls?(PERK_RES[cls]||null):null; }
@@ -113,10 +151,25 @@ function perkDyn(dt){
   player._stillT=player._moving?0:((player._stillT||0)+dt);
   player._moveT =player._moving?((player._moveT||0)+dt):0;
   for(const id in player.stk){ const s=player.stk[id]; s.t-=dt; if(s.t<=0) delete player.stk[id]; }
-  // resource decay (out of combat drain — Rage bleeds fast, Souls never do)
+  // resource upkeep. Event gains live in chargeRes; these are the per-second rules:
+  //   regen     always ticks (Storm static, Paladin faith, Shaman spirits)
+  //   moveGain  only while running (Monk flow)
+  //   stillGain only while planted (Dragoon wind-up)
+  //   calm      only while you have not been hurt lately (Cleric grace)
+  //   decay     drains out of combat (Rage bleeds fast, Souls never do)
   const rd=perkResDef();
-  if(rd&&rd.decay&&(player._t.hurt||0)<=0&&(player._t.hit||0)<=0&&typeof res!=='undefined')
-    res=Math.max(0,res-rd.decay*dt);
+  if(rd&&typeof res!=='undefined'){
+    // a per-second source is "filling" right now — decay must not fight it, or a meter can
+    // never rise (Monk's Flow drains 14/s but only fills 11/s while running, so moving
+    // would have LOWERED it). Decay is for when the class is NOT doing its thing.
+    const filling=(rd.regen>0)||(rd.moveGain&&player._moving)||
+                  (rd.stillGain&&!player._moving)||(rd.calm&&(T.hurt||0)<=0);
+    if(rd.regen)                      resAdd(rd.regen*dt);
+    if(rd.moveGain&&player._moving)   resAdd(rd.moveGain*dt);
+    if(rd.stillGain&&!player._moving) resAdd(rd.stillGain*dt);
+    if(rd.calm&&(T.hurt||0)<=0)       resAdd(rd.calm*dt);
+    if(rd.decay&&!filling&&(T.hurt||0)<=0&&(T.hit||0)<=0) res=Math.max(0,res-rd.decay*dt);
+  }
   // resource-threshold event: fires once when the meter fills, re-arms below 90%
   if(rd){ const f=resFrac();
     if(f>=0.999&&!player._resFull){ player._resFull=1; perkFire('resFull',{}); }
@@ -152,6 +205,7 @@ function perkFire(evt,ctx){
   const T=player._t;                     // event memory drives the recent* conditions
   if(evt==='kill') T.kill=3; else if(evt==='hurt') T.hurt=3;
   else if(evt==='cast') T.cast=3; else if(evt==='hit'||evt==='crit') T.hit=1.5;
+  if(evt==='hurt'){ const rd=perkResDef(); if(rd&&rd.hurtLoss) resAdd(-rd.hurtLoss); }  // Grace breaks when you're struck
   const P=player._perk; if(!P||!P.trig.length) return;
   for(const t of P.trig){
     if(t.on!==evt) continue;

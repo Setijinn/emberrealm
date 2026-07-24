@@ -414,6 +414,7 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
   try{ a.cast(ctx); }catch(e){ if(typeof showErr==='function') showErr(e); }
   player._lastCast={fn:a.cast,x:ctx.x,y:ctx.y,aim:ctx.aim,AP:ctx.AP,dmg:ctx.dmg,cls:ctx.cls};
   if(typeof perkCastPost==='function') perkCastPost(_mods,a,ctx);
+  if(typeof chargeRes==='function') chargeRes('cast');     // classes that build resource by casting
   if(typeof perkFire==='function') perkFire('cast',{x:ctx.x,y:ctx.y,aim:ctx.aim,abil:a.id,kind:a.kind,kinds:a.kinds});
   // tag this cast's projectiles for the forge — every ability has its own projectile look
   for(let i=_n0;i<pShots.length;i++){ if(!pShots[i].pk) pShots[i].pk='a:'+a.id; }
