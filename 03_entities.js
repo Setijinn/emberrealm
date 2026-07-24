@@ -8,34 +8,57 @@ let bossBar=null;        // boss whose big top-screen hp bar is showing (set on 
 let arenaActive=false, arenaWave=0, arenaCd=0;
 // ---- world bosses + dungeons ----
 // 9 zone bosses (bands 0-8), rethemed for the vertical climb. Sprites: assets/mobs/boss_<band>.png.
+// CANON (user): these creatures are INVADERS from a dying world — corruption devoured 70% of it,
+// so they tore a portal open to flee into the human lands. EACH boss played a role in opening that
+// rift, and each is corrupted (worse the nearer the portal). Humans don't know any of this until
+// they reach the portal at the end. `lore` = its backstory; `bark` = the two lines it speaks as the
+// fight escalates (phase 2 / phase 3); `mech` = its signature in-fight puzzle (see 17_bossmech.js).
 const GBOSS=[
- {n:'The Grovewarden',dn:'The Heartwood Hollow',col:'#4f9a3f',pat:'nova',pat2:'spiral',
-  title:'bark-skinned guardian of the vale',
-  desc:'A patient colossus that erupts in rings of thorns. Weave the gaps and wear it down.'},
- {n:'The Mistantler',dn:'The Fogbound Glade',col:'#6aae7a',pat:'spread5',pat2:'charge',
-  title:'antlered stag-beast of the deep wood',
-  desc:'Swift and wary, it strafes then lowers its antlers to charge. Punish between its rushes.'},
- {n:'The Bog Horror',dn:'The Sunken Warren',col:'#5a7a3a',pat:'aimed3',pat2:'spiral',
-  title:'mud-and-thorn terror of the marsh',
-  desc:'It rises from the muck and flails vine and spore. Bait its lunge, then flank.'},
- {n:'Stonefist',dn:'The Shattered Vault',col:'#8a8f88',pat:'nova',pat2:'charge',
-  title:'boulder-knuckled golem of the foothills',
-  desc:'Heavy shockwave rings and a crushing charge. Strike hard in the recovery after it lunges.'},
- {n:'The Crag Gargoyle',dn:'The Windward Roost',col:'#9aa0a8',pat:'spread5',pat2:'aimed3',
-  title:'winged stone hunter of the high cliffs',
-  desc:'It dives in erratic passes, raking with claws. Keep moving and answer between the swoops.'},
- {n:'Magmaw',dn:'The Scorch Barrows',col:'#c85a2a',pat:'ring8',pat2:'charge',
-  title:'lava-veined beast of the burning ridge',
-  desc:'Rings of cinder-fire and a molten charge. Orbit the safe lane; do not stand still.'},
- {n:'The Ash Wraith',dn:'The Cinder Crypt',col:'#8a857e',pat:'spiral',pat2:'aimed3',
-  title:'drifting horror of soot and ember',
-  desc:'A blinding spiral of ash with sudden aimed scythes. Find the one gap and stay in it.'},
- {n:'The Cinder Demon',dn:'The Ashen Keep',col:'#d4522a',pat:'ring8',pat2:'spiral',
-  title:'horned fiend of the volcanic spire',
-  desc:'Spinning fire-rings tighten around you. Match its rotation and thread the orbit.'},
- {n:'The Molten Titan',dn:'The Core Sanctum',col:'#ff7a3d',pat:'spiral',pat2:'summon',
-  title:'crowned colossus at the molten summit',
-  desc:'Everything at once: spiral fire, summoned horrors, relentless pressure. The final trial.'},
+ {n:'The Grovewarden',dn:'The Heartwood Hollow',col:'#4f9a3f',pat:'nova',pat2:'spiral',mech:'bloom',
+  title:'root-lord who anchored the rift',
+  desc:'A patient colossus that erupts in rings of thorns. Weave the gaps and wear it down.',
+  lore:'In the dying world it was the root-lord; its living lattice became the anchor the rift grew from. The corruption blooms through it still, seeding this land with the same rot that drowned its own.',
+  bark:['You guard soil already dead — I have seen where this ends.','I anchored the door. Let it root here too, as it rooted in us.']},
+ {n:'The Mistantler',dn:'The Fogbound Glade',col:'#6aae7a',pat:'spread5',pat2:'charge',mech:'clones',
+  title:'scout that parted the veil',
+  desc:'Swift and wary, it strafes then lowers its antlers to charge. Punish between its rushes.',
+  lore:'It scouted the void between worlds and parted the veil for the exodus. The corruption came through wearing its face — now it is countless mirages, and cannot tell which reflection is itself.',
+  bark:['Which of us is real, little warden? Even I have forgotten.','I mapped the fog between worlds. You cannot hide from what I already walked.']},
+ {n:'The Bog Horror',dn:'The Sunken Warren',col:'#5a7a3a',pat:'aimed3',pat2:'spiral',mech:'pools',
+  title:'brewer of the corroding reagent',
+  desc:'It rises from the muck and flails vine and spore. Bait its lunge, then flank.',
+  lore:'It brewed the reagent that ate through the wall between worlds. Where it wades the ground rots to bog, seeding your land with the very blight that dissolved the sky of its own.',
+  bark:['I brewed the rot that ate our sky. Taste a little of it.','The wall between worlds melted in my hands. So will you.']},
+ {n:'Stonefist',dn:'The Shattered Vault',col:'#8a8f88',pat:'nova',pat2:'charge',mech:'bloom',
+  title:'gate-stone that holds the rift open',
+  desc:'Heavy shockwave rings and a crushing charge. Strike hard in the recovery after it lunges.',
+  lore:'Forged as the gate-stone that holds the rift open, it cracked under the weight of two worlds. Each blow splits the earth into glowing fissures — the door itself tearing wider.',
+  bark:['I am the stone that holds the door. I do not tire.','Crack me and the gate cracks with me — is that the price you want?']},
+ {n:'The Crag Gargoyle',dn:'The Windward Roost',col:'#9aa0a8',pat:'spread5',pat2:'aimed3',mech:'pools',
+  title:'herald that flew the first scouts through',
+  desc:'It dives in erratic passes, raking with claws. Keep moving and answer between the swoops.',
+  lore:'The herald that carried the first scouts through the tear. Infected in flight, it falls in tar-black dives, marking this sky for the swarm that follows the trail it left.',
+  bark:['We flew ahead. Thousands more follow the way I marked.','Your sky is next — I have already watched it burn.']},
+ {n:'Magmaw',dn:'The Scorch Barrows',col:'#c85a2a',pat:'ring8',pat2:'charge',mech:'pools',
+  title:'furnace that burned the rift open',
+  desc:'Rings of cinder-fire and a molten charge. Orbit the safe lane; do not stand still.',
+  lore:'It was the furnace — a world’s worth of fire spent to burn the way open. What survived boils with molten corruption that bursts from the ground it crosses.',
+  bark:['It cost a world of fire to tear the way. I am what is left of it.','Burn — so your ashes may feed the next door we open.']},
+ {n:'The Ash Wraith',dn:'The Cinder Crypt',col:'#8a857e',pat:'spiral',pat2:'aimed3',mech:'clones',
+  title:'the dead burned to fuel the ritual',
+  desc:'A blinding spiral of ash with sudden aimed scythes. Find the one gap and stay in it.',
+  lore:'All that is left of the people burned to fuel the ritual that opened the door — a drifting grief of ash, copied endlessly, unsure which cinder among them ever lived.',
+  bark:['We paid in our own dead to open it. Do not mourn me — I am only the smoke.','So many of us... which ash was ever truly me?']},
+ {n:'The Cinder Demon',dn:'The Ashen Keep',col:'#d4522a',pat:'ring8',pat2:'spiral',mech:'bloom',
+  title:'first claimed — it taught them the way',
+  desc:'Spinning fire-rings tighten around you. Match its rotation and thread the orbit.',
+  lore:'The first of them wholly claimed by the corruption — the demon that taught the others how to open the way. It floods the ground with the rift’s own fire, sparing only the warded few.',
+  bark:['It whispered how to open the door. I had only to say yes.','Your kind will make the same bargain. They always do.']},
+ {n:'The Molten Titan',dn:'The Core Sanctum',col:'#ff7a3d',pat:'spiral',pat2:'summon',mech:'clones',
+  title:'the king who ordered the rift torn open',
+  desc:'Everything at once: spiral fire, summoned horrors, relentless pressure. The final trial.',
+  lore:'Their crowned king, who ordered the portal torn open to flee a world already seven-tenths devoured, and gave his molten core to power it. Wholly corrupted now, he shatters into false idols — the dead world’s last lie.',
+  bark:['I gave my crown to open the way, to save what remained of us.','I am the last lie of a dying world. Kneel — or join it.']},
 ];
 // per-ring projectile themes (colour/core/shape/size) — suited to each biome & creature
 const BOSS_PROJ=[
@@ -312,7 +335,7 @@ function spawnRingBoss(b){
   const bhp=Math.round(chaserHp*6*(1-edr));   // TTK-neutral hp (def mitigation applied in dealDamage)
   const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:bhp,maxhp:bhp,
    spd:(34+(lv/LV_CAP)*26)*espd,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,
-   def:edef,dr:edr,dex:edex,maxmp:emp,mp:emp,
+   def:edef,dr:edr,dex:edex,maxmp:emp,mp:emp,mech:GB.mech,
    pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3,
    pcol:PJ.col,pcore:PJ.core,pshape:PJ.shape,psize:PJ.size||7};
   enemies.push(boss);
@@ -638,7 +661,7 @@ function makeEnemy(sp){
     e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hpm*(GB?1.9:1)),spd:(GB?44:38)*espd,fireT:1.5,ang:0,
      col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?1.25:1),
      name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
-     chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
+     ring:bring,mech:GB?GB.mech:null,chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
   // attach the scaling stat block (nodes stay armour-free so their timed destruction is exact)
   e.def=(sp.t==='N')?0:edef; e.dr=(sp.t==='N')?0:edr; e.dex=edex; e.maxmp=emp; e.mp=emp;

@@ -170,9 +170,14 @@ function bossEnterPhase(e, ph){
     emitP(e.x,e.y,{vx:Math.cos(a)*sp2,vy:Math.sin(a)*sp2,life:0.55+Math.random()*0.45,
       col:e.col||'#ff9c50',sz:3+Math.random()*3,g:60,glow:true}); }
   if(typeof addShake==='function') addShake(11+ph*4);
+  // STORY: the boss speaks a line from its backstory as it escalates (its role in the rift)
+  const gb=(typeof GBOSS!=='undefined'&&e.ring!=null&&e.ring>=0)?GBOSS[e.ring]:null;
   const titles=['','ENRAGED','FINAL STAND'];
-  if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), titles[ph]||'');
+  const line=(gb&&gb.bark&&gb.bark[ph-1])?gb.bark[ph-1]:(titles[ph]||'');
+  if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), line);
   navigator.vibrate&&navigator.vibrate([30,40,30]);
+  // signature mechanic fires on the phase break (thornrot bloom / mirror idols / hazard burst)
+  if(typeof bossMechTrigger==='function') bossMechTrigger(e);
   // summon adds from phase 2 onward to change the fight's shape
   if(ph>=1 && typeof enemies!=='undefined'){
     const mlv=e.lv||10, edr=(typeof eDR==='function')?eDR(eDef(mlv)):0, mh=40*eHpScale(mlv)*(1-edr);
@@ -344,13 +349,15 @@ function update(dt){
         const psp=210*(1+(e.dex||0)*0.006);                             // DEX -> projectile speed
         for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, psp); }
     }
-    if(e.type==='B'){
+    if(e.type==='B' && !e.decoy){
+      if(typeof bossMechTick==='function') bossMechTick(e,dt);   // signature mechanic / puzzle
       // --- PHASES: escalating stages at 66% / 33% HP, each with a dramatic transition beat ---
       if(e.phase===undefined) e.phase=0;
       const frac=e.hp/e.maxhp, np = frac>0.66?0 : frac>0.33?1 : 2;
       if(np>e.phase){ e.phase=np; bossEnterPhase(e,np); }
       if(e.phaseInv>0) e.phaseInv-=dt;
       if(e.phaseFlash>0) e.phaseFlash-=dt;
+      if(!e.hidden){                              // hidden while its clone puzzle is up — images do the work
       const ph=e.phase, enraged=ph>=1;            // enrage behaviours from phase 2 on
       const fireMul=[1,0.78,0.6][ph]||0.6;        // attacks come faster each phase
       const pat=(ph>=1&&e.pat2)?e.pat2:(e.pat||'ring8');
@@ -379,6 +386,7 @@ function update(dt){
           if(e.fireT2<=0){ e.animAtk=0.5;
             e.fireT2=bossVolley(e,other,Math.atan2(dy,dx),spd,enraged)*1.5*fireMul; } }
       }
+      } // end !hidden
     }
   }
   // player shots

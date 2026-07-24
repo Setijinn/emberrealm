@@ -934,8 +934,14 @@ function render(){
   if(typeof drawEggDrops==='function') drawEggDrops();
   if(typeof drawPet==='function') drawPet();                   // active companion pet
   if(typeof drawPetRoom==='function') drawPetRoom();           // sanctuary decor + wandering pets
+  if(typeof drawBossMech==='function') drawBossMech();         // safe-tile / hazard-pool overlays
   for(const e of enemies){
+    if(e.hidden) continue;                                     // boss hidden during a clone puzzle
     shadow(e.x,e.y+e.r*0.8,e.r*1.05);
+    // clone-puzzle TELL: false idols render slightly dim + greyed; the TRUE image stays crisp
+    if(e.decoy && !e.realClone){ ctx.save(); ctx.globalAlpha=0.84; drawEnemySprite(e,pn); ctx.restore();
+      ctx.save(); ctx.globalAlpha=0.15; ctx.fillStyle='#3a3a46';
+      ctx.beginPath(); ctx.arc(e.x,e.y-e.r*0.3,e.r*0.92,0,6.29); ctx.fill(); ctx.restore(); continue; }
     drawEnemySprite(e,pn);
     if(e.slowT>0){ ctx.globalAlpha=0.35; ctx.fillStyle='#9ad4ef';
       ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
