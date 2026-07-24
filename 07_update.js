@@ -431,6 +431,7 @@ function update(dt){
     if(p.drag){ const f=Math.max(0,1-p.drag*dt); p.vx*=f; p.vy*=f; }
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; if(p.life<=0) particles.splice(i,1); }
   ambientParts(dt);
+  if(typeof updateEggDrops==='function') updateEggDrops(dt);   // pet eggs on the ground: walk-over to collect
   // drifting embers in warm places
   if(curRoom.glows&&curRoom.glows.length&&curRoom.town&&Math.random()<dt*16){
     const gl=curRoom.glows[Math.floor(Math.random()*curRoom.glows.length)];

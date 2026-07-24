@@ -897,6 +897,7 @@ function render(){
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#e8d8ff';
     ctx.fillText(gp.home?'EXIT':(GBOSS[gp.ring]?GBOSS[gp.ring].dn:'DUNGEON'),gp.x,gp.y-24); ctx.textAlign='left'; }
   for(const lb of loots) drawLootBag(lb,pn);
+  if(typeof drawEggDrops==='function') drawEggDrops();
   for(const e of enemies){
     shadow(e.x,e.y+e.r*0.8,e.r*1.05);
     drawEnemySprite(e,pn);
