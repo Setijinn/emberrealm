@@ -268,7 +268,9 @@ function grvLairXY(b){ const R=rooms['G']; if(!R) return null;
  if(!R.rings) return null;
  const NZ=R.rings.names.length, tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
  return {x:(R.w/2)*TILE, y:(tyc+0.5)*TILE}; }
-if(typeof rooms!=='undefined' && rooms['G']) stampLairs();   // carve the boss compounds into the grove once
+// lairs are stamped by vertical band today; SKIP for the new radial world (Phase 3 reworks
+// stampLairs to place them radially — until then ring bosses use the spawn-near-player fallback)
+if(typeof rooms!=='undefined' && rooms['G'] && !(rooms['G'].rings&&rooms['G'].rings.radial)) stampLairs();
 // each ring has its own unique mini-boss; only one of a given ring's boss lives at a time
 function spawnRingBoss(b){
  if(!curRoom||!curRoom.rings) return;
@@ -281,7 +283,7 @@ function spawnRingBoss(b){
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
   if(solid(bx,by)) continue;
   if(grvBandXY(bx/TILE,by/TILE)!==b) continue;
-  const lv=grvLvAtY(by/TILE);   // boss level matches where its lair sits in the zone
+  const lv=grvLvAt(bx/TILE,by/TILE);   // boss level matches where its lair sits in the zone
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
   // matched to zone: modest early, monstrous late — on the unified difficulty curve
   const chaserHp=40*eHpScale(lv);
@@ -631,25 +633,44 @@ function safeSpot(r,px,py){
    if(!sol(t0x+dx,t0y+dy)) return {x:(t0x+dx+.5)*TILE,y:(t0y+dy+.5)*TILE};
   } }
  return {x:px,y:py}; }
-// Vertical zone band from tile-y: bottom (high y)=band 0, top (y=0)=highest band.
-function grvBandY(ty){ const NZ=(curRoom.rings&&curRoom.rings.names.length)||9, H=curRoom.h||1;
- return Math.max(0,Math.min(NZ-1,Math.floor((1-ty/H)*NZ))); }
-function ringInfoAt(tx,ty){ return curRoom.rings.names[grvBandY(ty)]; }
-// Continuous enemy level: interpolates from a zone's entry lv at its bottom to its exit lv
-// at its top — so the top of one zone matches the bottom of the next (no difficulty cliffs).
-function grvLvAtY(ty){ const R=curRoom; if(!R||!R.rings) return (R&&R.lv)||1;
- const NZ=R.rings.names.length, H=R.h||1;
- const p=Math.max(0,Math.min(NZ-0.001,(1-ty/H)*NZ)), b=Math.floor(p), f=p-b;
- const n=R.rings.names[b], lo=n.lv, hi=(n.lv2!==undefined)?n.lv2:((b+1<NZ)?R.rings.names[b+1].lv:n.lv+10);
- return Math.max(1,Math.round(lo+(hi-lo)*f)); }
+// ===== RADIAL world model (two islands + bridge; matches genworld.py) =====
+// Band 0-8 and level 1-50 come from RADIAL distance: starter island (west) is Lv1-20 by
+// distance from its spawn centre; the bridge is the Lv20 gate; the main island (east) is
+// Lv20-50 by distance from the CORE (bridge landing), with a flat Lv50 grind ring at the rim.
+function _onBridge(R,tx,ty){ const B=R.bridge; return tx>=B.x0&&tx<=B.x1&&Math.abs(ty-B.cy)<=(B.w>>1); }
+function grvBandAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return 0;
+ if(_onBridge(R,tx,ty)) return 2;
+ if(tx<R.bridge.x0){ const f=Math.min(1,Math.hypot(tx-R.starter.cx,ty-R.starter.cy)/R.starter.r);
+   return Math.max(0,Math.min(2,Math.floor(f*3))); }
+ const f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/R.rmax);
+ return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
+function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return (curRoom&&curRoom.lv)||1;
+ if(_onBridge(R,tx,ty)) return 20;
+ if(tx<R.bridge.x0){ const f=Math.min(1,Math.hypot(tx-R.starter.cx,ty-R.starter.cy)/R.starter.r);
+   return Math.max(1,Math.min(20,Math.round(1+f*19))); }
+ const gR=R.grindR||0.8, f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/R.rmax);
+ if(f>=gR) return 50;                                   // flat Lv50 grind ring
+ return Math.max(20,Math.min(50,Math.round(20+(f/gR)*29))); }
+// zone identity: radial band name; the outer grind ring (band 8) is named by angular sector
+function ringInfoAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R) return null;
+ const b=grvBandAt(tx,ty);
+ if(b<8 && R.names[b]) return R.names[b];
+ const a=Math.atan2(ty-R.core.cy,tx-R.core.cx), g=R.grind||['Molten Crown'];
+ const i=Math.max(0,Math.min(g.length-1,Math.floor(((a+Math.PI)/(2*Math.PI))*g.length)));
+ return {n:g[i],lv:50,lv2:50}; }
+// 0..1 corruption, rising toward the infection portal (tint + future enemy variants)
+function corruptAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.portal) return 0;
+ const dd=Math.hypot(tx-R.portal.x,ty-R.portal.y); return Math.max(0,Math.min(1,1-dd/70)); }
 function regionAtPx(px,py){ if(!curRoom) return null;
  if(curRoom.rings) return ringInfoAt(px/TILE,py/TILE);
  if(!curRoom.regions) return null;
  const tx=px/TILE, ty=py/TILE;
  for(const rg of curRoom.regions){ if(tx>=rg.x1&&tx<rg.x2&&ty>=rg.y1&&ty<rg.y2) return rg; }
  return null; }
+// true once you have crossed the bridge onto the main island (permadeath territory)
+function onMainIsland(px,py){ const R=curRoom&&curRoom.rings; return !!(R&&R.radial&&px/TILE>R.bridge.x1); }
 function roomLvAt(sp){
- if(curRoom&&curRoom.rings) return grvLvAtY(sp.y);
+ if(curRoom&&curRoom.rings) return grvLvAt(sp.x,sp.y);
  if(curRoom&&curRoom.regions){
   for(const rg of curRoom.regions){ if(sp.x>=rg.x1&&sp.x<rg.x2&&sp.y>=rg.y1&&sp.y<rg.y2) return rg.lv; } }
  return (curRoom&&curRoom.lv)?curRoom.lv:1; }
@@ -675,11 +696,11 @@ function msg(t,sub=''){ const m=document.getElementById('msg');
 function usePortal(to){
   if(curRoom&&curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
   if(to==='G'){ const gv=rooms['G']; if(!gv) return;
-    let ax=gv.w*TILE/2, ay=gv.h*TILE/2;
-    if(gv.arrivals&&gv.arrivals.length){ const ar=gv.arrivals[Math.floor(Math.random()*gv.arrivals.length)];
-      ax=(ar[0]+.5)*TILE; ay=(ar[1]+.5)*TILE; }
+    // arrive on the STARTER island — the designated spawn (P) so you always begin safe in the west
+    let ax=(gv.px!=null?gv.px+.5:gv.w/2)*TILE, ay=(gv.py!=null?gv.py+.5:gv.h/2)*TILE;
     const sp=safeSpot(gv,ax,ay); enterRoom('G',sp.x,sp.y);
-    msg('ROOTHOLLOW VALE','the climb begins'); return; }
+    const rg=(typeof regionAtPx==='function')?regionAtPx(sp.x,sp.y):null;
+    msg((rg&&rg.n||'THE LANDING SANDS').toUpperCase(),'your journey begins'); return; }
   const dst=rooms[to]; if(!dst) return;
   const sp=safeSpot(dst,(dst.px+.5)*TILE,(dst.py+.5)*TILE);
   enterRoom(to,sp.x,sp.y);

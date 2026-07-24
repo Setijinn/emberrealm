@@ -471,6 +471,8 @@ function update(dt){
       if(e.sref && !e.boss && Math.hypot(e.x-player.x,e.y-player.y)>1100) enemies.splice(i,1); } }
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
       if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv+(rg.lv2?'–'+rg.lv2:'')); } }
+    // permadeath notice fires the instant you first cross the bridge onto the main island
+    if(curRoom.rings && typeof hcCheck==='function') hcCheck();
   }
   // find the nearest interactable portal/pillar and show a USE prompt above the hero.
   // Nothing auto-fires anymore — the player must press the prompt (see usePortalPrompt).
@@ -583,7 +585,11 @@ function update(dt){
   if(player.hp<=0){ recordBest(player.kills); saveRPG();
     if(curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
     // Lv20+ is permadeath: the hearth stops calling you home (see hcCheck/permaDeath)
-    if(typeof isHardcore==='function' && isHardcore(rpg)){ permaDeath(); return; }
+    // permadeath ONLY on the main island — the starter island (and Hearth) always respawn you.
+    // The bridge is the point of no return.
+    const _perma=(typeof isHardcore==='function' && isHardcore(rpg)) &&
+      (typeof onMainIsland!=='function' || onMainIsland(player.x,player.y));
+    if(_perma){ permaDeath(); return; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;

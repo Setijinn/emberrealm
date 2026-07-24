@@ -34,9 +34,8 @@ const GBANDCOL=[
  ['#7a4030','#8a4a22'], // 7 Cinderspire
  ['#9a3a1c','#b5451e'], // 8 Molten Crown
 ];
-// Vertical band: bottom of the map (high y) = band 0 (easy), top (y=0) = highest.
-function grvBandXY(x,y){ const R=curRoom, NZ=R.rings.names.length, H=R.h||1;
- return Math.max(0,Math.min(NZ-1,Math.floor((1-y/H)*NZ))); }
+// Radial band from tile-x/y — the new two-island world (grvBandAt lives in 03_entities).
+function grvBandXY(x,y){ return (typeof grvBandAt==='function')?grvBandAt(x,y):0; }
 // Well-avalanched per-cell hash. The old `(x*131+y*57)` has its low bit == (x+y)&1, so
 // anything keyed off its low bits (the tile FLIP `&3`, tile choice `%100`) alternated on a
 // checkerboard — with directionally-lit ground art that read as a bright/dark grid across the
@@ -128,6 +127,20 @@ function drawTileG(x,y){
       const pu=0.30+Math.sin(performance.now()/300)*0.18; ctx.globalAlpha=pu;
       ctx.fillStyle='#ffd07a'; ctx.fillRect(tx,ty,TILE,TILE); ctx.globalAlpha=1; return; }
   }
+  // 'b' = the great bridge between the islands (the permadeath gate). Real PixelLab deck art
+  // in Phase 2; placeholder timber planks + stippled rope rails over the ocean for now.
+  if(c==='b'){
+    const bimg=(typeof _bridgeImg!=='undefined'&&_bridgeImg&&_bridgeImg.complete&&_bridgeImg.naturalWidth)?_bridgeImg:null;
+    if(bimg){ ctx.imageSmoothingEnabled=false; const o=hmix(x,y)&1;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o?-1:1,1);
+      ctx.drawImage(bimg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
+    else { ctx.fillStyle='#5a3f28'; ctx.fillRect(tx,ty,TILE,TILE);
+      ctx.fillStyle='#6e4d31'; for(let py=2;py<TILE;py+=6) ctx.fillRect(tx,ty+py,TILE,4);   // planks
+      ctx.fillStyle='rgba(0,0,0,.28)'; for(let py=5;py<TILE;py+=6) ctx.fillRect(tx,ty+py,TILE,1); }
+    const G=curRoom.grid, off=(xx,yy)=>{ const rr=G[yy]; const cc=rr&&rr[xx]; return cc!=='b'; };
+    if(off(x,y-1)) pxH(tx,ty,TILE,'rgba(40,26,16,0.9)',0.8);        // rope rails on the open sides
+    if(off(x,y+1)) pxH(tx,ty+TILE-1,TILE,'rgba(40,26,16,0.9)',0.8);
+    return; }
   // town floor (PixelLab): cobble base, 'p' = paved walkway, ~11% broken variant
   // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes).
   // Decor cells (h planter / H brazier / l lamp) draw floor UNDER their sprite.

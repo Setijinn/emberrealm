@@ -453,7 +453,7 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  if(curRoom&&curRoom.key==='G'){ const rg=regionAtPx(player.x,player.y);
   // ringInfoAt returns {n,lv,lv2} \u2014 there is no .band field (the old footer printed
   // "Lv undefined"); the live level here comes from the continuous curve instead.
-  const lv=(typeof grvLvAtY==='function')?grvLvAtY(player.y/TILE):null;
+  const lv=(typeof grvLvAt==='function')?grvLvAt(player.x/TILE,player.y/TILE):null;
   c.fillStyle='#ffc94d'; c.fillText(rg?('you are in '+rg.n+(lv?' \u00b7 Lv '+lv:'')):'',MAP_W-MAP_M,fy); }
  else { c.fillStyle='#8a8494'; c.fillText('you are in '+(curRoom?curRoom.name:'')+' \u2014 take the portal in the plaza',MAP_W-MAP_M,fy); }
 }
@@ -726,17 +726,15 @@ function hudRPG(){ if(!rpg)return;
 const HC_LEVEL=20;
 function isHardcore(r){ return !!(r&&(r.lvl||1)>=HC_LEVEL); }
 function isDead(ch){ return !!(ch&&ch.dead); }
-// The notice fires ONCE per hero. The player is yanked to the Hearth FIRST — hitting 20
-// almost always happens mid-fight, and reading a modal while a boss chews on you would be
-// a cruel way to learn the rules.
-function hcCheck(){ const ch=curChar(); if(!ch||!rpg) return false;
- if(!isHardcore(rpg)||rpg.hcSeen) return false;
+// The permadeath notice now fires ONCE, when you first CROSS THE BRIDGE onto the main island
+// — the point of no return. No teleport (you're crossing on purpose); just the modal + a grace
+// window so you're not read the rules mid-hit. Called every frame from update() while in the
+// grove. (`hcSeen` kept as the flag; pre-existing Lv20+ heroes trip it on their first crossing.)
+function hcCheck(){ const ch=curChar(); if(!ch||!rpg||!inGame) return false;
+ if(rpg.hcSeen) return false;
+ if(typeof onMainIsland!=='function' || !onMainIsland(player.x,player.y)) return false;
  rpg.hcSeen=1; saveRPG();
- if(inGame&&rooms['0,0']){ const r0=rooms['0,0'];
-   enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
-   player.hp=player.maxhp; player.mp=player.maxmp; player.inv=2.5; }
- // close anything the player had open (the world keeps running behind overlays, so a pet
- // kill can level you up while the satchel is open) — but keep the HUD, the run continues
+ player.inv=Math.max(player.inv||0,2.5);
  for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','coopScr'])
    if($s(id)) $s(id).style.display='none';
  $s('hcScr').style.display='flex';
@@ -747,7 +745,7 @@ function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;
   msg('LEVEL '+rpg.lvl,'the ember grows'); }
- saveRPG(); hudRPG(); hcCheck(); }
+ saveRPG(); hudRPG(); }   // permadeath notice is bridge-crossing based now (hcCheck in update)
 // A Lv20+ hero has fallen for good: record the tombstone, end the run, show the eulogy.
 function permaDeath(){ const ch=curChar(); if(!ch) return;
  const zone=(typeof regionAtPx==='function'&&curRoom)?(regionAtPx(player.x,player.y)||{}).n:null;
