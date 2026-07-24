@@ -46,6 +46,12 @@ function hmix(x,y){ let h=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
   h=Math.imul(h^(h>>>13),1274126177)>>>0; return (h^(h>>>16))>>>0; }
 function _hexA(h,a){ if(!h||h[0]!=='#'){return 'rgba(154,212,239,'+a+')';}
   const n=parseInt(h.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+// No solid vector lines anywhere (user rule) — a "line" is drawn as a scatter of 1px pixels.
+// dens = fraction of pixels kept (hash-jittered so it reads hand-placed, not a crisp stroke).
+function pxV(px,py,len,col,dens){ ctx.fillStyle=col; const d=(dens===undefined?0.6:dens)*256;
+  px|=0; py|=0; for(let i=0;i<len;i++) if((hmix(px,py+i)&255)<d) ctx.fillRect(px,py+i,1,1); }
+function pxH(px,py,len,col,dens){ ctx.fillStyle=col; const d=(dens===undefined?0.6:dens)*256;
+  px|=0; py|=0; for(let i=0;i<len;i++) if((hmix(px+i,py)&255)<d) ctx.fillRect(px+i,py,1,1); }
 // Smooth value noise in ~[0,1], feature size `scale` tiles. Smoothstep-interpolated hash
 // lattice -> ORGANIC blobs with curved edges, not the hard 4x4 squares a block hash makes.
 // Used to place secondary-terrain patches so they look like natural pools, not tiles.
@@ -248,17 +254,21 @@ function drawTileG(x,y){
           if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
             ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }
     else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }
-    // ring boundary lines: darker edge where the neighbour is a different band
-    if(x>0 && grvBandXY(x-1,y)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,2,TILE); }
-    if(y>0 && grvBandXY(x,y-1)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,TILE,2); }
-    if(x>0 && grvBandXY(x-1,y)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,2,TILE); }
-    if(y>0 && grvBandXY(x,y-1)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,TILE,2); }
+    // ring boundary: a stippled pixel seam where the neighbour is a different band (no solid line)
+    if(x>0 && grvBandXY(x-1,y)!==bd) pxV(tx,ty,TILE,'rgba(0,0,0,0.55)',0.6);
+    if(y>0 && grvBandXY(x,y-1)!==bd) pxH(tx,ty,TILE,'rgba(0,0,0,0.55)',0.6);
+    if(x>0 && grvBandXY(x-1,y)>bd) pxV(tx+1,ty,TILE,'rgba(255,201,77,0.42)',0.4);
+    if(y>0 && grvBandXY(x,y-1)>bd) pxH(tx,ty+1,TILE,'rgba(255,201,77,0.42)',0.4);
     // terrain features layered on the band tint
     if(c==='d'){ if(h2(x*3,y*5)>0.7){ ctx.fillStyle='rgba(90,70,40,0.30)'; ctx.fillRect(tx+(x*13)%30+4,ty+(y*17)%30+4,3,3); } }
     else if(c==='g'){ if(h2(x,y*3)>0.72){ ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(tx+8,ty+12,3,6); ctx.fillRect(tx+24,ty+22,3,6); } }
-    else if(c==='r'){ ctx.strokeStyle='rgba(0,0,0,.16)'; ctx.strokeRect(tx+1,ty+1,TILE-2,TILE-2); }
+    else if(c==='r'){ // rock: a few weathering specks instead of a square outline (no line, no square)
+      const rh=hmix(x*5+1,y*9+2); ctx.fillStyle='rgba(0,0,0,.20)';
+      ctx.fillRect(tx+4+(rh%13),ty+5+((rh>>4)%13),2,1); ctx.fillRect(tx+19+((rh>>8)%15),ty+21+((rh>>12)%15),1,2);
+      ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(tx+10+((rh>>16)%18),ty+9+((rh>>20)%20),1,1); }
     else if(c==='e'){ if(h2(x*7,y)>0.72){ const gl=0.5+Math.sin(performance.now()/300+x+y)*0.35;
-      ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')'; ctx.fillRect(tx+10,ty+TILE/2,TILE-20,3); } }
+      ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')';   // ember vent: glowing specks, not a bar
+      for(let i=2;i<TILE-20;i+=3){ const yy=ty+TILE/2+((hmix(tx+i,ty+7)%3)-1); if(hmix(tx+i,ty)&1) ctx.fillRect(tx+10+i,yy,1,1); } } }
     else if(c==='t'){
       const _tr=_bandTree[bd], _o=featOffset(x,y), _bx=tx+TILE/2+_o[0], _by=ty+TILE-6+_o[1];
       if(_tr && _tr.naturalWidth){ ctx.imageSmoothingEnabled=false;
@@ -280,7 +290,8 @@ function drawTileG(x,y){
         ctx.beginPath(); ctx.arc(_bx,_by-8,11,0,6.29); ctx.stroke(); } }
   } else if(c==='f'){
     ctx.fillStyle=(x+y)%2?'#332318':'#3a281b'; ctx.fillRect(tx,ty,TILE,TILE);
-    ctx.strokeStyle='rgba(0,0,0,.20)'; ctx.strokeRect(tx+1,ty+1,TILE-2,TILE-2);
+    const fh=hmix(x*7,y*3); ctx.fillStyle='rgba(0,0,0,.22)';   // specks, not a square outline
+    ctx.fillRect(tx+5+(fh%14),ty+7+((fh>>4)%12),2,1); ctx.fillRect(tx+22+((fh>>8)%14),ty+24+((fh>>12)%12),1,2);
   }
 }
 function shadow(x,y,r){ ctx.fillStyle='rgba(0,0,0,.35)';

@@ -224,15 +224,40 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     const px=cx0+dx*2, py=cyBand-Math.round(TH/2)+dy*2; if(clear(px,py)) place={px,py}; }
   if(!place) place={px:cx0, py:cyBand-Math.round(TH/2)};
   const {px,py}=place;
-  for(let ty=0;ty<TH;ty++)for(let tx=0;tx<TW;tx++){ const ch=T[ty][tx];
-    if(ch==='X') R.grid[py+ty][px+tx]='X'; else if(ch==='.') R.grid[py+ty][px+tx]='F'; }
+  // ORGANIC arena (user: "boss arenas less square — almost nothing should be perfect squares").
+  // Instead of stamping the rectangular template, carve an irregular LOBED cavern inside the
+  // template's footprint: an ellipse whose radius wobbles with angle + per-cell noise, wrapped
+  // in a ragged 'X' wall ring, open at a south doorway, with a few scattered interior pillars.
+  const cx=px+TW/2, cy=py+TH/2, rx=TW/2-0.6, ry=TH/2-0.6;
+  const _lh=(tx,ty)=>{ let h=(Math.imul(tx+b*131+7,374761393)+Math.imul(ty+b*257+3,668265263))>>>0;
+    h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))&255)/255; };
+  const floorAt=(tx,ty)=>{ const nx=(tx+0.5-cx)/rx, ny=(ty+0.5-cy)/ry, a=Math.atan2(ny,nx);
+    const wob=0.80+0.17*Math.sin(a*3+b)+0.10*Math.sin(a*5-b*2)+0.05*(_lh(tx,ty)-0.5);
+    return (nx*nx+ny*ny) < wob*wob; };
+  const inGrid=(tx,ty)=>tx>0&&ty>0&&tx<R.w-1&&ty<R.h-1;
+  const ground=(tx,ty)=>{ const c=R.grid[ty]&&R.grid[ty][tx]; return c!=null&&'wWhHlXFDP'.indexOf(c)<0; };
+  const bx0=px-2,bx1=px+TW+2,by0=py-2,by1=py+TH+2;
+  // pass 1: floor
+  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++) if(inGrid(tx,ty)&&floorAt(tx,ty)&&ground(tx,ty)) R.grid[ty][tx]='F';
+  // pass 2: ragged wall ring around the floor, with a ~4-wide doorway at the south-centre
+  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++){ if(!inGrid(tx,ty)||R.grid[ty][tx]==='F'||!ground(tx,ty)) continue;
+    let touch=false; for(let dy=-1;dy<=1&&!touch;dy++)for(let dx=-1;dx<=1;dx++){ if(R.grid[ty+dy]&&R.grid[ty+dy][tx+dx]==='F'){touch=true;break;} }
+    if(!touch) continue;
+    if(ty>cy+ry*0.35 && Math.abs(tx-cx)<2.4) continue;    // leave the south doorway open
+    R.grid[ty][tx]='X'; }
+  // pass 3: a few scattered interior cover pillars (never near the boss's centre or the door)
+  for(let i=0;i<5;i++){ const a=(i/5)*6.283+b, rr=0.42+0.28*_lh(px+i,py+i);
+    const tx=Math.round(cx+Math.cos(a)*rx*rr), ty=Math.round(cy+Math.sin(a)*ry*rr);
+    if(inGrid(tx,ty)&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>2.4&&!(ty>cy&&Math.abs(tx-cx)<2.4)){
+      R.grid[ty][tx]='X'; if(_lh(tx+1,ty)>0.5&&R.grid[ty][tx+1]==='F') R.grid[ty][tx+1]='X'; } }
+  // decor scattered on the INTERIOR floor (the old corner spots now fall in the ragged walls)
+  const _decos=[]; for(let i=0;i<7;i++){ const a=(i/7)*6.283+b*1.3, rr=0.40+0.22*_lh(px+i*3,py-i);
+    const dx=cx+Math.cos(a)*rx*rr, dy=cy+Math.sin(a)*ry*rr, tx=Math.round(dx), ty=Math.round(dy);
+    if(R.grid[ty]&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>1.6) _decos.push({x:dx*TILE,y:dy*TILE,i:i%4}); }
   R.lairs[b]={ b, px, py, tw:TW, th:TH,
-    spawn:{x:(px+TW/2)*TILE, y:(py+TH*0.58)*TILE},          // boss stands in front of the den
-    sprite:{x:(px+TW/2)*TILE, y:(py+2.7)*TILE},             // den centrepiece near the back wall
-    decos:[ {x:(px+2.4)*TILE,y:(py+2.4)*TILE,i:0}, {x:(px+TW-2.4)*TILE,y:(py+2.4)*TILE,i:1},
-            {x:(px+2.4)*TILE,y:(py+TH-2.6)*TILE,i:2}, {x:(px+TW-2.4)*TILE,y:(py+TH-2.6)*TILE,i:3},
-            {x:(px+2.2)*TILE,y:(py+TH*0.5)*TILE,i:1}, {x:(px+TW-2.2)*TILE,y:(py+TH*0.5)*TILE,i:0},
-            {x:(px+TW/2-3.2)*TILE,y:(py+4.4)*TILE,i:2}, {x:(px+TW/2+3.2)*TILE,y:(py+4.4)*TILE,i:3} ] };
+    spawn:{x:cx*TILE, y:(cy+ry*0.20)*TILE},                 // boss stands just south of centre, on floor
+    sprite:{x:cx*TILE, y:(cy-ry*0.55)*TILE},                // den centrepiece toward the back
+    decos:_decos };
   // drop any arrival landing points that now fall inside this compound (avoid spawning trapped)
   if(R.arrivals) R.arrivals=R.arrivals.filter(a=>!(a[0]>=px-1&&a[0]<=px+TW&&a[1]>=py-1&&a[1]<=py+TH));
  }
