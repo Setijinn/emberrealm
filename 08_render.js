@@ -44,6 +44,17 @@ function grvBandXY(x,y){ const R=curRoom, NZ=R.rings.names.length, H=R.h||1;
 // position parity (same lesson as the town-floor hash).
 function hmix(x,y){ let h=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
   h=Math.imul(h^(h>>>13),1274126177)>>>0; return (h^(h>>>16))>>>0; }
+function _hexA(h,a){ if(!h||h[0]!=='#'){return 'rgba(154,212,239,'+a+')';}
+  const n=parseInt(h.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+// Smooth value noise in ~[0,1], feature size `scale` tiles. Smoothstep-interpolated hash
+// lattice -> ORGANIC blobs with curved edges, not the hard 4x4 squares a block hash makes.
+// Used to place secondary-terrain patches so they look like natural pools, not tiles.
+function vnoise(x,y,scale){
+  const fx=x/scale, fy=y/scale, x0=Math.floor(fx), y0=Math.floor(fy), ux=fx-x0, uy=fy-y0;
+  const r=(a,b)=>(hmix(a,b)&1023)/1023, s=t=>t*t*(3-2*t);
+  const a=r(x0,y0), b=r(x0+1,y0), c=r(x0,y0+1), d=r(x0+1,y0+1), sx=s(ux), sy=s(uy);
+  return (a*(1-sx)+b*sx)*(1-sy)+(c*(1-sx)+d*sx)*sy;
+}
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -56,16 +67,28 @@ function drawTileG(x,y){
     const set=(typeof _dunSet!=='undefined'&&_dunSet[rg]&&_dunSet[rg].complete&&_dunSet[rg].naturalWidth)?_dunSet[rg]
              :(typeof _lairSet!=='undefined'&&_lairSet[rg]&&_lairSet[rg].complete&&_lairSet[rg].naturalWidth)?_lairSet[rg]:null;
     if(set){
-      ctx.imageSmoothingEnabled=false; const hh=(x*131+y*57)>>>0, o=hh&3;
+      ctx.imageSmoothingEnabled=false; const hh=hmix(x,y), o=hh&3;   // mixed hash: no parity checkerboard
       const src=(c==='W'||c==='D')?GROUND_UP:GROUND_LO;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-      // 'p' = dream-path spine: glowing stepping stones laid OVER the dream floor
-      if(c==='p'&&typeof _dunPath!=='undefined'&&_dunPath&&_dunPath.complete&&_dunPath.naturalWidth){
-        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,1);
-        ctx.drawImage(_dunPath,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-        const pu=0.05+Math.sin(performance.now()/600+x+y)*0.03;
-        ctx.fillStyle='rgba(190,230,245,'+pu.toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+      // 'p' = dream-path spine. The old stepping-stone sprite read like a random trail of
+      // river stones; a boss's consciousness should show a GLOWING spectral path instead.
+      // Draw it as a soft luminous ribbon over the dream floor: adjacent 'p' cells' glows
+      // merge into a continuous flowing trail, with a gentle pulse travelling along it.
+      if(c==='p'){
+        const GB=(typeof GBOSS!=='undefined')?GBOSS[rg]:null;
+        const cr=GB?GB.col:'#9ad4ef', cx=tx+TILE/2, cy=ty+TILE/2;
+        const flow=0.5+Math.sin(performance.now()/430-(x+y)*0.55)*0.5;   // wave runs along the path
+        ctx.save(); ctx.globalCompositeOperation='lighter';
+        const gg=ctx.createRadialGradient(cx,cy,1,cx,cy,TILE*0.62);
+        gg.addColorStop(0,'rgba(200,235,248,'+(0.30+0.16*flow).toFixed(3)+')');
+        gg.addColorStop(0.55,_hexA(cr,(0.14+0.10*flow).toFixed(3)));
+        gg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,cy,TILE*0.62,0,6.29); ctx.fill();
+        // bright travelling core
+        ctx.globalAlpha=0.35+0.45*flow; ctx.fillStyle='rgba(220,244,252,1)';
+        ctx.beginPath(); ctx.arc(cx,cy,2.4+1.6*flow,0,6.29); ctx.fill();
+        ctx.restore();
         return; }
       // anti-repetition: fine per-cell brightness buckets PLUS clumped low-frequency
       // blotches (4x4-cell patches) so the dream floor never reads as a uniform grid
@@ -94,7 +117,7 @@ function drawTileG(x,y){
   // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes).
   // Decor cells (h planter / H brazier / l lamp) draw floor UNDER their sprite.
   if(t && typeof _hearth!=='undefined' && _hearth.floor && _hearth.floor.complete && _hearth.floor.naturalWidth && c!=='W' && c!=='w'){
-    ctx.imageSmoothingEnabled=false; const hh=(x*131+y*57)>>>0, o=hh&3;
+    ctx.imageSmoothingEnabled=false; const hh=hmix(x,y), o=hh&3;   // mixed hash: no parity checkerboard
     let m=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
     m=Math.imul(m^(m>>>13),1274126177)>>>0; m=(m^(m>>>16))>>>0;
     const ok=im=>im&&im.complete&&im.naturalWidth;
@@ -178,7 +201,7 @@ function drawTileG(x,y){
     const bd=curRoom.rings?grvBandXY(x,y):8;
     const set=_lairSet[bd], src=(c==='X')?GROUND_UP:GROUND_LO;
     if(set && set.naturalWidth){ ctx.imageSmoothingEnabled=false;
-      const hh=(x*131+y*57)>>>0, o=hh&3;
+      const hh=hmix(x,y), o=hh&3;   // mixed hash: no parity checkerboard
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
       // per-block variety: brightness noise + weathering chips so no two blocks read identical
@@ -197,16 +220,24 @@ function drawTileG(x,y){
     const _gset=_groundSet[bd];
     if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
       const hh=hmix(x,y), o=hh&3;   // mixed hash -> flip is random per-cell, not parity-checkerboard
-      // EVERY zone mixes its secondary tile in (heavier in the busy fiery zones) —
-      // single-tile fill read too uniform
-      const g=((hh>>4)%100 < (bd>=5?32:11))?GROUND_LO:GROUND_UP;
-      // Variant sheet in COARSE 4x4-tile patches (was per-tile), so the ground reads as
-      // natural regions instead of high-frequency two-tone noise — the low-frequency-blotch
-      // trick the dungeon floor uses. Kept SPARSE (~28%) so the map is mostly one clean
-      // ground with occasional patches, not a 50/50 quilt. bh is a mixed block hash.
+      // The base is ALWAYS the main upper-terrain tile (GROUND_UP). The lower-terrain tile
+      // (GROUND_LO) is a very DIFFERENT-looking biome tile — measured colour distance from the
+      // main up to 263 — so sprinkling it per-tile at 11-32% was the ugly quilt. It now appears
+      // ONLY as rare COARSE patches (a puddle / dirt / lava pool), a deliberate feature. The
+      // same-terrain variant SHEET (mild ~60 contrast) carries the large-scale variety instead.
       const _vs=_groundVar[bd];
-      const bh=hmix(x>>2, y>>2);
-      const src=(_vs && _vs.naturalWidth && bh%100>=72)?_vs:_gset;
+      // ORGANIC patches via smooth noise (curved blobs, not square blocks; sparse, not clustered):
+      // secondary terrain (a dirt/lava pool) only in the highest, rarest noise peaks; the
+      // same-terrain variant sheet fills gentler large-scale swells for texture variety.
+      // Both alternate tiles are SPARSE organic accents; the ground is overwhelmingly the
+      // clean main tile, with variety mostly from per-cell flip + brightness noise. loPatch
+      // (a very different biome tile) ~2.5%; the variant sheet (some bands' variant is quite
+      // dark) ~14% so it never takes over into big dark regions.
+      const nLo=vnoise(x+13,y+61,3.4), nVar=vnoise(x+140,y+9,6.5);
+      const loPatch=nLo > (bd>=5?0.82:0.90);
+      const g=loPatch?GROUND_LO:GROUND_UP;
+      const useVar=!loPatch && _vs && _vs.naturalWidth && nVar>0.74;
+      const src=useVar?_vs:_gset;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
       const v=(hh>>2)%5;                    // subtle per-tile brightness noise
