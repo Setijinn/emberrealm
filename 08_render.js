@@ -200,12 +200,13 @@ function drawTileG(x,y){
       // EVERY zone mixes its secondary tile in (heavier in the busy fiery zones) —
       // single-tile fill read too uniform
       const g=((hh>>4)%100 < (bd>=5?32:11))?GROUND_LO:GROUND_UP;
-      // Variant sheet in COARSE 3x3-tile patches (was per-tile), so the ground reads as
-      // natural regions of grass vs dirt instead of high-frequency two-tone noise — the same
-      // low-frequency-blotch trick the dungeon floor uses. bh is a mixed block hash.
+      // Variant sheet in COARSE 4x4-tile patches (was per-tile), so the ground reads as
+      // natural regions instead of high-frequency two-tone noise — the low-frequency-blotch
+      // trick the dungeon floor uses. Kept SPARSE (~28%) so the map is mostly one clean
+      // ground with occasional patches, not a 50/50 quilt. bh is a mixed block hash.
       const _vs=_groundVar[bd];
-      const bh=hmix(x/3|0, y/3|0);
-      const src=(_vs && _vs.naturalWidth && bh%100>=55)?_vs:_gset;
+      const bh=hmix(x>>2, y>>2);
+      const src=(_vs && _vs.naturalWidth && bh%100>=72)?_vs:_gset;
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
       const v=(hh>>2)%5;                    // subtle per-tile brightness noise
@@ -216,7 +217,7 @@ function drawTileG(x,y){
       const _dl=_decal[bd];
       if(_dl && _dl.length && 'tk'.indexOf(c)<0){
         const dh=hmix(x+911,y+53);   // mixed (own offset) so decals don't parity-align either
-        if(dh%100<20){ const im=_dl[dh%_dl.length];
+        if(dh%100<10){ const im=_dl[dh%_dl.length];   // sparse ground decals — 20% read as clutter
           if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
             ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }
     else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }
