@@ -463,12 +463,24 @@ function update(dt){
   // spawns: streaming activation + 60s respawns (only once you leave the area)
   respawnT-=dt;
   if(respawnT<=0 && !curRoom.dungeon){ respawnT=0.5; const rn=Date.now();
+    // CONCURRENCY CAP: the overworld bakes ~700 spawn points and a typical spot has 20-35 inside
+    // the stream ring — activating them all buried a new hero under a 20-30 enemy swarm. Cap the
+    // number of ROAMING foes (c/s) active near you at once, scaled by the local zone level so a
+    // Lv1 starter stays sparse (~5) and only the Lv50 grind zones get busy (~15). Bosses/nodes exempt.
+    const _lLv = (typeof grvLvAt==='function' && curRoom.rings) ? grvLvAt(player.x/TILE,player.y/TILE)
+               : (curRoom.band||10);
+    const roamCap = curRoom.big ? Math.max(5, Math.min(15, 5 + Math.floor(_lLv/5))) : 1e9;
+    let roamN=0; for(const e of enemies) if(e.type==='c'||e.type==='s') roamN++;
     for(const sp of curRoom.spawns){
       if(enemies.some(e=>e.sref===sp)) continue;
+      const roamer = (sp.t==='c'||sp.t==='s');
+      if(roamer && roamN>=roamCap) continue;                 // swarm cap reached — leave the rest dormant
       const sx=(sp.x+.5)*TILE, sy=(sp.y+.5)*TILE;
       const d=Math.hypot(sx-player.x,sy-player.y);
-      if(sp.dead){ if(sp.dead<=rn && d>500 && (!curRoom.big||d<800)){ sp.dead=0; enemies.push(makeEnemy(sp)); } }
-      else if(curRoom.big && d>240 && d<800) enemies.push(makeEnemy(sp));
+      let spawned=false;
+      if(sp.dead){ if(sp.dead<=rn && d>500 && (!curRoom.big||d<800)){ sp.dead=0; enemies.push(makeEnemy(sp)); spawned=true; } }
+      else if(curRoom.big && d>240 && d<800){ enemies.push(makeEnemy(sp)); spawned=true; }
+      if(spawned && roamer) roamN++;
     }
     if(curRoom.big){ for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i];
       if(e.sref && !e.boss && Math.hypot(e.x-player.x,e.y-player.y)>1100) enemies.splice(i,1); } }
