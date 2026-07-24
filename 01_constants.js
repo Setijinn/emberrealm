@@ -31,10 +31,16 @@ function _vpH(){ const vv=window.visualViewport;
   const lay=Math.round(document.documentElement.clientHeight||innerHeight);
   if(lay>h && _chromeless()) h=lay;
   return h; }
-function resize(){ W=_vpW(); H=_vpH();
+function resize(){
+  // Let CSS (position:fixed, 100dvw x 100dvh, viewport-fit=cover) decide the on-screen box —
+  // that spans the full landscape screen edge-to-edge — and read it straight back so the
+  // drawing buffer matches EXACTLY. Sizing H from visualViewport.height (as before) left the
+  // canvas short of the safe-area / toolbar strip in Safari landscape, and the near-black page
+  // background showed through as a band along the bottom. Measuring the element can't do that:
+  // whatever the browser paints as full-screen IS the buffer. _vp* stay as the 0-fallback.
+  W = cv.clientWidth || _vpW();
+  H = cv.clientHeight || _vpH();
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
-  // pin the element to exact px so the CSS box can never disagree with the buffer
-  cv.style.width=W+'px'; cv.style.height=H+'px'; cv.style.right='auto'; cv.style.bottom='auto';
   ctx.setTransform(DPR,0,0,DPR,0,0); ctx.imageSmoothingEnabled=false;
   document.getElementById('rotate').style.display = H>W ? 'flex':'none'; }
 resize(); addEventListener('resize',resize);
@@ -53,7 +59,7 @@ for(const ev of ['fullscreenchange','webkitfullscreenchange']) addEventListener(
 addEventListener('visibilitychange',()=>{ if(!document.hidden){ resize(); setTimeout(resize,200); } });
 if(window.visualViewport){ visualViewport.addEventListener('resize',resize); visualViewport.addEventListener('scroll',resize); }
 // safety net: some in-app viewers never fire events — poll every frame
-function checkSize(){ if(_vpW()!==W||_vpH()!==H) resize(); }
+function checkSize(){ if((cv.clientWidth||_vpW())!==W||(cv.clientHeight||_vpH())!==H) resize(); }
 // Boot heal: the per-frame checkSize() only starts once the main loop is running, and a rotation
 // mid-load can leave the canvas sized to the stale/portrait viewport before then. Poll for the
 // first few seconds (independent of the loop) so a rotate-while-loading always heals the black
