@@ -185,7 +185,7 @@ if(typeof window!=='undefined' && typeof _img==='function'){
   for(const p of PET_DB) _petImg[p.spr]=_img('assets/pets/'+p.spr+'.png');
   for(const c of PET_CAT_KEYS) _eggImg[c]=_img('assets/pets/egg_'+c+'.png');
   _roomFloorImg=_img('assets/pets/room_floor.png'); _roomFloor2Img=_img('assets/pets/room_floor2.png'); _roomHedgeImg=_img('assets/pets/room_hedge.png');
-  for(const d of ['pond','hay','shelter','barn','trough','apple','picket']) _roomDecor[d]=_img('assets/pets/room_'+d+'.png');
+  for(const d of ['pond','hay','shelter','barn','trough','apple','picket','rock','rocks']) _roomDecor[d]=_img('assets/pets/room_'+d+'.png');
 }
 
 // ================= Phase 2: the active pet in combat =================
@@ -374,7 +374,13 @@ function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['P
     spawns:[], glows:[], pillars:[], px:ex, py:H-3,
     waterfall:{ cx:pcx, x0:cx-1.35, x1:cx+1.35, topY:3.5, pcx, pcy, prx, pry },
     portals:[{x:(ex+0.5)*TILE, y:(H-1.5)*TILE, to:'_petback', col:'#8ee0a0', big:false}],
-    petDecor:[ {img:'barn',    x:6.5*TILE,   y:16*TILE,    s:3.2},   // barn, lower-left
+    petDecor:[ // ROCK BORDER framing the waterfall + pond (drawn over the water edges)
+               {img:'rock',  x:15.4*TILE, y:5.6*TILE,  s:1.8},  {img:'rock',  x:20.6*TILE, y:5.6*TILE,  s:1.8},
+               {img:'rocks', x:14.2*TILE, y:7.6*TILE,  s:1.7},  {img:'rocks', x:21.8*TILE, y:7.6*TILE,  s:1.7},
+               {img:'rock',  x:11.4*TILE, y:9.6*TILE,  s:1.6},  {img:'rock',  x:24.6*TILE, y:9.6*TILE,  s:1.6},
+               {img:'rocks', x:13.3*TILE, y:12.2*TILE, s:1.6},  {img:'rocks', x:22.7*TILE, y:12.2*TILE, s:1.6},
+               {img:'rock',  x:18*TILE,   y:12.7*TILE, s:1.5},
+               {img:'barn',    x:6.5*TILE,   y:16*TILE,    s:3.2},   // barn, lower-left
                {img:'shelter', x:11*TILE,    y:15*TILE,    s:2.0},   // pet den beside it
                {img:'picket',  x:5*TILE,     y:19.5*TILE,  s:2.0},   // paddock fence in FRONT of the barn
                {img:'picket',  x:8.4*TILE,   y:19.5*TILE,  s:2.0},
@@ -407,20 +413,28 @@ function updatePetRoom(dt){ if(!curRoom||!curRoom.petRoom||!petWanderers.length)
     if(d<4){ w.wait-=dt; if(w.wait<=0){ w.tx=b.x0+Math.random()*(b.x1-b.x0); w.ty=b.y0+Math.random()*(b.y1-b.y0); w.wait=0.8+Math.random()*3.2; } }
     else { const mv=Math.min(d,w.spd*dt); w.x+=dx/d*mv; w.y+=dy/d*mv; if(Math.abs(dx)>2) w.face=dx<0?-1:1; } } }
 function drawWaterfall(){ const wf=curRoom&&curRoom.waterfall; if(!wf||typeof ctx==='undefined') return;
-  const t=performance.now(), x0=wf.x0*TILE, x1=wf.x1*TILE, w=x1-x0, y0=wf.topY*TILE, y1=(wf.pcy-0.2)*TILE;
-  ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,w,y1-y0); ctx.clip();     // falling water column
-  ctx.fillStyle='#4f8ac4'; ctx.fillRect(x0,y0,w,y1-y0);
-  ctx.fillStyle='rgba(120,180,220,0.5)'; ctx.fillRect(x0,y0,3,y1-y0); ctx.fillRect(x1-3,y0,3,y1-y0);
-  const per=11, sc=(t*0.22)%per;
-  for(let yy=y0-per; yy<y1+per; yy+=per){ const py=yy+sc;
-    ctx.fillStyle='rgba(214,240,252,0.6)'; ctx.fillRect(x0+3,py,w-6,3);
-    ctx.fillStyle='rgba(160,210,238,0.45)'; ctx.fillRect(x0+3,py+5,w-6,2); }
+  const t=performance.now(), x0=wf.x0*TILE, x1=wf.x1*TILE, w=x1-x0, y0=wf.topY*TILE, y1=(wf.pcy-0.1)*TILE, hgt=y1-y0;
+  // shaded channel behind the falling water so it reads as a recessed spillway
+  ctx.fillStyle='#26527a'; ctx.fillRect(x0-3,y0-2,w+6,hgt+2);
+  // falling water = several bright RIBBONS with scrolling foam highlights (clipped to the column)
+  ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,w,hgt); ctx.clip();
+  const cols=6, cw=w/cols;
+  for(let c=0;c<cols;c++){ const cxp=x0+(c+0.5)*cw;
+    ctx.fillStyle=(c%2)?'#5fa2d2':'#4f92c6'; ctx.fillRect(x0+c*cw, y0, cw+0.6, hgt);
+    const spd=70+(c%3)*26, off=(t*spd/1000)%24;
+    for(let yy=y0-24; yy<y1+24; yy+=24){ const py=yy+off+(c*9);
+      ctx.fillStyle='rgba(232,247,255,0.8)'; ctx.fillRect(cxp-1.5, py, 3, 9);
+      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fillRect(cxp-0.5, py+3, 1, 4); } }
   ctx.restore();
-  ctx.fillStyle='rgba(244,252,255,0.9)'; ctx.fillRect(x0-2,y0-2,w+4,3);   // white lip at the lake edge
-  for(let i=0;i<8;i++) ctx.fillRect(x0+Math.random()*w, y0-3+Math.random()*4,1,1);
-  const by=y1;                                                            // splash where it hits the pond
-  for(let i=0;i<16;i++){ const px=wf.cx*TILE+(Math.random()*w*1.5-w*0.75); ctx.fillStyle='rgba(244,252,255,'+(0.4+Math.random()*0.45).toFixed(2)+')'; ctx.fillRect(px, by-2+Math.random()*6,1,1); }
-  if(typeof emitP==='function' && Math.random()<0.7) emitP(wf.cx*TILE+(Math.random()*w-w/2), by, {vx:Math.random()*34-17, vy:-22-Math.random()*22, life:0.5+Math.random()*0.4, col:'#e6f4ff', sz:2, g:80, drag:1, glow:true});
+  // white churning lip where it spills from the lake
+  ctx.fillStyle='rgba(248,253,255,0.95)'; ctx.fillRect(x0-4,y0-4,w+8,5);
+  for(let i=0;i<14;i++) ctx.fillRect(x0-3+Math.random()*(w+6), y0-5+Math.random()*6,1,1);
+  // splash foam RING in the pond where it lands + rising spray
+  const by=y1;
+  for(let i=0;i<26;i++){ const a=Math.random()*Math.PI, rr=Math.random()*w*1.15;
+    ctx.fillStyle='rgba(248,253,255,'+(0.4+Math.random()*0.5).toFixed(2)+')'; ctx.fillRect(wf.cx*TILE+Math.cos(a)*rr, by+Math.sin(a)*9-2,1,1); }
+  if(typeof emitP==='function') for(let k=0;k<2;k++) if(Math.random()<0.6)
+    emitP(wf.cx*TILE+(Math.random()*w-w/2), by, {vx:Math.random()*42-21, vy:-26-Math.random()*26, life:0.5+Math.random()*0.4, col:'#eaf6ff', sz:2, g:95, drag:1.5, glow:true});
 }
 function drawPetRoom(){ if(!curRoom||!curRoom.petRoom||typeof ctx==='undefined') return;
   drawWaterfall();
