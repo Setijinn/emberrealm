@@ -1,4 +1,4 @@
-﻿const CACHE = 'emberrealm-v154';
+const CACHE = 'emberrealm-v155';
 const ASSETS = ['.', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -6,24 +6,50 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
-  // drop every old-version cache so the fresh build's assets get fetched clean
+  // drop every old-version cache so a fresh build never mixes with stale files
   e.waitUntil(caches.keys().then(keys =>
     Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
-// CACHE-FIRST: serve assets instantly from cache; only hit the network on a miss
-// (then store it). Freshness is handled by the CACHE version bump on each deploy Ã¢â‚¬â€
-// the activate step above deletes old caches, so a new build re-fetches everything once
-// and then loads instantly on every subsequent visit. Much faster than re-fetching every
-// asset over the network on every load (the old network-first behaviour).
+
+// Split strategy so code can never go stale-mismatched (the cause of "errors on
+// launch after a deploy"), while heavy art still loads instantly:
+//   * CODE (page navigations + .js) -> NETWORK-FIRST: always fetch the current
+//     build; fall back to cache only when offline. index.html and every module
+//     therefore always match each other.
+//   * ASSETS (sprites/images/fonts/etc) -> CACHE-FIRST: instant, fetched once.
+function isCode(req, url) {
+  return req.mode === 'navigate' || /\.(js|mjs)(\?|$)/.test(url.pathname);
+}
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+
+  if (sameOrigin && isCode(req, url)) {
+    // network-first: freshest code wins; cache is only an offline fallback
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        }
+        return res;
+      }).catch(() =>
+        caches.match(req).then(hit => hit || caches.match('index.html'))
+      )
+    );
+    return;
+  }
+
+  // cache-first for everything else (art, fonts, etc.)
   e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+    caches.match(req).then(hit => hit || fetch(req).then(res => {
       if (res && res.status === 200 && res.type === 'basic') {
         const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
       }
       return res;
     }).catch(() => caches.match('index.html')))
