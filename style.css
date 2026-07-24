@@ -81,7 +81,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .istats{margin-top:5px;font-size:10px;line-height:1.5;letter-spacing:.02em;}
 #eqStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:9px;}
 
-#loadBtn,#skillBtn{display:none;align-items:center;justify-content:center;
+#loadBtn,#skillBtn,#petBtn{display:none;align-items:center;justify-content:center;
  width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
 /* skill tree screen */
 #skillScr{position:fixed;inset:0;z-index:40;display:none;background:rgba(9,7,12,.95);overflow-y:auto;
@@ -291,7 +291,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .shopnote{font-size:11px;color:#8a8494;text-align:center;padding:5px 8px;font-style:italic;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#devBtn2{
+#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#devBtn2{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
@@ -326,5 +326,5 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #devBtn2{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(17px*var(--uis));}
 #potBtn,#shopBtn{min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
 #invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
-#loadBtn,#skillBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#loadBtn,#skillBtn,#petBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #mapBtn,#coopBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}

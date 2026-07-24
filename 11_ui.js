@@ -1039,7 +1039,10 @@ function showGameHud(){
  if($s('coopBtn'))$s('coopBtn').style.display='flex';
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
  if($s('skillBtn'))$s('skillBtn').style.display='flex';
+ if($s('petBtn'))$s('petBtn').style.display='flex';
 }
+if(typeof document!=='undefined'){ const _pb=document.getElementById('petBtn');
+ if(_pb) _pb.addEventListener('click',function(){ if(typeof openPets==='function') openPets(); }); }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
  users[curUser].best=k; LS.set('er-users',users); } }
 // ---------- device settings (UI scale, camera, feedback toggles, manual aim) ----------

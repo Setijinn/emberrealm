@@ -220,6 +220,62 @@ function petAct(p,id,pow){
     default: return false;   // regen/fortune are passive
   }
 }
+// ================= Phase 3: the Pets collection UI =================
+function closePets(){ const ov=document.getElementById('petScr'); if(ov) ov.style.display='none'; }
+function _petKitIcons(kit){ return (kit||[]).map(id=>{ const u=petUtil(id); return u?('<span title="'+u.name+': '+u.desc+'">'+u.icon+'</span>'):''; }).join(' '); }
+function openPets(){ const u=petStore(); if(!u) return;
+  let ov=document.getElementById('petScr');
+  if(!ov){ ov=document.createElement('div'); ov.id='petScr';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(6,5,9,.86);z-index:60;display:flex;align-items:center;justify-content:center;padding:12px;';
+    document.body.appendChild(ov); }
+  ov.style.display='flex';
+  _petPaint(ov,u);
+}
+function _petPaint(ov,u){
+  ov.innerHTML='';
+  const card=document.createElement('div');
+  card.style.cssText='background:#15121b;border:1px solid #4a3d5c;border-radius:14px;max-width:600px;width:100%;max-height:92vh;overflow-y:auto;padding:16px;font-family:monospace;';
+  let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    +'<div style="font:bold 17px monospace;color:#ffd07a;letter-spacing:.08em;">🐾 PETS</div>'
+    +'<button id="petClose" style="background:#2a1f16;border:1px solid #7a4a1e;color:#ffd07a;border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer;">✕</button></div>'
+    +'<div style="font-size:11px;color:#8a8494;margin-bottom:12px;">Kept across deaths. Eggs drop from bosses &amp; hatch as you fight. Equip one to fight beside you.</div>';
+  // ---- EGGS ----
+  h+='<div style="font:bold 12px monospace;color:#c9a04a;margin:4px 0 6px;letter-spacing:.1em;">EGGS ('+u.eggs.length+')</div>';
+  if(!u.eggs.length) h+='<div style="font-size:11px;color:#6a6472;margin-bottom:10px;">No eggs yet — defeat bosses to find them.</div>';
+  else { h+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">';
+    u.eggs.forEach((eg,i)=>{ const cat=PET_CATS[eg.cat]||{name:'?',col:'#fff'}, ready=eg.prog>=eg.need, pct=Math.min(100,Math.round(100*eg.prog/eg.need));
+      h+='<div style="display:flex;align-items:center;gap:10px;background:#1c1826;border:1px solid #332b40;border-radius:9px;padding:7px 9px;">'
+        +'<img src="assets/pets/egg_'+eg.cat+'.png" style="width:34px;height:34px;image-rendering:pixelated;">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:12px;color:'+cat.col+';">'+cat.emoji+' '+cat.name+' Egg <span style="color:'+PET_RAR_COL[eg.cond]+';">· '+PET_RAR_NAME[eg.cond]+'</span></div>'
+        +(ready?'<div style="font-size:10px;color:#ffd07a;">ready to open!</div>'
+              :'<div style="height:6px;background:#0d0b12;border-radius:4px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:'+pct+'%;background:'+cat.col+';"></div></div>'
+               +'<div style="font-size:9px;color:#8a8494;margin-top:2px;">incubating '+eg.prog+' / '+eg.need+' kills</div>')
+        +'</div>'
+        +(ready?'<button class="petOpen" data-i="'+i+'" style="background:#3a2a12;border:1px solid #c9a04a;color:#ffd07a;border-radius:8px;padding:6px 12px;font:bold 11px monospace;cursor:pointer;">OPEN</button>':'')
+        +'</div>'; });
+    h+='</div>'; }
+  // ---- COLLECTION ----
+  h+='<div style="font:bold 12px monospace;color:#c9a04a;margin:4px 0 6px;letter-spacing:.1em;">COLLECTION ('+u.pets.length+')</div>';
+  if(!u.pets.length) h+='<div style="font-size:11px;color:#6a6472;">No pets yet. Open an egg to hatch your first companion.</div>';
+  else { h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:8px;">';
+    const sorted=u.pets.slice().sort((a,b)=>b.rar-a.rar||b.lvl-a.lvl);
+    for(const p of sorted){ const active=p.uid===u.activePet, cat=PET_CATS[p.cat]||{name:'?',col:'#fff'};
+      h+='<div class="petCard" data-uid="'+p.uid+'" style="background:'+(active?'#241a2e':'#1a1622')+';border:2px solid '+(active?'#ffc94d':'#332b40')+';border-radius:10px;padding:8px;text-align:center;cursor:pointer;position:relative;">'
+        +(active?'<div style="position:absolute;top:3px;right:6px;font-size:8px;color:#ffc94d;letter-spacing:.05em;">ACTIVE</div>':'')
+        +'<img src="assets/pets/'+p.spr+'.png" style="width:52px;height:52px;image-rendering:pixelated;">'
+        +'<div style="font-size:11px;color:'+PET_RAR_COL[p.rar]+';font-weight:bold;margin-top:2px;">'+p.name+'</div>'
+        +'<div style="font-size:9px;color:#8a8494;">'+cat.emoji+' '+PET_RAR_NAME[p.rar]+' · Lv '+p.lvl+'</div>'
+        +'<div style="font-size:12px;margin-top:3px;letter-spacing:1px;">'+_petKitIcons(p.kit)+'</div>'
+        +'</div>'; }
+    h+='</div>'; }
+  card.innerHTML=h; ov.appendChild(card);
+  document.getElementById('petClose').onclick=closePets;
+  card.querySelectorAll('.petOpen').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
+    const i=+b.getAttribute('data-i'); const pet=hatchEgg(i); if(pet && typeof spawnActivePet==='function'&&u.activePet===pet.uid) spawnActivePet(); _petPaint(ov,u); });
+  card.querySelectorAll('.petCard').forEach(c=>c.onclick=()=>{ const uid=+c.getAttribute('data-uid');
+    setActivePet(u.activePet===uid?null:uid); if(typeof spawnActivePet==='function') spawnActivePet(); _petPaint(ov,u); });
+}
 function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return; const p=petEnt.def;
   const im=_petImg[p.spr], x=petEnt.x, y=petEnt.y, t=performance.now()/1000;
   const bob=Math.sin(t*3+x*0.05)*2;
