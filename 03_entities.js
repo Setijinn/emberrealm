@@ -662,7 +662,10 @@ function _onBridge(R,tx,ty){ const B=R.bridge; return tx>=B.x0&&tx<=B.x1&&Math.a
 function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
  if(_onBridge(RG,tx,ty)) return 20;
  if(tx<RG.bridge.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r);
-   return Math.max(1,Math.min(20,Math.round(1+f*19))); }
+   // EASED starter ramp (f^1.7, not linear): the inner ~40% around the spawn stays Lv1-4 so a
+   // brand-new Lv1 hero isn't immediately swarmed by Lv10+ foes it can't dent, and only the far
+   // edge / bridge approach reaches the Lv20 gate. (Linear made the whole starter island too steep.)
+   return Math.max(1,Math.min(20,Math.round(1+Math.pow(f,1.7)*19))); }
  const gR=RG.grindR||0.8, f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax);
  if(f>=gR) return 50;                                   // flat Lv50 grind ring
  return Math.max(20,Math.min(50,Math.round(20+(f/gR)*29))); }
@@ -746,8 +749,14 @@ function usePortal(to){
   if(to==='_petback'){ if(typeof leavePetRoom==='function') leavePetRoom(); return; }   // exit the Sanctuary
   if(curRoom&&curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
   if(to==='G'){ const gv=rooms['G']; if(!gv) return;
-    // arrive on the STARTER island — the designated spawn (P) so you always begin safe in the west
-    let ax=(gv.px!=null?gv.px+.5:gv.w/2)*TILE, ay=(gv.py!=null?gv.py+.5:gv.h/2)*TILE;
+    // Arrive at the LOW-LEVEL HEART of the starter island (Lv1), not the baked P point — P sits
+    // off-centre in a Lv5 pocket where the surrounding radial ramp already puts nearby foes at
+    // Lv6-10, which a brand-new Lv1 hero can't dent. Spawning at the starter centre means the
+    // first ~12 tiles in every direction are Lv1-4. Falls back to P for non-radial worlds.
+    const RG=gv.rings;
+    let ax,ay;
+    if(RG&&RG.radial&&RG.starter){ ax=(RG.starter.cx+.5)*TILE; ay=(RG.starter.cy+.5)*TILE; }
+    else { ax=(gv.px!=null?gv.px+.5:gv.w/2)*TILE; ay=(gv.py!=null?gv.py+.5:gv.h/2)*TILE; }
     const sp=safeSpot(gv,ax,ay); enterRoom('G',sp.x,sp.y);
     const rg=(typeof regionAtPx==='function')?regionAtPx(sp.x,sp.y):null;
     msg((rg&&rg.n||'THE LANDING SANDS').toUpperCase(),'your journey begins'); return; }
