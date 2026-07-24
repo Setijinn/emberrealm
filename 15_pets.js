@@ -106,11 +106,38 @@ function giveEgg(cond,cat){ const u=petStore(); if(!u) return;
   savePets();
   if(typeof msg==='function') msg('🥚 '+(PET_CATS[cat]?PET_CATS[cat].name:'')+' Egg', PET_RAR_NAME[cond]+' condition · incubating'); }
 
-// incubation ticks on kills (Phase 2 calls petOnKill); returns list of newly-ready egg indexes
-function petOnKill(){ const u=petStore(); if(!u) return; let changed=false;
+// per-kill: incubate eggs + level the active pet. (Phase 4)
+function petOnKill(e){ const u=petStore(); if(!u) return; let changed=false;
   for(const eg of u.eggs){ if(eg.prog<eg.need){ eg.prog++; if(eg.prog>=eg.need){ changed=true;
     if(typeof msg==='function') msg('🥚 An egg is ready to open!', (PET_CATS[eg.cat]?PET_CATS[eg.cat].name:'')+' · '+PET_RAR_NAME[eg.cond]); } } }
-  if(changed) savePets(); }
+  if(changed) savePets();
+  const xp = e&&e.type==='B'?36 : e&&e.type==='s'?4 : 3;    // bosses feed the active pet far more
+  petGainXp(xp); }
+// ---- Phase 4: leveling / fuse / evolve ----
+function petMaxLvl(p){ return 10 + (p.rar||0)*5; }            // Common 10 ... Legendary 30
+function petXpNeed(lvl){ return Math.floor(18*Math.pow(lvl,1.5)); }
+function petGainXp(amt){ const p=activePet(); if(!p||!amt) return; const mx=petMaxLvl(p); if(p.lvl>=mx) return;
+  p.xp=(p.xp||0)+amt; let up=false;
+  while(p.lvl<mx && p.xp>=petXpNeed(p.lvl)){ p.xp-=petXpNeed(p.lvl); p.lvl++; up=true; }
+  if(up){ savePets(); if(typeof msg==='function') msg(p.name+' → Lv '+p.lvl, p.lvl>=mx?'max level — ready to evolve!':''); } }
+// fuse: sacrifice one pet to REROLL another's utility kit + feed it XP (the only way a kit changes)
+function petFuse(baseUid,sacUid){ const u=petStore(); if(!u||baseUid===sacUid) return false;
+  const base=u.pets.find(p=>p.uid===baseUid), sac=u.pets.find(p=>p.uid===sacUid); if(!base||!sac) return false;
+  base.kit=rollKit(base.rar);
+  const bonus=Math.round(petXpNeed(1)*(1+sac.rar)*(1+(sac.lvl-1)*0.3));
+  base.xp=(base.xp||0)+bonus; const mx=petMaxLvl(base);
+  while(base.lvl<mx && base.xp>=petXpNeed(base.lvl)){ base.xp-=petXpNeed(base.lvl); base.lvl++; }
+  u.pets=u.pets.filter(p=>p.uid!==sacUid); if(u.activePet===sacUid) u.activePet=base.uid;
+  savePets(); if(typeof spawnActivePet==='function'&&u.activePet===base.uid) spawnActivePet();
+  if(typeof msg==='function') msg('🔗 Fused!', base.name+' rerolled its kit (+XP)'); return true; }
+// evolve: at max level, climb a rarity — becoming the category's next creature if one exists
+function petCanEvolve(p){ return p && p.rar<4 && p.lvl>=petMaxLvl(p); }
+function petEvolve(uid){ const u=petStore(); if(!u) return false; const p=u.pets.find(x=>x.uid===uid); if(!petCanEvolve(p)) return false;
+  const nr=p.rar+1, up=PET_DB.filter(d=>d.cat===p.cat&&d.rar>=nr).sort((a,b)=>a.rar-b.rar)[0];
+  if(up){ p.spr=up.spr; p.name=up.name; p.rar=up.rar; } else { p.rar=nr; }   // no higher creature in family -> stronger same creature
+  p.size=1+p.rar*0.14; p.lvl=1; p.xp=0; p.kit=rollKit(p.rar);
+  savePets(); if(u.activePet===uid && typeof spawnActivePet==='function') spawnActivePet();
+  if(typeof msg==='function') msg('✨ Evolved!', p.name+' — '+PET_RAR_NAME[p.rar]+'!'); return true; }
 
 // ---- the OPEN roll: weighted rarity within the egg's band; rarest is hardest ----
 // Common egg -> {0,1,2}, Uncommon -> {1,2,3}, Rare -> {2,3,4}. Weights favour the floor.
@@ -221,7 +248,11 @@ function petAct(p,id,pow){
   }
 }
 // ================= Phase 3: the Pets collection UI =================
-function closePets(){ const ov=document.getElementById('petScr'); if(ov) ov.style.display='none'; }
+let _petSel=null, _petFuse=false;
+function closePets(){ const ov=document.getElementById('petScr'); if(ov) ov.style.display='none'; _petFuse=false; }
+const _PBTN='background:#2a2233;border:1px solid #5a4d6c;color:#e8dff2;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:pointer;';
+const _PBTNG='background:#3a2a12;border:1px solid #c9a04a;color:#ffd07a;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:pointer;';
+const _PBTND='background:#1a1622;border:1px solid #332b40;color:#5a5464;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:default;';
 function _petKitIcons(kit){ return (kit||[]).map(id=>{ const u=petUtil(id); return u?('<span title="'+u.name+': '+u.desc+'">'+u.icon+'</span>'):''; }).join(' '); }
 function openPets(){ const u=petStore(); if(!u) return;
   let ov=document.getElementById('petScr');
@@ -257,24 +288,45 @@ function _petPaint(ov,u){
     h+='</div>'; }
   // ---- COLLECTION ----
   h+='<div style="font:bold 12px monospace;color:#c9a04a;margin:4px 0 6px;letter-spacing:.1em;">COLLECTION ('+u.pets.length+')</div>';
+  if(_petFuse){ const bn=(u.pets.find(p=>p.uid===_petSel)||{}).name||'?';
+    h+='<div style="font-size:11px;color:#ff9a5a;margin-bottom:6px;">🔗 Fuse mode — pick a pet to SACRIFICE into <b>'+bn+'</b> (rerolls its kit, +XP). <span id="petFuseCancel" style="color:#8ab6d6;cursor:pointer;text-decoration:underline;">cancel</span></div>'; }
   if(!u.pets.length) h+='<div style="font-size:11px;color:#6a6472;">No pets yet. Open an egg to hatch your first companion.</div>';
   else { h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:8px;">';
     const sorted=u.pets.slice().sort((a,b)=>b.rar-a.rar||b.lvl-a.lvl);
-    for(const p of sorted){ const active=p.uid===u.activePet, cat=PET_CATS[p.cat]||{name:'?',col:'#fff'};
-      h+='<div class="petCard" data-uid="'+p.uid+'" style="background:'+(active?'#241a2e':'#1a1622')+';border:2px solid '+(active?'#ffc94d':'#332b40')+';border-radius:10px;padding:8px;text-align:center;cursor:pointer;position:relative;">'
+    for(const p of sorted){ const active=p.uid===u.activePet, sel=p.uid===_petSel, cat=PET_CATS[p.cat]||{name:'?',col:'#fff'};
+      const bord=sel?'#ffffff':active?'#ffc94d':'#332b40';
+      h+='<div class="petCard" data-uid="'+p.uid+'" style="background:'+(sel?'#2a2136':active?'#241a2e':'#1a1622')+';border:2px solid '+bord+';border-radius:10px;padding:8px;text-align:center;cursor:pointer;position:relative;">'
         +(active?'<div style="position:absolute;top:3px;right:6px;font-size:8px;color:#ffc94d;letter-spacing:.05em;">ACTIVE</div>':'')
         +'<img src="assets/pets/'+p.spr+'.png" style="width:52px;height:52px;image-rendering:pixelated;">'
         +'<div style="font-size:11px;color:'+PET_RAR_COL[p.rar]+';font-weight:bold;margin-top:2px;">'+p.name+'</div>'
-        +'<div style="font-size:9px;color:#8a8494;">'+cat.emoji+' '+PET_RAR_NAME[p.rar]+' · Lv '+p.lvl+'</div>'
+        +'<div style="font-size:9px;color:#8a8494;">'+cat.emoji+' '+PET_RAR_NAME[p.rar]+' · Lv '+p.lvl+'/'+petMaxLvl(p)+'</div>'
         +'<div style="font-size:12px;margin-top:3px;letter-spacing:1px;">'+_petKitIcons(p.kit)+'</div>'
         +'</div>'; }
     h+='</div>'; }
+  // ---- ACTIONS for the selected pet ----
+  const sp=u.pets.find(p=>p.uid===_petSel);
+  if(sp && !_petFuse){ const mx=petMaxLvl(sp), need=petXpNeed(sp.lvl), pct=sp.lvl>=mx?100:Math.min(100,Math.round(100*(sp.xp||0)/need));
+    h+='<div style="margin-top:12px;background:#1c1826;border:1px solid #4a3d5c;border-radius:10px;padding:10px;">'
+      +'<div style="font-size:12px;color:'+PET_RAR_COL[sp.rar]+';font-weight:bold;">'+sp.name+' <span style="color:#8a8494;font-weight:normal;">· '+PET_RAR_NAME[sp.rar]+' · Lv '+sp.lvl+'/'+mx+'</span></div>'
+      +'<div style="height:6px;background:#0d0b12;border-radius:4px;overflow:hidden;margin:6px 0;"><div style="height:100%;width:'+pct+'%;background:#c9a04a;"></div></div>'
+      +'<div style="font-size:10px;color:#9a93a6;margin-bottom:9px;">'+(sp.kit||[]).map(id=>{const uu=petUtil(id);return uu?uu.icon+' '+uu.name:'';}).join('   ·   ')+'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+      +'<button id="petEquip" style="'+_PBTN+'">'+(sp.uid===u.activePet?'UNEQUIP':'EQUIP')+'</button>'
+      +(petCanEvolve(sp)?'<button id="petEvolve" style="'+_PBTNG+'">✨ EVOLVE</button>':'<button style="'+_PBTND+'">✨ EVOLVE (Lv '+mx+')</button>')
+      +(u.pets.length>=2?'<button id="petFuseBtn" style="'+_PBTN+'">🔗 FUSE</button>':'')
+      +'</div></div>';
+  } else if(!_petFuse) h+='<div style="font-size:10px;color:#6a6472;margin-top:8px;">Tap a pet to inspect, equip, evolve or fuse it.</div>';
   card.innerHTML=h; ov.appendChild(card);
   document.getElementById('petClose').onclick=closePets;
   card.querySelectorAll('.petOpen').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation();
-    const i=+b.getAttribute('data-i'); const pet=hatchEgg(i); if(pet && typeof spawnActivePet==='function'&&u.activePet===pet.uid) spawnActivePet(); _petPaint(ov,u); });
+    const i=+b.getAttribute('data-i'); const pet=hatchEgg(i); if(pet){ _petSel=pet.uid; if(typeof spawnActivePet==='function'&&u.activePet===pet.uid) spawnActivePet(); } _petPaint(ov,u); });
   card.querySelectorAll('.petCard').forEach(c=>c.onclick=()=>{ const uid=+c.getAttribute('data-uid');
-    setActivePet(u.activePet===uid?null:uid); if(typeof spawnActivePet==='function') spawnActivePet(); _petPaint(ov,u); });
+    if(_petFuse && _petSel!=null && uid!==_petSel){ petFuse(_petSel,uid); _petFuse=false; _petPaint(ov,u); return; }
+    _petSel=uid; _petPaint(ov,u); });
+  const fc=document.getElementById('petFuseCancel'); if(fc) fc.onclick=()=>{ _petFuse=false; _petPaint(ov,u); };
+  const eq=document.getElementById('petEquip'); if(eq) eq.onclick=()=>{ setActivePet(u.activePet===_petSel?null:_petSel); if(typeof spawnActivePet==='function') spawnActivePet(); _petPaint(ov,u); };
+  const ev2=document.getElementById('petEvolve'); if(ev2) ev2.onclick=()=>{ petEvolve(_petSel); _petPaint(ov,u); };
+  const fb=document.getElementById('petFuseBtn'); if(fb) fb.onclick=()=>{ _petFuse=true; _petPaint(ov,u); };
 }
 function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return; const p=petEnt.def;
   const im=_petImg[p.spr], x=petEnt.x, y=petEnt.y, t=performance.now()/1000;

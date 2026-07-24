@@ -303,7 +303,7 @@ function rollLoot(e){
  const r=Math.random();
  // rare Fortune Coin (bronze) — its own roll, can drop alongside gear
  if(Math.random() < (e.type==='B'?0.85:0.04)) loots.push(bagAt(e,{k:'coin'}));
- if(typeof petOnKill==='function') petOnKill();          // incubation ticks per kill
+ if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
  if(e.type==='B'){ loots.push(bagAt(e,mkDrop(Math.min(11,tb+1))));
    if(typeof spawnEggDrop==='function') spawnEggDrop(e);  // pet egg drops as a loose EGG on the ground (not a bag)
    if(Math.random()<0.4) loots.push(bagAt(e,{k:'pot'})); return; }
