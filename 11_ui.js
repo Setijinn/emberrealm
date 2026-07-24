@@ -706,12 +706,76 @@ function hudRPG(){ if(!rpg)return;
  $s('lvlTxt').textContent='Lv '+rpg.lvl;
  $s('goldTxt').textContent=rpg.gold+'g';
  $s('potBtn').textContent='🧪 '+rpg.pots; }
+// ===== PERMADEATH =====
+// Up to Lv20 the hearth calls you home on death. From Lv20 the run is your life: dying
+// retires the hero to the Hall of the Fallen and you start over with someone new.
+const HC_LEVEL=20;
+function isHardcore(r){ return !!(r&&(r.lvl||1)>=HC_LEVEL); }
+function isDead(ch){ return !!(ch&&ch.dead); }
+// The notice fires ONCE per hero. The player is yanked to the Hearth FIRST — hitting 20
+// almost always happens mid-fight, and reading a modal while a boss chews on you would be
+// a cruel way to learn the rules.
+function hcCheck(){ const ch=curChar(); if(!ch||!rpg) return false;
+ if(!isHardcore(rpg)||rpg.hcSeen) return false;
+ rpg.hcSeen=1; saveRPG();
+ if(inGame&&rooms['0,0']){ const r0=rooms['0,0'];
+   enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
+   player.hp=player.maxhp; player.mp=player.maxmp; player.inv=2.5; }
+ // close anything the player had open (the world keeps running behind overlays, so a pet
+ // kill can level you up while the satchel is open) — but keep the HUD, the run continues
+ for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','coopScr'])
+   if($s(id)) $s(id).style.display='none';
+ $s('hcScr').style.display='flex';
+ navigator.vibrate&&navigator.vibrate([40,60,40]);
+ return true; }
 function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
  while(rpg.lvl<150 && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;
   msg('LEVEL '+rpg.lvl,'the ember grows'); }
- saveRPG(); hudRPG(); }
+ saveRPG(); hudRPG(); hcCheck(); }
+// A Lv20+ hero has fallen for good: record the tombstone, end the run, show the eulogy.
+function permaDeath(){ const ch=curChar(); if(!ch) return;
+ const zone=(typeof regionAtPx==='function'&&curRoom)?(regionAtPx(player.x,player.y)||{}).n:null;
+ ch.dead={ lvl:rpg.lvl, kills:player.kills||0, gold:rpg.gold||0,
+   zone: zone || (curRoom?curRoom.name:'the realm'), at: Date.now() };
+ recordBest(player.kills); saveRPG(); LS.set('er-users',users);
+ runLive=false; runChar=null; inGame=false;
+ res=0; allies=[]; zones=[]; fx=[]; enemies.length=0; pShots.length=0; eShots.length=0;
+ player.spiritT=0; player.deadeye=0;
+ const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))];
+ $s('deathWho').textContent=ch.name+' the '+(cc?cc.n:ch.cls);
+ $s('deathCard').innerHTML=
+   '<div>fell in <b class="dstat">'+ch.dead.zone+'</b></div>'
+  +'<div>at <b class="dstat">Level '+ch.dead.lvl+'</b> · <b class="dstat">'+ch.dead.kills+'</b> kills this run</div>'
+  +'<div class="mnote" style="margin-top:10px;">Their name is kept in the Hall of the Fallen.</div>';
+ // show() tears down the whole in-game UI — HUD buttons and any overlay left open
+ // (inventory, skills, map, shop...) — so nothing survives the run
+ show('deathScr');
+ navigator.vibrate&&navigator.vibrate([90,70,90,70,180]); }
+function openFallen(){ const u=users[curUser]; if(!u) return; migrate(u);
+ const dead=u.chars.map((ch,i)=>({ch,i})).filter(x=>isDead(x.ch))
+   .sort((a,b)=>(b.ch.dead.lvl-a.ch.dead.lvl)||(b.ch.dead.at-a.ch.dead.at));
+ const box=$s('fallenList'); box.innerHTML='';
+ $s('fallenNote').textContent=dead.length
+   ? dead.length+' hero'+(dead.length>1?'es':'')+' lost to the realm'
+   : 'No one has fallen yet. Keep it that way.';
+ for(const {ch,i} of dead){ const ci=CLASSES.findIndex(x=>x.id===ch.cls); const c=CLASSES[ci<0?0:ci];
+  const d=document.createElement('div'); d.className='ccard fallen';
+  const when=new Date(ch.dead.at);
+  d.innerHTML='<div class="cskull">💀</div>'
+   +'<canvas class="cicCv" width="64" height="64"></canvas>'
+   +'<div class="cn">'+ch.name+'</div>'
+   +'<div class="cd">'+c.n+' · fell at Lv '+ch.dead.lvl+'<br>'+ch.dead.zone+'</div>'
+   +'<div class="cs">'+ch.dead.kills+' kills · '+ch.dead.gold+'g</div>'
+   +'<div class="mnote" style="margin-top:4px;">'+when.toLocaleDateString()+'</div>'
+   +'<div class="cdel">✕</div>';
+  paintClassIcon(d.querySelector('.cicCv'), ch.cls);
+  d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')
+      && confirm('Remove '+ch.name+' from the Hall? Their record is lost.')){
+    u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0; LS.set('er-users',users); openFallen(); } };
+  box.appendChild(d); }
+ show('fallenScr'); }
 function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
  const heal=Math.max(60,Math.round(player.maxhp*0.35));   // scale with HP pool, not flat
  rpg.pots--; player.hp=Math.min(player.maxhp,player.hp+heal); saveRPG(); hudRPG();
@@ -799,7 +863,7 @@ $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none'
 
 
 
-function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr'])$s(s).style.display=(s===id)?'flex':'none';
+function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display=(s===id)?'flex':'none';
  $s('menuBtn').style.display='none'; $s('potBtn').style.display='none';
  $s('shopBtn').style.display='none'; $s('shopScr').style.display='none';
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
@@ -812,7 +876,7 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  if($s('skillBtn'))$s('skillBtn').style.display='none';
  if($s('skillScr'))$s('skillScr').style.display='none';
  if($s('sheetScr'))$s('sheetScr').style.display='none'; shopNear=false;}
-function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr'])$s(s).style.display='none';}
+function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display='none';}
 function refreshUserList(){
  const box=$s('userList'); box.innerHTML='';
  for(const n of Object.keys(users)){const b=document.createElement('button');b.className='mbtn user';
@@ -844,7 +908,14 @@ function openMenu(){
  const cc=ch?CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))]:null;
  $s('menuChar').textContent= ch&&cc ? cc.ic+' '+ch.name+' the '+cc.n : 'No character yet';
  const ur=(ch&&ch.rpg)||{lvl:1,gold:0};
- $s('menuBest').textContent='Lv '+ur.lvl+' · '+ur.gold+'g · best '+(u.best||0)+' kills';
+ $s('menuBest').textContent=isDead(ch)
+   ? '💀 fell at Lv '+ch.dead.lvl+' in '+ch.dead.zone+' — choose another hero'
+   : ('Lv '+ur.lvl+' · '+ur.gold+'g · best '+(u.best||0)+' kills'
+      +(isHardcore(ur)?'  ·  ☠ PERMADEATH':''));
+ // Hall of the Fallen appears once you have actually lost someone
+ const anyDead=(u.chars||[]).some(isDead);
+ $s('fallenBtn').style.display=anyDead?'':'none';
+ $s('playBtn').textContent=isDead(ch)?'CHOOSE A HERO':'PLAY';
  $s('devMenuBtn').style.display=isAdmin?'':'none'; $s('devBtn2').style.display='none'; inGame=false; show('menuScr');
  // ☰ mid-run used to be a one-way door: PLAY restarts you in the Hearth with the run
  // reset, so an accidental tap cost your position. Offer RESUME while the run is live.
@@ -864,16 +935,21 @@ function openChar(){
  const box=$s('charList'); box.innerHTML='';
  if(!u.chars.length){ box.innerHTML='<div class="mnote">No characters yet. Forge your first hero.</div>'; }
  u.chars.forEach((ch,i)=>{ const ci=CLASSES.findIndex(x=>x.id===ch.cls); const c=CLASSES[ci<0?0:ci];
-  const d=document.createElement('div'); d.className='ccard'+(i===u.cur?' sel':'');
-  d.innerHTML='<canvas class="cicCv" width="64" height="64"></canvas><div class="cn">'+ch.name+'</div>'
-   +'<div class="cd">'+c.n+' · Lv '+ch.rpg.lvl+'</div>'
-   +'<div class="cs">'+ch.rpg.gold+'g · T'+((ch.rpg.wpn||0)+1)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n+'</div>'
+  const gone=isDead(ch);
+  const d=document.createElement('div'); d.className='ccard'+(i===u.cur&&!gone?' sel':'')+(gone?' fallen':'');
+  d.innerHTML=(gone?'<div class="cskull">💀</div>':'')
+   +'<canvas class="cicCv" width="64" height="64"></canvas><div class="cn">'+ch.name+'</div>'
+   +'<div class="cd">'+c.n+' · '+(gone?('fell at Lv '+ch.dead.lvl+'<br>'+ch.dead.zone):('Lv '+ch.rpg.lvl))+'</div>'
+   +'<div class="cs">'+(gone?(ch.dead.kills+' kills · '+ch.dead.gold+'g')
+        :(ch.rpg.gold+'g · T'+((ch.rpg.wpn||0)+1)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n))+'</div>'
    +'<div class="cdel">✕</div>';
   paintClassIcon(d.querySelector('.cicCv'), ch.cls);
   d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')){
-    if(confirm('Delete '+ch.name+' forever?')){ u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0;
+    if(confirm(gone?('Remove '+ch.name+' from the Hall? Their record is lost.'):('Delete '+ch.name+' forever?'))){
+     u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0;
      LS.set('er-users',users); openChar(); }
     return; }
+   if(gone){ msg&&msg(ch.name+' is gone','their ember cannot be rekindled'); return; }   // dead heroes are not playable
    u.cur=i; LS.set('er-users',users); openMenu(); };
   box.appendChild(d); });
  show('charScr');
@@ -899,6 +975,7 @@ function play(){
  const u=users[curUser];
  const ch=curChar();
  if(!ch){openChar();return;}
+ if(isDead(ch)){ openChar(); return; }        // a fallen hero can never be played again
  loadRPG(); recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
  player.kills=0; player.inv=1;
  res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;
@@ -911,6 +988,7 @@ function play(){
  hideAll(); showGameHud(); inGame=true;
  runLive=true; runChar=ch;                       // a run is now in progress (enables RESUME)
  const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
+ hcCheck();     // heroes already past Lv20 (or from before this rule) get the notice here
 }
 // one place that reveals the in-game HUD — used by play() and resumeRun()
 function showGameHud(){
@@ -959,6 +1037,13 @@ $s('loginBtn').addEventListener('click',doLogin);
 $s('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $s('playBtn').addEventListener('click',play);
 $s('resumeBtn').addEventListener('click',resumeRun);
+// ---- permadeath screens ----
+$s('hcOk').addEventListener('click',()=>{ $s('hcScr').style.display='none'; });
+$s('deathNew').addEventListener('click',()=>{ $s('deathScr').style.display='none'; openClassPick(); });
+$s('deathHall').addEventListener('click',()=>{ $s('deathScr').style.display='none'; openFallen(); });
+$s('deathMenu').addEventListener('click',()=>{ $s('deathScr').style.display='none'; openMenu(); });
+$s('fallenBtn').addEventListener('click',openFallen);
+$s('fallenBack').addEventListener('click',openMenu);
 $s('charBtn').addEventListener('click',openChar);
 $s('backBtn').addEventListener('click',openMenu);
 $s('newCharBtn').addEventListener('click',openClassPick);

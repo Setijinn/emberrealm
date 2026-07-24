@@ -1006,7 +1006,8 @@ function render(){
     const sy=oy-orbR-8;
     ctx.textAlign='center';
     ctx.font='bold '+Math.round(13*UIS)+'px "Pixelify Sans",monospace';
-    const l1='Lv '+rpg.lvl+'  ·  '+zn;
+    // ☠ = this hero is past Lv20, so death is permanent — keep the stakes visible
+    const l1='Lv '+rpg.lvl+((typeof isHardcore==='function'&&isHardcore(rpg))?' ☠':'')+'  ·  '+zn;
     ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l1,W/2+1,sy+1);
     ctx.fillStyle='#ffd07a'; ctx.fillText(l1,W/2,sy);
     ctx.font=Math.round(11*UIS)+'px "Pixelify Sans",monospace';

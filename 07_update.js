@@ -519,6 +519,8 @@ function update(dt){
   if(typeof dev!=='undefined'&&dev.god&&player.hp<player.maxhp) player.hp=player.maxhp;
   if(player.hp<=0){ recordBest(player.kills); saveRPG();
     if(curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
+    // Lv20+ is permadeath: the hearth stops calling you home (see hcCheck/permaDeath)
+    if(typeof isHardcore==='function' && isHardcore(rpg)){ permaDeath(); return; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;

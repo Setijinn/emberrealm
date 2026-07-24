@@ -35,6 +35,7 @@
  <button id="resumeBtn" class="mbtn go" style="display:none;">▸ RESUME RUN</button>
  <button id="playBtn" class="mbtn go">PLAY</button>
  <button id="charBtn" class="mbtn">CHARACTERS</button>
+ <button id="fallenBtn" class="mbtn" style="display:none;">💀 HALL OF THE FALLEN</button>
  <button id="switchBtn" class="mbtn">SWITCH USER</button>
  <button id="setBtn" class="mbtn">⚙️ SETTINGS</button>
  <button id="devMenuBtn" class="mbtn" style="display:none;border-color:#7a4a1e;">🛠 DEV PANEL</button>
@@ -53,6 +54,35 @@
  <div class="mnote">saved on this device · applies to every hero</div>
  <button class="mbtn dev" id="setReset">Reset to defaults</button>
  <button class="mbtn go" id="setBack">DONE</button>
+</div>
+<!-- Lv20 permadeath notice: shown ONCE, after the player has been pulled to the Hearth -->
+<div class="scr" id="hcScr" style="background:rgba(9,7,12,.94);">
+ <div class="mtitle" style="font-size:30px;color:#e2604c;">THE EMBER HARDENS</div>
+ <div class="msub">LEVEL 20 · NO MORE SECOND CHANCES</div>
+ <div id="hcCard">
+  <p>From here on, <b>death is permanent.</b></p>
+  <p>Fall in battle and this hero is gone for good — their name passes to the
+     <b>Hall of the Fallen</b>, and you begin again with someone new.</p>
+  <p class="mnote" style="text-align:left;">Below Lv 20 the hearth still calls you home. Not any more.</p>
+  <p>You have been returned to <b>Emberhearth</b>. Spend your gold, ready your kit,
+     and step out when you are sure.</p>
+ </div>
+ <button class="mbtn go" id="hcOk">I UNDERSTAND</button>
+</div>
+<!-- permanent death -->
+<div class="scr" id="deathScr" style="background:rgba(9,7,12,.96);">
+ <div class="mtitle" style="font-size:34px;color:#8a8494;">YOUR EMBER GOES OUT</div>
+ <div class="msub" id="deathWho" style="color:#8a8494;"></div>
+ <div id="deathCard"></div>
+ <button class="mbtn go" id="deathNew">FORGE A NEW HERO</button>
+ <button class="mbtn" id="deathHall">💀 HALL OF THE FALLEN</button>
+ <button class="mbtn" id="deathMenu">MAIN MENU</button>
+</div>
+<div class="scr" id="fallenScr">
+ <div class="mtitle" style="font-size:26px;color:#8a8494;">HALL OF THE FALLEN</div>
+ <div class="mnote" id="fallenNote"></div>
+ <div id="fallenList" class="clist"></div>
+ <button class="mbtn" id="fallenBack">BACK</button>
 </div>
 <div class="scr" id="charScr">
  <div class="mtitle" style="font-size:26px;">YOUR CHARACTERS</div>

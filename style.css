@@ -49,6 +49,18 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
  color:#d8d2c8;font-family:inherit;font-size:16px;white-space:nowrap;}
 #shopBtn{border-color:#7a4a1e;color:#ffc94d;}
 
+/* ---------- permadeath (Lv20+) ---------- */
+#hcCard{background:#17141d;border:2px solid #7a2f24;border-radius:12px;padding:14px 18px;
+ width:min(92vw,520px);font-size:14px;line-height:1.55;color:#d8d2c8;}
+#hcCard p{margin:8px 0;}
+#hcCard b{color:#e2604c;}
+#deathCard{background:#17141d;border:2px solid #39323f;border-radius:12px;padding:14px 18px;
+ width:min(92vw,460px);font-size:14px;line-height:1.6;color:#d8d2c8;text-align:center;}
+#deathCard .dstat{color:#ffc94d;font-family:'Pixelify Sans',monospace;}
+#fallenList{max-height:56vh;overflow-y:auto;padding:2px;}
+.ccard.fallen{border-color:#3a3442;background:#131019;filter:grayscale(1);opacity:.75;}
+.ccard.fallen .cn{color:#8a8494;}
+.ccard .cskull{position:absolute;top:6px;left:8px;font-size:15px;filter:none;}
 .ccard{position:relative;}
 .ccard.sel{border-color:#ffc94d;}
 .ccard .cdel{position:absolute;top:3px;right:8px;color:#8a8494;font-size:14px;padding:3px 5px;}
