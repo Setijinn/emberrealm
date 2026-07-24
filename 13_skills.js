@@ -9,12 +9,21 @@
 //                 rof(fire-rate mult add) cleave(pierce+1) hpPct atkPct
 // Keystones set flags the combat/render code reads.
 
+// Bump whenever node IDs/meanings change: every save is refunded to a clean slate on load,
+// because rewritten trees would otherwise leave points stranded on ids that no longer exist.
+const TREE_VER=2;
 function perkTotalFor(lvl){ return Math.floor((lvl||1)/2); }        // total points earned by level
 function xpTreeInit(rpg){
   if(rpg.perkEarned===undefined) rpg.perkEarned=0;
   if(rpg.perkPts===undefined) rpg.perkPts=0;
   if(!rpg.tree) rpg.tree={};                 // nodeId -> ranks
   if(rpg.ascension===undefined) rpg.ascension=null;
+  if(rpg.treeVer!==TREE_VER){                // full refund from level (points = floor(lvl/2))
+    const had=Object.keys(rpg.tree).length;
+    rpg.tree={}; rpg.perkEarned=rpg.perkPts=perkTotalFor(rpg.lvl);   // ascension is kept
+    rpg.treeVer=TREE_VER;
+    if(had&&typeof msg==='function') msg('PERKS REFUNDED','the skill trees were rebuilt');
+  }
 }
 // award points to catch up to the level (called after level ups)
 function grantPerkPoints(rpg){ xpTreeInit(rpg);
@@ -25,28 +34,47 @@ function grantPerkPoints(rpg){ xpTreeInit(rpg);
 // ----- tree data. Each class: {branches:[{key,name,color,nodes:[...]}], ascend:[{...}x3]} -----
 // node: {id,name,desc,cost,max,req,eff}  (req = array of prerequisite node ids; eff per-rank)
 const CLASS_TREE = {
+ // ===== KNIGHT — resource: DEFIANCE (builds when you are hurt, bleeds off out of combat).
+ // Identity: a wall that CONVERTS damage taken into offence. Shockwaves (tag 'shock') are
+ // the class's chain currency — Retaliate throws them, Unbreakable Oath and Last Bastion
+ // both feed off them.
  knight: {
   branches: [
    { key:'bulwark', name:'Bulwark', color:'#7d8a99', nodes:[
-     {id:'k_b1', name:'Iron Skin',   desc:'+8 DEF per rank',            cost:1, max:3, req:[],        eff:{def:8}},
-     {id:'k_b2', name:'Toughened',   desc:'+8% max HP per rank',        cost:2, max:2, req:['k_b1'],  eff:{hpPct:0.08}},
-     {id:'k_b3', name:'Bulwark',     desc:'Keystone: take 12% less damage', cost:3, max:1, req:['k_b2'], eff:{dr:0.12}},
-     {id:'k_b4', name:'Retribution', desc:'Reflect 25% of melee damage', cost:2, max:1, req:['k_b3'],  eff:{thorns:0.25}},
-     {id:'k_b5', name:'Unbreakable', desc:'Keystone: +18 DEF and +10% HP',cost:3, max:1, req:['k_b4'], eff:{def:18,hpPct:0.10}},
+     {id:'k_b1', name:'Iron Skin', desc:'+7 DEF and +5 VIT per rank', cost:1, max:3, req:[], eff:{def:7,vit:5}},
+     {id:'k_b2', name:'Defiant Stand', desc:'Below 50% HP, take 9% less damage per rank', cost:2, max:2, req:['k_b1'],
+      cond:{when:'lowHp',v:0.50,eff:{dr:0.09}}},
+     {id:'k_b3', name:'Retaliate', desc:'Being hurt looses a shockwave — 70% ATK around you (0.9s)', cost:2, max:1, req:['k_b1'],
+      trig:{on:'hurt',icd:0.9,do:{dmgNearby:{r:100,pct:0.7,col:'#c9d2da'}},emits:'shock'}},
+     {id:'k_b4', name:'Aegis', desc:'At full Defiance, spend 60 for a shield worth 15% max HP', cost:2, max:2, req:['k_b2'],
+      trig:{on:'resFull',do:{shield:{pct:0.15},res:{n:-60,perRank:false},text:'AEGIS'}}},
+     {id:'k_b5', name:'Unbreakable Oath', desc:'Keystone: +16 DEF, +10% HP. Your shockwaves stun (0.4s) and return 8 Defiance',
+      cost:3, max:1, req:['k_b3','k_b4'], eff:{def:16,hpPct:0.10},
+      trig:{on:'proc',filter:{tag:'shock'},do:{status:{r:120,id:'stun',dur:0.4},res:{n:8}}}},
    ]},
    { key:'vanguard', name:'Vanguard', color:'#6aae7a', nodes:[
-     {id:'k_v1', name:'Footwork',    desc:'+6% move speed per rank',     cost:1, max:3, req:[],        eff:{spd:0.06}},
-     {id:'k_v2', name:'Momentum',    desc:'+8% attack speed per rank',   cost:2, max:2, req:['k_v1'],  eff:{rof:0.08}},
-     {id:'k_v3', name:'Vigor',       desc:'+10 VIT (HP + regen)',        cost:2, max:2, req:['k_v1'],  eff:{vit:10}},
-     {id:'k_v4', name:'Second Wind', desc:'Keystone: +12% HP, +20% regen',cost:3, max:1, req:['k_v2','k_v3'], eff:{hpPct:0.12,vit:16}},
-     {id:'k_v5', name:'Warlust',     desc:'Keystone: +14% attack speed', cost:3, max:1, req:['k_v4'],  eff:{rof:0.14}},
+     {id:'k_v1', name:'Footwork', desc:'+6% move speed and +3 DEX per rank', cost:1, max:3, req:[], eff:{spd:0.06,dex:3}},
+     {id:'k_v2', name:'Shield Charge', desc:'Your dashing abilities shove foes back and stun them 0.6s', cost:2, max:1, req:['k_v1'],
+      mod:{kind:'dash',do:{status:{r:110,id:'stun',dur:0.6},knock:{r:110,v:52}}}},
+     {id:'k_v3', name:'Warpath', desc:'After any cast, +25% attack speed for 3s', cost:2, max:2, req:['k_v1'],
+      trig:{on:'cast',do:{buff:{f:'bRof',m:1.25,dur:3,col:'#c9d2da'}},perRank:false}},
+     {id:'k_v4', name:'Banner of the Line', desc:'Casting plants a war banner: 6s ground that grinds foes and steadies you', cost:2, max:1, req:['k_v3'],
+      trig:{on:'cast',icd:6,do:{zone:{r:110,life:6,dmgPct:0.16,col:'#d4b96a'}}}},
+     {id:'k_v5', name:'Onward', desc:'Keystone: while moving, +12% attack speed and +8% move speed', cost:3, max:1, req:['k_v2','k_v4'],
+      cond:{when:'moving',eff:{rof:0.12,spd:0.08}}},
    ]},
    { key:'onslaught', name:'Onslaught', color:'#c0504a', nodes:[
-     {id:'k_o1', name:'Sharpened',   desc:'+4 ATK per rank',             cost:1, max:3, req:[],        eff:{atk:4}},
-     {id:'k_o2', name:'Bloodthirst', desc:'+5% crit chance per rank',    cost:2, max:2, req:['k_o1'],  eff:{crit:0.05}},
-     {id:'k_o3', name:'Cleave',      desc:'Keystone: attacks pierce +1', cost:3, max:1, req:['k_o1'],  eff:{cleave:1}},
-     {id:'k_o4', name:'Lifedrink',   desc:'Heal 6% of damage dealt',     cost:2, max:1, req:['k_o2'],  eff:{ls:0.06}},
-     {id:'k_o5', name:'Executioner', desc:'Keystone: +10 ATK, +8% crit', cost:3, max:1, req:['k_o3','k_o4'], eff:{atk:10,crit:0.08}},
+     {id:'k_o1', name:'Sharpened', desc:'+5 ATK per rank', cost:1, max:3, req:[], eff:{atk:5}},
+     {id:'k_o2', name:'Punish', desc:'For 3s after being hurt, +13% damage per rank', cost:2, max:2, req:['k_o1'],
+      cond:{when:'recentHurt',eff:{atkPct:0.13}}},
+     {id:'k_o3', name:'Guard Break', desc:'Your crits leave foes weakened (deal 30% less) for 2.5s', cost:2, max:1, req:['k_o1'],
+      trig:{on:'crit',do:{status:{id:'weak',dur:2.5}}}},
+     {id:'k_o4', name:'Defiant Might', desc:'+1.5% damage per 10 Defiance, per rank', cost:2, max:2, req:['k_o2'],
+      cond:{when:'resScale',per:10,eff:{atkPct:0.015}}},
+     {id:'k_o5', name:'Last Bastion', desc:'Keystone: below 35% HP, being hurt looses a GREATER shockwave (110% ATK) and heals you 5%',
+      cost:3, max:1, req:['k_o3','k_o4'], ifOwn:'k_b3',
+      trig:{on:'hurt',when:{when:'lowHp',v:0.35},icd:1.2,
+            do:{dmgNearby:{r:140,pct:1.1,col:'#ffd07a'},heal:{pct:0.05}},emits:'shock'}},
    ]},
   ],
   ascend: [
@@ -190,27 +218,45 @@ const CLASS_TREE = {
    {id:'inquisitor',name:'Inquisitor',color:'#e8b34b',desc:'+18% damage, +10% crit, +1 pierce. Capstone: bolts scorch (burn over 3s).',eff:{atkPct:0.18,crit:0.10,pierce:1,burnHit:0.5}},
    {id:'warden_c',name:'Warden',color:'#7d8a99',desc:'+18% HP, +16 DEF, take 12% less damage. Capstone: overflowing heals ward you.',eff:{hpPct:0.18,def:16,dr:0.12,overshield:1}},
   ]},
+ // ===== BERSERKER — resource: RAGE (builds on hits AND on being hurt, bleeds off fast).
+ // Identity: risk/reward — the lower your HP and the higher your Rage, the harder you hit.
+ // Frenzy (tag 'frenzy') and blood bursts (tag 'blood') are the chain currencies.
  berserker:{ branches:[
   {key:'fury',name:'Fury',color:'#c0504a',nodes:[
-   {id:'be_f1',name:'Brutality',desc:'+5 ATK per rank',cost:1,max:3,req:[],eff:{atk:5}},
-   {id:'be_f2',name:'Savage',desc:'+6% crit per rank',cost:2,max:2,req:['be_f1'],eff:{crit:0.06}},
-   {id:'be_f3',name:'Cleave',desc:'Keystone: attacks cleave +1',cost:3,max:1,req:['be_f1'],eff:{cleave:1}},
-   {id:'be_f4',name:'Reckless',desc:'+8% damage',cost:2,max:1,req:['be_f2'],eff:{atkPct:0.08}},
-   {id:'be_f5',name:'Rampage',desc:'Keystone: +12 ATK, cleave +1',cost:3,max:1,req:['be_f3','be_f4'],eff:{atk:12,cleave:1}},
+   {id:'be_f1',name:'Brutality',desc:'+6 ATK per rank',cost:1,max:3,req:[],eff:{atk:6}},
+   {id:'be_f2',name:'Bloodfury',desc:'+2.5% damage per 10 Rage, per rank',cost:2,max:2,req:['be_f1'],
+    cond:{when:'resScale',per:10,eff:{atkPct:0.025}}},
+   {id:'be_f3',name:'Reckless Swing',desc:'Surrounded (3+ foes): +6% crit per rank — but take 4% more damage',cost:2,max:2,req:['be_f1'],
+    cond:{when:'nearFoes',n:3,r:190,eff:{crit:0.06,dr:-0.04}}},
+   {id:'be_f4',name:'Frenzy',desc:'At full Rage: spend it all for 6s of +50% attack speed',cost:3,max:1,req:['be_f2'],
+    trig:{on:'resFull',do:{buff:{f:'bRof',m:1.5,dur:6,col:'#e2604c'},res:{n:-100,perRank:false},text:'FRENZY!'},emits:'frenzy'}},
+   {id:'be_f5',name:'Rampage',desc:'Keystone: kills stack Rampage (+4% damage each, 5 max, 6s) and return 9 Rage',cost:3,max:1,req:['be_f3','be_f4'],
+    trig:{on:'kill',do:{stack:{id:'ramp',n:1,max:5,dur:6},res:{n:9}}},
+    cond:{when:'stacks',id:'ramp',per:1,eff:{atkPct:0.04}}},
   ]},
   {key:'bloodrage',name:'Bloodrage',color:'#8a5ac0',nodes:[
-   {id:'be_b1',name:'Thick Hide',desc:'+8% max HP per rank',cost:1,max:3,req:[],eff:{hpPct:0.08}},
-   {id:'be_b2',name:'Bloodthirst',desc:'Heal 5% of damage dealt',cost:2,max:2,req:['be_b1'],eff:{ls:0.05}},
-   {id:'be_b3',name:'Regenerate',desc:'+2 regen',cost:2,max:1,req:['be_b1'],eff:{regen:2}},
-   {id:'be_b4',name:'Sanguine',desc:'Keystone: +8% lifesteal',cost:3,max:1,req:['be_b2'],eff:{ls:0.08}},
-   {id:'be_b5',name:'Undying',desc:'Keystone: +14% HP, +2 regen',cost:3,max:1,req:['be_b3'],eff:{hpPct:0.14,regen:2}},
+   {id:'be_b1',name:'Thick Hide',desc:'+6 VIT and +5 DEF per rank',cost:1,max:3,req:[],eff:{vit:6,def:5}},
+   {id:'be_b2',name:'Bloodbath',desc:'Below half HP, heal 8% of all damage you deal, per rank',cost:2,max:2,req:['be_b1'],
+    cond:{when:'lowHp',v:0.50,eff:{ls:0.08}}},
+   {id:'be_b3',name:'Reprisal',desc:'Being hurt sprays blood — foes within 140 bleed for 3s (1s)',cost:2,max:1,req:['be_b1'],
+    trig:{on:'hurt',icd:1.0,do:{status:{r:140,id:'bleed',dur:3,val:2},res:{n:6}},emits:'blood'}},
+   {id:'be_b4',name:'Blood Feast',desc:'Kills heal 5% max HP and feed 5 Rage, per rank',cost:2,max:2,req:['be_b2'],
+    trig:{on:'kill',do:{heal:{pct:0.05},res:{n:5}}}},
+   {id:'be_b5',name:'Undying',desc:'Keystone: below 30% HP take 18% less damage; every blood spray heals you 3%',cost:3,max:1,req:['be_b3','be_b4'],
+    cond:{when:'lowHp',v:0.30,eff:{dr:0.18,ls:0.05}},
+    trig:{on:'proc',filter:{tag:'blood'},do:{heal:{pct:0.03}}}},
   ]},
   {key:'warpath',name:'Warpath',color:'#e07a2e',nodes:[
-   {id:'be_w1',name:'Charge',desc:'+5% move speed per rank',cost:1,max:3,req:[],eff:{spd:0.05}},
-   {id:'be_w2',name:'Frenzy',desc:'+8% attack speed per rank',cost:2,max:2,req:['be_w1'],eff:{rof:0.08}},
-   {id:'be_w3',name:'Bloodlust',desc:'Keystone: +10% attack speed',cost:3,max:1,req:['be_w2'],eff:{rof:0.10}},
-   {id:'be_w4',name:'Ironhide',desc:'+6 DEF per rank',cost:2,max:2,req:[],eff:{def:6}},
-   {id:'be_w5',name:'Warpath',desc:'Keystone: +12% move, +10% attack speed',cost:3,max:1,req:['be_w3'],eff:{spd:0.12,rof:0.10}},
+   {id:'be_w1',name:'Longstride',desc:'+6% move speed and +4 ATK per rank',cost:1,max:3,req:[],eff:{spd:0.06,atk:4}},
+   {id:'be_w2',name:'Unstoppable',desc:'Above 60% Rage: +9% move speed and take 5% less damage, per rank',cost:2,max:2,req:['be_w1'],
+    cond:{when:'resAbove',v:0.60,eff:{spd:0.09,dr:0.05}}},
+   {id:'be_w3',name:'Quake Step',desc:'Your leaps and dashes crater the ground — 90% ATK and a shove',cost:2,max:1,req:['be_w1'],
+    mod:{kind:'dash',do:{dmgNearby:{r:120,pct:0.9,col:'#e07a2e'},knock:{r:120,v:58}}}},
+   {id:'be_w4',name:'Warcry',desc:'Casting terrifies foes within 200 (deal 30% less, 3s) and builds 12 Rage (4s)',cost:2,max:1,req:['be_w2'],
+    trig:{on:'cast',icd:4,do:{status:{r:200,id:'weak',dur:3},res:{n:12}}}},
+   {id:'be_w5',name:'Endless Rage',desc:'Keystone: when Frenzy erupts it blasts everything around you (140% ATK) and adds +35% damage for 6s',
+    cost:3,max:1,req:['be_w3','be_w4'],ifOwn:'be_f4',
+    trig:{on:'proc',filter:{tag:'frenzy'},do:{dmgNearby:{r:170,pct:1.4,col:'#e2604c'},buff:{f:'bDmg',m:1.35,dur:6}}}},
   ]}],
   ascend:[
    {id:'ravager',name:'Ravager',color:'#c0504a',desc:'+16 ATK, cleave +2, +10% crit. Capstone: hits arc to a nearby foe.',eff:{atk:16,cleave:2,crit:0.10,chainHit:0.5}},
@@ -379,27 +425,43 @@ const CLASS_TREE = {
    {id:'guardian',name:'Guardian',color:'#7d8a99',desc:'+18% HP, +18 DEF, take 12% less damage. Capstone: overflowing light wards you.',eff:{hpPct:0.18,def:18,dr:0.12,overshield:1}},
    {id:'highpriest',name:'High Priest',color:'#d4b96a',desc:'+24% ability power, +8 WIS, +3 regen. Capstone: casts consecrate healing ground.',eff:{abilPow:0.24,wis:8,regen:3,groundHeal:1}},
   ]},
+ // ===== NECROMANCER — resource: SOULS (torn from every kill; never decays).
+ // Identity: a death economy — kills bank Souls, Souls are SPENT on minions and detonations.
+ // Corpse blooms (tag 'bloom') and the soul nova (tag 'soulnova') are the chain currencies.
  necro:{ branches:[
-  {key:'undeath',name:'Undeath',color:'#6aae7a',nodes:[
-   {id:'ne_u1',name:'Command',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'ne_u2',name:'Dark Ritual',desc:'+8% ability power per rank',cost:2,max:2,req:['ne_u1'],eff:{abilPow:0.08}},
-   {id:'ne_u3',name:'Bone Rot',desc:'Keystone: hits bleed foes',cost:3,max:1,req:['ne_u1'],eff:{bleedHit:1}},
-   {id:'ne_u4',name:'Grave Feast',desc:'heal 5% of damage dealt',cost:2,max:1,req:['ne_u2'],eff:{ls:0.05}},
-   {id:'ne_u5',name:'Master of Death',desc:'Keystone: +12% damage, +8% ability power',cost:3,max:1,req:['ne_u3','ne_u4'],eff:{atkPct:0.12,abilPow:0.08}},
+  {key:'reaping',name:'Reaping',color:'#6aae7a',nodes:[
+   {id:'ne_u1',name:'Grave Touch',desc:'+4 WIS and +4 ATK per rank',cost:1,max:3,req:[],eff:{wis:4,atk:4}},
+   {id:'ne_u2',name:'Soul Harvest',desc:'Kills tear out 6 extra Souls and restore 4% mana, per rank',cost:2,max:2,req:['ne_u1'],
+    trig:{on:'kill',do:{res:{n:6},mana:{pct:0.04}}}},
+   {id:'ne_u3',name:'Corpse Bloom',desc:'The slain burst into a 4s pool of rot (0.8s)',cost:2,max:1,req:['ne_u1'],
+    trig:{on:'kill',icd:0.8,do:{zone:{r:85,life:4,poison:true,dmgPct:0.18,col:'#8fd48c'}},emits:'bloom'}},
+   {id:'ne_u4',name:'Soul Surge',desc:'At full Souls, spend them all: 160% ATK erupts around you',cost:3,max:1,req:['ne_u2'],
+    trig:{on:'resFull',do:{dmgNearby:{r:190,pct:1.6,col:'#8a5ac0'},res:{n:-100,perRank:false},text:'SOUL SURGE'},emits:'soulnova'}},
+   {id:'ne_u5',name:'Grave Pact',desc:'Keystone: a skeleton claws its way out of every corpse bloom',cost:3,max:1,req:['ne_u3','ne_u4'],ifOwn:'ne_u3',
+    trig:{on:'proc',filter:{tag:'bloom'},do:{summon:{n:1,dmgPct:0.35,life:12,spr:'skel'}}}},
   ]},
   {key:'bonecraft',name:'Bonecraft',color:'#c0304a',nodes:[
-   {id:'ne_b1',name:'Marrow',desc:'+5 WIS per rank',cost:1,max:3,req:[],eff:{wis:5}},
-   {id:'ne_b2',name:'Bone Spear',desc:'Keystone: bolts pierce +1',cost:3,max:1,req:['ne_b1'],eff:{pierce:1}},
-   {id:'ne_b3',name:'Malice',desc:'+6% crit per rank',cost:2,max:2,req:['ne_b1'],eff:{crit:0.06}},
-   {id:'ne_b4',name:'Decay',desc:'+8% damage per rank',cost:2,max:2,req:['ne_b2'],eff:{atkPct:0.08}},
-   {id:'ne_b5',name:'Impale',desc:'Keystone: bolts pierce +1, +14% damage',cost:3,max:1,req:['ne_b3','ne_b4'],eff:{pierce:1,atkPct:0.14}},
+   {id:'ne_b1',name:'Ossify',desc:'+5 DEF and +5 VIT per rank',cost:1,max:3,req:[],eff:{def:5,vit:5}},
+   {id:'ne_b2',name:'Bonecraft',desc:'Your minions last 60% longer and hit 25% harder',cost:2,max:1,req:['ne_b1'],
+    mod:{kind:'summon',pre:{sumLife:1.6,sumDmg:1.25}}},
+   {id:'ne_b3',name:'Soul Conduit',desc:'Spend 20 Souls when you summon: the dead rise DOUBLED',cost:2,max:1,req:['ne_b1'],
+    mod:{kind:'summon',pre:{spendRes:20,sumMul:2}}},
+   {id:'ne_b4',name:'Bone Shield',desc:'Raising the dead wraps you in bone — 7% max HP of shield per rank',cost:2,max:2,req:['ne_b2'],
+    trig:{on:'cast',filter:{kind:'summon'},do:{shield:{pct:0.07}}}},
+   {id:'ne_b5',name:'Dread Legion',desc:'Keystone: minions carry your rot, and 3-in-10 kills raise another servant',cost:3,max:1,req:['ne_b3','ne_b4'],
+    mod:{kind:'summon',pre:{sumSt:{id:'poison',dur:3,val:5}}},
+    trig:{on:'kill',chance:0.30,perRank:false,do:{summon:{n:1,dmgPct:0.3,life:10,spr:'skel'}}}},
   ]},
-  {key:'soulwell',name:'Soulwell',color:'#8a5ac0',nodes:[
-   {id:'ne_s1',name:'Soul Vigor',desc:'+8% max HP per rank',cost:1,max:3,req:[],eff:{hpPct:0.08}},
-   {id:'ne_s2',name:'Soul Font',desc:'+25 MP, +2 mana regen',cost:2,max:2,req:['ne_s1'],eff:{mp:25,mpregen:2}},
-   {id:'ne_s3',name:'Vampiric',desc:'Keystone: +8% lifesteal',cost:3,max:1,req:['ne_s1'],eff:{ls:0.08}},
-   {id:'ne_s4',name:'Bone Wall',desc:'reflect 20% melee damage',cost:2,max:1,req:['ne_s1'],eff:{thorns:0.20}},
-   {id:'ne_s5',name:'Undying',desc:'Keystone: +12% HP, take 8% less damage',cost:3,max:1,req:['ne_s2','ne_s3'],eff:{hpPct:0.12,dr:0.08}},
+  {key:'plague',name:'Plague',color:'#8a5ac0',nodes:[
+   {id:'ne_s1',name:'Withering',desc:'+5 WIS and +3 DEX per rank',cost:1,max:3,req:[],eff:{wis:5,dex:3}},
+   {id:'ne_s2',name:'Rot',desc:'1-in-4 hits fester — poison for 25% of the hit over 4s, per rank',cost:2,max:2,req:['ne_s1'],
+    trig:{on:'hit',chance:0.25,perRank:false,do:{status:{id:'poison',dur:4,pct:0.25}}}},
+   {id:'ne_s3',name:'Curse of Ash',desc:'Your crits curse — the marked take 20% more damage for 4s',cost:2,max:1,req:['ne_s1'],
+    trig:{on:'crit',do:{status:{id:'curse',dur:4,val:0.20}}}},
+   {id:'ne_s4',name:'Miasma',desc:'With 2+ foes near, +7% ability power per rank',cost:2,max:2,req:['ne_s2'],
+    cond:{when:'nearFoes',n:2,r:210,eff:{abilPow:0.07}}},
+   {id:'ne_s5',name:'Plaguelord',desc:'Keystone: the rotting dead spread their plague to everything within 150',cost:3,max:1,req:['ne_s3','ne_s4'],ifOwn:'ne_s2',
+    trig:{on:'kill',do:{status:{r:150,id:'poison',dur:4,val:7}}}},
   ]}],
   ascend:[
    {id:'lich',name:'Lich',color:'#8a5ac0',desc:'+26% ability power, +12% lifesteal, +8 WIS. Capstone: raise twice the skeletons.',eff:{abilPow:0.26,ls:0.12,wis:8,summonX2:1}},

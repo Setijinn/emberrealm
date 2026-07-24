@@ -996,6 +996,8 @@ function render(){
   drawOrb(W/2-orbR-5, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
   drawOrb(W/2+orbR+5, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
   if(rpg){ const xbw=orbR*4+10, xbx=W/2-xbw/2, xbh=Math.max(4,Math.round(6*UIS)), xby=H-Math.round(12*UIS);
+    // class resource meter (only for classes whose tree actually uses one)
+    if(typeof drawResMeter==='function') drawResMeter(W/2,xby,xbw);
     ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,xbh);
     ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),xbh);
     ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,xbh+1);

@@ -165,16 +165,19 @@ function healPlayer(amt){ if(!amt||amt<=0) return;
 // damage to the player through Juggernaut (less while moving), shields, Nightblade (vanish)
 function damagePlayer(raw){ let hit=raw;
   if(player.moveDr&&player._moving) hit*=(1-player.moveDr);
+  if(typeof dynDr==='function') hit*=(1-dynDr());          // conditional perks (below X% HP, ...)
   hit=Math.max(1,Math.round(hit));
   if((player.shield||0)>0){ const ab=Math.min(player.shield,hit); player.shield-=ab; hit-=ab; }
   if(hit>0) player.hp-=hit;
   if(player.vanishHurt) player.inv=Math.max(player.inv,1.1);
+  if(typeof perkFire==='function') perkFire('hurt',{dmg:hit,x:player.x,y:player.y});
   return hit; }
 let _pmove=false;   // true only while the PLAYER is being moved (Pathwarden terrain ghost)
 function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
-  const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1);
+  const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1)
+    *((typeof dynSpd==='function')?dynSpd():1);
   player._moving=false; _pmove=true;
   if(m.id!==null){
     const d=Math.hypot(m.dx,m.dy)||1;
@@ -197,6 +200,9 @@ function update(dt){
     if(Math.abs(camRot-camRotT)<0.0008 && camRotT===0) camRot=0;
   }
   player.inv=Math.max(0,player.inv-dt);
+  // perk conditionals: rebuilt AFTER movement (so `moving`/`still` are current) and BEFORE
+  // fire(), so this frame's shot already sees the bonus.
+  if(typeof perkDyn==='function') perkDyn(dt);
   if(typeof updateAbilCooldowns==='function') updateAbilCooldowns(dt);      // ability cooldowns
   if(player.atkT>0) player.atkT-=dt;                                       // attack animation timer
   if(player.hp<player.maxhp) player.hp+=(player.regen||1)*dt;               // VIT -> regen
@@ -282,14 +288,10 @@ function update(dt){
     s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
     if(s.life<=0||solid(s.x,s.y)){ pShots.splice(i,1); continue; }
     for(const e of enemies){ if(e!==s.lastHit && Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
-      let dmg=Math.round((s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1));
-      if(player.execute&&e.hp<e.maxhp*0.15) dmg=Math.round(dmg*(1+player.execute)); // Executioner
-      if(player.shatter&&(e.slowT>0||hasStatus(e,'freeze'))) dmg=Math.round(dmg*(1+player.shatter)); // Cryomancer
-      dmg=Math.round(dmg*statusDmgIn(e));                                           // cursed foes
-      e.hp-=dmg; e.flash=0.12; s.lastHit=e; chargeRes('hit');
-      if(e.boss) bossBar=e;   // big top-screen bar from the first hit on
-      texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:s.crit?dmg+'!':dmg,col:s.crit?'#ffd23d':'#ffe9b0',life:s.crit?0.85:0.55});
-      if(player.ls) healPlayer(dmg*player.ls);
+      // execute/shatter/curse scaling, lifesteal, damage text and the on-hit perk triggers
+      // all live in dealDamage now — shot-only extras (fork/chain/splash/critBolt) stay here.
+      const dmg=dealDamage(e,(s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1),{crit:s.crit});
+      s.lastHit=e; chargeRes('hit');
       if(s.slow) applyStatus(e,'chill',1,0);
       // ---- on-hit capstones (all through the unified status system) ----
       if(player.burnHit) applyStatus(e,'burn',3,dmg*player.burnHit/3);
@@ -329,6 +331,7 @@ function update(dt){
     enemies.splice(i,1); player.kills++;
     if(player.killHeal) healPlayer(player.maxhp*player.killHeal);          // Reaper
     if(player.killInv) player.inv=Math.max(player.inv,0.9);               // Phantom
+    if(typeof perkFire==='function') perkFire('kill',{e:de,x:de.x,y:de.y});
     document.getElementById('killTxt').textContent='Kills '+player.kills;
     if(de.type==='N' && curRoom.dungeon && curRoom.objs){   // objective node destroyed
       const o=curRoom.objs[de.ch]; if(o&&!o.done){ o.got++;
@@ -486,8 +489,9 @@ function update(dt){
     for(const e of enemies){ const d=Math.hypot(e.x-al.x,e.y-al.y); if(d<bd){bd=d;tgt=e;} }
     if(tgt){ if(bd>26){ al.x+=(tgt.x-al.x)/bd*140*dt; al.y+=(tgt.y-al.y)/bd*140*dt; }
       else { al.cd-=dt; if(al.cd<=0){ al.cd=0.5/(1+(player.allyHaste||0));   // Skald tempo
-        tgt.hp-=al.dmg; tgt.flash=0.1;
+        dealDamage(tgt,al.dmg,{ally:true,silent:true});
         if(player.allyDot) applyStatus(tgt,'poison',2,al.dmg*player.allyDot/2);  // Plaguebringer
+        if(al.st) applyStatus(tgt,al.st.id,al.st.dur||2,al.st.val||0);           // Bonecraft: minions inherit your on-hit
         texts.push({x:tgt.x,y:tgt.y-tgt.r-2,txt:al.dmg,col:'#8fd48c',life:0.4}); } } }
     else { const d=Math.hypot(player.x-al.x,player.y-al.y)||1;
       if(d>50){ al.x+=(player.x-al.x)/d*150*dt; al.y+=(player.y-al.y)/d*150*dt; } }
@@ -497,8 +501,9 @@ function update(dt){
       if(z.healOnly){ if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) healPlayer(9*(z.ap||1)); }
       else {
         for(const e of enemies){ if(Math.hypot(e.x-z.x,e.y-z.y)<z.r){
-          e.hp-=Math.round(12*(z.ap||1)); e.flash=0.08;
-          if(z.fire) applyStatus(e,'burn',2,6*(z.ap||1)); } }
+          dealDamage(e,z.dmg||Math.round(12*(z.ap||1)),{zone:true,silent:true,col:z.col});
+          if(z.fire) applyStatus(e,'burn',2,6*(z.ap||1));
+          if(z.poison) applyStatus(e,'poison',3,Math.max(2,Math.round((z.dmg||12*(z.ap||1))*0.4))); } }
         if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) player.hp=Math.min(player.maxhp,player.hp+5); } }
     if(z.life<=0) zones.splice(i,1); }
   if(player.spiritT>0){ player.spiritT-=dt;

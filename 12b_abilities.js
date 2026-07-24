@@ -45,16 +45,19 @@ function abilFx(kind,x,y,col,ang){
 }
 // ----- cast primitives (each returns a cast(ctx) fn). ctx={x,y,aim,AP,dmg,cls} -----
 // ground abilities use ctx.x/ctx.y (the tapped world point); others use player pos.
+// Every primitive stamps a KIND on the closure it returns; A() copies it onto the ability
+// def, so perks can target a whole family of abilities ({kind:'dash'}) rather than one id.
+function K(kind,fn){ fn.kind=kind; return fn; }
 const P = {
  fan:(n,sp,spd,dm,col,r,life,pc)=>(c)=>{ const a0=c.aim;
    for(let i=0;i<n;i++){ const sa=a0+(i-(n-1)/2)*sp;
      pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*spd,vy:Math.sin(sa)*spd,r:r,life:life,dmg:Math.round(c.dmg*dm*c.AP),pierce:pc||0,lastHit:null}); }
    abilFx('fan',player.x,player.y,col,a0); },
  nova:(rad,dm,col,slow)=>(c)=>{ fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.38,col:col});
-   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)applyStatus(e,'chill',slow,0); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
+   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ dealDamage(e,c.dmg*dm*c.AP,{ability:true,col:col}); if(slow)applyStatus(e,'chill',slow,0); } }
    abilFx('nova',player.x,player.y,col); },
  blast:(rad,dm,col,slow)=>(c)=>{ fx.push({t:'ring',x:c.x,y:c.y,r:rad,life:0.38,col:col});
-   for(const e of enemies){ if(Math.hypot(e.x-c.x,e.y-c.y)<rad){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; if(slow)applyStatus(e,'chill',slow,0); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); } }
+   for(const e of enemies){ if(Math.hypot(e.x-c.x,e.y-c.y)<rad){ dealDamage(e,c.dmg*dm*c.AP,{ability:true,col:col}); if(slow)applyStatus(e,'chill',slow,0); } }
    abilFx('blast',c.x,c.y,col); },
  dash:(dist,inv,col)=>(c)=>{ const a=c.aim, ox=player.x, oy=player.y;
    const nx=player.x+Math.cos(a)*dist, ny=player.y+Math.sin(a)*dist;
@@ -71,23 +74,33 @@ const P = {
    abilFx('whirl',player.x,player.y,col); },
  chain:(n,dm,col)=>(c)=>{ const s=enemies.slice().sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y)).slice(0,n);
    const pts=[{x:player.x,y:player.y}];
-   for(const e of s){ const d=Math.round(c.dmg*dm*c.AP); e.hp-=d; e.flash=0.15; pts.push({x:e.x,y:e.y}); texts.push({x:e.x,y:e.y-e.r,txt:d,col:col,life:0.6}); }
+   for(const e of s){ dealDamage(e,c.dmg*dm*c.AP,{ability:true,col:col}); pts.push({x:e.x,y:e.y}); }
    if(pts.length>1) fx.push({t:'bolt',pts:pts,life:0.3,col:col}); },
- summon:(spr,cnt,dm,life)=>(c)=>{ const n2=cnt*(player.summonX2?2:1);   // Packlord / Lich
-   for(let i=0;i<n2;i++) allies.push({x:player.x,y:player.y,dmg:Math.round(c.dmg*dm*c.AP),life:life,cd:0,spr:spr}); abilFx('summon',player.x,player.y); },
+ summon:(spr,cnt,dm,life)=>(c)=>{ const n2=cnt*(player.summonX2?2:1)*(player._sumMul||1);   // Packlord / Lich / perk mods
+   for(let i=0;i<n2;i++) allies.push({x:player.x,y:player.y,
+     dmg:Math.round(c.dmg*dm*c.AP*(player._sumDmg||1)),life:life*(player._sumLife||1),
+     cd:0,spr:spr,st:player._sumSt||null}); abilFx('summon',player.x,player.y); },
  heal:(pct)=>(c)=>{ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*pct); abilFx('heal',player.x,player.y);
    texts.push({x:player.x,y:player.y-28,txt:'+'+Math.round(player.maxhp*pct),col:'#8fd48c',life:0.8}); },
  buff:(fld,mult,dur,inv)=>(c)=>{ player[fld+'T']=dur; player[fld+'M']=mult; if(inv)player.inv=Math.max(player.inv,inv); abilFx('buff',player.x,player.y,'#ffd07a'); },
  invuln:(dur)=>(c)=>{ player.inv=Math.max(player.inv,dur); abilFx('invuln',player.x,player.y); },
  zone:(rad,life,col)=>(c)=>{ zones.push({x:c.x,y:c.y,r:rad,life:life,tick:0,ap:c.AP}); fx.push({t:'ring',x:c.x,y:c.y,r:rad,life:0.35,col:col}); },
  drain:(rad,dm,col,healPer)=>(c)=>{ let n=0;
-   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ e.hp-=Math.round(c.dmg*dm*c.AP); e.flash=0.15; n++; } }
+   for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ dealDamage(e,c.dmg*dm*c.AP,{ability:true,silent:true}); n++; } }
    player.hp=Math.min(player.maxhp,player.hp+n*healPer*c.AP); fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.35,col:col}); abilFx('drain',player.x,player.y,col); },
  spirit:(dur)=>(c)=>{ player.spiritT=dur*(1+(player.spiritDur||0));   // Spiritcaller lingering
    player.spiritAP=c.AP; abilFx('summon',player.x,player.y); },
  combo:(...fns)=>(c)=>{ for(const f of fns) f(c); },
 };
-function A(id,name,mp,cd,icon,desc,cast,ground){ return {id:id,name:name,mp:mp,cd:cd,icon:icon,desc:desc,cast:cast,ground:!!ground}; }
+// stamp the kind on every cast closure without touching the bodies above; a combo carries
+// the kinds of all its parts, so "your dashes ..." also matches Leap (dash + nova).
+for(const _k in P){ const _f=P[_k]; P[_k]=function(){ const fn=_f.apply(null,arguments);
+  if(_k==='combo'){ const ks=[]; for(const g of arguments) if(g&&g.kind) ks.push(g.kind);
+    fn.kinds=ks.length?ks:['combo']; fn.kind=fn.kinds[0]; }
+  else { fn.kind=_k; fn.kinds=[_k]; }
+  return fn; }; }
+function A(id,name,mp,cd,icon,desc,cast,ground){ return {id:id,name:name,mp:mp,cd:cd,icon:icon,desc:desc,
+  cast:cast,ground:!!ground,kind:(cast&&cast.kind)||null,kinds:(cast&&cast.kinds)||[]}; }
 
 // ----- per-class ability pools (first 3 = default loadout) -----
 const APOOL = {
@@ -392,9 +405,16 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
   if(abilCd(a.id)>0){ texts.push({x:player.x,y:player.y-30,txt:'◷ cooldown',col:'#c9c2b8',life:0.6}); navigator.vibrate&&navigator.vibrate(15); return; }
   if((player.mp||0)<a.mp){ texts.push({x:player.x,y:player.y-30,txt:'◇ low mana',col:'#7ab8d4',life:0.7}); navigator.vibrate&&navigator.vibrate(20); return; }
   player.mp-=a.mp; player.acd[a.id]=a.cd;
-  const ctx={ x:(a.ground&&wx!=null)?wx:player.x, y:(a.ground&&wy!=null)?wy:player.y, aim:player.aim||0, AP:player.abilPow||1, dmg:player.dmg, cls:ch.cls };
+  const ctx={ x:(a.ground&&wx!=null)?wx:player.x, y:(a.ground&&wy!=null)?wy:player.y, aim:player.aim||0,
+    AP:(player.abilPow||1)*((typeof dynAP==='function')?dynAP():1),
+    dmg:Math.round(player.dmg*((typeof dynAtk==='function')?dynAtk():1)), cls:ch.cls };
+  // perk ability-mods: `pre` may spend resource / boost the cast before it runs
+  const _mods=(typeof perkCastPre==='function')?perkCastPre(a,ctx):null;
   const _n0=pShots.length;
   try{ a.cast(ctx); }catch(e){ if(typeof showErr==='function') showErr(e); }
+  player._lastCast={fn:a.cast,x:ctx.x,y:ctx.y,aim:ctx.aim,AP:ctx.AP,dmg:ctx.dmg,cls:ctx.cls};
+  if(typeof perkCastPost==='function') perkCastPost(_mods,a,ctx);
+  if(typeof perkFire==='function') perkFire('cast',{x:ctx.x,y:ctx.y,aim:ctx.aim,abil:a.id,kind:a.kind,kinds:a.kinds});
   // tag this cast's projectiles for the forge — every ability has its own projectile look
   for(let i=_n0;i<pShots.length;i++){ if(!pShots[i].pk) pShots[i].pk='a:'+a.id; }
   // ---- ascension cast capstones ----

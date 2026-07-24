@@ -325,15 +325,20 @@ const ABIL={
  shaman:{res:'Spirits',col:'#7ab8d4',rule:'time',d:'Spirit Ring: 8 orbiting wards, 8s'},
  dragoon:{res:'Wind-up',col:'#e07a2e',rule:'prox',d:'Skyfall: leap and crater the ground'},
 };
-function chargeRes(kind){ const rd=player.resDef; if(!rd) return;
+// Classes with a PERK_RES entry (13b_perks.js) use its gain table — that meter is a real
+// resource perks read and spend. Everyone else keeps the old single-rule charge.
+function chargeRes(kind){
+ const pr=(typeof perkResDef==='function')?perkResDef():null;
+ if(pr){ const g=pr.gain&&pr.gain[kind]; if(g) resAdd(g); return; }
+ const rd=player.resDef; if(!rd) return;
  if(rd.rule==='shot'&&kind==='shot') res=Math.min(100,res+2.2);
  else if(rd.rule==='hit'&&kind==='hit') res=Math.min(100,res+3);
  else if(rd.rule==='kill'&&kind==='kill') res=Math.min(100,res+16);
  else if(rd.rule==='hurt'&&kind==='hurt') res=Math.min(100,res+13);
 }
 function aoe(x,y,r,dmg,col){ fx.push({t:'ring',x:x,y:y,r:r,life:0.35,col:col});
- for(const e of enemies){ if(Math.hypot(e.x-x,e.y-y)<r){ e.hp-=dmg; e.flash=0.15;
-  texts.push({x:e.x,y:e.y-e.r,txt:dmg,col:col,life:0.6}); } } boom(x,y,col,20); }
+ for(const e of enemies){ if(Math.hypot(e.x-x,e.y-y)<r) dealDamage(e,dmg,{ability:true,col:col}); }
+ boom(x,y,col,20); }
 // Ability casting now routes through the 3-slot loadout system (12b_abilities.js).
 function abilityCost(){ return (typeof armedCost==='function')?armedCost():1e9; }
 function doAbility(wx,wy){ if(typeof castArmed==='function') castArmed(wx,wy); }
@@ -647,6 +652,8 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
     'summonX2','homing','terrainGhost','stun3','groundHeal','allyDot','allyHaste',
     'echoCast','spiritDur','dashBlast','poisonHit','shockHit','bleedHit','weakHit']) player[k]=T[k]||0; }
  if(player.shield===undefined) player.shield=0;
+ // perk engine: re-aggregate the owned nodes' cond/trig/mod entries (13b_perks.js)
+ if(typeof perkAgg==='function') player._perk=perkAgg(ch.cls,rpg);
  player.look={cls:ch.cls, hue:ci*20, mt:mt, armT:(aL?11:at), helmT:ht, asc:(rpg.ascension||null)};
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }

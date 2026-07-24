@@ -37,6 +37,31 @@ function tickStatuses(e,dt){ if(!e.st) return true;
  return act; }
 function statusDmgOut(e){ return hasStatus(e,'weak')?0.7:1; }                       // weakened hit softer
 function statusDmgIn(e){ return hasStatus(e,'curse')?(1+(e.st.curse.v||0.15)):1; }  // cursed take more
+// ===== ONE funnel for every point of PLAYER-SOURCE damage =====
+// Shots, abilities, zones, minions and perk procs all land here, so the multipliers that
+// should apply everywhere (curse / execute / shatter, lifesteal) and the on-hit perk
+// triggers fire uniformly instead of only for auto-attacks.
+//   src {crit, ability, zone, ally, perk, silent, col}  — silent skips the damage number
+function dealDamage(e,amount,src){
+  if(!e||e.hp<=0) return 0;
+  src=src||{};
+  let dmg=Math.round(amount);
+  if(player.execute&&e.hp<e.maxhp*0.15) dmg=Math.round(dmg*(1+player.execute));            // Executioner
+  if(player.shatter&&(e.slowT>0||hasStatus(e,'freeze'))) dmg=Math.round(dmg*(1+player.shatter)); // Cryomancer
+  dmg=Math.max(1,Math.round(dmg*statusDmgIn(e)));                                          // cursed foes
+  e.hp-=dmg; e.flash=Math.max(e.flash||0,0.12);
+  if(e.boss&&typeof bossBar!=='undefined') bossBar=e;
+  // lifesteal covers what YOU land (shots, abilities, perk procs) — not minion or zone ticks,
+  // which would otherwise drip-heal you forever with no risk attached.
+  if(!src.ally&&!src.zone){ const ls=(player.ls||0)+((typeof dynLs==='function')?dynLs():0);
+    if(ls&&typeof healPlayer==='function') healPlayer(dmg*ls); }
+  if(!src.silent&&typeof texts!=='undefined')
+    texts.push({x:e.x+(Math.random()*18-9),y:e.y-e.r-2,txt:src.crit?dmg+'!':dmg,
+      col:src.col||(src.crit?'#ffd23d':'#ffe9b0'),life:src.crit?0.85:0.55});
+  if(typeof perkFire==='function'){ const pc={e:e,dmg:dmg,crit:!!src.crit,src:src};
+    perkFire('hit',pc); if(src.crit) perkFire('crit',pc); }
+  return dmg;
+}
 function los(x1,y1,x2,y2){
   const d=Math.hypot(x2-x1,y2-y1), steps=Math.ceil(d/14);
   for(let i=1;i<steps;i++){ const t=i/steps;
@@ -69,12 +94,14 @@ function fire(dt){
   if(ang===null) return;
   let _rate=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
   if(player.moveRof&&player._moving) _rate/=(1+player.moveRof);   // Galewalker: faster on the move
+  if(typeof dynRof==='function') _rate/=dynRof();                 // conditional perks
   player.fireT=_rate;
   player.aim=ang;
   player.atkT=0.2;                     // trigger the attack animation
   const de3=player.deadeye>0;
-  const crit=Math.random()<(player.crit||0);          // LUCK -> crit chance
-  let dm=player.dmg*(wt.dm||1)*(player.bDmgT>0?(player.bDmgM||1.5):1);
+  const critC=(player.crit||0)+((typeof dynCrit==='function')?dynCrit():0);
+  const crit=Math.random()<critC;                     // LUCK + conditional perks -> crit chance
+  let dm=player.dmg*(wt.dm||1)*(player.bDmgT>0?(player.bDmgM||1.5):1)*((typeof dynAtk==='function')?dynAtk():1);
   if(crit) dm*=(player.critMult||1.5);
   let pr=(wt.pierce||0)+(player.pierce||0);
   if(de3){ dm*=3; pr=99; }
