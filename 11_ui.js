@@ -704,6 +704,7 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  player.crit=Math.min(0.75, st.luck*0.005);           // LUCK -> crit chance + hit
  player.critMult=1.5+st.luck*0.004;
  player.fortune=st.fort;                              // FORTUNE -> loot
+ if(typeof petBonusFortune==='function') player.fortune+=petBonusFortune();   // active pet's Fortune kit
  player.shots=c.shots||1; player.pierce=c.pierce||0;
  player.ls=c.ls||0; player.slowShot=!!c.slow;
  player.resDef=ABIL[ch.cls]||ABIL.knight;
@@ -1022,7 +1023,7 @@ function play(){
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
  player.acd={}; armedSlot=0; if(typeof ensureLoadout==='function') ensureLoadout();
  if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);   // backfill earned perk points
- spawnPet();
+ spawnPet(); if(typeof spawnActivePet==='function') spawnActivePet();
  document.getElementById('killTxt').textContent='Kills 0';
  hudRPG();
  hideAll(); showGameHud(); inGame=true;

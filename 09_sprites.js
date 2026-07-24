@@ -898,6 +898,7 @@ function render(){
     ctx.fillText(gp.home?'EXIT':(GBOSS[gp.ring]?GBOSS[gp.ring].dn:'DUNGEON'),gp.x,gp.y-24); ctx.textAlign='left'; }
   for(const lb of loots) drawLootBag(lb,pn);
   if(typeof drawEggDrops==='function') drawEggDrops();
+  if(typeof drawPet==='function') drawPet();                   // active companion pet
   for(const e of enemies){
     shadow(e.x,e.y+e.r*0.8,e.r*1.05);
     drawEnemySprite(e,pn);

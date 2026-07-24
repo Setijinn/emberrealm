@@ -157,3 +157,82 @@ if(typeof window!=='undefined' && typeof _img==='function'){
   for(const p of PET_DB) _petImg[p.spr]=_img('assets/pets/'+p.spr+'.png');
   for(const c of PET_CAT_KEYS) _eggImg[c]=_img('assets/pets/egg_'+c+'.png');
 }
+
+// ================= Phase 2: the active pet in combat =================
+// The equipped pet (activePet()) follows you and auto-casts its rolled UTILITY kit. It deals no
+// weapon damage — its abilities are support (heal/mana/shield/haste) + light control (shock/stun/
+// chill/spark). Strength scales with rarity + level via petPower().
+let petEnt = null;
+function petPower(p){ return 1 + (p.rar||0)*0.4 + ((p.lvl||1)-1)*0.10; }
+function spawnActivePet(){ const p=activePet();
+  if(!p){ petEnt=null; return; }
+  petEnt={ def:p, x:(typeof player!=='undefined'?player.x-24:0), y:(typeof player!=='undefined'?player.y+14:0), face:1, cds:{}, t:0 };
+  for(const id of p.kit){ const u=petUtil(id); if(u&&u.cd>0) petEnt.cds[id]=1.5+Math.random()*u.cd*0.5; }   // stagger first casts
+}
+// passive Fortune (folded into recalcStats via the hook in 11_ui)
+function petBonusFortune(){ const p=activePet(); if(!p||!p.kit||p.kit.indexOf('fortune')<0) return 0;
+  return Math.round(8 + p.rar*7 + (p.lvl-1)*1.5); }
+// tiny sparkle burst for pet fx (uses the particle system when present)
+function petSpark(x,y,col,n){ if(typeof emitP!=='function') return; n=n||6;
+  for(let i=0;i<n;i++){ const a=Math.random()*6.283, s=20+Math.random()*40;
+    emitP(x,y,{vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:0.5+Math.random()*0.3,col:col,sz:2,g:60,drag:2,glow:true}); } }
+
+function updatePet(dt){ if(!petEnt||!petEnt.def||typeof player==='undefined') return; const p=petEnt.def;
+  petEnt.t+=dt;
+  // follow: trail slightly behind/beside the hero, lerped so it drifts naturally
+  const tx=player.x-22, ty=player.y+14;
+  petEnt.x+=(tx-petEnt.x)*Math.min(1,dt*6); petEnt.y+=(ty-petEnt.y)*Math.min(1,dt*6);
+  if(Math.abs(tx-petEnt.x)>1) petEnt.face=(tx<petEnt.x)?-1:1;
+  const pow=petPower(p);
+  // passive regen (continuous, gentle)
+  if(p.kit.indexOf('regen')>=0 && typeof healPlayer==='function' && player.hp<player.maxhp) healPlayer(player.maxhp*0.005*pow*dt);
+  // active abilities on cooldown
+  for(const id of p.kit){ const u=petUtil(id); if(!u||u.cd<=0) continue;
+    petEnt.cds[id]=(petEnt.cds[id]||0)-dt; if(petEnt.cds[id]>0) continue;
+    petEnt.cds[id]= petAct(p,id,pow) ? u.cd : 0.6;   // fired -> full cd; condition unmet -> retry soon
+  }
+}
+// nearest live enemy to the pet within range (or null)
+function _petTarget(rng){ if(typeof enemies==='undefined') return null; let best=null,bd=rng*rng;
+  for(const e of enemies){ if(!e||e.hp<=0||e.node) continue; const dx=e.x-petEnt.x,dy=e.y-petEnt.y,d=dx*dx+dy*dy; if(d<bd){bd=d;best=e;} }
+  return best; }
+function petAct(p,id,pow){
+  const dmg=(typeof player!=='undefined'?player.dmg:10);
+  switch(id){
+    case 'mend': if(player.hp>=player.maxhp*0.9) return false;
+      if(typeof healPlayer==='function') healPlayer(player.maxhp*(0.07+0.02*pow)); petSpark(player.x,player.y,'#7ee08a'); return true;
+    case 'font': if((player.mp||0)>=player.maxmp*0.7) return false;
+      player.mp=Math.min(player.maxmp,(player.mp||0)+player.maxmp*(0.12+0.03*pow)); petSpark(player.x,player.y-4,'#6ab8e0'); return true;
+    case 'guard': if((player.shield||0)>=player.maxhp*0.14) return false;
+      player.shield=(player.shield||0)+player.maxhp*(0.09+0.03*pow); petSpark(player.x,player.y,'#a9e0ff'); return true;
+    case 'haste': player.bSpdT=Math.max(player.bSpdT||0,3); player.bSpdM=Math.max(player.bSpdM||1,1.28); petSpark(player.x,player.y,'#e6d29a'); return true;
+    case 'shock': { const e=_petTarget(240); if(!e) return false;
+      if(typeof dealDamage==='function') dealDamage(e, dmg*(0.35+0.12*pow), 'pet');
+      if(typeof applyStatus==='function') applyStatus(e,'shock',2.2,Math.max(2,Math.round(dmg*0.1*pow))); petSpark(e.x,e.y,'#6ab8ff'); return true; }
+    case 'stun': { const e=_petTarget(210); if(!e) return false;
+      if(typeof applyStatus==='function') applyStatus(e,'stun',0.7+0.12*pow); petSpark(e.x,e.y,'#ffe08a'); return true; }
+    case 'spark': { let hit=false; if(typeof enemies!=='undefined') for(const e of enemies){ if(!e||e.hp<=0||e.node) continue;
+        if(Math.hypot(e.x-player.x,e.y-player.y)<125){ if(typeof dealDamage==='function') dealDamage(e, dmg*(0.28+0.1*pow), 'pet'); hit=true; } }
+      if(hit) petSpark(player.x,player.y,'#ffd07a',10); return hit; }
+    case 'chill': { let hit=false; if(typeof enemies!=='undefined') for(const e of enemies){ if(!e||e.hp<=0||e.node) continue;
+        if(Math.hypot(e.x-player.x,e.y-player.y)<150){ if(typeof applyStatus==='function') applyStatus(e,'chill',1.6+0.2*pow); hit=true; } }
+      if(hit) petSpark(player.x,player.y,'#9ad4ef',8); return hit; }
+    default: return false;   // regen/fortune are passive
+  }
+}
+function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return; const p=petEnt.def;
+  const im=_petImg[p.spr], x=petEnt.x, y=petEnt.y, t=performance.now()/1000;
+  const bob=Math.sin(t*3+x*0.05)*2;
+  if(typeof shadow==='function') shadow(x,y,8);
+  // rarity aura for rare+ pets
+  if(p.rar>=2){ const col=PET_RAR_COL[p.rar]||'#fff', pulse=0.4+0.3*Math.sin(t*2.5);
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const g=ctx.createRadialGradient(x,y-6,1,x,y-6,18+p.rar*3);
+    g.addColorStop(0,col+Math.round(pulse*90).toString(16).padStart(2,'0')); g.addColorStop(1,col+'00');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y-6,18+p.rar*3,0,6.29); ctx.fill(); ctx.restore(); }
+  if(im&&im.complete&&im.naturalWidth){ ctx.save(); ctx.imageSmoothingEnabled=false;
+    const sc=(TILE*0.62*(p.size||1))/Math.max(im.naturalWidth,im.naturalHeight);
+    const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
+    ctx.translate(x,y+bob); ctx.scale(petEnt.face<0?-1:1,1);
+    ctx.drawImage(im,-w/2,-h,w,h); ctx.restore();
+  } }
