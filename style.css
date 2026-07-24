@@ -35,19 +35,19 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .ccard.mini .cicCv{width:56px;height:56px;}
 .cd{font-size:11px;color:#8a8494;min-height:40px;margin-top:4px;}
 .cs{font-size:11px;color:#d8d2c8;margin-top:6px;}
-#menuBtn{position:fixed;top:8px;right:10px;z-index:15;display:none;align-items:center;justify-content:center;
+#menuBtn{display:none;align-items:center;justify-content:center;
  width:42px;height:34px;background:rgba(23,20,29,.85);border:1px solid #39323f;border-radius:8px;color:#d8d2c8;font-size:18px;}
 
 .dgrid{display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:8px;max-width:92vw;}
 .mbtn.dev{width:auto;font-size:14px;padding:8px 10px;}
 .mbtn.dev.on{border-color:#7dc47a;color:#7dc47a;}
-#devBtn2{position:fixed;top:8px;right:58px;z-index:15;display:none;align-items:center;justify-content:center;
+#devBtn2{display:none;align-items:center;justify-content:center;
  width:42px;height:34px;background:rgba(23,20,29,.85);border:1px solid #7a4a1e;border-radius:8px;font-size:17px;}
 
-#potBtn,#shopBtn{position:fixed;bottom:14px;right:12px;z-index:15;display:none;align-items:center;justify-content:center;
+#potBtn,#shopBtn{display:none;align-items:center;justify-content:center;
  min-width:58px;height:40px;padding:0 12px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;
- color:#d8d2c8;font-family:inherit;font-size:16px;}
-#shopBtn{right:84px;border-color:#7a4a1e;color:#ffc94d;}
+ color:#d8d2c8;font-family:inherit;font-size:16px;white-space:nowrap;}
+#shopBtn{border-color:#7a4a1e;color:#ffc94d;}
 
 .ccard{position:relative;}
 .ccard.sel{border-color:#ffc94d;}
@@ -55,7 +55,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .ccard.mini{width:152px;padding:10px;}
 #classList{max-height:52vh;overflow-y:auto;}
 
-#invBtn{position:fixed;bottom:14px;right:156px;z-index:15;display:none;align-items:center;justify-content:center;
+#invBtn{display:none;align-items:center;justify-content:center;
  width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:18px;}
 .igrid{display:grid;grid-template-columns:repeat(auto-fill,54px);gap:6px;max-height:38vh;overflow-y:auto;padding:2px;justify-content:center;}
 .islot{position:relative;width:54px;height:50px;background:#17141d;border:1px solid #39323f;border-radius:8px;
@@ -69,9 +69,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 .istats{margin-top:5px;font-size:10px;line-height:1.5;letter-spacing:.02em;}
 #eqStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:9px;}
 
-#loadBtn{position:fixed;top:8px;right:62px;z-index:15;display:none;align-items:center;justify-content:center;
- width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
-#skillBtn{position:fixed;top:8px;right:112px;z-index:15;display:none;align-items:center;justify-content:center;
+#loadBtn,#skillBtn{display:none;align-items:center;justify-content:center;
  width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
 /* skill tree screen */
 #skillScr{position:fixed;inset:0;z-index:40;display:none;background:rgba(9,7,12,.95);overflow-y:auto;
@@ -190,16 +188,8 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;}
 
 /* PC mode: gather the thumb-scattered HUD buttons into one tidy top-right row
    (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
-body.pcmode #potBtn{bottom:auto;top:8px;right:12px;}
-body.pcmode #invBtn{bottom:auto;top:8px;right:62px;}
-body.pcmode #mapBtn{bottom:auto;top:8px;right:212px;}
-body.pcmode #loadBtn{top:8px;right:112px;}
-body.pcmode #skillBtn{top:8px;right:162px;}
-#mapBtn{position:fixed;bottom:14px;right:268px;z-index:15;display:none;align-items:center;justify-content:center;
+#mapBtn,#coopBtn{display:none;align-items:center;justify-content:center;
  width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:17px;}
-#coopBtn{position:fixed;bottom:14px;right:324px;z-index:15;display:none;align-items:center;justify-content:center;
- width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:17px;}
-body.pcmode #coopBtn{bottom:auto;top:8px;right:262px;}
 #coopCard{position:relative;width:min(92vw,360px);background:#141019;border:2px solid #7a4a1e;border-radius:14px;
  padding:18px 20px 20px;box-shadow:0 14px 40px rgba(0,0,0,.7);}
 #coopCard .mbtn{width:100%;margin-top:6px;}
@@ -208,8 +198,9 @@ body.pcmode #coopBtn{bottom:auto;top:8px;right:262px;}
 #coopCodeIn{flex:1;min-width:0;background:#1c1626;border:1px solid #39323f;border-radius:8px;color:#f0e8d8;
  padding:10px;font-family:'Pixelify Sans',monospace;font-size:18px;letter-spacing:.2em;text-transform:uppercase;text-align:center;}
 #mapScr{position:fixed;inset:0;z-index:22;display:none;align-items:center;justify-content:center;background:rgba(5,4,8,.55);}
-#mapCard{width:auto;max-width:97vw;max-height:96vh;overflow:auto;background:#141019;border:2px solid #7a4a1e;border-radius:14px;
- box-shadow:0 14px 50px rgba(0,0,0,.7);padding:10px 12px 12px;}
+#mapCard{width:min(96vw,1010px);max-height:96vh;background:#141019;border:2px solid #7a4a1e;border-radius:14px;
+ box-shadow:0 14px 50px rgba(0,0,0,.7);padding:10px 12px 12px;
+ display:flex;flex-direction:column;gap:6px;}   /* header + map + CLOSE always reachable */
 #mapCard #shHead span{font-family:'Pixelify Sans',monospace;font-size:16px;color:#ffc94d;}
 
 #invCard{position:relative;width:min(96vw,760px);max-height:96vh;display:flex;padding:0;
@@ -305,27 +296,23 @@ body.pcmode #coopBtn{bottom:auto;top:8px;right:262px;}
 .setRow.tog{cursor:pointer;}
 .setRow.tog:active{background:rgba(255,201,77,.05);}
 
-/* ---------- UI scale (settings -> --uis) ----------
-   Scales the fixed HUD buttons: sizes, fonts AND corner offsets shrink/grow
-   together so the button rows keep their spacing at any scale. Canvas-drawn
-   UI (orbs, ability buttons, prompts) reads the same factor as UIS in JS. */
+/* ---------- HUD button rows (flex, never hand-placed) ----------
+   Every HUD button lives in one of two fixed FLEX rows, so nothing can overlap:
+   widths are decided by content (🧪 25 / 🏪 SHOP grow freely) and a hidden button
+   collapses instead of leaving a hole. --uis (settings) scales sizes, gaps and the
+   corner insets together; canvas-drawn UI reads the same factor as UIS in JS.
+   touch: #hudTop = top-right row, #hudBot = bottom-right row.
+   pcmode: #hudBot goes position:static and folds into #hudTop as ONE top-right row. */
 :root{--uis:1;}
-#menuBtn{top:calc(8px*var(--uis));right:calc(10px*var(--uis));width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(18px*var(--uis));}
-#devBtn2{top:calc(8px*var(--uis));right:calc(58px*var(--uis));width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(17px*var(--uis));}
-#potBtn,#shopBtn{bottom:calc(14px*var(--uis));right:calc(12px*var(--uis));min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
-#shopBtn{right:calc(84px*var(--uis));}
-#invBtn{bottom:calc(14px*var(--uis));right:calc(156px*var(--uis));width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
-#loadBtn{top:calc(8px*var(--uis));right:calc(62px*var(--uis));width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
-#skillBtn{top:calc(8px*var(--uis));right:calc(112px*var(--uis));width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
-#mapBtn{bottom:calc(14px*var(--uis));right:calc(268px*var(--uis));width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
-#coopBtn{bottom:calc(14px*var(--uis));right:calc(324px*var(--uis));width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
-body.pcmode #potBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(12px*var(--uis));}
-body.pcmode #invBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(62px*var(--uis));}
-body.pcmode #loadBtn{top:calc(8px*var(--uis));right:calc(112px*var(--uis));}
-body.pcmode #skillBtn{top:calc(8px*var(--uis));right:calc(162px*var(--uis));}
-body.pcmode #mapBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(212px*var(--uis));}
-body.pcmode #coopBtn{bottom:auto;top:calc(8px*var(--uis));right:calc(262px*var(--uis));}
-/* pcmode gathers the HUD into the top-right row — the ☰/🛠 buttons (right:10/58) were
-   left underneath it, fully covered by the 🧪/🎒 buttons. Give them their own slots. */
-body.pcmode #menuBtn{right:calc(318px*var(--uis));}
-body.pcmode #devBtn2{right:calc(366px*var(--uis));}
+#hudTop{position:fixed;top:calc(8px*var(--uis));right:calc(10px*var(--uis));z-index:15;
+ display:flex;align-items:center;gap:calc(6px*var(--uis));pointer-events:none;}
+#hudBot{position:fixed;bottom:calc(14px*var(--uis));right:calc(12px*var(--uis));z-index:15;
+ display:flex;align-items:center;gap:calc(8px*var(--uis));pointer-events:none;}
+body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--uis));margin-right:calc(4px*var(--uis));}
+#hudTop>*,#hudBot>*{pointer-events:auto;}
+#menuBtn{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(18px*var(--uis));}
+#devBtn2{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(17px*var(--uis));}
+#potBtn,#shopBtn{min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
+#invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#loadBtn,#skillBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#mapBtn,#coopBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}

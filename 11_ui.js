@@ -1,5 +1,6 @@
 // ---------- accounts, menus, character select ----------
 let inGame=false; let isAdmin=false;
+let runLive=false, runChar=null;   // a run is in progress for THIS character -> ☰ offers RESUME
 const memStore={};
 const LS={
  get:(k,d)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):(k in memStore?memStore[k]:d);}catch(e){return k in memStore?memStore[k]:d;}},
@@ -353,62 +354,105 @@ function slotLabel(kind){ const ch=curChar(); if(!ch||!rpg)return '—';
  return '—'; }
 let mapInt=null;
 const MAPCOL={w:'#16303f',d:'#c0a870',g:'#33502f',t:'#22391f',r:'#4a4550',k:'#5d5666',e:'#3a1f14',W:'#100d14'};
+// ---------- world map ----------
+// The Ascent is 64x864 tiles (1:13.5). Drawn as one strip it rendered as a ~56px-wide
+// sliver on a landscape screen \u2014 unreadable. Instead each ZONE is its own panel, laid out
+// bottom row first, left->right = the order you climb, so the map fits the screen shape
+// and every zone gets ~2.8px per tile instead of 0.87.
+const MAP_W=980, MAP_M=16, MAP_GAP=10, MAP_HEAD=30, MAP_LBL=26, MAP_ROWGAP=10, MAP_FOOT=26;
+const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e'];
+function mapLayout(G){
+  const NZ=G.rings.names.length, zh=G.h/NZ;
+  const cols=Math.ceil(NZ/2), botN=cols, topN=NZ-cols;
+  const pw=(MAP_W-2*MAP_M-(cols-1)*MAP_GAP)/cols, s=pw/G.w, ph=zh*s;
+  const rowH=ph+MAP_LBL;
+  const H=Math.round(MAP_HEAD+(topN>0?rowH+MAP_ROWGAP:0)+rowH+MAP_FOOT);
+  const panel=(i)=>{ const top=i>=cols, col=top?i-cols:i, n=top?topN:botN;
+    const rowW=n*pw+(n-1)*MAP_GAP;
+    return {x:(MAP_W-rowW)/2+col*(pw+MAP_GAP),
+            y:MAP_HEAD+(top?0:(topN>0?rowH+MAP_ROWGAP:0)),
+            w:pw,h:ph, ty0:G.h-(i+1)*zh, ty1:G.h-i*zh}; };
+  return {NZ,zh,s,pw,ph,H,panel};
+}
+// terrain is static \u2014 render every panel once into an offscreen canvas and blit it,
+// so the live redraw only paints the moving marker
+let _mapCache=null;
+function mapTerrain(G,L){
+  const key=G.w+'x'+G.h+':'+MAP_W;
+  if(_mapCache&&_mapCache.key===key) return _mapCache.cv;
+  const off=document.createElement('canvas'); off.width=MAP_W; off.height=L.H;
+  const c=off.getContext('2d');
+  c.fillStyle='#0f0c14'; c.fillRect(0,0,MAP_W,L.H);
+  for(let i=0;i<L.NZ;i++){ const p=L.panel(i);
+    c.fillStyle='#14110e'; c.fillRect(p.x,p.y,p.w,p.h);
+    for(let ty=p.ty0;ty<p.ty1;ty++){ const row=G.grid[ty]; if(!row) continue;
+      const bd=Math.max(0,Math.min(L.NZ-1,Math.floor((1-ty/G.h)*L.NZ)));
+      for(let tx=0;tx<G.w;tx++){ const ch=row[tx];
+        if(ch==='W') continue;
+        c.fillStyle=(ch==='t')?'rgba(20,40,20,0.9)':(ch==='k')?'#5d5666':(ch==='w')?'#16303f':(MRAMP[bd]||'#547a44');
+        c.fillRect(p.x+tx*L.s,p.y+(ty-p.ty0)*L.s,L.s+0.6,L.s+0.6); } }
+    // panel frame + zone label beneath
+    c.strokeStyle='#39323f'; c.lineWidth=1; c.strokeRect(p.x-0.5,p.y-0.5,p.w+1,p.h+1);
+    const rg=G.rings.names[i];
+    c.textAlign='center';
+    c.font='bold 12px "Pixelify Sans",monospace'; c.fillStyle='#f0e8d8';
+    c.fillText(rg.n,p.x+p.w/2,p.y+p.h+14);
+    c.font='10px "Pixelify Sans",monospace'; c.fillStyle='#ffc94d';
+    c.fillText('Lv '+rg.lv+(rg.lv2?'\u2013'+rg.lv2:''),p.x+p.w/2,p.y+p.h+25); }
+  _mapCache={key:key,cv:off};
+  return off;
+}
+// a world point -> its panel + pixel position on the map
+function mapPos(G,L,wx,wy){ const tx=wx/TILE, ty=wy/TILE;
+  const i=Math.max(0,Math.min(L.NZ-1,Math.floor((1-ty/G.h)*L.NZ)));
+  const p=L.panel(i);
+  return {i:i,x:p.x+tx*L.s,y:p.y+(ty-p.ty0)*L.s}; }
 function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  if($s('mapScr').style.display==='none'||!$s('mapScr').style.display){
   if(mapInt){clearInterval(mapInt);mapInt=null;} return; }
  const cv2=$s('mapCv'), c=cv2.getContext('2d');
- const scl=cv2.width/G.w;
- const hpx=Math.ceil(G.h*scl);
- if(cv2.height!==hpx+30) cv2.height=hpx+30;
- // deep ocean backdrop with faint swell lines
- c.fillStyle='#14110e'; c.fillRect(0,0,cv2.width,cv2.height);
- // vertical zone map, tile by tile \u2014 band by height (bottom=green vale, top=molten)
- const NZ=G.rings.names.length;
- const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e'];
- for(let y=0;y<G.h;y++){ const row=G.grid[y];
-  const bd=Math.max(0,Math.min(NZ-1,Math.floor((1-y/G.h)*NZ)));
-  for(let x=0;x<G.w;x++){ const ch=row[x];
-   if(ch==='W') continue;
-   c.fillStyle=(ch==='t')?'rgba(20,40,20,0.9)':(ch==='k')?'#5d5666':(MRAMP[bd]||'#547a44');
-   c.fillRect(x*scl,y*scl,scl+0.6,scl+0.6); } }
- // zone boundary lines + centered labels
- c.strokeStyle='rgba(0,0,0,0.45)'; c.lineWidth=1;
- for(let i=1;i<NZ;i++){ const yy=G.h*(1-i/NZ)*scl;
-  c.beginPath(); c.moveTo(0,yy); c.lineTo(cv2.width,yy); c.stroke(); }
+ const L=mapLayout(G);
+ if(cv2.width!==MAP_W) cv2.width=MAP_W;
+ if(cv2.height!==L.H) cv2.height=L.H;
+ c.imageSmoothingEnabled=false;
+ c.drawImage(mapTerrain(G,L),0,0);
  c.textAlign='center';
- for(let i=0;i<NZ;i++){ const rg=G.rings.names[i];
-  const ly=G.h*(1-(i+0.5)/NZ)*scl, lx=cv2.width/2;
-  c.font='bold 9px "Pixelify Sans",monospace';
-  c.fillStyle='rgba(0,0,0,0.85)'; c.fillText(rg.n,lx+1,ly+1);
-  c.fillStyle='#f0e8d8'; c.fillText(rg.n,lx,ly);
-  c.font='8px "Pixelify Sans",monospace';
-  c.fillStyle='rgba(0,0,0,0.85)'; c.fillText('Lv '+rg.lv,lx+1,ly+10);
-  c.fillStyle='#ffc94d'; c.fillText('Lv '+rg.lv,lx,ly+9); }
+ c.font='bold 13px "Pixelify Sans",monospace'; c.fillStyle='#8a8494';
+ c.fillText('THE ASCENT  \u00b7  bottom row first, left to right \u2014 you climb toward the Molten Crown',MAP_W/2,19);
+ // waypoint pillars (attuned = gold, locked = grey)
+ if(G.pillars) for(const pl of G.pillars){ const q=mapPos(G,L,pl.tx*TILE,pl.ty*TILE);
+   const on=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
+   c.save(); c.translate(q.x,q.y); c.rotate(Math.PI/4);
+   c.fillStyle=on?'#ffd07a':'#4a4454'; c.fillRect(-4,-4,8,8);
+   c.strokeStyle='#14100c'; c.lineWidth=1; c.strokeRect(-4,-4,8,8); c.restore(); }
  // return portals
- for(const gp of G.portals){ const px=gp.x/TILE*scl, py=gp.y/TILE*scl;
-  c.strokeStyle='#c07ad4'; c.lineWidth=1.5;
-  c.beginPath(); c.arc(px,py,4,0,6.29); c.stroke();
-  c.fillStyle='#e8d8ff'; c.fillRect(px-1.5,py-1.5,3,3); }
- // you
+ if(G.portals) for(const gp of G.portals){ const q=mapPos(G,L,gp.x,gp.y);
+   c.strokeStyle='#c07ad4'; c.lineWidth=1.5;
+   c.beginPath(); c.arc(q.x,q.y,4,0,6.29); c.stroke();
+   c.fillStyle='#e8d8ff'; c.fillRect(q.x-1.5,q.y-1.5,3,3); }
+ // you (and a gold frame around the zone you're standing in)
  if(curRoom&&curRoom.key==='G'){
-  const px=player.x/TILE*scl, py=player.y/TILE*scl;
+  const q=mapPos(G,L,player.x,player.y), p=L.panel(q.i);
+  c.strokeStyle='#ffc94d'; c.lineWidth=2; c.strokeRect(p.x-1,p.y-1,p.w+2,p.h+2);
   const pu=(Math.sin(performance.now()/250)+1)/2;
-  c.strokeStyle='rgba(255,201,77,'+(0.9-pu*0.5)+')'; c.lineWidth=1.5;
-  c.beginPath(); c.arc(px,py,5+pu*5,0,6.29); c.stroke();
-  c.fillStyle='#fff'; c.beginPath(); c.arc(px,py,3,0,6.29); c.fill();
+  c.strokeStyle='rgba(255,201,77,'+(0.9-pu*0.5)+')'; c.lineWidth=2;
+  c.beginPath(); c.arc(q.x,q.y,5+pu*6,0,6.29); c.stroke();
+  c.fillStyle='#fff'; c.beginPath(); c.arc(q.x,q.y,3.5,0,6.29); c.fill();
   c.strokeStyle='#101c26'; c.lineWidth=1; c.stroke(); }
- // legend: shallows to the heart
- const ly2=hpx+10, lw=cv2.width-160;
- for(let i=0;i<100;i++){ const t=i/99;
-  c.fillStyle=t<0.15?'#c0a870':t<0.55?'hsl('+(105-t*90)+',35%,30%)':t<0.8?'#4a4550':'#7a3a1e';
-  c.fillRect(10+i*(lw/100),ly2,lw/100+0.6,8); }
- c.font='9px monospace'; c.textAlign='left'; c.fillStyle='#cfc8bd';
- c.fillText('shore \u00b7 Lv 1',10,ly2+17);
- c.fillText('heart \u00b7 Lv 150',10+lw-74,ly2+17);
- c.textAlign='right'; c.font='9px "Pixelify Sans",monospace';
+ // footer: legend + where you are
+ const fy=L.H-9;
+ c.textAlign='left'; c.font='10px "Pixelify Sans",monospace';
+ c.fillStyle='#ffd07a'; c.fillRect(MAP_M,fy-8,8,8);
+ c.fillStyle='#cfc8bd'; c.fillText('waypoint',MAP_M+13,fy);
+ c.fillStyle='#c07ad4'; c.beginPath(); c.arc(MAP_M+82,fy-4,4,0,6.29); c.fill();
+ c.fillStyle='#cfc8bd'; c.fillText('portal home',MAP_M+92,fy);
+ c.textAlign='right';
  if(curRoom&&curRoom.key==='G'){ const rg=regionAtPx(player.x,player.y);
-  c.fillStyle='#ffc94d'; c.fillText(rg?rg.n+' \u00b7 Lv '+rg.band:'',cv2.width-8,ly2+17); }
- else { c.fillStyle='#8a8494'; c.fillText('you are in '+(curRoom?curRoom.name:'')+' \u2014 portal in the plaza',cv2.width-8,ly2+17); }
+  // ringInfoAt returns {n,lv,lv2} \u2014 there is no .band field (the old footer printed
+  // "Lv undefined"); the live level here comes from the continuous curve instead.
+  const lv=(typeof grvLvAtY==='function')?grvLvAtY(player.y/TILE):null;
+  c.fillStyle='#ffc94d'; c.fillText(rg?('you are in '+rg.n+(lv?' \u00b7 Lv '+lv:'')):'',MAP_W-MAP_M,fy); }
+ else { c.fillStyle='#8a8494'; c.fillText('you are in '+(curRoom?curRoom.name:'')+' \u2014 take the portal in the plaza',MAP_W-MAP_M,fy); }
 }
 $s('mapBtn').addEventListener('click',function(){ $s('mapScr').style.display='flex';
  drawMap(); if(mapInt)clearInterval(mapInt); mapInt=setInterval(drawMap,120); });
@@ -802,7 +846,14 @@ function openMenu(){
  const ur=(ch&&ch.rpg)||{lvl:1,gold:0};
  $s('menuBest').textContent='Lv '+ur.lvl+' · '+ur.gold+'g · best '+(u.best||0)+' kills';
  $s('devMenuBtn').style.display=isAdmin?'':'none'; $s('devBtn2').style.display='none'; inGame=false; show('menuScr');
+ // ☰ mid-run used to be a one-way door: PLAY restarts you in the Hearth with the run
+ // reset, so an accidental tap cost your position. Offer RESUME while the run is live.
+ const rb=$s('resumeBtn'); if(rb) rb.style.display=(runLive&&curChar()===runChar)?'':'none';
 }
+// Return to a run already in progress: the world, position and cooldowns are all still
+// in memory — only the HUD was hidden — so this restores the HUD and hands control back.
+function resumeRun(){ if(!runLive||curChar()!==runChar){ play(); return; }
+ hideAll(); showGameHud(); inGame=true; hudRPG(); }
 function migrate(u){ if(!u.chars){ u.chars=[]; u.cur=0;
   if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||{lvl:1,xp:0,gold:0,wpn:0,pots:1}}); }
   delete u.char; delete u.rpg; LS.set('er-users',users); }
@@ -857,12 +908,18 @@ function play(){
  spawnPet();
  document.getElementById('killTxt').textContent='Kills 0';
  hudRPG();
- hideAll(); $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
- $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex'; $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex';
+ hideAll(); showGameHud(); inGame=true;
+ runLive=true; runChar=ch;                       // a run is now in progress (enables RESUME)
+ const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
+}
+// one place that reveals the in-game HUD — used by play() and resumeRun()
+function showGameHud(){
+ $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
+ $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex';
+ $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex';
  if($s('coopBtn'))$s('coopBtn').style.display='flex';
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
- if($s('skillBtn'))$s('skillBtn').style.display='flex'; inGame=true;
- const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
+ if($s('skillBtn'))$s('skillBtn').style.display='flex';
 }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
  users[curUser].best=k; LS.set('er-users',users); } }
@@ -901,9 +958,10 @@ $s('setFs').addEventListener('click',()=>{ OPTS.fs=(OPTS.fs===false); saveOpts()
 $s('loginBtn').addEventListener('click',doLogin);
 $s('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $s('playBtn').addEventListener('click',play);
+$s('resumeBtn').addEventListener('click',resumeRun);
 $s('charBtn').addEventListener('click',openChar);
 $s('backBtn').addEventListener('click',openMenu);
 $s('newCharBtn').addEventListener('click',openClassPick);
 $s('classBack').addEventListener('click',openChar);
-$s('switchBtn').addEventListener('click',()=>{curUser=null;isAdmin=false;LS.set('er-last',null);refreshUserList();show('loginScr');});
+$s('switchBtn').addEventListener('click',()=>{curUser=null;isAdmin=false;runLive=false;runChar=null;LS.set('er-last',null);refreshUserList();show('loginScr');});
 $s('menuBtn').addEventListener('click',()=>{recordBest(player.kills);openMenu();});

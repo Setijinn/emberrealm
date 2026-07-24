@@ -32,6 +32,7 @@
  <div class="msub" id="menuWho"></div>
  <div class="mnote" id="menuChar"></div>
  <div class="mnote" id="menuBest"></div>
+ <button id="resumeBtn" class="mbtn go" style="display:none;">▸ RESUME RUN</button>
  <button id="playBtn" class="mbtn go">PLAY</button>
  <button id="charBtn" class="mbtn">CHARACTERS</button>
  <button id="switchBtn" class="mbtn">SWITCH USER</button>
@@ -66,8 +67,22 @@
  <div id="classList" class="clist"></div>
  <button class="mbtn" id="classBack">BACK</button>
 </div>
-<button id="mapBtn">🗺️</button>
-<button id="coopBtn">🤝</button>
+<!-- HUD buttons live in two FLEX rows, never hand-placed with px offsets: #hudBot is the
+     bottom-right row on touch, and in pcmode it collapses into #hudTop as one top-right row.
+     Hidden buttons (shop outside town, dev for non-admins) simply leave no gap. -->
+<div id="hudTop">
+ <div id="hudBot">
+  <button id="coopBtn">🤝</button>
+  <button id="mapBtn">🗺️</button>
+  <button id="shopBtn">🏪 SHOP</button>
+  <button id="invBtn">🎒</button>
+  <button id="potBtn">🧪 0</button>
+ </div>
+ <button id="skillBtn">🌟</button>
+ <button id="loadBtn">⚔️</button>
+ <div id="devBtn2">🛠</div>
+ <div id="menuBtn">☰</div>
+</div>
 <div class="scr" id="coopScr" style="background:rgba(9,7,12,.9);display:none;">
  <div id="coopCard"><button class="tabX" id="coopX" aria-label="Close">✕</button>
   <div class="ldTitle" style="text-align:center;">CO-OP</div>
@@ -78,12 +93,13 @@
 <div id="mapScr">
  <div id="mapCard">
   <div id="shHead"><span>THE ASCENT</span><button id="mapClose">✕</button></div>
-  <canvas id="mapCv" width="620" height="430" style="image-rendering:pixelated;border:1px solid #39323f;border-radius:8px;display:block;margin:0 auto;max-width:94vw;max-height:74vh;width:auto;height:auto;"></canvas>
+  <!-- position:static;inset:auto is REQUIRED — the global canvas{position:fixed;inset:0}
+       rule in style.css otherwise rips this canvas out of the card and pins it to the
+       viewport (that was the broken map: it floated over the page as a squashed strip). -->
+  <canvas id="mapCv" width="980" height="660" style="position:static;inset:auto;image-rendering:pixelated;border:1px solid #39323f;border-radius:8px;display:block;margin:0 auto;width:auto;height:auto;max-width:100%;max-height:calc(92vh - 110px);"></canvas>
   <button class="mbtn go" id="mapClose2" style="width:100%;margin-top:8px;">CLOSE MAP</button>
  </div>
 </div>
-<div id="menuBtn">☰</div>
-<div id="devBtn2">🛠</div>
 <div class="scr" id="devScr">
  <div class="mtitle" style="font-size:26px;">DEV PANEL</div>
  <div class="dgrid">
@@ -132,11 +148,6 @@
  <div id="shopRows"></div>
  <button class="mbtn go" id="shopClose">LEAVE</button>
 </div></div></div>
-<button id="potBtn">🧪 0</button>
-<button id="shopBtn">🏪 SHOP</button>
-<button id="invBtn">🎒</button>
-<button id="loadBtn">⚔️</button>
-<button id="skillBtn">🌟</button>
 <button id="abBtn">—</button>
 <div class="scr" id="invScr" style="background:rgba(9,7,12,.9);"><div id="invCard"><button class="tabX" id="invX" aria-label="Close">✕</button><div id="invInner">
  <div id="invTitle">EQUIPMENT</div>
