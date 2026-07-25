@@ -11,7 +11,19 @@ const STATUS={
  burn:{col:'#ffb347'}, poison:{col:'#7dc47a'}, bleed:{col:'#ff4d5e'},
  chill:{col:'#9ad4ef'}, freeze:{col:'#d8f0fa'}, stun:{col:'#ffe08a'},
  curse:{col:'#c07ad4'}, weak:{col:'#8a8494'}, shock:{col:'#5a9cc0'} };
+// ===== ONE rule for "this boss cannot be touched right now" =====
+// Used by damage AND status, because a boss that shrugs off hits while a burn quietly eats it is
+// not actually invulnerable. Covers: the clone puzzle (it's hidden among its images), the phase
+// transition beat, a SURVIVAL window where the fight is "get to safe ground" rather than "hit it",
+// and the dramatic spoken lines — so a boss cannot be melted during its own confession.
+function bossImmune(e){ if(!e) return false;
+ if(e.mechInv) return true;                 // hidden among its mirror images
+ if((e.phaseInv||0)>0) return true;         // mid phase-transition
+ if((e.dlgInv||0)>0) return true;           // a dramatic line is landing
+ if(e.bloom) return true;                   // SURVIVAL: thornrot bloom, reach the safe ground
+ return false; }
 function applyStatus(e,id,dur,val){ if(!e||e.hp<=0||e.node) return;   // objective nodes immune
+ if(bossImmune(e)) return;                                            // and untouchable bosses
  if(!e.st) e.st={};
  const s=e.st[id];
  if(s){ s.t=Math.max(s.t,dur); s.v=Math.max(s.v||0,val||0); }
@@ -21,7 +33,13 @@ function applyStatus(e,id,dur,val){ if(!e||e.hp<=0||e.node) return;   // objecti
 function hasStatus(e,id){ return !!(e.st&&e.st[id]&&e.st[id].t>0); }
 function tickStatuses(e,dt){ if(!e.st) return true;
  let act=true;
+ // Damage-over-time subtracts hp DIRECTLY, so it never passed through dealDamage's immunity
+ // check — a burn stack kept eating a boss straight through phase transitions and clone
+ // puzzles. While immune the ticks are skipped AND the timers frozen, so the player doesn't
+ // silently lose the duration they paid for either.
+ const imm=bossImmune(e);
  for(const id in e.st){ const s=e.st[id];
+  if(imm) continue;   // and an existing freeze/stun must not hold it either, or the mech stalls
   s.t-=dt;
   if(id==='burn'||id==='poison') e.hp-=(s.v||0)*dt;
   else if(id==='bleed') e.hp-=e.maxhp*0.008*Math.max(1,s.v)*dt;
@@ -46,7 +64,7 @@ function dealDamage(e,amount,src){
   if(!e||e.hp<=0) return 0;
   if(e.decoy){ if(typeof bossDecoyHit==='function') bossDecoyHit(e); return 0; }            // mirror-puzzle guess
   if(e.mechInv) return 0;                                                                    // boss hidden among its images
-  if(e.phaseInv>0){ e.flash=Math.max(e.flash||0,0.1);                                       // immune mid phase-transition
+  if(bossImmune(e)){ e.flash=Math.max(e.flash||0,0.1);                                       // phase beat / survival / dialogue
     if(!src||!src.silent){ if(typeof texts!=='undefined') texts.push({x:e.x+(Math.random()*16-8),y:e.y-e.r-2,txt:'IMMUNE',col:'#9ad4ef',life:0.5}); }
     return 0; }
   src=src||{};

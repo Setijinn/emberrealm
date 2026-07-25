@@ -42,7 +42,8 @@ function bossChatter(e){
   if(typeof bossBar==='undefined' || bossBar!==e) return;      // only the boss you're actually fighting
   if(e.phaseInv>0) return;                                     // let the phase beat land alone
   if(!e.saidOpen){ if(!gb.open){ e.saidOpen=1; }
-    else if(bossSayLine(gb.open,5000,e)){ e.saidOpen=1; return; } else return; }
+    else if(bossSayLine(gb.open,5000,e)){ e.saidOpen=1; e.dlgInv=Math.max(e.dlgInv||0,1.8); return; }
+    else return; }
   if(!gb.mid || !gb.mid.length) return;
   if(e.chat===undefined) e.chat=0;
   const f=e.hp/e.maxhp;

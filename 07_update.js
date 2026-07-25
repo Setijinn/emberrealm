@@ -180,7 +180,8 @@ function bossEnterPhase(e, ph){
   // fires its own msg() a line later ("REACH THE SAFE GROUND"), so every canon boss — they all
   // have a mech — overwrote its own phase dialogue almost immediately. Nobody ever read it.
   if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), titles[ph]||'');
-  if(line && typeof bossSayNow==='function') bossSayNow(line,5800,e);   // outranks chatter
+  // the spoken beat is a protected moment: it cannot be melted mid-sentence (user)
+  if(line && typeof bossSayNow==='function'){ bossSayNow(line,5800,e); e.dlgInv=Math.max(e.dlgInv||0,2.2); }
   navigator.vibrate&&navigator.vibrate([30,40,30]);
   // signature mechanic fires on the phase break (thornrot bloom / mirror idols / hazard burst)
   if(typeof bossMechTrigger==='function') bossMechTrigger(e);
@@ -363,6 +364,7 @@ function update(dt){
       if(np>e.phase){ e.phase=np; bossEnterPhase(e,np); }
       if(typeof bossChatter==='function') bossChatter(e);       // engage line + HP-milestone dialogue
       if(e.phaseInv>0) e.phaseInv-=dt;
+      if(e.dlgInv>0) e.dlgInv-=dt;                               // protected dialogue window
       if(e.phaseFlash>0) e.phaseFlash-=dt;
       if(!e.hidden){                              // hidden while its clone puzzle is up — images do the work
       const ph=e.phase, enraged=ph>=1;            // enrage behaviours from phase 2 on

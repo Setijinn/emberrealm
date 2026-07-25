@@ -962,6 +962,14 @@ function render(){
   for(const e of enemies){
     if(e.hidden) continue;                                     // boss hidden during a clone puzzle
     shadow(e.x,e.y+e.r*0.8,e.r*1.05);
+    // WARD: a boss that cannot be hurt right now says so, or "IMMUNE" popups read as a bug
+    if(e.boss && typeof bossImmune==='function' && bossImmune(e) && !e.decoy){
+      const _wt=performance.now()/1000, pu=0.42+0.18*Math.sin(_wt*7);
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=pu;
+      ctx.strokeStyle='#9ad4ef'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(e.x,e.y,e.r*1.32,0,6.29); ctx.stroke();
+      ctx.globalAlpha=pu*0.4; ctx.lineWidth=6;
+      ctx.beginPath(); ctx.arc(e.x,e.y,e.r*1.32,0,6.29); ctx.stroke(); ctx.restore(); }
     if(e.corrupt){ const _ct=performance.now()/1000;           // violet corruption aura
       ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.30+0.14*Math.sin(_ct*3+e.x);
       const cg=ctx.createRadialGradient(e.x,e.y,2,e.x,e.y,e.r*1.9);
