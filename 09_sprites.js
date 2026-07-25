@@ -784,6 +784,20 @@ function drawLairs(){
 // end — and all of it DECAYS EASTWARD: the closer to the rift, the more of the rail is gone, the
 // statues fall, the stone stains violet and the braziers burn corrupt instead of gold. `f` below
 // is 0 at the safe western landing and 1 at the main-island end, and drives every one of those.
+// Recolour a sprite properly: 'source-atop' paints ONLY where the image is opaque, so the tint
+// follows the artwork instead of filling its bounding box (which is what made the earlier
+// "corruption tint" render as violet slabs). Cached — this is per-sprite, not per-frame work.
+const _tintImgCache={};
+function _tintImg(im,col,a){
+  if(!im||!im.naturalWidth) return im;
+  const k=im.src+'|'+col+'|'+a; let c=_tintImgCache[k]; if(c) return c;
+  c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight;
+  const g=c.getContext('2d'); g.imageSmoothingEnabled=false;
+  g.drawImage(im,0,0);
+  g.globalCompositeOperation='source-atop'; g.globalAlpha=a; g.fillStyle=col;
+  g.fillRect(0,0,c.width,c.height);
+  _tintImgCache[k]=c; return c;
+}
 let _bridgeParts=null;
 function _bridgeBuild(R){
   const B=R.rings.bridge, half=(B.w/2);
@@ -791,13 +805,19 @@ function _bridgeBuild(R){
   const yTop=(B.cy-half), yBot=(B.cy+half);
   // A gatehouse seen from ABOVE is two towers flanking the deck — one on each side — not a single
   // arch sprite sitting in the middle of the roadway. Four towers: both sides of both ends.
+  // Towers flank the bridge head on the deck's outer rows. `y` is the BASE LINE — the sprite is
+  // drawn bottom-aligned to it with a contact shadow, and the balustrade is suppressed underneath
+  // (see drawBridge), so the plinth reads as seated on the deck rather than perched on the rail.
   for(const end of [0,1]){ const bx=end?B.x1:B.x0;
-    for(const yy of [yTop,yBot])
-      p.arches.push({x:(bx+0.5)*TILE, y:(yy+(yy===yTop?0.1:0.9))*TILE, f:end, top:yy===yTop}); }
+    p.arches.push({x:(bx+0.5)*TILE, y:(yTop+1)*TILE, f:end, top:true});
+    p.arches.push({x:(bx+0.5)*TILE, y:(yBot+1)*TILE, f:end, top:false}); }
   const span=B.x1-B.x0;
   for(let i=1;i<8;i++){ const tx=B.x0+span*(i/8), f=(tx-B.x0)/span;
     for(const yy of [yTop,yBot]) p.statues.push({x:(tx+0.5)*TILE, y:(yy+0.5)*TILE, f, fallen:((i*7+(yy&3))%10)/10 < f*0.75});
-    if(i%2===1) p.braz.push({x:(tx+0.5)*TILE, y:(B.cy+0.5)*TILE, f, p:i*0.9}); }
+    // Braziers LINE THE EDGES just inside the balustrade, like lamps along a causeway. Sitting
+    // them on the centre line put a torch in the middle of the roadway, which read as debris.
+    if(i%2===1){ p.braz.push({x:(tx+0.5)*TILE, y:(yTop+1.7)*TILE, f, p:i*0.9});
+                 p.braz.push({x:(tx+0.5)*TILE, y:(yBot-0.7)*TILE, f, p:i*0.9+1.7}); } }
   // Balustrade in short sections; corruption eats more of them eastward. The baseline is the
   // OUTER EDGE of the deck's outer row (top rail stands on it and rises, bottom rail descends),
   // so the stonework sits on the bridge instead of floating on the waterline.
@@ -837,6 +857,10 @@ function drawBridge(){
   // built outward from the deck edge so it reads as stonework on the bridge. `d` is the outward
   // direction (up for the north rail, down for the south), so one piece of code does both sides.
   const RW=TILE*2;
+  // The balustrade runs CONTINUOUSLY through the gate towers. Towers are drawn after this, so the
+  // rail disappears behind the plinth — that occlusion is what actually sells them as standing on
+  // the same surface; cutting a gap around each tower made them read as separate objects dropped
+  // on top of the bridge.
   for(const s of P.rail){
     const d=s.top?-1:1;
     // A missing section is the balustrade SNAPPED OFF — a couple of jagged stumps of its own
@@ -894,14 +918,29 @@ function drawBridge(){
     ctx.beginPath(); ctx.ellipse(z.x,z.y-11,4.5*fl,8*fl,0,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
   // the four gate towers, drawn last so they stand over everything
   const tw=(typeof _bridgeTower!=='undefined'&&_bridgeTower&&_bridgeTower.naturalWidth)?_bridgeTower:null;
-  if(tw) for(const a of P.arches){ const w=TILE*3.1, h=w*tw.height/tw.width;
+  // SINK: the sprite's stepped plinth is drawn a few px past its baseline so the deck (and the
+  // balustrade running through it) overlaps the very bottom of the stonework, instead of the
+  // tower resting on a hairline above the surface.
+  const SINK=9;
+  if(tw) for(const a0 of P.arches){ const a={x:a0.x,y:a0.y+SINK,f:a0.f,top:a0.top};
+    const w=TILE*3.1, h=w*tw.height/tw.width;
     // the far gate is wreathed in corruption — a glow BEHIND it, never a rect over it
     if(a.f){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.20;
       const ag=ctx.createRadialGradient(a.x,a.y-h*0.3,6,a.x,a.y-h*0.3,w*0.95);
       ag.addColorStop(0,'#a838d0'); ag.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(a.x,a.y-h*0.3,w*0.95,0,6.29); ctx.fill(); ctx.restore(); }
-    ctx.fillStyle='rgba(0,0,0,.36)'; ctx.beginPath(); ctx.ellipse(a.x,a.y+6,w*0.36,w*0.13,0,0,6.29); ctx.fill();
-    ctx.drawImage(tw,a.x-w/2,a.y+12-h,w,h); }
+    // A heavier, wider contact shadow tucked right under the plinth — a thin ellipse floating
+    // above the base is most of why the towers read as hovering rather than standing.
+    ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(a.x,a.y-1,w*0.40,w*0.15,0,0,6.29); ctx.fill();
+    ctx.globalAlpha=0.22;
+    ctx.beginPath(); ctx.ellipse(a.x,a.y-1,w*0.50,w*0.20,0,0,6.29); ctx.fill(); ctx.restore();
+    // base-anchored EXACTLY on a.y so the plinth rests on the deck, with the shadow under it.
+    // The starter-side pair is mossy green (the safe island reclaims its stone); the far pair is
+    // MIRRORED so the two gatehouses face each other across the span instead of both facing west.
+    const src=a.f?tw:_tintImg(tw,'#4f9a3f',0.34);
+    ctx.save(); ctx.translate(a.x,0); if(a.f) ctx.scale(-1,1);
+    ctx.drawImage(src,-w/2,a.y-h,w,h); ctx.restore(); }
 }
 function drawWorldFeatures(){
   const R=curRoom; if(!R||!R.rings||!R.rings.radial||R.dungeon||R.town) return;

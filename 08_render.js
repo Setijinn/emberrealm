@@ -263,8 +263,15 @@ function drawTileG(x,y){
     const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
     // Pick one of the seamless ocean variants per cell (mix breaks the single-tile repetition).
     // NO per-cell flip — these tiles are edge-matched, flipping would break the seams.
+    // The variant is CYCLED over time, not fixed per cell, so the sea animates through its wave
+    // frames. The time index carries a spatial term (x*0.30 + y*0.55) so neighbours change on
+    // different beats and the swap reads as a swell travelling across the water — stepping every
+    // cell in lockstep just makes the whole ocean blink.
     let _wimg=_waterImg;
-    if(typeof _waterVar!=='undefined'&&_waterVar){ const wv=_waterVar[hmix(x,y)%_waterVar.length];
+    if(typeof _waterVar!=='undefined'&&_waterVar&&_waterVar.length){
+      const wn2=_waterVar.length;
+      const fi=(hmix(x,y)+Math.floor(performance.now()/560 + x*0.30 + y*0.55))%wn2;
+      const wv=_waterVar[(fi+wn2)%wn2];
       if(wv&&wv.complete&&wv.naturalWidth) _wimg=wv; }
     if(_wimg&&_wimg.complete&&_wimg.naturalWidth){
       ctx.imageSmoothingEnabled=false; ctx.drawImage(_wimg,tx,ty,TILE,TILE);
