@@ -513,7 +513,10 @@ function spawnRingBoss(b){
   // matched to zone: modest early, monstrous late — on the unified difficulty curve
   const chaserHp=40*eHpScale(lv);
   const edef=eDef(lv), edr=eDR(edef), edex=eDex(lv), espd=eSpdMul(lv), emp=eMp(lv);  // scaling stat block
-  const size=24+ (lv/LV_CAP)*22;       // small on the sands, huge at the core
+  // Bosses were barely larger than a regular mob — 24px at Lv1 in a world of 44px tiles, which
+  // is not a boss, it is a slightly big hound. Base and range both up so even the first one has
+  // presence and the Molten Titan genuinely towers.
+  const size=38+ (lv/LV_CAP)*34;       // imposing on the sands, enormous at the core
   const bhp=Math.round(chaserHp*6*(1-edr));   // TTK-neutral hp (def mitigation applied in dealDamage)
   const boss={type:'B',wb:true,ring:b,x:bx,y:by,r:size,hp:bhp,maxhp:bhp,
    spd:(34+(lv/LV_CAP)*26)*espd,fireT:1.4,ang:0,col:GB.col,bd:5+eDmgScale(lv)*0.56,lv:lv,boss:true,name:GB.n,

@@ -64,6 +64,21 @@ function vnoise(x,y,scale){
   const a=r(x0,y0), b=r(x0+1,y0), c=r(x0,y0+1), d=r(x0+1,y0+1), sx=s(ux), sy=s(uy);
   return (a*(1-sx)+b*sx)*(1-sy)+(c*(1-sx)+d*sx)*sy;
 }
+// ---- 16-VARIANT ATLAS SAMPLER ----
+// A 128x128 sheet holding sixteen 32x32 tiles of the SAME material (create_tiles_pro). Draws the
+// variant chosen by position hash, so no surface is ever one cell repeated. Returns false when the
+// atlas for that theme hasn't shipped yet, and the caller keeps its old single-cell path.
+function drawAtlas(atlas,x,y,tx,ty,hh){
+  if(!atlas || !atlas.complete || !atlas.naturalWidth) return false;
+  const i=(hh>>>7)&15, sx=(i&3)*32, sy=(i>>2)*32;
+  ctx.imageSmoothingEnabled=false;
+  // quarter-turns as well as mirrors: a mirror keeps the texture's own axes, so it still reads
+  // as the same tile. With 16 variants x 8 orientations a repeat is essentially unfindable.
+  ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
+  ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale((hh&1)?-1:1,(hh&2)?-1:1);
+  ctx.drawImage(atlas,sx,sy,32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+  return true;
+}
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -313,17 +328,29 @@ function drawTileG(x,y){
       // not cell-aligned by material — the floor and wall areas are organic regions, so a cell
       // that measures close to the floor colour still straddles the boundary and drags wall
       // pixels in. On screen that reads as dark holes punched through the floor. GROUND_UP /
-      // GROUND_LO are the two hand-verified clean cells; variety comes from the mottling below.
-      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
-      ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      // GROUND_LO are the two hand-verified clean cells.
+      // ROTATE, don't just flip. A mirror preserves the texture's own axes, so a flipped tile
+      // still reads as the same tile and the lattice survives; quarter-turns genuinely change its
+      // orientation. 4 rotations x 2 mirrors from one clean cell = 8 readings of a single tile.
+      // 16-variant atlas when this theme has one; otherwise the old single hand-verified cell
+      if(!(c==='F' && drawAtlas(_floorSet[bd],x,y,tx,ty,hh))){
+        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
+        ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale(o&1?-1:1,o&2?-1:1);
+        ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
       // LOW-FREQUENCY mottling. Per-tile variation repeats at exactly the grid frequency, so it
       // can never break the wallpaper look no matter how strong it is — the eye still locks onto
       // the lattice. Broad vnoise patches several tiles across are what actually kill it: damp
       // hollows and sun-bleached rises that ignore the tile edges entirely.
-      const m1=vnoise(x,y,6.5), m2=vnoise(x+91,y-37,2.7);
-      const mo=m1*0.7+m2*0.3;
-      if(mo<0.46){ ctx.fillStyle='rgba(6,10,16,'+((0.46-mo)*0.62).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(mo>0.58){ ctx.fillStyle='rgba(255,240,208,'+((mo-0.58)*0.34).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      const m1=vnoise(x,y,6.5), m2=vnoise(x+91,y-37,2.7), m3=vnoise(x-53,y+17,14);
+      const mo=m1*0.55+m2*0.25+m3*0.20;
+      if(mo<0.48){ ctx.fillStyle='rgba(6,10,16,'+((0.48-mo)*1.05).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(mo>0.56){ ctx.fillStyle='rgba(255,240,208,'+((mo-0.56)*0.55).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // WORN PATCHES at a scale far bigger than the grid: broad areas where the surface is rubbed
+      // through, with a soft edge. Nothing tile-sized can break a lattice — only something that
+      // plainly ignores it can.
+      const wr=vnoise(x+311,y+127,9.5);
+      if(wr>0.63){ const a2=Math.min(0.34,(wr-0.63)*1.5);
+        ctx.fillStyle='rgba(24,18,12,'+a2.toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
       // per-block variety on top: brightness + weathering so no two blocks read identical
       const v=(hh>>2)%7;
       if(v===0){ ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(tx,ty,TILE,TILE); }
