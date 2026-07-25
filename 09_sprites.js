@@ -778,6 +778,131 @@ function drawLairs(){
 }
 // The infection portal — the corrupting rift landmark on the far shore (lore only, no
 // interaction). Base-anchored like a lair den, with a pulsing violet ground-glow beneath it.
+// ===== THE GREAT BRIDGE =====
+// It was a royal causeway and it is the point of no return, but it rendered as plain planks with
+// rope rails. Now it carries a carved balustrade, sentinel statues and a gatehouse arch at each
+// end — and all of it DECAYS EASTWARD: the closer to the rift, the more of the rail is gone, the
+// statues fall, the stone stains violet and the braziers burn corrupt instead of gold. `f` below
+// is 0 at the safe western landing and 1 at the main-island end, and drives every one of those.
+let _bridgeParts=null;
+function _bridgeBuild(R){
+  const B=R.rings.bridge, half=(B.w/2);
+  const p={arches:[], statues:[], rail:[], braz:[]};
+  const yTop=(B.cy-half), yBot=(B.cy+half);
+  // A gatehouse seen from ABOVE is two towers flanking the deck — one on each side — not a single
+  // arch sprite sitting in the middle of the roadway. Four towers: both sides of both ends.
+  for(const end of [0,1]){ const bx=end?B.x1:B.x0;
+    for(const yy of [yTop,yBot])
+      p.arches.push({x:(bx+0.5)*TILE, y:(yy+(yy===yTop?0.1:0.9))*TILE, f:end, top:yy===yTop}); }
+  const span=B.x1-B.x0;
+  for(let i=1;i<8;i++){ const tx=B.x0+span*(i/8), f=(tx-B.x0)/span;
+    for(const yy of [yTop,yBot]) p.statues.push({x:(tx+0.5)*TILE, y:(yy+0.5)*TILE, f, fallen:((i*7+(yy&3))%10)/10 < f*0.75});
+    if(i%2===1) p.braz.push({x:(tx+0.5)*TILE, y:(B.cy+0.5)*TILE, f, p:i*0.9}); }
+  // Balustrade in short sections; corruption eats more of them eastward. The baseline is the
+  // OUTER EDGE of the deck's outer row (top rail stands on it and rises, bottom rail descends),
+  // so the stonework sits on the bridge instead of floating on the waterline.
+  for(let tx=B.x0;tx<=B.x1;tx+=2){ const f=(tx-B.x0)/span;
+    let h=(Math.imul(tx*131+7,374761393))>>>0; h=Math.imul(h^(h>>>13),1274126177)>>>0;
+    const r1=((h>>>16)&255)/255, r2=(h&255)/255;
+    p.rail.push({x:tx*TILE, y:(yTop+1)*TILE, f, top:true,  gone:r1 < f*0.8});
+    p.rail.push({x:tx*TILE, y:yBot*TILE,     f, top:false, gone:r2 < f*0.8}); }
+  return p;
+}
+function drawBridge(){
+  const R=curRoom; if(!R||!R.rings||!R.rings.radial||R.dungeon||R.town) return;
+  const B=R.rings.bridge; if(!B) return;
+  if(!_bridgeParts||_bridgeParts.key!==(B.x0+'/'+B.x1)){ _bridgeParts=_bridgeBuild(R); _bridgeParts.key=B.x0+'/'+B.x1; }
+  const P=_bridgeParts, t=performance.now()/1000;
+  const cx=(B.x0+B.x1)*0.5*TILE;
+  if(Math.abs(player.x-cx)>(B.x1-B.x0)*TILE*0.75+1400) return;      // only near the crossing
+  ctx.imageSmoothingEnabled=false;
+  // deck stain: clean stone in the west, violet rot in the east. A real gradient — drawing it as
+  // banded fillRects left visible vertical steps across the deck.
+  // Kept DELIBERATELY faint. A flat wash at any real strength stops reading as stained stone and
+  // starts reading as a purple filter over the whole deck. The corruption sells itself through
+  // the veins below, the toppled sentinels and the far gate — the film is only a hint.
+  const y0=(B.cy-B.w/2)*TILE, hh=B.w*TILE, gx0=B.x0*TILE, gx1=B.x1*TILE, span=B.x1-B.x0;
+  const dg=ctx.createLinearGradient(gx0,0,gx1,0);
+  dg.addColorStop(0,'rgba(120,30,150,0)'); dg.addColorStop(0.6,'rgba(120,30,150,0.03)');
+  dg.addColorStop(1,'rgba(120,30,150,0.13)');
+  ctx.fillStyle=dg; ctx.fillRect(gx0,y0,gx1-gx0,hh);
+  // creeping veins: short violet runs along the plank seams, denser toward the rift
+  for(let tx=B.x0;tx<=B.x1;tx++){ const f=(tx-B.x0)/span; if(f<0.3) continue;
+    let h=(Math.imul(tx*7919+13,2246822519))>>>0; h=Math.imul(h^(h>>>15),3266489917)>>>0;
+    for(let k=0;k<3;k++){ const r=((h>>>(k*8))&255)/255; if(r>f*0.55) continue;
+      const ty=B.cy-B.w/2+((h>>>(k*5+3))%B.w);
+      ctx.fillStyle='rgba(150,40,180,'+(0.10+f*0.30).toFixed(3)+')';
+      ctx.fillRect(tx*TILE, ty*TILE+((h>>>(k*3))%TILE), TILE, 2+((h>>>k)&1)); } }
+  // Balustrade: a carved kerb the railing STANDS on, turned balusters, and a heavy top rail —
+  // built outward from the deck edge so it reads as stonework on the bridge. `d` is the outward
+  // direction (up for the north rail, down for the south), so one piece of code does both sides.
+  const RW=TILE*2;
+  for(const s of P.rail){
+    const d=s.top?-1:1;
+    // A missing section is the balustrade SNAPPED OFF — a couple of jagged stumps of its own
+    // kerb, in its own stone. Dropping a rubble sprite in the gap instead read as a violet block
+    // sitting on the rail line and broke the run apart.
+    if(s.gone){
+      ctx.fillStyle='rgba(0,0,0,0.26)'; ctx.fillRect(s.x,s.y-d*2,RW,4);
+      ctx.fillStyle='#7d745f'; ctx.fillRect(s.x,Math.min(s.y,s.y+d*4),RW,4);       // broken-off kerb line
+      ctx.fillStyle='#9b9280';                                                     // two shattered stumps
+      ctx.fillRect(s.x+3,Math.min(s.y,s.y+d*9),5,9);
+      ctx.fillRect(s.x+RW-11,Math.min(s.y,s.y+d*6),5,6);
+      if(s.f>0.35){ ctx.fillStyle='rgba(120,30,150,'+((s.f-0.35)*0.4).toFixed(3)+')';
+        ctx.fillRect(s.x,Math.min(s.y,s.y+d*9),RW,9); }
+      continue; }
+    const kerb=s.y, post=kerb+d*4, rail=kerb+d*17;
+    ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.fillRect(s.x,kerb-d*2,RW,5);        // shadow on the deck
+    ctx.fillStyle='#8f8676'; ctx.fillRect(s.x,Math.min(kerb,kerb+d*5),RW,5);  // carved kerb
+    ctx.fillStyle='#b3aa98';                                                  // balusters
+    for(let k=0;k<4;k++) ctx.fillRect(s.x+5+k*21,Math.min(post,rail),6,Math.abs(rail-post));
+    ctx.fillStyle='#d3cab6'; ctx.fillRect(s.x,Math.min(rail,rail+d*7),RW,7);  // top rail
+    ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.fillRect(s.x,rail+(s.top?7:-1),RW,2);
+    if(s.f>0.45){ ctx.fillStyle='rgba(120,30,150,'+((s.f-0.45)*0.55).toFixed(3)+')';
+      ctx.fillRect(s.x,Math.min(kerb,rail+d*7),RW,Math.abs(rail+d*7-kerb)); } }
+  // sentinel statues
+  if(typeof _bridgeStatue!=='undefined'&&_bridgeStatue&&_bridgeStatue.naturalWidth)
+    for(const s of P.statues){ const w=TILE*1.5, h=w*_bridgeStatue.height/_bridgeStatue.width;
+      ctx.save(); ctx.translate(s.x,s.y);
+      ctx.fillStyle='rgba(0,0,0,.30)'; ctx.beginPath(); ctx.ellipse(0,4,w*0.28,w*0.10,0,0,6.29); ctx.fill();
+      // corruption reads as a GLOW AT THE BASE, not a tint. Compositing a rect over the sprite's
+      // bounding box paints a violet slab, since the box is mostly transparent — it looked awful.
+      if(s.f>0.4){ ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=(s.f-0.4)*0.55;
+        const sg=ctx.createRadialGradient(0,2,1,0,2,w*0.55);
+        sg.addColorStop(0,'#a838d0'); sg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(0,2,w*0.55,0,6.29); ctx.fill();
+        ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1; }
+      if(s.fallen){
+        // A toppled sentinel is an EMPTY BROKEN PLINTH, not the standing sprite rotated on its
+        // side — rotating a base-anchored top-down figure just reads as a rendering bug.
+        const pw=w*0.52, ph=w*0.30;
+        ctx.fillStyle='#8b8272'; ctx.fillRect(-pw/2,-ph,pw,ph);            // plinth
+        ctx.fillStyle='#a49b89'; ctx.fillRect(-pw/2,-ph,pw,4);             // lit top
+        ctx.fillStyle='#6f6757'; ctx.fillRect(-pw*0.22,-ph-7,pw*0.30,8);   // snapped-off ankles
+        ctx.fillStyle='#9b9280'; ctx.fillRect(pw*0.12,-4,7,5);             // fallen chunks
+        ctx.fillRect(-pw*0.62,-3,6,4);
+      } else ctx.drawImage(_bridgeStatue,-w/2,10-h,w,h);
+      ctx.restore(); ctx.globalAlpha=1; }
+  // braziers: gold at the safe end, corrupt violet toward the rift
+  for(const z of P.braz){ const fl=0.7+0.3*Math.sin(t*5+z.p), col=z.f>0.55?'#c04ae0':'#ffb45a';
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.26*fl;
+    const g=ctx.createRadialGradient(z.x,z.y-8,2,z.x,z.y-8,84);
+    g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(z.x,z.y-8,84,0,6.29); ctx.fill(); ctx.restore();
+    ctx.fillStyle='rgba(22,18,14,0.9)'; ctx.fillRect(z.x-5,z.y-6,10,14);
+    ctx.fillStyle=col; ctx.globalAlpha=0.95;
+    ctx.beginPath(); ctx.ellipse(z.x,z.y-11,4.5*fl,8*fl,0,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
+  // the four gate towers, drawn last so they stand over everything
+  const tw=(typeof _bridgeTower!=='undefined'&&_bridgeTower&&_bridgeTower.naturalWidth)?_bridgeTower:null;
+  if(tw) for(const a of P.arches){ const w=TILE*3.1, h=w*tw.height/tw.width;
+    // the far gate is wreathed in corruption — a glow BEHIND it, never a rect over it
+    if(a.f){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.20;
+      const ag=ctx.createRadialGradient(a.x,a.y-h*0.3,6,a.x,a.y-h*0.3,w*0.95);
+      ag.addColorStop(0,'#a838d0'); ag.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(a.x,a.y-h*0.3,w*0.95,0,6.29); ctx.fill(); ctx.restore(); }
+    ctx.fillStyle='rgba(0,0,0,.36)'; ctx.beginPath(); ctx.ellipse(a.x,a.y+6,w*0.36,w*0.13,0,0,6.29); ctx.fill();
+    ctx.drawImage(tw,a.x-w/2,a.y+12-h,w,h); }
+}
 function drawWorldFeatures(){
   const R=curRoom; if(!R||!R.rings||!R.rings.radial||R.dungeon||R.town) return;
   const P=R.rings.portal; if(!P) return;
@@ -840,6 +965,7 @@ function render(){
   }
   for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++) drawTileG(tx,ty);
   if(typeof drawLairs==='function') drawLairs();
+  if(typeof drawBridge==='function') drawBridge();
   if(typeof drawWorldFeatures==='function') drawWorldFeatures();
   const pn=performance.now()/1000;
   // light sources: soft additive halos only — the FIRE itself is the sprite art

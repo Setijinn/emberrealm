@@ -47,6 +47,9 @@ const _portalPillars=(typeof window!=='undefined')?[_img('assets/env/pillar_0.pn
 // Waypoint (fast-travel) pillar — a beautiful light-magic shrine; drawn base-anchored in drawPillar.
 const _waypointImg=(typeof window!=='undefined')?_img('assets/env/waypoint.png'):null;
 const _wardenImg=(typeof window!=='undefined')?_img('assets/env/warden.png'):null;   // Warden Ivor
+// the great bridge: royal gatehouse arches, sentinel statues, collapsed masonry (09_sprites drawBridge)
+const _bridgeTower=(typeof window!=='undefined')?_img('assets/env/bridge_tower.png'):null;
+const _bridgeStatue=(typeof window!=='undefined')?_img('assets/env/bridge_statue.png'):null;
 // 9-sliced plaque behind boss dialogue (17_bossmech drawBossQuote); QUOTE_INSET must match its border
 const _quoteFrame=(typeof window!=='undefined')?_img('assets/ui/quote_frame.png'):null;
 // Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
