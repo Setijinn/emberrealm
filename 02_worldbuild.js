@@ -31,6 +31,11 @@ for(const key in rooms){
   r.w=r.grid[0].length; r.h=r.grid.length;
   r.big=!!ROOM_DEFS[key].big; r.regions=ROOM_DEFS[key].regions||null; r.portals=[];
   r.rings=ROOM_DEFS[key].rings||null; r.arrivals=ROOM_DEFS[key].arrivals||null;
+  // the generator writes 8 ring names (bands 0-7); band 8 is the grind RIM, named out of the
+  // separate rings.grind list. Anything indexing names[band] with 8 (openFastTravel on the
+  // b:8 pillar, genDungeon(8)) hit undefined and threw — so normalize to 9 entries here, once.
+  if(r.rings&&r.rings.radial&&r.rings.names&&r.rings.names.length===8&&r.rings.grind)
+    r.rings.names.push({n:r.rings.grind[0],lv:LV_CAP,lv2:LV_CAP});
   r.pillars=(ROOM_DEFS[key].pillars||[]).map(p=>({x:(p.tx+.5)*TILE,y:(p.ty+.5)*TILE,band:p.b,name:p.name}));
   r.hub=!!ROOM_DEFS[key].hub; r.arena=!!ROOM_DEFS[key].arena; r.safe=!!ROOM_DEFS[key].safe;
   r.decor=ROOM_DEFS[key].decor||null; r.stalls=ROOM_DEFS[key].stalls||null;
