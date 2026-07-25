@@ -418,20 +418,25 @@ function mapTerrain(G,L){
   c.fillStyle='#0b0a10'; c.fillRect(0,0,MAP_W,L.H);
   const T=(typeof _territories==='function')?_territories(G):null, zg=RG._zg;
   const zAt=(tx,ty)=>{ const zr=zg&&zg[ty]; return (zr&&tx>=0&&tx<zr.length)?zr[tx]:-1; };
-  for(let ty=0;ty<G.h;ty++){ const row=G.grid[ty]; if(!row) continue;
-    for(let tx=0;tx<G.w;tx++){ const ch=row[tx]; if(ch==null) continue;
+  // STRIDE. The minimap scales the world down, so many tiles share one map pixel and drawing
+  // every one is wasted work — at 1160x720 that was ~2.5M canvas ops and a 1.7s freeze the
+  // first time the map opened. Sample a fixed budget of cells instead, drawing each as a
+  // step-sized block: the picture is the same, and the cost stops tracking world size.
+  const step=Math.max(1,Math.ceil(Math.sqrt((G.w*G.h)/250000))), bs=s*step+0.6;
+  for(let ty=0;ty<G.h;ty+=step){ const row=G.grid[ty]; if(!row) continue;
+    for(let tx=0;tx<G.w;tx+=step){ const ch=row[tx]; if(ch==null) continue;
       const px=L.ox+tx*s, py=L.oy+ty*s;
-      if(ch==='w'){ c.fillStyle=MAP_OCEAN; c.fillRect(px,py,s+0.6,s+0.6); continue; }
-      if(ch==='b'){ c.fillStyle=MAP_BRIDGE; c.fillRect(px,py,s+0.6,s+0.6); continue; }
+      if(ch==='w'){ c.fillStyle=MAP_OCEAN; c.fillRect(px,py,bs,bs); continue; }
+      if(ch==='b'){ c.fillStyle=MAP_BRIDGE; c.fillRect(px,py,bs,bs); continue; }
       const zi=zAt(tx,ty), tt=(T&&zi>=0)?T[zi]:null, band=tt?tt.band:0;
-      c.fillStyle=MRAMP[band]||'#547a44'; c.fillRect(px,py,s+0.6,s+0.6);
-      if(tt&&tt.gi>=0&&_GRIND_TINT[tt.gi]){ c.fillStyle=_GRIND_TINT[tt.gi]; c.fillRect(px,py,s+0.6,s+0.6); }
+      c.fillStyle=MRAMP[band]||'#547a44'; c.fillRect(px,py,bs,bs);
+      if(tt&&tt.gi>=0&&_GRIND_TINT[tt.gi]){ c.fillStyle=_GRIND_TINT[tt.gi]; c.fillRect(px,py,bs,bs); }
       const cor=_mCorrupt(RG,tx,ty);
-      if(cor>0.05){ c.fillStyle='rgba(150,40,180,'+(cor*0.55).toFixed(3)+')'; c.fillRect(px,py,s+0.6,s+0.6); }
-      // clump border: darken where a 4-neighbour is a DIFFERENT territory -> a province line
-      if((zAt(tx-1,ty)>=0&&zAt(tx-1,ty)!==zi)||(zAt(tx+1,ty)>=0&&zAt(tx+1,ty)!==zi)
-       ||(zAt(tx,ty-1)>=0&&zAt(tx,ty-1)!==zi)||(zAt(tx,ty+1)>=0&&zAt(tx,ty+1)!==zi)){
-        c.fillStyle='rgba(14,9,16,0.55)'; c.fillRect(px,py,s+0.6,s+0.6); } } }
+      if(cor>0.05){ c.fillStyle='rgba(150,40,180,'+(cor*0.55).toFixed(3)+')'; c.fillRect(px,py,bs,bs); }
+      // clump border: darken where a neighbouring SAMPLE is a different territory -> province line
+      if((zAt(tx-step,ty)>=0&&zAt(tx-step,ty)!==zi)||(zAt(tx+step,ty)>=0&&zAt(tx+step,ty)!==zi)
+       ||(zAt(tx,ty-step)>=0&&zAt(tx,ty-step)!==zi)||(zAt(tx,ty+step)>=0&&zAt(tx,ty+step)!==zi)){
+        c.fillStyle='rgba(14,9,16,0.55)'; c.fillRect(px,py,bs,bs); } } }
   // zone name labels \u2014 bands at a representative ring point, grind sectors at their centroid
   c.textAlign='center'; c.textBaseline='middle';
   if(T) for(const tt of T){ if(tt.n<60) continue;
