@@ -118,7 +118,7 @@ const _lairSet={}, _lairDec={};              // boss-room wall/floor tileset (wa
 // 4x4 atlases of 16 same-material variants, keyed like the sheets above. `_floorSet` = boss-arena
 // floors, `_terrSet` = open-world ground per band, `_dunFloor` = dungeon floors. Any theme with no
 // atlas yet falls back to its old single cell, so these roll out one at a time.
-const _floorSet={}, _terrSet={}, _dunFloor={};
+const _floorSet={}, _wallSet={}, _terrSet={}, _dunFloor={};
 const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (uniform across tilesets)
 // every band gets decals: forest zones share the grass set (0), stone zones the rocky set (3),
 // ash/fire zones the ember set (5) â€” richness everywhere without 9 full unique sets
@@ -142,6 +142,7 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   // arena floor is never one 32x32 cell repeated. Themes without a sheet yet fall back to the
   // single lairset cell, so this rolls out per theme without breaking anything.
   for(const b of LAIR_BANDS) _floorSet[b]=_img('assets/tiles/floor_'+b+'.png');
+  for(const b of LAIR_BANDS) _wallSet[b]=_img('assets/tiles/wall_'+b+'.png');
   const _decDone={};
   for(const b of _artSlots){ const s=(typeof bossDecArt==='function')?bossDecArt(b):b;   // decor may still be borrowed
     if(_decDone[s]){ _lairDec[b]=_decDone[s]; continue; }

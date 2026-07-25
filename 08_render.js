@@ -333,7 +333,8 @@ function drawTileG(x,y){
       // still reads as the same tile and the lattice survives; quarter-turns genuinely change its
       // orientation. 4 rotations x 2 mirrors from one clean cell = 8 readings of a single tile.
       // 16-variant atlas when this theme has one; otherwise the old single hand-verified cell
-      if(!(c==='F' && drawAtlas(_floorSet[bd],x,y,tx,ty,hh))){
+      const _atl=(c==='F')?_floorSet[bd]:_wallSet[bd];
+      if(!drawAtlas(_atl,x,y,tx,ty,hh)){
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
         ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale(o&1?-1:1,o&2?-1:1);
         ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
@@ -362,15 +363,33 @@ function drawTileG(x,y){
           ctx.fillRect(tx+3+((hh>>4)%26), ty+5+((hh>>7)%24), 5+((hh>>13)%7), 3); }
         if(((hh>>15)&7)===0){ ctx.fillStyle='rgba(255,244,214,0.09)';
           ctx.fillRect(tx+2+((hh>>6)%30), ty+3+((hh>>10)%28), 3, 2); } }
+      // A wall standing over the floor casts onto it. Drawn on the FLOOR tile beneath, this is
+      // the single strongest cue that the wall has height rather than being a painted pattern.
+      if(c==='F'){ const G3=curRoom.grid, ab=(dx)=>{ const r=G3[y-1]; return r&&r[x+dx]==='X'; };
+        if(ab(0)){ const sg=ctx.createLinearGradient(0,ty,0,ty+TILE*0.55);
+          sg.addColorStop(0,'rgba(0,0,0,0.50)'); sg.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=sg; ctx.fillRect(tx,ty,TILE,TILE*0.55); }
+        else if(ab(-1)||ab(1)){ const sg=ctx.createLinearGradient(0,ty,0,ty+TILE*0.30);
+          sg.addColorStop(0,'rgba(0,0,0,0.26)'); sg.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=sg; ctx.fillRect(tx,ty,TILE,TILE*0.30); } }
       if(c==='X'){
         const G2=curRoom.grid, wl=(xx,yy)=>{ const r=G2[yy]; return r&&r[xx]==='X'; };
         // Light the wall by its SHAPE, not uniformly: a run of identical blocks with the same
         // highlight top and shadow bottom is exactly what reads as a repeated texture. Only the
         // exposed courses catch light, and only free-standing ends get a side shadow.
-        if(!wl(x,y-1)){ ctx.fillStyle='rgba(255,252,240,'+(0.07+0.05*mo).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,4); }
-        if(!wl(x,y+1)){ ctx.fillStyle='rgba(0,0,0,0.40)'; ctx.fillRect(tx,ty+TILE-6,TILE,6); }
-        if(!wl(x-1,y)){ ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(tx,ty,3,TILE); }
-        if(!wl(x+1,y)){ ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(tx+TILE-3,ty,3,TILE); }
+        // TOP CAP: the exposed upper course catches the light.
+        if(!wl(x,y-1)){ ctx.fillStyle='rgba(255,250,232,'+(0.16+0.08*mo).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,5);
+          ctx.fillStyle='rgba(255,255,255,0.10)'; ctx.fillRect(tx,ty+5,TILE,2); }
+        // FRONT FACE: where the wall ends and floor begins you are looking at its vertical side,
+        // so the lower third becomes a distinctly darker face with a lit top edge. Without this a
+        // wall is just a differently-coloured floor tile.
+        if(!wl(x,y+1)){ const fh=Math.round(TILE*0.38);
+          const fg=ctx.createLinearGradient(0,ty+TILE-fh,0,ty+TILE);
+          fg.addColorStop(0,'rgba(0,0,0,0.30)'); fg.addColorStop(1,'rgba(0,0,0,0.66)');
+          ctx.fillStyle=fg; ctx.fillRect(tx,ty+TILE-fh,TILE,fh);
+          ctx.fillStyle='rgba(255,246,224,0.14)'; ctx.fillRect(tx,ty+TILE-fh,TILE,2); }
+        if(!wl(x-1,y)){ ctx.fillStyle='rgba(0,0,0,0.24)'; ctx.fillRect(tx,ty,4,TILE); }
+        if(!wl(x+1,y)){ ctx.fillStyle='rgba(0,0,0,0.24)'; ctx.fillRect(tx+TILE-4,ty,4,TILE); }
         ctx.fillStyle='rgba(0,0,0,'+(0.10+0.22*(1-mo)).toFixed(3)+')';   // damp courses go darker
         ctx.fillRect(tx,ty,TILE,TILE);
         if(v>=4){ ctx.fillStyle='rgba(0,0,0,0.35)';                    // cracked / chipped blocks
