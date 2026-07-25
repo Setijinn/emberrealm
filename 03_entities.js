@@ -220,6 +220,13 @@ function bossArtSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bos
 // tileset and its scatter decor. Leave a boss in one of these and it still wears its own face.
 const TILE_SLOT={};                    // dungeon tilesets — 9/10/11 have their own since v218
 const DEC_SLOT={9:0,10:1,11:2};        // lair scatter decor — shared, same idea as DECAL_SRC
+// A boss ARENA is that boss's den, so its walls and floor must carry the BOSS's theme — not the
+// theme of whatever terrain it happens to stand in. Keying lair tiles to the terrain band (which
+// is right for open ground) meant the Grovewarden fought in a stone room, the brine Tidewrack in
+// a forest, and four different grind bosses all shared one molten tileset.
+// Only slots 0-8 have a lairset_N sheet, so the starter three borrow the closest fit.
+const LAIR_TILE={9:2, 10:4, 11:0};     // brine->sunken warren, harrier->windward crag, reaper->green
+function lairTileSet(b){ return (LAIR_TILE[b]!==undefined)?LAIR_TILE[b]:bossArt(b); }
 function bossTileArt(i){ return (TILE_SLOT[i]!==undefined)?TILE_SLOT[i]:bossArt(i); }
 function bossDecArt(i){ return (DEC_SLOT[i]!==undefined)?DEC_SLOT[i]:bossArt(i); }
 function bossTileSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossTileArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
@@ -414,8 +421,12 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
   const inGrid=(tx,ty)=>tx>0&&ty>0&&tx<R.w-1&&ty<R.h-1;
   const ground=(tx,ty)=>{ const c=R.grid[ty]&&R.grid[ty][tx]; return c!=null&&'wWhHlXFDP'.indexOf(c)<0; };
   const bx0=px-3,bx1=px+TW+3,by0=py-3,by1=py+TH+3;
+  // Remember which boss owns each carved tile, so the renderer can theme the room to its BOSS
+  // instead of to the ground it stands on.
+  if(!R.lairAt) R.lairAt={};
+  const own=(tx,ty)=>{ R.lairAt[ty*R.w+tx]=b; };
   // pass 1: floor
-  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++) if(inGrid(tx,ty)&&floorAt(tx,ty)&&ground(tx,ty)) R.grid[ty][tx]='F';
+  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++) if(inGrid(tx,ty)&&floorAt(tx,ty)&&ground(tx,ty)){ R.grid[ty][tx]='F'; own(tx,ty); }
   // pass 2: the wall itself — every ground cell touching floor, minus the doorways
   for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++){ if(!inGrid(tx,ty)||R.grid[ty][tx]==='F'||!ground(tx,ty)) continue;
     let touch=false; for(let dy=-1;dy<=1&&!touch;dy++)for(let dx=-1;dx<=1;dx++){ if(R.grid[ty+dy]&&R.grid[ty+dy][tx+dx]==='F'){touch=true;break;} }
@@ -424,7 +435,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     // a colonnade has no curtain wall at all — just standing pillars at regular bearings
     if(A.k==='colonnade'){ const a=Math.atan2((ty+0.5-cy)/ry,(tx+0.5-cx)/rx);
       const f=((a+Math.PI)/6.2832)*(A.n||12); if((f-Math.floor(f))>0.42) continue; }
-    R.grid[ty][tx]='X'; }
+    R.grid[ty][tx]='X'; own(tx,ty); }
   // pass 3: interior structure — what's INSIDE says as much as the outline
   const put=(tx,ty)=>{ if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') R.grid[ty][tx]='X'; };
   if(A.k==='pans'){                                    // evaporation pans: two dividing walls, gap each

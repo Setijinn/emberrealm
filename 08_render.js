@@ -300,22 +300,57 @@ function drawTileG(x,y){
       if(!wat(x+1,y)){ ctx.fillRect(tx+TILE-4,ty,2,TILE); pxV(tx+TILE-1,ty,TILE,foam,0.7); }
     }
   } else if(c==='X' || c==='F'){
-    // boss-room wall ('X', sampled from tileset upper) / floor ('F', lower), themed per zone
-    const bd=curRoom.rings?grvBandXY(x,y):8;
-    const set=_lairSet[bd], src=(c==='X')?GROUND_UP:GROUND_LO;
+    // Boss-room wall ('X', tileset upper) / floor ('F', lower) — themed to the BOSS whose den it
+    // is, falling back to the terrain band only for arenas with no recorded owner.
+    const _lo=curRoom.lairAt?curRoom.lairAt[y*curRoom.w+x]:undefined;
+    const bd=(_lo!==undefined&&typeof lairTileSet==='function')?lairTileSet(_lo)
+            :(curRoom.rings?grvBandXY(x,y):8);
+    const set=_lairSet[bd];
+    let src=(c==='X')?GROUND_UP:GROUND_LO;
     if(set && set.naturalWidth){ ctx.imageSmoothingEnabled=false;
       const hh=hmix(x,y), o=hh&3;   // mixed hash: no parity checkerboard
+      // NOTE: do NOT try to auto-pick extra 32x32 "variant" cells out of these sheets. They are
+      // not cell-aligned by material — the floor and wall areas are organic regions, so a cell
+      // that measures close to the floor colour still straddles the boundary and drags wall
+      // pixels in. On screen that reads as dark holes punched through the floor. GROUND_UP /
+      // GROUND_LO are the two hand-verified clean cells; variety comes from the mottling below.
       ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
       ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-      // per-block variety: brightness noise + weathering chips so no two blocks read identical
+      // LOW-FREQUENCY mottling. Per-tile variation repeats at exactly the grid frequency, so it
+      // can never break the wallpaper look no matter how strong it is — the eye still locks onto
+      // the lattice. Broad vnoise patches several tiles across are what actually kill it: damp
+      // hollows and sun-bleached rises that ignore the tile edges entirely.
+      const m1=vnoise(x,y,6.5), m2=vnoise(x+91,y-37,2.7);
+      const mo=m1*0.7+m2*0.3;
+      if(mo<0.46){ ctx.fillStyle='rgba(6,10,16,'+((0.46-mo)*0.62).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      else if(mo>0.58){ ctx.fillStyle='rgba(255,240,208,'+((mo-0.58)*0.34).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // per-block variety on top: brightness + weathering so no two blocks read identical
       const v=(hh>>2)%7;
       if(v===0){ ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(tx,ty,TILE,TILE); }
       else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.07)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      if(c==='X'){ ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(tx,ty,TILE,3);
-        ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-5,TILE,5);
-        if(v>=5){ ctx.fillStyle='rgba(0,0,0,0.35)';                    // cracked / chipped blocks
+      // scattered grit + debris on the FLOOR, keyed off the same noise so it clusters in the
+      // hollows instead of sprinkling evenly (even sprinkles read as texture, not as a place)
+      if(c==='F'){
+        if(mo<0.44 && ((hh>>9)&3)===0){ ctx.fillStyle='rgba(0,0,0,0.20)';
+          ctx.fillRect(tx+3+((hh>>4)%26), ty+5+((hh>>7)%24), 5+((hh>>13)%7), 3); }
+        if(((hh>>15)&7)===0){ ctx.fillStyle='rgba(255,244,214,0.09)';
+          ctx.fillRect(tx+2+((hh>>6)%30), ty+3+((hh>>10)%28), 3, 2); } }
+      if(c==='X'){
+        const G2=curRoom.grid, wl=(xx,yy)=>{ const r=G2[yy]; return r&&r[xx]==='X'; };
+        // Light the wall by its SHAPE, not uniformly: a run of identical blocks with the same
+        // highlight top and shadow bottom is exactly what reads as a repeated texture. Only the
+        // exposed courses catch light, and only free-standing ends get a side shadow.
+        if(!wl(x,y-1)){ ctx.fillStyle='rgba(255,252,240,'+(0.07+0.05*mo).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,4); }
+        if(!wl(x,y+1)){ ctx.fillStyle='rgba(0,0,0,0.40)'; ctx.fillRect(tx,ty+TILE-6,TILE,6); }
+        if(!wl(x-1,y)){ ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(tx,ty,3,TILE); }
+        if(!wl(x+1,y)){ ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.fillRect(tx+TILE-3,ty,3,TILE); }
+        ctx.fillStyle='rgba(0,0,0,'+(0.10+0.22*(1-mo)).toFixed(3)+')';   // damp courses go darker
+        ctx.fillRect(tx,ty,TILE,TILE);
+        if(v>=4){ ctx.fillStyle='rgba(0,0,0,0.35)';                    // cracked / chipped blocks
           ctx.fillRect(tx+4+((hh>>5)%18), ty+7+((hh>>8)%20), 2, 5+((hh>>11)%6));
-          ctx.fillRect(tx+7+((hh>>6)%16), ty+16+((hh>>9)%14), 4, 2); } }
+          ctx.fillRect(tx+7+((hh>>6)%16), ty+16+((hh>>9)%14), 4, 2); }
+        if(mo>0.60 && ((hh>>12)&1)){ ctx.fillStyle='rgba(96,132,64,0.20)';   // moss on the damp side
+          ctx.fillRect(tx+((hh>>3)%22), ty+TILE-9-((hh>>7)%7), 6+((hh>>14)%10), 4); } }
     } else { ctx.fillStyle=(c==='X')?'#3a3340':'#241f2a'; ctx.fillRect(tx,ty,TILE,TILE);
       if(c==='X'){ ctx.fillStyle='#4a4350'; ctx.fillRect(tx,ty,TILE,9); ctx.fillStyle='#181420'; ctx.fillRect(tx,ty+TILE-5,TILE,5); } }
   } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
