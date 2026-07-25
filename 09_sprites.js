@@ -805,16 +805,12 @@ function _bridgeBuild(R){
   const yTop=(B.cy-half), yBot=(B.cy+half);
   // A gatehouse seen from ABOVE is two towers flanking the deck — one on each side — not a single
   // arch sprite sitting in the middle of the roadway. Four towers: both sides of both ends.
-  // GATE POSTS, not gatehouses. A generated building never sat right here: any building sprite
-  // shows wall faces and a plinth implying a ~30 degree ground plane, which fights the deck's
-  // flat top-down plank lines, so it reads as floating no matter how the shadow is drawn. These
-  // are the same crumbling monument pillars that ring the rift — already proven in this world,
-  // and narrow enough that a vertical object doesn't advertise a conflicting ground plane.
-  // Two per side per end: a colonnaded gate rather than one lump.
-  for(const end of [0,1]){ const bx=end?B.x1:B.x0, dir=end?-1:1;
-    for(let k=0;k<2;k++){ const px2=(bx+0.5+dir*k*2.2)*TILE;
-      p.arches.push({x:px2, y:(yTop+1)*TILE, f:end, top:true,  i:k});
-      p.arches.push({x:px2, y:(yBot+1)*TILE, f:end, top:false, i:k+1}); } }
+  // The gatehouse TOWERS, one on each side of both ends (user prefers these to the pillar posts).
+  // `y` is the base line; drawBridge sinks the sprite into it and runs the balustrade through and
+  // behind it, which is what stops it reading as a separate object sat on the bridge.
+  for(const end of [0,1]){ const bx=end?B.x1:B.x0;
+    p.arches.push({x:(bx+0.5)*TILE, y:(yTop+1)*TILE, f:end, top:true});
+    p.arches.push({x:(bx+0.5)*TILE, y:(yBot+1)*TILE, f:end, top:false}); }
   const span=B.x1-B.x0;
   for(let i=1;i<8;i++){ const tx=B.x0+span*(i/8), f=(tx-B.x0)/span;
     for(const yy of [yTop,yBot]) p.statues.push({x:(tx+0.5)*TILE, y:(yy+0.5)*TILE, f, fallen:((i*7+(yy&3))%10)/10 < f*0.75});
@@ -920,24 +916,30 @@ function drawBridge(){
     ctx.fillStyle='rgba(22,18,14,0.9)'; ctx.fillRect(z.x-5,z.y-6,10,14);
     ctx.fillStyle=col; ctx.globalAlpha=0.95;
     ctx.beginPath(); ctx.ellipse(z.x,z.y-11,4.5*fl,8*fl,0,0,6.29); ctx.fill(); ctx.globalAlpha=1; }
-  // the gate posts, drawn last so they stand over the rail (that occlusion is the grounding cue)
-  const PP=(typeof _portalPillars!=='undefined')?_portalPillars:null;
-  if(PP) for(const a of P.arches){
-    const im=PP[(a.i||0)%PP.length]; if(!im||!im.naturalWidth) continue;
-    const w=TILE*1.55, h=w*im.height/im.width;
-    // corruption on the far posts: a glow behind the stone, never a rect over it
-    if(a.f){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.24;
-      const ag=ctx.createRadialGradient(a.x,a.y-h*0.35,4,a.x,a.y-h*0.35,w*1.1);
+  // the gate towers, drawn last so they stand over the rail (that occlusion is the grounding cue)
+  const tw=(typeof _bridgeTower!=='undefined'&&_bridgeTower&&_bridgeTower.naturalWidth)?_bridgeTower:null;
+  const SINK=18;   // the deck and the balustrade bite the lowest course of the plinth
+  if(tw) for(const a0 of P.arches){ const a={x:a0.x,y:a0.y+SINK,f:a0.f,top:a0.top};
+    const w=TILE*3.1, h=w*tw.height/tw.width;
+    // corruption on the far gate: a glow BEHIND the stone, never a rect over it
+    if(a.f){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.20;
+      const ag=ctx.createRadialGradient(a.x,a.y-h*0.3,6,a.x,a.y-h*0.3,w*0.95);
       ag.addColorStop(0,'#a838d0'); ag.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(a.x,a.y-h*0.35,w*1.1,0,6.29); ctx.fill(); ctx.restore(); }
-    // tight contact shadow — a narrow post needs a small ellipse, not a big slab
-    ctx.save(); ctx.fillStyle='#000'; ctx.globalAlpha=0.34;
-    ctx.beginPath(); ctx.ellipse(a.x,a.y-2,w*0.30,w*0.11,0,0,6.29); ctx.fill();
-    ctx.globalAlpha=0.20;
-    ctx.beginPath(); ctx.ellipse(a.x,a.y-2,w*0.42,w*0.16,0,0,6.29); ctx.fill(); ctx.restore();
-    // starter side keeps the moss; the far side stays bare corrupted stone
-    const src=a.f?im:_tintImg(im,'#4f9a3f',0.30);
-    ctx.drawImage(src,a.x-w/2,a.y-h+3,w,h); }
+      ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(a.x,a.y-h*0.3,w*0.95,0,6.29); ctx.fill(); ctx.restore(); }
+    // Shadow is a RHOMBUS matching the isometric plinth footprint. An ellipse under a diamond
+    // base describes a different ground plane than the sprite and makes the float worse.
+    const rh=(cx2,cy2,hw,hh,al)=>{ ctx.globalAlpha=al;
+      ctx.beginPath(); ctx.moveTo(cx2,cy2-hh); ctx.lineTo(cx2+hw,cy2);
+      ctx.lineTo(cx2,cy2+hh); ctx.lineTo(cx2-hw,cy2); ctx.closePath(); ctx.fill(); };
+    ctx.save(); ctx.fillStyle='#000';
+    rh(a.x,a.y-4,w*0.60,w*0.30,0.18);
+    rh(a.x,a.y-4,w*0.47,w*0.235,0.34);
+    rh(a.x,a.y-4,w*0.34,w*0.17,0.30);
+    ctx.restore(); ctx.globalAlpha=1;
+    // starter side mossy green; the far pair MIRRORED so the gatehouses face each other
+    const src=a.f?tw:_tintImg(tw,'#4f9a3f',0.34);
+    ctx.save(); ctx.translate(a.x,0); if(a.f) ctx.scale(-1,1);
+    ctx.drawImage(src,-w/2,a.y-h,w,h); ctx.restore(); }
 }
 function drawWorldFeatures(){
   const R=curRoom; if(!R||!R.rings||!R.rings.radial||R.dungeon||R.town) return;
