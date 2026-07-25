@@ -788,14 +788,24 @@ function drawLairs(){
 // follows the artwork instead of filling its bounding box (which is what made the earlier
 // "corruption tint" render as violet slabs). Cached — this is per-sprite, not per-frame work.
 const _tintImgCache={};
-function _tintImg(im,col,a){
+function _tintImg(im,col,a,ao){
   if(!im||!im.naturalWidth) return im;
-  const k=im.src+'|'+col+'|'+a; let c=_tintImgCache[k]; if(c) return c;
+  const k=im.src+'|'+col+'|'+a+'|'+(ao||0); let c=_tintImgCache[k]; if(c) return c;
   c=document.createElement('canvas'); c.width=im.naturalWidth; c.height=im.naturalHeight;
   const g=c.getContext('2d'); g.imageSmoothingEnabled=false;
   g.drawImage(im,0,0);
-  g.globalCompositeOperation='source-atop'; g.globalAlpha=a; g.fillStyle=col;
-  g.fillRect(0,0,c.width,c.height);
+  if(a>0){ g.globalCompositeOperation='source-atop'; g.globalAlpha=a; g.fillStyle=col;
+    g.fillRect(0,0,c.width,c.height); g.globalAlpha=1; }
+  // CONTACT AO baked into the sprite's own lowest pixels. This is what actually beds a prop into
+  // the ground: the base of the art darkens as it meets the surface, so the eye stops reading a
+  // lit edge hanging in mid-air. It has to live on the sprite (source-atop on ITS canvas) — doing
+  // it on the world canvas would darken everything behind it.
+  if(ao>0){ const hh=Math.max(2,Math.round(c.height*ao));
+    const lg=g.createLinearGradient(0,c.height-hh,0,c.height);
+    lg.addColorStop(0,'rgba(0,0,0,0)'); lg.addColorStop(0.55,'rgba(0,0,0,0.34)');
+    lg.addColorStop(1,'rgba(0,0,0,0.62)');
+    g.globalCompositeOperation='source-atop'; g.fillStyle=lg;
+    g.fillRect(0,c.height-hh,c.width,hh); }
   _tintImgCache[k]=c; return c;
 }
 let _bridgeParts=null;
@@ -936,8 +946,9 @@ function drawBridge(){
     rh(a.x,a.y-4,w*0.47,w*0.235,0.34);
     rh(a.x,a.y-4,w*0.34,w*0.17,0.30);
     ctx.restore(); ctx.globalAlpha=1;
-    // starter side mossy green; the far pair MIRRORED so the gatehouses face each other
-    const src=a.f?tw:_tintImg(tw,'#4f9a3f',0.34);
+    // starter side mossy green; the far pair MIRRORED so the gatehouses face each other.
+    // Both get contact AO baked into the base so the stonework beds into the surface.
+    const src=a.f?_tintImg(tw,'#000000',0,0.17):_tintImg(tw,'#4f9a3f',0.34,0.17);
     ctx.save(); ctx.translate(a.x,0); if(a.f) ctx.scale(-1,1);
     ctx.drawImage(src,-w/2,a.y-h,w,h); ctx.restore(); }
 }
