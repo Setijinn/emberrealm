@@ -98,15 +98,8 @@ function drawAtlas(atlas,x,y,tx,ty,hh,nv){
   ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
   ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale((hh&1)?-1:1,(hh&2)?-1:1);
   ctx.drawImage(atlas,sx,sy,32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-  // Faint lattice marking the tile squares. Drawn here rather than baked into the art: painted
-  // into the tiles it would rotate and mirror with them and land at a different strength on every
-  // cell, which is what made the old accidental version read as a defect. One line, one alpha,
-  // identical everywhere.
-  ctx.fillStyle=GRID_INK;
-  ctx.fillRect(tx,ty,TILE,1); ctx.fillRect(tx,ty,1,TILE);
   return true;
 }
-const GRID_INK='rgba(150,152,160,0.055)';   // tile lattice strength — one knob
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -467,6 +460,7 @@ function drawTileG(x,y){
       if(c==='X'){ ctx.fillStyle='#4a4350'; ctx.fillRect(tx,ty,TILE,9); ctx.fillStyle='#181420'; ctx.fillRect(tx,ty+TILE-5,TILE,5); } }
   } else if('dgretk.'.indexOf(c)>=0 && curRoom.rings){
     const bd=grvBandXY(x,y);
+    let _baseDrawn=false;      // shore sand already laid down -> skip the ground pass
     // SHORE: a sandy beach ring wherever land meets the ocean. Land cells touching 'w' draw the
     // sand tile instead of ground, with a wet-sand rim on the water side -> reads as a coastline.
     if(curRoom.rings.radial && typeof _shoreImg!=='undefined' && _shoreImg && _shoreImg.complete && _shoreImg.naturalWidth){
@@ -481,14 +475,13 @@ function drawTileG(x,y){
         ctx.fillStyle='rgba(70,110,120,0.30)';   // wet darker sand on the water-facing edge(s)
         if(wat(x,y-1)) ctx.fillRect(tx,ty,TILE,4); if(wat(x,y+1)) ctx.fillRect(tx,ty+TILE-4,TILE,4);
         if(wat(x-1,y)) ctx.fillRect(tx,ty,4,TILE); if(wat(x+1,y)) ctx.fillRect(tx+TILE-4,ty,4,TILE);
-        return; }
+        // Do NOT return: a tree or boulder on the shoreline still has to draw its sprite,
+        // or it becomes an invisible obstacle exactly like the ground atlas used to cause.
+        _baseDrawn=true; }
     }
-    // 16-variant open-world ground. Same rule as the arenas: no spot in the world repeats a single
-    // ground sprite. Drawn before the old single-tile path so the sheet wins wherever it shipped,
-    // and the secondary-terrain patch logic below still runs over the top of it.
-    if(drawAtlas(_terrSet[bd],x,y,tx,ty,hmix(x,y),16)) return;
     const _gset=_groundSet[bd];
-    if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
+    if(_baseDrawn){ /* shore sand is the base here */ }
+    else if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
       const hh=hmix(x,y), o=hh&3;   // mixed hash -> flip is random per-cell, not parity-checkerboard
       // The base is ALWAYS the main upper-terrain tile (GROUND_UP). The lower-terrain tile
       // (GROUND_LO) is a very DIFFERENT-looking biome tile — measured colour distance from the
@@ -508,11 +501,18 @@ function drawTileG(x,y){
       const g=loPatch?GROUND_LO:GROUND_UP;
       const useVar=!loPatch && _vs && _vs.naturalWidth && nVar>0.74;
       const src=useVar?_vs:_gset;
-      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
-      ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-      const v=(hh>>2)%5;                    // subtle per-tile brightness noise
-      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // 16-variant open-world ground. This replaces ONLY the base tile -- it must not return
+      // early: everything below (zone tint, corruption, decals) and, critically, the per-char
+      // terrain features further down draw the trees and boulders. Returning here rendered a
+      // world with no obstacles in it while collision still read them from the grid, so the
+      // player walked into things that were not there.
+      if(!drawAtlas(_terrSet[bd],x,y,tx,ty,hh,16)){
+        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+        ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+        const v=(hh>>2)%5;                  // subtle per-tile brightness noise
+        if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
+        else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      }
       if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
       // CORRUPTION: the infection bleeding out from the portal. A violet/black stain rising
       // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
