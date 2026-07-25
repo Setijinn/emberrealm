@@ -93,7 +93,9 @@ if(typeof window!=='undefined'){
   const _T12=[0,1,2,3,4,5,6,7,8,9,10,11];
   ['plate','leather','robe'].forEach(m=>{ _itemArt['arm_'+m]=_T12.map(b=>_img('assets/items/arm_'+m+'_'+b+'.png'));
     _itemArt['helm_'+m]=_T12.map(b=>_img('assets/items/helm_'+m+'_'+b+'.png')); });
-  ['hp','dmg','def','mp','vit','wis','dex','spd','luck'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
+  // Rings tier like everything else. Their gem colour is the STAT's identity so it
+  // never moves; the band is what carries the tier.
+  ['hp','dmg','def','mp','vit','wis','dex','spd','luck'].forEach(s=>{ _itemArt['ring_'+s]=_T12.map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
   _itemArt['coin']=[0,1,2].map(b=>_img('assets/items/coin_'+b+'.png'));   // bronze/silver/gold
   _itemArt['potion']=[_img('assets/items/potion.png')];
 }
