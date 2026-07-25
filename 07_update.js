@@ -565,6 +565,8 @@ function update(dt){
     for(const lb of loots){ const rar=(lb.item&&lb.item.rar)||0; if(rar<2||lb.item.k==='pot') continue;
       const d=Math.hypot(lb.x-player.x,lb.y-player.y);
       if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'loot',x:lb.x,y:lb.y,bag:lb,ctx:(RAR_NAMES[rar]||'')}; } }
+    if(curRoom.npc){ const np=curRoom.npc, d=Math.hypot(np.x-player.x,np.y-player.y);
+      if(d<52 && d<_pbest){ _pbest=d; portalPrompt={kind:'npc',x:np.x,y:np.y,np:np,ctx:np.name}; } }
     if(curRoom.switches) for(const sw of curRoom.switches){ if(sw.on) continue;
       const d=Math.hypot(sw.x-player.x,sw.y-player.y);
       if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'switch',x:sw.x,y:sw.y,sw:sw,ctx:'Awaken'}; } }

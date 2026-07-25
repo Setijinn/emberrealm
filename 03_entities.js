@@ -83,6 +83,7 @@ const GBOSS=[
  // a player only recognises later: a tide from no sea, a bird that only ever flies east, armour
  // no local smith made. Their `home` names a LOCAL place, so nothing hints at a lost world.
  {n:'The Tidewrack',dn:'The Saltworks',col:'#4a90a8',pat:'aimed3',pat2:'nova',mech:'pools',
+  gate:'none',dsub:'the salt-house has new tenants',
   title:'thing the tide left behind',
   desc:'It drags itself from the shallows and floods the ground with brine. Keep to dry sand.',
   lore:'The salt-crews found it tangled in their nets after a tide that came in from no sea the fishers know — running the wrong way, warm, and carrying weed no one could name. They cut it free. It has been growing in the flooded salt-house ever since.',
@@ -90,6 +91,7 @@ const GBOSS=[
   death:'...the water came the wrong way. I only followed it in.',
   home:'the salt-house on the Landing Sands'},
  {n:'The Gullwind Harrier',dn:'Gullwind Light',col:'#8fae6a',pat:'spread5',pat2:'charge',mech:'clones',
+  gate:'none',dsub:'the lamp is out and the stair is full of wings',
   title:'bird that will not turn',
   desc:'It splits into a wheeling flock and stoops from odd angles. Watch which shadow has weight.',
   lore:'The lighthouse keeper logged it for nine years: every dusk it climbs, turns east, and beats itself bloody against the wind until dark. It has never once flown west. The keeper stopped writing after the light went out; the flock roosts in his stair now.',
@@ -97,6 +99,7 @@ const GBOSS=[
   death:'...east. It is always east. Something over there is calling and I am so tired.',
   home:'the lamp room at Gullwind Light'},
  {n:'The Sawgrass Reaper',dn:'Marrow Chapel',col:'#7ea44a',pat:'ring8',pat2:'spiral',mech:'bloom',
+  gate:'none',dsub:'someone is still alive in the cloister',
   title:'reaper in borrowed armour',
   desc:'It cuts in wide rings through the reeds. Break the rhythm and step inside its swing.',
   lore:'It wears plate — dented, ill-fitting, and stamped with a maker’s mark no smith in the isles has ever used. Whoever it took the armour from, it took the walk as well: the reeds are cut in neat rows, the way a farmer would.',
@@ -495,6 +498,14 @@ const DSHAPE=[
  {room:'vault',irr:0.0, rmin:5, rmax:8, wob:0.0,cw:1.6,gap:13},  // 10 lighthouse + keeper's stair
  {room:'cells',irr:0.15,rmin:6, rmax:9, wob:1.0,cw:1.9,gap:10},  // 11 chapel cloister
 ];
+// Living NPCs found inside a dungeon, by boss id. He speaks one line per interaction and then
+// repeats the last — deliberately vague: he has the shape of the truth and none of the facts.
+const DUN_NPC={
+ 11:{name:'Warden Ivor', col:'#e8d8a0',
+   lines:['Don\'t— ...you\'re not one of them. Forgive me. I\'ve been holding this door eleven days.',
+          'It isn\'t a sickness. It has a direction. Everything it touches leans the same way — east.',
+          'The thing in the cloister was a man\'s size once. It still cuts the reeds in rows.',
+          'I can hold the ward. I can\'t hold the ground under it. Go on ahead — and don\'t stop at the water.']}};
 // Dungeon DEPTH drives length/size. Boss ids keep their old depth so every canon dungeon is
 // byte-identical to before; the starter three are deliberately short (4-5 chambers).
 const DDEPTH=[0,1,2,3,4,5,6,7,8, 0,0,1];
@@ -669,6 +680,12 @@ function genDungeon(ring){
    if(g[dy2][dx2]!=='.'||(Math.abs(dx2-c.cx)<3&&Math.abs(dy2-c.cy)<3)) continue;
    room.ddec.push({x:(dx2+.5)*TILE,y:(dy2+.5)*TILE,i:Math.floor(rng()*6)}); } });
  room.bossRing=ring;
+ // THE WARDEN. One living human still inside a starter dungeon, holding a ward that is losing.
+ // He is the first on-screen hint that the corruption is a THING being resisted rather than
+ // weather — and the seed of the reveal the canon bosses finish much later. Placed in a middle
+ // chamber (never the boss arena) so he's found on the way in.
+ if(DUN_NPC[ring] && chs.length>2){ const c=chs[1];
+  room.npc=Object.assign({x:(c.cx+.5)*TILE, y:(c.cy+.5)*TILE, said:0}, DUN_NPC[ring]); }
  rooms['DUN']=room;
  return room;
 }
@@ -677,9 +694,10 @@ function enterDungeon(ring){
  genDungeon(ring);
  curRoom=rooms['DUN']; // set so makeEnemy reads dungeon lv
  enterRoom('DUN',(rooms['DUN'].px+.5)*TILE,(rooms['DUN'].py+.5)*TILE);
- // the dungeon IS the boss's corruption-dream: it dreams of the home it lost before the rift
+ // Canon dungeons ARE the boss's corruption-dream: it dreams of the home it lost before the rift.
+ // The starter three are plain places — a salt-house, a lighthouse, a chapel — so they say so.
  const gb=GBOSS[ring];
- msg(gb.dn, gb.n+' dreams of '+(gb.home||'a world now lost'));
+ msg(gb.dn, gb.dsub || (gb.n+' dreams of '+(gb.home||'a world now lost')));
 }
 
 const SHOPNPCS=[
@@ -781,11 +799,14 @@ function makeEnemy(sp){
   else { const bring=(curRoom&&curRoom.dungeon)?curRoom.bossRing:-1;
     const GB=bring>=0?GBOSS[bring]:null;
     // dungeon boss = the AWAKENED consciousness: tougher than the flesh it wore,
-    // and it always layers both its shot patterns (e.awk bypasses the Lv60 gate)
-    e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hpm*(GB?1.9:1)),spd:(GB?44:38)*espd,fireT:1.5,ang:0,
-     col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?1.25:1),
-     name:GB?('Awakened '+GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
-     ring:bring,mech:GB?GB.mech:null,chargeT:0,sumT:3,wb:!!GB,awk:!!GB}; }
+    // and it always layers both its shot patterns (e.awk bypasses the Lv60 gate).
+    // The starter three are NOT dreams — just the creature itself, holed up in a human
+    // building — so they keep their own name and don't get the awakened buff or sprite.
+    const _awk=!!GB&&GB.gate!=='none';
+    e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hpm*(GB?(_awk?1.9:1.35):1)),spd:(GB?44:38)*espd,fireT:1.5,ang:0,
+     col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?(_awk?1.25:1.1):1),
+     name:GB?(_awk?'Awakened '+GB.n:GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
+     ring:bring,mech:GB?GB.mech:null,chargeT:0,sumT:3,wb:!!GB,awk:_awk}; }
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
   // attach the scaling stat block (nodes stay armour-free so their timed destruction is exact)
   e.def=(sp.t==='N')?0:edef; e.dr=(sp.t==='N')?0:edr; e.dex=edex; e.maxmp=emp; e.mp=emp;

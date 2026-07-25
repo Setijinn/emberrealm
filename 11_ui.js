@@ -44,11 +44,20 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
     const _pn=(typeof activePet==='function'&&activePet())?activePet().name:'Pet'; if(typeof msg==='function') msg('🐾 '+_pn,'now your follower');
     navigator.vibrate&&navigator.vibrate(20); return; }
   if(p.kind==='petstation'){ if(typeof openPets==='function') openPets(p.st.kind==='incubator'?'collection':'fuse'); navigator.vibrate&&navigator.vibrate(20); return; }
+  if(p.kind==='npc'){ const np=p.np, ls=np.lines||[];
+    // walks his lines, then holds on the last — rendered with the boss death-quote treatment
+    const i=Math.min(np.said,ls.length-1); np.said=Math.min(np.said+1,ls.length);
+    if(typeof bossSayDeath==='function') bossSayDeath(ls[i]); else msg(np.name,ls[i]);
+    if(i===0) msg(np.name,'a warden, still holding');
+    navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='portal'){ usePortal(p.to); }
   else if(p.kind==='ground'){ const gp=p.gp;
     if(gp.home){ const gv=rooms['G']; const rp=dunReturn||{x:gv.w*TILE/2,y:gv.h*TILE/2};
       const sp2=safeSpot(gv,rp.x,rp.y); enterRoom('G',sp2.x,sp2.y); msg('THE CLIMB','back to the vale'); groundPortals.length=0; }
-    else if(!rpg||!rpg.ascension){    // Awakened Dungeons are ascension-gated (max all stats -> ascend)
+    // Per-boss gate. 'none' = a plain building on the starter island, walk right in — it is
+    // already gated by having had to kill its Lv4-16 owner. Anything else (including a MISSING
+    // field) means the ascension wall, so a new boss can never accidentally unlock endgame depths.
+    else if((GBOSS[gp.ring]&&GBOSS[gp.ring].gate)!=='none' && (!rpg||!rpg.ascension)){
       msg('THE RIFT RESISTS','Ascend to enter the awakened depths'); navigator.vibrate&&navigator.vibrate([20,40,20]); }
     else { enterDungeon(gp.ring); groundPortals.length=0; } }
   else if(p.kind==='pillar'){ const pl=p.pl;
