@@ -330,6 +330,33 @@ const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 
 // own wedge instead, as a fraction of starter.r, giving ~Lv4 / Lv10 / Lv17 to match the zones'
 // stated ranges (Landing Sands 1-8, Gullwind Shore 8-14, Sawgrass Flats 14-20).
 const LAIR_RAD={9:0.34,10:0.62,11:0.88};
+// ---- ARENA ARCHITECTURE, one per boss ----
+// (user: "make all the borders of all the boss areas not as consistent and make them represent
+// something, like a structure"). Every lair used to carve the SAME wobbling ellipse with the same
+// south doorway, so twelve very different creatures all lived in one generic cave. Each boss now
+// gets a footprint that means something, and its wall openings sit where that structure would
+// actually have them — a caldera blows out downhill, a keep has one gatehouse, a colonnade has no
+// wall at all. `k` picks the floor shape; `doors` are [angle, arcWidth] gaps punched in the wall
+// ring (0 = east, +y = south); `round` forces a true circle; `den`/`spawn` move the centrepiece
+// and the boss's stand in normalized arena coords.
+// Door widths are HALF-ARCS of bearing, not tile counts: on a ring of radius r, a w-radian
+// half-arc opens roughly 2*w*r tiles. ~0.25 is a 3-tile doorway on these footprints. They read
+// much wider on a FLAT wall (every cell along it shares a similar bearing), so masonry gets
+// tighter numbers than the organic shapes — 0.55 on the chapel's west wall removed the wall.
+const LAIR_ARCH={
+ 0:{k:'grove',  doors:[[1.57,0.30],[-1.9,0.26],[2.9,0.24]]},               // root-ring, gaps between buttresses
+ 1:{k:'glade',  doors:[[1.57,0.55],[-0.6,0.45],[3.0,0.40]]},               // open clearing — a scout doesn't wall itself in
+ 2:{k:'warren', doors:[[1.57,0.22]]},                                      // bog hollow, one narrow gullet
+ 3:{k:'vault',  doors:[[1.57,0.20]], den:[0,-0.5]},                        // broken stone hall, square corners
+ 4:{k:'roost',  doors:[[1.57,0.80]]},                                      // clifftop crescent, open to the drop
+ 5:{k:'caldera',doors:[[1.4,0.30],[-1.75,0.22]],round:true},               // crater rim with two blowouts
+ 6:{k:'crypt',  doors:[[1.57,0.18],[-1.57,0.15]]},                         // cross-plan catacomb
+ 7:{k:'keep',   doors:[[1.57,0.16]], den:[0,-0.55]},                       // fortress, corner bastions, one gate
+ 8:{k:'colonnade',doors:[],round:true,n:14},                               // ring of standing pillars, no wall
+ 9:{k:'pans',   doors:[[1.57,0.20],[0,0.14]], den:[0,-0.55]},              // salt-house evaporation pans
+ 10:{k:'tower', doors:[[1.57,0.22]],round:true,den:[0,-0.5]},              // lighthouse drum, one narrow door
+ 11:{k:'nave',  doors:[[3.14,0.16]], den:[0.5,0], spawn:[-0.1,0.1]},       // chapel: west door, apse at the east end
+};
 // Where a boss's lair wants to be, in TILES. Shared by stampLairs and grvLairXY so the stamped
 // footprint and the spawn fallback can never drift apart.
 function lairAnchor(RG,T,z,b){
@@ -392,39 +419,85 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     console.warn('stampLairs: no clear footprint for boss '+b+' (zone '+z+') — clamping');
     place={px:Math.max(1,Math.min(R.w-TW-1,cx0)), py:Math.max(1,Math.min(R.h-TH-1,cy0))}; }
   const {px,py}=place;
-  // ORGANIC arena (user: "boss arenas less square — almost nothing should be perfect squares").
-  // Instead of stamping the rectangular template, carve an irregular LOBED cavern inside the
-  // template's footprint: an ellipse whose radius wobbles with angle + per-cell noise, wrapped
-  // in a ragged 'X' wall ring, open at a south doorway, with a few scattered interior pillars.
-  const cx=px+TW/2, cy=py+TH/2, rx=TW/2-0.6, ry=TH/2-0.6;
+  // ---- carve the arena as an actual STRUCTURE (see LAIR_ARCH) ----
+  const A=LAIR_ARCH[b]||{k:'cavern',doors:[[1.57,0.8]]};
+  const cx=px+TW/2, cy=py+TH/2;
+  let rx=TW/2-0.6, ry=TH/2-0.6;
+  if(A.round){ const r0=Math.min(rx,ry); rx=r0; ry=r0; }     // a drum is a drum, whatever the footprint
   const _lh=(tx,ty)=>{ let h=(Math.imul(tx+b*131+7,374761393)+Math.imul(ty+b*257+3,668265263))>>>0;
     h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))&255)/255; };
-  const floorAt=(tx,ty)=>{ const nx=(tx+0.5-cx)/rx, ny=(ty+0.5-cy)/ry, a=Math.atan2(ny,nx);
-    const wob=0.80+0.17*Math.sin(a*3+b)+0.10*Math.sin(a*5-b*2)+0.05*(_lh(tx,ty)-0.5);
-    return (nx*nx+ny*ny) < wob*wob; };
+  const _sup=(nx,ny,p,w)=>Math.pow(Math.abs(nx),p)+Math.pow(Math.abs(ny),p) < Math.pow(w,p);
+  const _disc=(nx,ny,ox,oy,r)=>((nx-ox)*(nx-ox)+(ny-oy)*(ny-oy)) < r*r;
+  const floorAt=(tx,ty)=>{ const nx=(tx+0.5-cx)/rx, ny=(ty+0.5-cy)/ry;
+    const a=Math.atan2(ny,nx), n=_lh(tx,ty)-0.5, d2=nx*nx+ny*ny;
+    switch(A.k){
+     // masonry: straight runs and real corners, roughened only a little so it still reads as built
+     case 'vault':  return _sup(nx,ny,6,0.93+0.03*n) && !(nx>0.45&&ny<-0.45);          // one corner fallen in
+     case 'keep':   return _sup(nx,ny,8,0.84+0.02*n) ||                                 // curtain wall...
+                           _disc(nx,ny,-0.8,-0.8,0.30)||_disc(nx,ny,0.8,-0.8,0.30)||
+                           _disc(nx,ny,-0.8,0.8,0.30)||_disc(nx,ny,0.8,0.8,0.30);       // ...+ 4 corner bastions
+     case 'crypt':  return _sup(nx,ny*2.1,8,0.95)||_sup(nx*2.1,ny,8,0.95);              // cross plan, nave + transept
+     case 'nave':   return (nx<0.35 && _sup(nx,ny*1.7,8,0.95)) || _disc(nx,ny,0.35,0,0.60);  // hall + rounded apse
+     case 'pans':   return _sup(nx,ny,6,0.94+0.02*n);                                   // plain rectangular works
+     case 'tower':  return d2 < Math.pow(0.90+0.025*n,2);                               // drum
+     case 'caldera':return d2 < Math.pow(0.93+0.05*Math.sin(a*7)+0.03*n,2);             // crater rim, scalloped
+     case 'colonnade':return d2 < Math.pow(0.92+0.02*n,2);                              // open ring floor
+     // natural: keep the lobed organic feel, but distinct per creature
+     case 'roost':  return d2 < Math.pow(0.95+0.04*n,2) && !_disc(nx,ny,0.0,1.05,0.62); // crescent ledge, bitten open
+     case 'glade':  return d2 < Math.pow(0.78+0.22*Math.sin(a*2+b)+0.14*Math.sin(a*3-b)+0.08*n,2);
+     case 'grove':  return d2 < Math.pow(0.84+0.13*Math.sin(a*6+b)+0.07*n,2);           // ring of roots
+     default:       return d2 < Math.pow(0.80+0.17*Math.sin(a*3+b)+0.10*Math.sin(a*5-b*2)+0.05*n,2); } };
+  // an opening is where a wall cell's bearing falls inside one of this structure's doors
+  const doorAt=(tx,ty)=>{ const a=Math.atan2((ty+0.5-cy)/ry,(tx+0.5-cx)/rx);
+    for(const d of (A.doors||[])){ let da=Math.abs(a-d[0]); if(da>Math.PI) da=6.2832-da;
+      if(da<d[1]) return true; }
+    return false; };
   const inGrid=(tx,ty)=>tx>0&&ty>0&&tx<R.w-1&&ty<R.h-1;
   const ground=(tx,ty)=>{ const c=R.grid[ty]&&R.grid[ty][tx]; return c!=null&&'wWhHlXFDP'.indexOf(c)<0; };
-  const bx0=px-2,bx1=px+TW+2,by0=py-2,by1=py+TH+2;
+  const bx0=px-3,bx1=px+TW+3,by0=py-3,by1=py+TH+3;
   // pass 1: floor
   for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++) if(inGrid(tx,ty)&&floorAt(tx,ty)&&ground(tx,ty)) R.grid[ty][tx]='F';
-  // pass 2: ragged wall ring around the floor, with a ~4-wide doorway at the south-centre
+  // pass 2: the wall itself — every ground cell touching floor, minus the doorways
   for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++){ if(!inGrid(tx,ty)||R.grid[ty][tx]==='F'||!ground(tx,ty)) continue;
     let touch=false; for(let dy=-1;dy<=1&&!touch;dy++)for(let dx=-1;dx<=1;dx++){ if(R.grid[ty+dy]&&R.grid[ty+dy][tx+dx]==='F'){touch=true;break;} }
     if(!touch) continue;
-    if(ty>cy+ry*0.35 && Math.abs(tx-cx)<2.4) continue;    // leave the south doorway open
+    if(doorAt(tx,ty)) continue;
+    // a colonnade has no curtain wall at all — just standing pillars at regular bearings
+    if(A.k==='colonnade'){ const a=Math.atan2((ty+0.5-cy)/ry,(tx+0.5-cx)/rx);
+      const f=((a+Math.PI)/6.2832)*(A.n||12); if((f-Math.floor(f))>0.42) continue; }
     R.grid[ty][tx]='X'; }
-  // pass 3: a few scattered interior cover pillars (never near the boss's centre or the door)
-  for(let i=0;i<5;i++){ const a=(i/5)*6.283+b, rr=0.42+0.28*_lh(px+i,py+i);
-    const tx=Math.round(cx+Math.cos(a)*rx*rr), ty=Math.round(cy+Math.sin(a)*ry*rr);
-    if(inGrid(tx,ty)&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>2.4&&!(ty>cy&&Math.abs(tx-cx)<2.4)){
-      R.grid[ty][tx]='X'; if(_lh(tx+1,ty)>0.5&&R.grid[ty][tx+1]==='F') R.grid[ty][tx+1]='X'; } }
-  // decor scattered on the INTERIOR floor (the old corner spots now fall in the ragged walls)
+  // pass 3: interior structure — what's INSIDE says as much as the outline
+  const put=(tx,ty)=>{ if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') R.grid[ty][tx]='X'; };
+  if(A.k==='pans'){                                    // evaporation pans: two dividing walls, gap each
+    for(const fx of [-0.34,0.34]){ const wx=Math.round(cx+fx*rx);
+      for(let ty=Math.round(cy-ry*0.8);ty<=Math.round(cy+ry*0.8);ty++) if(Math.abs(ty-cy)>ry*0.28) put(wx,ty); } }
+  else if(A.k==='nave'||A.k==='crypt'){                // two rows of columns down the hall
+    for(let i=-2;i<=2;i++){ const tx=Math.round(cx+i*rx*0.26);
+      if(Math.abs(i)===0) continue; put(tx,Math.round(cy-ry*0.42)); put(tx,Math.round(cy+ry*0.42)); } }
+  else if(A.k==='keep'){                               // a keep is mostly open ground inside its walls
+    put(Math.round(cx),Math.round(cy-ry*0.62)); }
+  else if(A.k!=='colonnade'){                          // everything else: scattered natural cover
+    for(let i=0;i<5;i++){ const a=(i/5)*6.283+b, rr=0.42+0.28*_lh(px+i,py+i);
+      const tx=Math.round(cx+Math.cos(a)*rx*rr), ty=Math.round(cy+Math.sin(a)*ry*rr);
+      if(inGrid(tx,ty)&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>2.4&&!doorAt(tx,ty)){
+        put(tx,ty); if(_lh(tx+1,ty)>0.5) put(tx+1,ty); } } }
+  // decor scattered on the INTERIOR floor
   const _decos=[]; for(let i=0;i<7;i++){ const a=(i/7)*6.283+b*1.3, rr=0.40+0.22*_lh(px+i*3,py-i);
     const dx=cx+Math.cos(a)*rx*rr, dy=cy+Math.sin(a)*ry*rr, tx=Math.round(dx), ty=Math.round(dy);
     if(R.grid[ty]&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>1.6) _decos.push({x:dx*TILE,y:dy*TILE,i:i%4}); }
-  R.lairs[b]={ b, px, py, tw:TW, th:TH,
-    spawn:{x:cx*TILE, y:(cy+ry*0.20)*TILE},                 // boss stands just south of centre, on floor
-    sprite:{x:cx*TILE, y:(cy-ry*0.55)*TILE},                // den centrepiece toward the back
+  // Snap the boss's stand and the centrepiece onto real floor. The shapes are no longer all
+  // centre-filled — a crescent ledge or an apse can leave the old fixed offsets inside a wall,
+  // and a boss anchored in rock never spawns (spawnRingBoss just fails quietly).
+  const snap=(fx,fy)=>{ const ox=cx+fx*rx, oy=cy+fy*ry;
+    for(let r=0;r<9;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;
+      const tx=Math.round(ox)+dx, ty=Math.round(oy)+dy;
+      if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') return {x:(tx+0.5)*TILE,y:(ty+0.5)*TILE}; }
+    return {x:ox*TILE,y:oy*TILE}; };
+  const sp0=A.spawn||[0,0.20], dn0=A.den||[0,-0.55];
+  R.lairs[b]={ b, px, py, tw:TW, th:TH, arch:A.k,
+    spawn:snap(sp0[0],sp0[1]),                              // where the boss stands
+    sprite:snap(dn0[0],dn0[1]),                             // den centrepiece
     decos:_decos };
   // drop any arrival landing points that now fall inside this compound (avoid spawning trapped)
   if(R.arrivals) R.arrivals=R.arrivals.filter(a=>!(a[0]>=px-1&&a[0]<=px+TW&&a[1]>=py-1&&a[1]<=py+TH));
