@@ -132,14 +132,15 @@ const _projArt={_list:['arrow','fireball','ice_shard','lightning','magic_orb','s
 // What a weapon throws, per tier. The shape used to be a hash of the forge key, so a Hearthfire bow
 // could fire a musical note; now the weapon type picks the family (a bow always looses something
 // arrow-like) and the tier escalates it, so the shot on screen matches the weapon in the hand.
+// One shape per weapon type, held across all twelve tiers. This mirrors how the
+// weapon art itself now works: the silhouette is fixed per line and the tier is
+// carried entirely by colour. Swapping the projectile's shape as you level would
+// contradict that -- a Dragonbone bow would fire a bone while its sprite is plainly
+// still a bow. The tier shows in the hue (PROJ_TIER_HUE) exactly as it does on the
+// weapon in hand.
 const PROJ_BY_WEAPON={
-  bow:   ['arrow','arrow','arrow','arrow','arrow','rune','ember','thorn','lightning','bone','feather','meteor'],
-  xbow:  ['arrow','arrow','spear','spear','spear','rune','ember','thorn','lightning','bone','holy_star','meteor'],
-  sword: ['wind_slash','wind_slash','wind_slash','wind_slash','wind_slash','rune','fireball','void_orb','lightning','bone','holy_star','meteor'],
-  dagger:['dagger','dagger','dagger','shuriken','shuriken','rune','ember','void_orb','lightning','bone','shuriken','holy_star'],
-  staff: ['magic_orb','magic_orb','magic_orb','magic_orb','crystal','rune','fireball','void_orb','lightning','skull','holy_star','meteor'],
-  wand:  ['wisp','wisp','wisp','magic_orb','crystal','rune','ember','void_orb','lightning','skull','holy_star','meteor'],
-  fists: ['wind_slash','wind_slash','wind_slash','wind_slash','wind_slash','rune','fireball','void_orb','lightning','bone','holy_star','meteor']
+  bow:'arrow', xbow:'spear', sword:'wind_slash',
+  dagger:'dagger', staff:'magic_orb', wand:'wisp', fists:'wind_slash'
 };
 // Signature hue per tier, matching the material each tier's gear is made of: rust, grey, iron blue,
 // steel, brass, rune blue, ember orange, obsidian red, storm white-blue, bone cream, mythril, gold.
@@ -150,11 +151,9 @@ const PROJ_TIER_HUE=[24,28,212,205,42,212,22,352,196,44,190,45];
 const PROJ_SPIN={chakram:7.5,shuriken:11,axe:6,skull:2.4,magic_orb:2.0,void_orb:2.2,
   meteor:3.2,crystal:2.6,rune:1.8,wisp:2.8,ember:3.0,holy_star:2.2,bone:5.0};
 function projLook(wt,tier){
-  const row=PROJ_BY_WEAPON[wt]||PROJ_BY_WEAPON.sword;
-  const t=Math.max(0,Math.min(row.length-1,tier|0));
-  const shape=row[t];
-  return {shape:shape, hue:PROJ_TIER_HUE[Math.max(0,Math.min(PROJ_TIER_HUE.length-1,t))],
-          spin:PROJ_SPIN[shape]||0};
+  const shape=PROJ_BY_WEAPON[wt]||PROJ_BY_WEAPON.sword;
+  const t=Math.max(0,Math.min(PROJ_TIER_HUE.length-1,tier|0));
+  return {shape:shape, hue:PROJ_TIER_HUE[t], spin:PROJ_SPIN[shape]||0};
 }
 const _groundSet={}, _bandTree={}, _bandBoulder={}, _bandTone={};
 const _groundVar={}, _decal={}, _lair={};   // richer terrain: variant ground tiles + scatter decals + boss lairs
@@ -189,8 +188,11 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   for(const b of LAIR_BANDS) _wallSet[b]=_img('assets/tiles/wall_'+b+'.png');
   // open-world ground, one atlas per terrain band -- same no-repeat rule outdoors as in the arenas
   for(let b=0;b<=8;b++) _terrSet[b]=_img('assets/tiles/terr_'+b+'.png');
+  // Boss-room decor: all nine themes already ship their own set of four props, and
+  // bossDecArt only borrows for the three starter bosses (DEC_SLOT). Do not "fix" this
+  // by cutting the count -- fewer props per theme means a barer arena, not a richer one.
   const _decDone={};
-  for(const b of _artSlots){ const s=(typeof bossDecArt==='function')?bossDecArt(b):b;   // decor may still be borrowed
+  for(const b of _artSlots){ const s=(typeof bossDecArt==='function')?bossDecArt(b):b;
     if(_decDone[s]){ _lairDec[b]=_decDone[s]; continue; }
     const a=[]; for(let i=0;i<4;i++) a.push(_img('assets/env/ldec_'+s+'_'+i+'.png'));
     _decDone[s]=a; _lairDec[b]=a; }

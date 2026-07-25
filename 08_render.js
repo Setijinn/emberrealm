@@ -161,11 +161,20 @@ function drawTileG(x,y){
     const rg=curRoom.ring||0, ra=(typeof bossTileArt==='function')?bossTileArt(rg):rg;
     const set=(typeof _dunSet!=='undefined'&&_dunSet[ra]&&_dunSet[ra].complete&&_dunSet[ra].naturalWidth)?_dunSet[ra]
              :(typeof _lairSet!=='undefined'&&_lairSet[ra]&&_lairSet[ra].complete&&_lairSet[ra].naturalWidth)?_lairSet[ra]:null;
-    if(set){
+    // A dungeon is that boss's dream of home, so it draws the boss's own 16-variant
+    // arena atlases. Without this the dream fell back to a single repeated cell from
+    // the lair sheet -- the one-sprite-everywhere problem the arenas already fixed.
+    const _datl=(c==='W'||c==='D')
+        ? (typeof _wallSet!=='undefined'?_wallSet[lairTileSet?lairTileSet(rg):ra]:null)
+        : (typeof _floorSet!=='undefined'?_floorSet[lairTileSet?lairTileSet(rg):ra]:null);
+    if(set || _datl){
       ctx.imageSmoothingEnabled=false; const hh=hmix(x,y), o=hh&3;   // mixed hash: no parity checkerboard
       const src=(c==='W'||c==='D')?GROUND_UP:GROUND_LO;
-      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
-      ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      // atlas first; only the base tile is replaced, everything below still runs
+      if(!drawAtlas(_datl,x,y,tx,ty,hh,16)){
+        ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
+        ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+      }
       // 'p' = dream-path spine. NOT an obvious road (the old stepping stones read as river
       // stones) — a faint 1x1 SPRINKLE of motes over the dream floor: a mysterious trail you
       // have to look for, never a highlighted path. A couple of tiny dim points per cell,

@@ -1214,10 +1214,32 @@ function render(){
             ctx.fillRect(px3,by-13,6,6); }
           px3+=11; } } });
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#cfc8bd';
-    if(e.wb){ upright(e.x,e.y-e.r-30,(lx,ly)=>{ ctx.fillStyle='#ff6b5a'; ctx.font='12px "Pixelify Sans",monospace';
-      ctx.fillText('\u2620 '+e.name+' \u2620',lx,ly); });
-      upright(e.x,e.y-e.r-19,(lx,ly)=>{
-        ctx.font='10px monospace'; ctx.fillStyle='#ffd07a'; ctx.fillText('WORLD BOSS · Lv'+e.lv,lx,ly); }); }
+    if(e.wb){
+      // The boss name is the loudest thing on screen after the boss itself, so it gets real
+      // presence: a darkened plate behind it (flat text vanished over a busy arena floor),
+      // a heavy outline, rules either side and a slow ember pulse on the fill.
+      const _bn='\u2620 '+e.name+' \u2620';
+      upright(e.x,e.y-e.r-32,(lx,ly)=>{
+        ctx.font='16px "Pixelify Sans",monospace'; ctx.textAlign='center';
+        const w=ctx.measureText(_bn).width, pd=10;
+        const g=ctx.createLinearGradient(lx-w/2-pd,0,lx+w/2+pd,0);
+        g.addColorStop(0,'rgba(12,8,10,0)'); g.addColorStop(0.5,'rgba(12,8,10,0.78)');
+        g.addColorStop(1,'rgba(12,8,10,0)');
+        ctx.fillStyle=g; ctx.fillRect(lx-w/2-pd,ly-13,w+pd*2,18);
+        const pul=0.72+0.28*Math.sin(performance.now()/430);
+        ctx.strokeStyle='rgba(0,0,0,0.92)'; ctx.lineWidth=4; ctx.lineJoin='round';
+        ctx.strokeText(_bn,lx,ly);
+        ctx.fillStyle='rgba(255,'+Math.round(120+70*pul)+','+Math.round(70+40*pul)+',1)';
+        ctx.fillText(_bn,lx,ly);
+        ctx.fillStyle='rgba(255,190,120,'+(0.30+0.25*pul).toFixed(2)+')';
+        ctx.fillRect(lx-w/2-pd-14,ly-5,12,2); ctx.fillRect(lx+w/2+pd+2,ly-5,12,2);
+      });
+      upright(e.x,e.y-e.r-17,(lx,ly)=>{
+        ctx.font='11px "Pixelify Sans",monospace'; ctx.textAlign='center';
+        const s='WORLD BOSS \u00b7 Lv'+e.lv;
+        ctx.strokeStyle='rgba(0,0,0,0.9)'; ctx.lineWidth=3.5; ctx.lineJoin='round';
+        ctx.strokeText(s,lx,ly);
+        ctx.fillStyle='#ffd07a'; ctx.fillText(s,lx,ly); }); }
     else if(e.type!=='N') upright(e.x,e.y-e.r-19,(lx,ly)=>ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),lx,ly));
     ctx.textAlign='left';
   }
