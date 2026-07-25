@@ -166,8 +166,8 @@ if(typeof window!=='undefined'){
   const _anim=(name)=>({idle:_frames('assets/mobs/anim/'+name,'idle',7), attack:_frames('assets/mobs/anim/'+name,'attack',7)});
   _mobAnim.c=_anim('hound');
   _mobAnim.s=_anim('cultist');
-  // frame animations exist only for the canon nine; the rest fall back to their static sprite
-  for(const b of _artSlots){ if(b<=8) _bossAnim[b]=_anim('boss_'+b); }
+  // every boss now has idle+attack frames; a slot without them falls back to its static sprite
+  for(const b of _artSlots) _bossAnim[b]=_anim('boss_'+b);
 }
 
 // All 17 classes have real PixelLab art vendored to assets/<class>/.
