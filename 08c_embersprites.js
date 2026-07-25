@@ -48,8 +48,10 @@ const _portalPillars=(typeof window!=='undefined')?[_img('assets/env/pillar_0.pn
 const _waypointImg=(typeof window!=='undefined')?_img('assets/env/waypoint.png'):null;
 // Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
 // (render falls back to lairset / normal boss art until these land)
+// ART SLOTS, not boss ids: a boss borrowing an existing slot adds no image request.
+const _artSlots=(typeof bossArtSlots==='function')?bossArtSlots():[0,1,2,3,4,5,6,7,8];
 const _dunSet={}, _awakImg={};
-if(typeof window!=='undefined') for(let b=0;b<=8;b++){
+if(typeof window!=='undefined') for(const b of _artSlots){
   _dunSet[b]=_img('assets/tiles/dunset_'+b+'.png');
   _awakImg[b]=_img('assets/mobs/awak_'+b+'.png'); }
 // ability effect sprites: zone rune circle, melee slash arc, heal glyph
@@ -117,10 +119,11 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   const _dsrc={};
   for(const s of [0,3,5]){ _dsrc[s]=[]; for(let i=0;i<6;i++) _dsrc[s].push(_img('assets/env/decal_'+s+'_'+i+'.png')); }
   for(let b=0;b<=8;b++) _decal[b]=_dsrc[DECAL_SRC[b]];
-  // boss lairs per band: exterior-den centrepiece sprite, wall/floor tileset, interior decorations
-  for(const b of LAIR_BANDS) _lair[b]=_img('assets/env/lair_'+b+'.png');
+  // The den sprite and its decor belong to the BOSS (art slots); the wall/floor tileset belongs
+  // to the TERRAIN it's cut into (bands) — that split is what lets a boss move zones.
+  for(const b of _artSlots) _lair[b]=_img('assets/env/lair_'+b+'.png');
   for(const b of LAIR_BANDS) _lairSet[b]=_img('assets/tiles/lairset_'+b+'.png');
-  for(const b of LAIR_BANDS){ _lairDec[b]=[]; for(let i=0;i<4;i++) _lairDec[b].push(_img('assets/env/ldec_'+b+'_'+i+'.png')); }
+  for(const b of _artSlots){ _lairDec[b]=[]; for(let i=0;i<4;i++) _lairDec[b].push(_img('assets/env/ldec_'+b+'_'+i+'.png')); }
   _bandTree[0]=_img('assets/env/tree_grass.png');
   _bandTree[1]=_img('assets/env/tree_pine.png');
   _bandTree[2]=_img('assets/env/tree_willow.png');
@@ -144,7 +147,7 @@ const _allyImg = (typeof window!=='undefined') ? {
   skel:_img('assets/mobs/ally_skel.png'),
   wisp:_img('assets/mobs/ally_wisp.png') } : {};
 const _bossImg = {};
-if(typeof window!=='undefined') for(let b=0;b<=8;b++) _bossImg[b]=_img('assets/mobs/boss_'+b+'.png');
+if(typeof window!=='undefined') for(const b of _artSlots) _bossImg[b]=_img('assets/mobs/boss_'+b+'.png');
 
 // Enemy frame animations (PixelLab objects). type/band -> {idle:[frames], attack:[frames]}
 function _frames(dir,name,n){ const a=[]; if(typeof window!=='undefined') for(let i=0;i<n;i++) a.push(_img(dir+'/'+name+'_'+i+'.png')); return a; }
@@ -153,7 +156,7 @@ if(typeof window!=='undefined'){
   const _anim=(name)=>({idle:_frames('assets/mobs/anim/'+name,'idle',7), attack:_frames('assets/mobs/anim/'+name,'attack',7)});
   _mobAnim.c=_anim('hound');
   _mobAnim.s=_anim('cultist');
-  for(let b=0;b<=8;b++) _bossAnim[b]=_anim('boss_'+b);
+  for(const b of _artSlots) _bossAnim[b]=_anim('boss_'+b);
 }
 
 // All 17 classes have real PixelLab art vendored to assets/<class>/.

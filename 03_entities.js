@@ -115,6 +115,15 @@ function bossClump(bid){ const R=rooms['G'], RG=R&&R.rings; if(!RG||!RG.radial) 
  const T=_territories(R), z=BOSS_ZONE[bid]; return (T&&z!=null&&T[z])?T[z]:null; }
 // a boss's THEME band — for art fallbacks and dungeon mob naming/tint (NOT for its identity)
 function bossBand(bid){ const t=bossClump(bid); return t?t.band:Math.max(0,Math.min(8,bid)); }
+// ART SLOT per boss. Sprite/animation/den/dungeon-tile art follows the BOSS; ground tilesets,
+// lair walls and decals follow the BAND. Bosses 0-8 were authored as art 0-8, so identity is the
+// default; an entry here lets a boss without its own art borrow an existing slot. Loader loops
+// walk the DISTINCT values, so a borrowed slot costs zero extra image requests.
+// (named BOSS_SLOT, not BOSS_ART — 09_sprites already owns BOSS_ART, the procedural sprite table)
+const BOSS_SLOT={};
+function bossArt(i){ return (BOSS_SLOT[i]!==undefined)?BOSS_SLOT[i]:i; }
+const BOSS_SLOT_N=9;                             // grows with the roster
+function bossArtSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
 // ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
 // 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
 const LAIR_TEMPLATES={
@@ -551,6 +560,8 @@ function genDungeon(ring){
      g[y][x]='D'; cells.push({x:x,y:y}); }
   gatesByCh.push(cells);
  }
+ // `ring` is a BOSS ID here, not a band. Anything wanting a 0-8 theme index (mob names/tints,
+ // tile fallbacks) goes through bossArt(ring) — the dream wears the boss's own theme.
  const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
   glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,
   px:Math.floor(chs[0].cx),py:Math.floor(chs[0].cy),

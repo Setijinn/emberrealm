@@ -423,13 +423,14 @@ function drawEnemySprite(e,pn){
      if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
  else { // awakened dungeon bosses use their spectral sprite when it exists
-   if(e.awk && typeof _awakImg!=='undefined'){ const ai=_awakImg[e.ring];
+   const _ba=(typeof bossArt==='function')?bossArt(e.ring):e.ring;   // art slot, NOT the boss id
+   if(e.awk && typeof _awakImg!=='undefined'){ const ai=_awakImg[_ba];
      if(ai&&ai.complete&&ai.naturalWidth){ blit(ai,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/ai.width,flip); return; } }
-   const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[e.ring]:null,e,pn);
+   const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[_ba]:null,e,pn);
    if(fr) blit(fr,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/fr.width,flip);
-   else { const im=(typeof _bossImg!=='undefined')?_bossImg[e.ring]:null;
+   else { const im=(typeof _bossImg!=='undefined')?_bossImg[_ba]:null;
      if(im&&im.naturalWidth) blit(im,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/im.width,flip);
-     else { const sp=(e.wb && sprBoss[e.ring])?sprBoss[e.ring]:sprTyrant;
+     else { const sp=(e.wb && sprBoss[_ba])?sprBoss[_ba]:sprTyrant;
        blit(sp,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/sp.width,flip); } } }
 }
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
@@ -444,7 +445,11 @@ const MOBTINT=['rgba(96,168,72,0.30)','rgba(120,190,160,0.30)','rgba(128,148,64,
  'rgba(255,116,44,0.28)','rgba(255,176,64,0.28)'];
 function enemyBand(e){
  if(curRoom&&curRoom.rings) return grvBandXY(e.x/TILE,e.y/TILE);
- if(curRoom&&typeof curRoom.ring==='number') return curRoom.ring;
+ // In a dungeon curRoom.ring is a BOSS ID, which would run off the end of the 9-entry
+ // MOBNAME/MOBTINT tables (silently — undefined name, no tint). Use the boss's ART SLOT: the
+ // dungeon is that boss's dream of ITS lost homeland, so the mobs wear the boss's theme, not
+ // the theme of whatever territory it happens to squat in now.
+ if(curRoom&&typeof curRoom.ring==='number') return bossArt(curRoom.ring);
  return -1; }
 function mobLabel(e){ const t=MOBNAME[e.type]; if(!t) return ENAME[e.type]||'';
  const bd=enemyBand(e); return (bd>=0&&t[bd])||ENAME[e.type]||''; }
@@ -710,12 +715,13 @@ function drawLairs(){
   if(typeof _lair==='undefined') return;
   ctx.imageSmoothingEnabled=false;
   for(const b in R.lairs){ const L=R.lairs[b];
+    const ba=(typeof bossArt==='function')?bossArt(+b):+b;   // for..in gives STRING keys — coerce
     // corner decorations (bones, mushrooms, lava pools, braziers…)
-    const dec=(typeof _lairDec!=='undefined')?_lairDec[b]:null;
+    const dec=(typeof _lairDec!=='undefined')?_lairDec[ba]:null;
     if(dec) for(const d of L.decos){ const im=dec[d.i]; if(im&&im.naturalWidth){
       const w=TILE*1.1, h=w*im.height/im.width; ctx.drawImage(im, d.x-w/2, d.y-h*0.72, w, h); } }
     // den centrepiece (the exterior lair art, reused as an interior back-wall feature)
-    const cp=_lair[b];
+    const cp=_lair[ba];
     if(cp&&cp.naturalWidth){ const w=TILE*3.1, h=w*cp.height/cp.width;
       ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.beginPath(); ctx.ellipse(L.sprite.x,L.sprite.y+8,w*0.30,w*0.10,0,0,6.29); ctx.fill();
       ctx.drawImage(cp, L.sprite.x-w/2, L.sprite.y+12-h, w, h); }
@@ -913,7 +919,7 @@ function render(){
   for(const gp of groundPortals){ const pp=performance.now()/220;
     // dungeon drops render as a miniature of that zone boss's DEN (the lair centrepiece art);
     // the EXIT portal (and zones whose den art hasn't shipped) keep the swirl rings.
-    const den=(!gp.home && typeof _lair!=='undefined')?_lair[gp.ring]:null;
+    const den=(!gp.home && typeof _lair!=='undefined')?_lair[bossArt(gp.ring)]:null;
     if(den && den.naturalWidth){
       const w=74, h=w*den.height/den.width, bob=Math.sin(pp*0.9)*2;
       const glw=0.30+Math.sin(pp*1.6)*0.12;
