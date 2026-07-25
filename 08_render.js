@@ -100,6 +100,37 @@ function drawAtlas(atlas,x,y,tx,ty,hh,nv){
   ctx.drawImage(atlas,sx,sy,32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
   return true;
 }
+// A patch of ground beneath a standing feature, so it has something to grow out of. Without it a
+// pine sits directly on shore shingle or bare stone and reads as pasted on. Trees get dark soil
+// with a little leaf litter and a couple of grass blades; boulders get dry scree and no growth.
+// Irregular and deterministic per tile, so it never reads as a drawn circle.
+function propFooting(tx,ty,x,y,kind){
+  const h=hmix(x*13+7,y*11+3);
+  const cx=tx+TILE/2, cy=ty+TILE-9, rx=TILE*(kind==='t'?0.40:0.32), ry=rx*0.52;
+  ctx.save();
+  ctx.beginPath();
+  for(let i=0;i<10;i++){                        // lumpy ellipse, not a clean disc
+    const a=i/10*6.283, w=0.80+((h>>(i*3))&7)/18;
+    const px=cx+Math.cos(a)*rx*w, py=cy+Math.sin(a)*ry*w;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+  ctx.fillStyle=(kind==='t')?'rgba(46,34,22,0.62)':'rgba(58,55,52,0.50)';
+  ctx.fill();
+  if(kind==='t'){
+    ctx.fillStyle='rgba(62,48,28,0.55)';        // scuffed litter round the base
+    for(let i=0;i<3;i++){ const a=((h>>(i*5))&15)/15*6.283;
+      ctx.fillRect((cx+Math.cos(a)*rx*0.75)|0,(cy+Math.sin(a)*ry*0.75)|0,2,1); }
+    ctx.fillStyle='rgba(88,120,58,0.55)';       // a couple of blades pushing up
+    for(let i=0;i<2;i++){ const ox=((h>>(i*7+2))%Math.round(rx))-rx/2;
+      ctx.fillRect((cx+ox)|0,(cy-2)|0,1,3); }
+  } else {
+    ctx.fillStyle='rgba(30,28,26,0.40)';        // chips shed off the rock
+    for(let i=0;i<4;i++){ const a=((h>>(i*4))&15)/15*6.283;
+      ctx.fillRect((cx+Math.cos(a)*rx*0.85)|0,(cy+Math.sin(a)*ry*0.85)|0,2,1); }
+  }
+  ctx.restore();
+}
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -549,6 +580,7 @@ function drawTileG(x,y){
       ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')'; ctx.fillRect(tx+10,ty+TILE/2,TILE-20,3); } }
     else if(c==='t'){
       const _tr=_bandTree[bd], _o=featOffset(x,y), _bx=tx+TILE/2+_o[0], _by=ty+TILE-6+_o[1];
+      propFooting(tx+_o[0],ty+_o[1],x,y,'t');
       if(_tr && _tr.naturalWidth){ ctx.imageSmoothingEnabled=false;
         const tw=TILE*0.92, th=tw*_tr.height/_tr.width;
         ctx.drawImage(_tr, _bx-tw/2, _by-th, tw, th); }
@@ -558,6 +590,7 @@ function drawTileG(x,y){
         ctx.fillStyle='#2c4a2a'; ctx.beginPath(); ctx.arc(_bx-3,_by-19,7,0,6.29); ctx.fill(); } }
     else if(c==='k'){
       const _bo=_bandBoulder[bd], _o=featOffset(x,y), _bx=tx+TILE/2+_o[0], _by=ty+TILE-6+_o[1];
+      propFooting(tx+_o[0],ty+_o[1],x,y,'k');
       if(_bo && _bo.naturalWidth){ ctx.imageSmoothingEnabled=false;
         const bw=TILE*0.72, bh=bw*_bo.height/_bo.width;
         ctx.drawImage(_bo, _bx-bw/2, _by-bh, bw, bh); }

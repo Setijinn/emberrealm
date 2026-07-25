@@ -165,7 +165,12 @@ const _floorSet={}, _wallSet={}, _terrSet={}, _dunFloor={};
 const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (uniform across tilesets)
 // every band gets decals: forest zones share the grass set (0), stone zones the rocky set (3),
 // ash/fire zones the ember set (5) â€” richness everywhere without 9 full unique sets
-const DECAL_SRC={0:0,1:0,2:0,3:3,4:3,5:5,6:5,7:5,8:5};
+// Which scatter-decal set each terrain band uses: 0 = grass/mushroom, 3 = rocky, 5 = ember.
+// This used to run 0,0,0,3,3,5,5,5,5, which put mushrooms and grass tufts on the landing sands
+// and the shore while the verdant belt and wolfwood got bare rock -- exactly backwards. Decals
+// now follow the ground they land on: grass only where grass grows, rock on sand/scree, ember
+// in the burn.
+const DECAL_SRC={0:3,1:3,2:0,3:0,4:0,5:0,6:3,7:5,8:5};
 const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair structure
 (function(){
   if(typeof window==='undefined') return;
