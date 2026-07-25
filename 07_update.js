@@ -409,6 +409,7 @@ function update(dt){
         const na=cur+Math.max(-3.2*dt,Math.min(3.2*dt,diff)), sp2=Math.hypot(s.vx,s.vy);
         s.vx=Math.cos(na)*sp2; s.vy=Math.sin(na)*sp2; } }
     s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
+    s.age=(s.age||0)+dt;                       // drives the tumble on spinning projectiles
     if(s.life<=0||solid(s.x,s.y)){ pShots.splice(i,1); continue; }
     for(const e of enemies){ if(e!==s.lastHit && Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
       // execute/shatter/curse scaling, lifesteal, damage text and the on-hit perk triggers
@@ -440,7 +441,8 @@ function update(dt){
       if(player.fork&&!s.forked){ const ba=Math.atan2(s.vy,s.vx), sp3=Math.hypot(s.vx,s.vy);
         for(const off of [-0.5,0.5]) pShots.push({x:s.x,y:s.y,px:s.x,py:s.y,
           vx:Math.cos(ba+off)*sp3,vy:Math.sin(ba+off)*sp3,r:s.r,life:0.45,
-          dmg:Math.round((s.dmg||player.dmg)*0.45),crit:false,pierce:0,lastHit:e,forked:true,pk:s.pk,pcore:s.pcore}); }
+          dmg:Math.round((s.dmg||player.dmg)*0.45),crit:false,pierce:0,lastHit:e,forked:true,pk:s.pk,pcore:s.pcore,
+          psh:s.psh,phu:s.phu,pspin:s.pspin,age:0}); }
       fxHit(s.x,s.y,'#ffc94d');
       if(s.pierce>0){ s.pierce--; } else { pShots.splice(i,1); }
       break; } }

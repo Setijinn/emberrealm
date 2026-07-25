@@ -135,7 +135,13 @@ function fire(dt){
   // projectile forge key: every (class, weapon type, tier, rarity) combo has its own look
   const _cls=(typeof curChar==='function'&&curChar())?curChar().cls:'x';
   const _rar=(typeof eqRar==='function')?(eqRar('wpn')||0):0;
-  let pk='w:'+_cls+':'+((typeof CWEAP!=='undefined'&&CWEAP[_cls])||'sword')+':'+(rpg?rpg.wpn:0)+':'+_rar;
+  const _wtn=(typeof CWEAP!=='undefined'&&CWEAP[_cls])||'sword';
+  const _wtier=(rpg?(rpg.wpn||0):0);
+  let pk='w:'+_cls+':'+_wtn+':'+_wtier+':'+_rar;
+  // Tie the shot's look to the weapon that fired it rather than to a hash of the key: the weapon
+  // type picks the shape family and the tier sets the hue and the top-end shape, so upgrading a
+  // bow visibly changes what comes off the string.
+  const _look=(typeof projLook==='function')?projLook(_wtn,_wtier):null;
   let pcore=(_rar>0&&typeof RAR_COL!=='undefined')?RAR_COL[_rar]:undefined;
   // status builds recolour the shot to the effect it inflicts (recalcStats -> player.shotStat).
   // The '|st:' suffix gives the forge a distinct cached sprite so the tint sticks per status.
@@ -149,7 +155,10 @@ function fire(dt){
     pShots.push({x:sx,y:sy,px:sx,py:sy,
       vx:Math.cos(sa)*psp,vy:Math.sin(sa)*psp,
       r:wt.size||5,life:wt.life||1,dmg:dm,crit:crit,
-      pierce:pr,lastHit:null,slow:player.slowShot,pk:pk,pc:_sc,pcore:pcore});
+      pierce:pr,lastHit:null,slow:player.slowShot,pk:pk,pc:_sc,pcore:pcore,
+      // a status build recolours the shot, so let its hue win over the tier's
+      psh:_look?_look.shape:undefined, phu:(_look&&!_ss)?_look.hue:undefined,
+      pspin:_look?_look.spin:0, age:0});
   }
   if(de3) player.deadeye--;
   chargeRes('shot'); lastShotT=0;

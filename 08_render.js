@@ -595,13 +595,17 @@ function _domHue(name,img){ if(_projArtHue[name]!==undefined) return _projArtHue
 // PixelLab-art projectile: pick a base shape by hash, hue-shift its pixels (12 steps, or to
 // the caller's theme colour), pad square, add a glow. Falls back to the procedural forge
 // until the art decodes. 24 shapes x 12 hues x sizes/rarity glows = hundreds of looks.
-function projSprite(key, baseCol, coreCol){
+// `shape`/`hue` are supplied by the firing weapon (see projLook). When given they override the
+// hash-picked look entirely, which is what ties the shot on screen to the weapon that fired it;
+// without them this falls back to the old key-hash behaviour for boss and perk projectiles.
+function projSprite(key, baseCol, coreCol, shape, hue){
   let c=_projCache[key]; if(c) return c;
   const h=_pfh(key);
   if(typeof _projArt!=='undefined'){
-    const name=_projArt._list[(h>>>3)%_projArt._list.length], img=_projArt[name];
+    const name=shape||_projArt._list[(h>>>3)%_projArt._list.length], img=_projArt[name];
     if(img && img.complete && img.naturalWidth){
-      const tgt=_colHue(baseCol), delta=(tgt!==null)?(tgt-_domHue(name,img)):(((h>>>9)%12)*30);
+      const tgt=(hue!==undefined&&hue!==null)?hue:_colHue(baseCol);
+      const delta=(tgt!==null)?(tgt-_domHue(name,img)):(((h>>>9)%12)*30);
       const w=img.naturalWidth, hh2=img.naturalHeight, S=Math.max(w,hh2)+10;
       const cv2=document.createElement('canvas'); cv2.width=S; cv2.height=S;
       const g=cv2.getContext('2d');
@@ -662,7 +666,10 @@ function _projProc(key, baseCol, coreCol){
 }
 function drawShot(s,col,core){
  if(s.pk){                                   // forged projectile: sprite rotated to its heading
-   const sp2=projSprite(s.pk,s.pc,s.pcore), ang=Math.atan2(s.vy,s.vx), sc=Math.max(0.7,(s.r||5)/6);
+   const sp2=projSprite(s.pk,s.pc,s.pcore,s.psh,s.phu), sc=Math.max(0.7,(s.r||5)/6);
+   // Pointed shots stay aligned to their heading; tumbling shapes (thrown blades, orbs, stars) get
+   // a continuous spin instead, driven by flight time so every shot spins at the same rate.
+   const ang=s.pspin ? (s.age||0)*s.pspin : Math.atan2(s.vy,s.vx);
    ctx.globalAlpha=0.35; ctx.drawImage(sp2,(s.px+s.x)/2-15*sc*0.7,(s.py+s.y)/2-15*sc*0.7,30*sc*0.7,30*sc*0.7);
    ctx.globalAlpha=1;
    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
