@@ -83,11 +83,11 @@ if(typeof window!=='undefined') for(let i=0;i<6;i++) _dunDec.push(_img('assets/e
 // key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
 const _itemArt={};
 if(typeof window!=='undefined'){
-  // Weapons get SIX bands, one per pair of tiers, so the ladder actually escalates: with three
-  // bands a T1 Cracked sword and a T4 Steel sword were the same picture. The bands line up with
-  // the tier-name pairs -- Cracked/Worn, Iron/Steel, Tempered/Runed, Ember/Obsidian,
-  // Storm-forged/Dragonbone, Mythril/Hearthfire. Armour and rings stay on three.
-  ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2,3,4,5].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
+  // Weapons ship ONE sprite per tier -- no two tiers share art. Each depicts its own tier name's
+  // material: Cracked, Worn, Iron, Steel, Tempered, Runed, Ember, Obsidian, Storm-forged,
+  // Dragonbone, Mythril, Hearthfire. Armour, helms and rings still ship three bands each; the
+  // band maths below adapts to whatever a key actually provides.
+  ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2,3,4,5,6,7,8,9,10,11].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
   ['plate','leather','robe'].forEach(m=>{ _itemArt['arm_'+m]=[0,1,2].map(b=>_img('assets/items/arm_'+m+'_'+b+'.png'));
     _itemArt['helm_'+m]=[0,1,2].map(b=>_img('assets/items/helm_'+m+'_'+b+'.png')); });
   ['hp','dmg','def','mp','vit','wis','dex','spd','luck'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
