@@ -19,29 +19,39 @@ function bossPunishDmg(e){ return Math.min((player&&player.maxhp?player.maxhp*0.
 // speaks a couple words of TRUTH as it goes. Shown as a slow, sombre centred quote (separate from
 // the action banner). The final boss's line drops the whole reveal. (user, 2026-07-24) ----
 let bossQuote=null;
-function bossSayDeath(line,who){ if(!line) return;
-  bossQuote={line:line, born:performance.now(), dur:6200, who:who||null,
+// unconditional — used by the beats that OUTRANK chatter (phase lines, dying words)
+function bossSayNow(line,dur,who){ if(!line) return;
+  bossQuote={line:line, born:performance.now(), dur:dur||6200, who:who||null,
              x:who?who.x:0, y:who?who.y:0, r:who?who.r:0}; }
+function bossSayDeath(line,who){ bossSayNow(line,6200,who); }
 // ---- IN-FIGHT DIALOGUE ----
 // The two phase banners alone left the Lv30-50 bosses nearly silent through a long fight, so the
 // confession they are supposed to be building landed in two lines. Each canon boss now speaks on
 // ENGAGE and at four HP milestones as well, in the same sombre quote treatment as its dying words
 // — the phase banners stay the loud beats, this is the boss talking THROUGH the fight.
 const BOSS_CHAT_AT=[0.86,0.52,0.24,0.09];
-function bossSayLine(line,dur,who){ if(!line) return;
-  // never talk over a line still on screen — the phase banner and dying words outrank chatter
-  if(bossQuote && (performance.now()-bossQuote.born) < bossQuote.dur-700) return;
+// true while a line is still on screen — callers must WAIT rather than fire and lose the line
+function quoteBusy(){ return !!(bossQuote && (performance.now()-bossQuote.born) < bossQuote.dur-700); }
+function bossSayLine(line,dur,who){ if(!line || quoteBusy()) return false;
   bossQuote={line:line, born:performance.now(), dur:dur||4600, who:who||null,
-             x:who?who.x:0, y:who?who.y:0, r:who?who.r:0}; }
+             x:who?who.x:0, y:who?who.y:0, r:who?who.r:0};
+  return true; }
 function bossChatter(e){
   const gb=(typeof GBOSS!=='undefined' && e && e.ring!=null && e.ring>=0)?GBOSS[e.ring]:null;
   if(!gb || e.decoy) return;
   if(typeof bossBar==='undefined' || bossBar!==e) return;      // only the boss you're actually fighting
-  if(!e.saidOpen){ e.saidOpen=1; if(gb.open){ bossSayLine(gb.open,5000,e); return; } }
+  if(e.phaseInv>0) return;                                     // let the phase beat land alone
+  if(!e.saidOpen){ if(!gb.open){ e.saidOpen=1; }
+    else if(bossSayLine(gb.open,5000,e)){ e.saidOpen=1; return; } else return; }
   if(!gb.mid || !gb.mid.length) return;
   if(e.chat===undefined) e.chat=0;
-  if(e.phaseInv>0) return;                                     // let the phase beat land alone
-  const f=e.hp/e.maxhp; let spoke=null;
+  const f=e.hp/e.maxhp;
+  // Check what's DUE before checking whether we can speak, and don't consume a milestone we
+  // can't voice — otherwise a line whose moment arrives while another is on screen is marked
+  // said and silently lost. Overdue milestones collapse to the most recent one.
+  if(e.chat>=BOSS_CHAT_AT.length || f>BOSS_CHAT_AT[e.chat]) return;
+  if(quoteBusy()) return;
+  let spoke=null;
   while(e.chat<BOSS_CHAT_AT.length && f<=BOSS_CHAT_AT[e.chat]){ spoke=gb.mid[e.chat]; e.chat++; }
   if(spoke) bossSayLine(spoke,0,e); }
 // 9-SLICE the plaque so one bitmap fits any line count: corners drawn at native size, edges and

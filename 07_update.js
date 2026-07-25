@@ -173,8 +173,14 @@ function bossEnterPhase(e, ph){
   // STORY: the boss speaks a line from its backstory as it escalates (its role in the rift)
   const gb=(typeof GBOSS!=='undefined'&&e.ring!=null&&e.ring>=0)?GBOSS[e.ring]:null;
   const titles=['','ENRAGED','FINAL STAND'];
-  const line=(gb&&gb.bark&&gb.bark[ph-1])?gb.bark[ph-1]:(titles[ph]||'');
-  if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), line);
+  const line=(gb&&gb.bark&&gb.bark[ph-1])?gb.bark[ph-1]:'';
+  // Banner keeps the loud stage title; the SPOKEN line goes in the plaque above the boss's head,
+  // so every word a boss says appears in the same place instead of split across two UIs.
+  // This also FIXES a silent bug: the bark used to go in the banner, and bossMechTrigger below
+  // fires its own msg() a line later ("REACH THE SAFE GROUND"), so every canon boss — they all
+  // have a mech — overwrote its own phase dialogue almost immediately. Nobody ever read it.
+  if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), titles[ph]||'');
+  if(line && typeof bossSayNow==='function') bossSayNow(line,5800,e);   // outranks chatter
   navigator.vibrate&&navigator.vibrate([30,40,30]);
   // signature mechanic fires on the phase break (thornrot bloom / mirror idols / hazard burst)
   if(typeof bossMechTrigger==='function') bossMechTrigger(e);
@@ -446,7 +452,7 @@ function update(dt){
         emitP(de.x,de.y,{vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.55+Math.random()*0.3,col:'#b030d0',sz:3,glow:true}); }
     if(de.boss){ // freeing a boss from the dream ends it — it speaks a couple words of truth
       const gb=(de.ring!=null&&de.ring>=0&&typeof GBOSS!=='undefined')?GBOSS[de.ring]:null;
-      if(gb&&gb.death&&typeof bossSayDeath==='function') bossSayDeath(gb.death);
+      if(gb&&gb.death&&typeof bossSayDeath==='function') bossSayDeath(gb.death,de);   // over the corpse
       else msg('THRONE SHATTERED','the realm is yours — for now'); }
     if(de.sref) de.sref.dead=Date.now()+(de.boss?180000:60000);
     enemies.splice(i,1); player.kills++;

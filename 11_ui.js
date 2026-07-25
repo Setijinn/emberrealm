@@ -47,7 +47,7 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   if(p.kind==='npc'){ const np=p.np, ls=np.lines||[];
     // walks his lines, then holds on the last — rendered with the boss death-quote treatment
     const i=Math.min(np.said,ls.length-1); np.said=Math.min(np.said+1,ls.length);
-    if(typeof bossSayDeath==='function') bossSayDeath(ls[i]); else msg(np.name,ls[i]);
+    if(typeof bossSayDeath==='function') bossSayDeath(ls[i],np); else msg(np.name,ls[i]);   // over his head
     if(i===0) msg(np.name,'a warden, still holding');
     navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='portal'){ usePortal(p.to); }
