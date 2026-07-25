@@ -936,16 +936,8 @@ function drawBridge(){
       const ag=ctx.createRadialGradient(a.x,a.y-h*0.3,6,a.x,a.y-h*0.3,w*0.95);
       ag.addColorStop(0,'#a838d0'); ag.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(a.x,a.y-h*0.3,w*0.95,0,6.29); ctx.fill(); ctx.restore(); }
-    // Shadow is a RHOMBUS matching the isometric plinth footprint. An ellipse under a diamond
-    // base describes a different ground plane than the sprite and makes the float worse.
-    const rh=(cx2,cy2,hw,hh,al)=>{ ctx.globalAlpha=al;
-      ctx.beginPath(); ctx.moveTo(cx2,cy2-hh); ctx.lineTo(cx2+hw,cy2);
-      ctx.lineTo(cx2,cy2+hh); ctx.lineTo(cx2-hw,cy2); ctx.closePath(); ctx.fill(); };
-    ctx.save(); ctx.fillStyle='#000';
-    rh(a.x,a.y-4,w*0.60,w*0.30,0.18);
-    rh(a.x,a.y-4,w*0.47,w*0.235,0.34);
-    rh(a.x,a.y-4,w*0.34,w*0.17,0.30);
-    ctx.restore(); ctx.globalAlpha=1;
+    // No cast shadow under the towers (user). The contact AO baked into the sprite's own base
+    // does the grounding; a dark pool underneath just drew attention to the seam.
     // starter side mossy green; the far pair MIRRORED so the gatehouses face each other.
     // Both get contact AO baked into the base so the stonework beds into the surface.
     const src=a.f?_tintImg(tw,'#000000',0,0.17):_tintImg(tw,'#4f9a3f',0.34,0.17);
