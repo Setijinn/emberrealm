@@ -921,7 +921,10 @@ function drawBridge(){
   // SINK: the sprite's stepped plinth is drawn a few px past its baseline so the deck (and the
   // balustrade running through it) overlaps the very bottom of the stonework, instead of the
   // tower resting on a hairline above the surface.
-  const SINK=9;
+  // The gate art is a squat roof-dominant bastion (near square), so it only needs a few px of
+  // sink for the deck to bite its lowest course — the deep sink the old TALL tower wanted would
+  // bury half of this one.
+  const SINK=7;
   if(tw) for(const a0 of P.arches){ const a={x:a0.x,y:a0.y+SINK,f:a0.f,top:a0.top};
     const w=TILE*3.1, h=w*tw.height/tw.width;
     // the far gate is wreathed in corruption — a glow BEHIND it, never a rect over it
@@ -929,12 +932,19 @@ function drawBridge(){
       const ag=ctx.createRadialGradient(a.x,a.y-h*0.3,6,a.x,a.y-h*0.3,w*0.95);
       ag.addColorStop(0,'#a838d0'); ag.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=ag; ctx.beginPath(); ctx.arc(a.x,a.y-h*0.3,w*0.95,0,6.29); ctx.fill(); ctx.restore(); }
-    // A heavier, wider contact shadow tucked right under the plinth — a thin ellipse floating
-    // above the base is most of why the towers read as hovering rather than standing.
-    ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle='#000';
-    ctx.beginPath(); ctx.ellipse(a.x,a.y-1,w*0.40,w*0.15,0,0,6.29); ctx.fill();
-    ctx.globalAlpha=0.22;
-    ctx.beginPath(); ctx.ellipse(a.x,a.y-1,w*0.50,w*0.20,0,0,6.29); ctx.fill(); ctx.restore();
+    // The tower art is ISOMETRIC — its plinth bottom is a diamond implying a ~30 degree ground
+    // plane — while the deck is orthographic top-down. That mismatch, not shadow weight, is what
+    // reads as floating. An ELLIPSE under a diamond base made it worse: the shadow described a
+    // different ground plane than the sprite. This lays a rhombus matching the plinth footprint,
+    // so locally the eye reads one consistent surface.
+    const rh=(cx2,cy2,hw,hh,al)=>{ ctx.globalAlpha=al;
+      ctx.beginPath(); ctx.moveTo(cx2,cy2-hh); ctx.lineTo(cx2+hw,cy2);
+      ctx.lineTo(cx2,cy2+hh); ctx.lineTo(cx2-hw,cy2); ctx.closePath(); ctx.fill(); };
+    ctx.save(); ctx.fillStyle='#000';
+    rh(a.x,a.y-4,w*0.60,w*0.30,0.18);        // soft outer falloff
+    rh(a.x,a.y-4,w*0.47,w*0.235,0.34);       // core shadow, footprint-sized
+    rh(a.x,a.y-4,w*0.34,w*0.17,0.30);        // contact darkening right at the stonework
+    ctx.restore(); ctx.globalAlpha=1;
     // base-anchored EXACTLY on a.y so the plinth rests on the deck, with the shadow under it.
     // The starter-side pair is mossy green (the safe island reclaims its stone); the far pair is
     // MIRRORED so the two gatehouses face each other across the span instead of both facing west.
