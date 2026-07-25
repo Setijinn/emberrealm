@@ -933,6 +933,7 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
  $s('mapBtn').style.display='none'; $s('mapScr').style.display='none';
+ if($s('hearthBtn'))$s('hearthBtn').style.display='none';
  if($s('coopBtn'))$s('coopBtn').style.display='none';
  if($s('coopScr'))$s('coopScr').style.display='none';
  if($s('loadBtn'))$s('loadBtn').style.display='none';
@@ -1066,7 +1067,30 @@ function showGameHud(){
  if($s('skillBtn'))$s('skillBtn').style.display='flex';
  if($s('petBtn'))$s('petBtn').style.display='flex';
  if($s('statsBtn')){ $s('statsBtn').style.display='flex'; if(typeof updateStatsBtn==='function') updateStatsBtn(); }
+ if($s('hearthBtn')) $s('hearthBtn').style.display='flex';
 }
+// ---- HEARTH RECALL: one tap home from anywhere (user) ----
+// Deliberately always available, including mid-fight, because that is what was asked for. It is
+// therefore also an escape hatch out of a losing permadeath fight — worth knowing, and easy to
+// gate later by refusing while bossBar is set if that turns out to be too forgiving.
+function goHearth(){
+ if(typeof rooms==='undefined'||!rooms['0,0']) return;
+ if(curRoom && curRoom.town){ if(typeof msg==='function') msg('THE HEARTH','you are already home'); return; }
+ const r0=rooms['0,0'];
+ // leaving the world cleanly: drop the pursuers, live shots and any dungeon-exit portal, or
+ // they follow you into town and the ground portal would still be waiting on return
+ if(typeof enemies!=='undefined') enemies.length=0;
+ if(typeof eShots!=='undefined') eShots.length=0;
+ if(typeof groundPortals!=='undefined') groundPortals.length=0;
+ if(typeof bossBar!=='undefined') bossBar=null;
+ if(typeof portalLock!=='undefined') portalLock=true;      // don't instantly re-trigger the arrival portal
+ enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE);
+ if(typeof spawnPet==='function') spawnPet();
+ if(typeof msg==='function') msg('🔥 THE HEARTH','the fire calls you home');
+ navigator.vibrate&&navigator.vibrate(18);
+}
+if(typeof document!=='undefined'){ const _hb=document.getElementById('hearthBtn');
+ if(_hb) _hb.addEventListener('click',goHearth); }
 if(typeof document!=='undefined'){ const _pb=document.getElementById('petBtn');
  if(_pb) _pb.addEventListener('click',function(){ if(typeof openPets==='function') openPets(); }); }
 function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){

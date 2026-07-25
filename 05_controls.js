@@ -73,6 +73,7 @@ addEventListener('keydown',e=>{
   else if(k==='k'){ const b=document.getElementById('skillBtn'); if(b) b.click(); }
   else if(k==='l'){ const b=document.getElementById('loadBtn'); if(b) b.click(); }
   else if(k==='m'){ const b=document.getElementById('mapBtn'); if(b) b.click(); }
+  else if(k==='h'){ const b=document.getElementById('hearthBtn'); if(b) b.click(); }   // recall home
 });
 addEventListener('keyup',e=>{ if(e.key) keys[e.key.toLowerCase()]=false; });
 // normalized WASD/arrow vector, consumed by update() when the touch stick is idle.

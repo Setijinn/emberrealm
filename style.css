@@ -87,6 +87,11 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 
 #loadBtn,#skillBtn,#petBtn,#statsBtn{display:none;align-items:center;justify-content:center;
  width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
+/* Hearth recall. Lives INSIDE #hudBot's flex row rather than being positioned absolutely, so it
+   can never overlap another control at any UI scale — the row just reflows around it. */
+#hearthBtn{display:none;align-items:center;justify-content:center;
+ width:48px;height:40px;background:rgba(38,20,14,.92);border:1px solid #b5482f;border-radius:10px;
+ font-size:19px;color:#ffb46a;}
 /* skill tree screen */
 #skillScr{position:fixed;inset:0;z-index:40;display:none;background:rgba(9,7,12,.95);overflow-y:auto;
  align-items:flex-start;justify-content:center;padding:14px 10px 24px;}
@@ -295,7 +300,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .shopnote{font-size:11px;color:#8a8494;text-align:center;padding:5px 8px;font-style:italic;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2{
+#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
@@ -360,3 +365,4 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #loadBtn,#skillBtn,#petBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #statsBtn{min-width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(7px*var(--uis));}
 #mapBtn,#coopBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
+#hearthBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(19px*var(--uis));}
