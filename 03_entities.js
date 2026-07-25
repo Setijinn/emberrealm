@@ -225,155 +225,28 @@ function bossDecArt(i){ return (DEC_SLOT[i]!==undefined)?DEC_SLOT[i]:bossArt(i);
 function bossTileSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossTileArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
 // ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
 // 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
-const LAIR_TEMPLATES={
- 0:[ // Heartwood Hollow (19x14) — the Grovewarden's den, root-clump cover
-  'XXXXXXXXXXXXXXXXXXX',
-  'X.................X',
-  'X.................X',
-  'X.................X',
-  'X....X.......X....X',
-  'X.................X',
-  'X.................X',
-  'X.................X',
-  'X.................X',
-  'X....X.......X....X',
-  'X.................X',
-  'X.................X',
-  'X.................X',
-  'XXXXXXXX...XXXXXXXX'],
- 1:[ // Fogbound Glade (19x14) — the Mistantler's den, thicket cover
-  'XXXXXXXXXXXXXXXXXXX',
-  'X.................X',
-  'X.................X',
-  'X..X...........X..X',
-  'X.................X',
-  'X.................X',
-  'X......X...X......X',
-  'X.................X',
-  'X.................X',
-  'X..X...........X..X',
-  'X.................X',
-  'X.................X',
-  'X.................X',
-  'XXXXXXXX...XXXXXXXX'],
- 2:[ // Sunken Warren (20x15) — the Bog Horror's marsh warren, mud islets
-  'XXXXXXXXXXXXXXXXXXXX',
-  'X..................X',
-  'X..................X',
-  'X...XX........XX...X',
-  'X..................X',
-  'X..................X',
-  'X........X.........X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'X...XX........XX...X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'XXXXXXXXX...XXXXXXXX'],
- 3:[ // Shattered Vault (21x15) — Stonefist's ruin, broken pillar rows
-  'XXXXXXXXXXXXXXXXXXXXX',
-  'X...................X',
-  'X...................X',
-  'X...X....X....X.....X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'X...X....X....X.....X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'XXXXXXXXX...XXXXXXXXX'],
- 4:[ // Windward Roost (20x14) — the Crag Gargoyle's eyrie, scattered crag teeth
-  'XXXXXXXXXXXXXXXXXXXX',
-  'X..................X',
-  'X..................X',
-  'X.....X......X.....X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'X..X............X..X',
-  'X..................X',
-  'X..................X',
-  'X.....X......X.....X',
-  'X..................X',
-  'X..................X',
-  'XXXXXXXXX...XXXXXXXX'],
- 5:[ // Scorch Barrows (21x16) — Magmaw's keep, obsidian pillar clusters
-  'XXXXXXXXXXXXXXXXXXXXX',
-  'X...................X',
-  'X..XX.....X.....XX..X',
-  'X...................X',
-  'X...................X',
-  'X.....X.......X.....X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'X.....X.......X.....X',
-  'X...................X',
-  'X...................X',
-  'X..XX...........XX..X',
-  'X...................X',
-  'X...................X',
-  'XXXXXXXXX...XXXXXXXXX'],
- 6:[ // Cinder Crypt (20x15) — the Ash Wraith's tombyard, grave rows
-  'XXXXXXXXXXXXXXXXXXXX',
-  'X..................X',
-  'X..................X',
-  'X..X.....X.....X...X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'X...X.....X.....X..X',
-  'X..................X',
-  'X..................X',
-  'X..................X',
-  'XXXXXXXXX...XXXXXXXX'],
- 7:[ // Ashen Keep (21x16) — the Cinder Demon's fortress, bastion piers
-  'XXXXXXXXXXXXXXXXXXXXX',
-  'X...................X',
-  'X..XX...........XX..X',
-  'X..XX...........XX..X',
-  'X...................X',
-  'X...................X',
-  'X.......X...X.......X',
-  'X...................X',
-  'X...................X',
-  'X...................X',
-  'X.......X...X.......X',
-  'X...................X',
-  'X..XX...........XX..X',
-  'X..XX...........XX..X',
-  'X...................X',
-  'XXXXXXXXX...XXXXXXXXX'],
- 8:[ // Core Sanctum (23x17) — the Molten Titan's throne hall, grand colonnade
-  'XXXXXXXXXXXXXXXXXXXXXXX',
-  'X.....................X',
-  'X.....................X',
-  'X....X.....X.....X....X',
-  'X.....................X',
-  'X.....................X',
-  'X.....................X',
-  'X..X...............X..X',
-  'X.....................X',
-  'X.....................X',
-  'X.....................X',
-  'X.....................X',
-  'X....X.....X.....X....X',
-  'X.....................X',
-  'X.....................X',
-  'X.....................X',
-  'XXXXXXXXXX...XXXXXXXXXX'],
-};
+// (LAIR_TEMPLATES lived here: 147 lines of ASCII arena blueprints. They stopped being READ when
+//  the organic carve landed — only their width/height was measured — and LAIR_SIZE now states
+//  those dimensions outright, so the blueprints were deleted rather than left to mislead.)
 const LAIR_BOSSES=[0,1,2,3,4,5,6,7,8,9,10,11];       // every boss gets a lair
-const LAIR_SIZE={9:[17,13],10:[17,13],11:[18,14]};   // footprint for bosses with no ASCII template
+// Arena footprint in tiles, SCALED BY THE BOSS'S LEVEL (user: "the higher level the boss fight
+// the bigger the arena should be, unless certain boss fight mechanics demand otherwise").
+// The old fixed ~20x15 was smaller than one screen — the whole arena fit in view with room to
+// spare, which is why every fight felt cramped. A Lv4 shore brute now gets a yard (~30x23) and a
+// Lv50 gets a hall (~48x36, wider than the viewport and about twice its height).
+// `szMul` on a LAIR_ARCH entry is the "unless mechanics demand otherwise" escape hatch:
+//   pools  — hazard puddles ACCUMULATE; a tight floor becomes unplayable, so give them room
+//   clones — decoys need somewhere to spread, or the puzzle is solved by standing still
+//   tower  — a lighthouse drum is compact BY NATURE; scaling it up stops reading as a tower
+function lairSizeFor(b,lv){
+ const t=Math.max(0,Math.min(1,((lv||4)-4)/46));
+ const m=(LAIR_ARCH[b]&&LAIR_ARCH[b].szMul)||1;
+ // The FLOOR is deliberately generous: even the Lv4 fight gets ~34x26 (still wider and taller
+ // than the old maximum), because a low-level boss arena shouldn't feel like a broom cupboard.
+ const w=Math.round((34+t*18)*m), h=Math.round((26+t*13)*m);
+ // A round arena inscribes a circle, whose diameter is limited by the SHORTER side — so a wide
+ // box gave the caldera a much smaller floor than its level deserved. Square it up.
+ return (LAIR_ARCH[b]&&LAIR_ARCH[b].round)?[w,w]:[w,h]; }
 let _lairsStamped=false;
 // Lair NUDGE angles (radians). The anchor is the clump's own centroid; this only pushes the lair
 // off-centre so it doesn't sit under the zone label drawn at that same centroid on the map screen.
@@ -398,18 +271,18 @@ const LAIR_RAD={9:0.34,10:0.62,11:0.88};
 // much wider on a FLAT wall (every cell along it shares a similar bearing), so masonry gets
 // tighter numbers than the organic shapes — 0.55 on the chapel's west wall removed the wall.
 const LAIR_ARCH={
- 0:{k:'grove',  doors:[[1.57,0.30],[-1.9,0.26],[2.9,0.24]]},               // root-ring, gaps between buttresses
- 1:{k:'glade',  doors:[[1.57,0.55],[-0.6,0.45],[3.0,0.40]]},               // open clearing — a scout doesn't wall itself in
- 2:{k:'warren', doors:[[1.57,0.22]]},                                      // bog hollow, one narrow gullet
+ 0:{k:'grove',  doors:[[1.57,0.30],[-1.9,0.26],[2.9,0.24]], szMul:1.10},   // root-ring, gaps between buttresses
+ 1:{k:'glade',  doors:[[1.57,0.55],[-0.6,0.45],[3.0,0.40]], szMul:1.08},   // open clearing; clones need spread
+ 2:{k:'warren', doors:[[1.57,0.22]], szMul:1.08},                          // bog hollow, one gullet; pools pile up
  3:{k:'vault',  doors:[[1.57,0.20]], den:[0,-0.5]},                        // broken stone hall, square corners
- 4:{k:'roost',  doors:[[1.57,0.80]]},                                      // clifftop crescent, open to the drop
- 5:{k:'caldera',doors:[[1.4,0.30],[-1.75,0.22]],round:true},               // crater rim with two blowouts
- 6:{k:'crypt',  doors:[[1.57,0.18],[-1.57,0.15]]},                         // cross-plan catacomb
- 7:{k:'keep',   doors:[[1.57,0.16]], den:[0,-0.55]},                       // fortress, corner bastions, one gate
- 8:{k:'colonnade',doors:[],round:true,n:14},                               // ring of standing pillars, no wall
- 9:{k:'pans',   doors:[[1.57,0.20],[0,0.14]], den:[0,-0.55]},              // salt-house evaporation pans
- 10:{k:'tower', doors:[[1.57,0.22]],round:true,den:[0,-0.5]},              // lighthouse drum, one narrow door
- 11:{k:'nave',  doors:[[3.14,0.16]], den:[0.5,0], spawn:[-0.1,0.1]},       // chapel: west door, apse at the east end
+ 4:{k:'roost',  doors:[[1.57,0.80]], szMul:1.08},                          // clifftop crescent; pools pile up
+ 5:{k:'caldera',doors:[[1.4,0.30],[-1.75,0.22]],round:true, szMul:1.10},   // crater rim, two blowouts; pools
+ 6:{k:'crypt',  doors:[[1.57,0.18],[-1.57,0.15]], szMul:1.08},             // cross-plan catacomb; clones
+ 7:{k:'keep',   doors:[[1.57,0.16]], den:[0,-0.55], szMul:1.05},           // fortress, corner bastions, one gate
+ 8:{k:'colonnade',doors:[],round:true,n:14, szMul:1.15},                   // the final gate — the grandest floor
+ 9:{k:'pans',   doors:[[1.57,0.20],[0,0.14]], den:[0,-0.55], szMul:1.08},  // salt-house pans; pools
+ 10:{k:'tower', doors:[[1.57,0.22]],round:true,den:[0,-0.5], szMul:0.92},  // a drum stops reading as one if scaled up
+ 11:{k:'nave',  doors:[[3.14,0.16]], den:[0.5,0], spawn:[-0.1,0.1], szMul:1.12}, // chapel: west door, east apse
 };
 // Where a boss's lair wants to be, in TILES. Shared by stampLairs and grvLairXY so the stamped
 // footprint and the spawn fallback can never drift apart.
@@ -428,26 +301,46 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
  // from the natural grid so the 'X'/'F' tiles carved below inherit the zone they sit in. Do not
  // "fix" this to run after stamping.
  const TT=(RG&&RG.radial)?_territories(R):null, ZG=(RG&&RG._zg)||null;
- for(const b of LAIR_BOSSES){ const T=LAIR_TEMPLATES[b];
-  // the ASCII templates are never READ — only measured — so a size pair is enough for new lairs
-  const TH=T?T.length:(LAIR_SIZE[b]?LAIR_SIZE[b][1]:14), TW=T?T[0].length:(LAIR_SIZE[b]?LAIR_SIZE[b][0]:19);
+ for(const b of LAIR_BOSSES){
   const z=(BOSS_ZONE[b]!==undefined)?BOSS_ZONE[b]:-1;
   // CLUMP-CENTROID anchor. This is the only anchor that guarantees the lair lands inside the
   // territory its boss rules — and it must, because spawnRingBoss rejects every candidate whose
   // clump doesn't match and then just gives up after 40 tries, SILENTLY.
-  let tcx, tcy;
   const an=(RG&&RG.radial)?lairAnchor(RG,TT,z,b):null;
+  // Size scales with the boss's LEVEL (user) — read it at the anchor, before placement, since
+  // nothing about the anchor depends on the footprint.
+  const _lv=(an&&RG&&RG.radial)?grvLvAtR(RG,an.x,an.y):10;
+  const SZ=lairSizeFor(b,_lv);
+  let TW=SZ[0], TH=SZ[1];
+  let tcx, tcy;
   if(an){ tcx=an.x; tcy=an.y; }
   else { tcx=R.w/2; tcy=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ)))); }
-  // every sampled corner + the centre must belong to this boss's clump
+  // The footprint is a BOUNDING BOX but the arena carved inside it is an inscribed shape, so its
+  // box corners are never part of the arena. Testing them rejected placements that would have
+  // been perfectly fine and forced big arenas to shrink — the Lv28 hall ended up smaller than the
+  // Lv4 one. Both tests now only look at cells the arena will actually occupy.
+  const _inside=(dx,dy)=>{ const nx=(dx-TW/2)/(TW/2), ny=(dy-TH/2)/(TH/2); return nx*nx+ny*ny<=1.04; };
   const inZone=(px,py)=>{ if(!ZG||z<0) return true;
-    const pts=[[px,py],[px+TW-1,py],[px,py+TH-1],[px+TW-1,py+TH-1],[px+(TW>>1),py+(TH>>1)]];
-    for(const q of pts){ const zr=ZG[q[1]]; if(!zr||zr[q[0]]!==z) return false; }
-    return true; };
+    const pts=[[px+(TW>>1),py+(TH>>1)],                                          // centre must match
+      [px+Math.round(TW*0.20),py+(TH>>1)],[px+Math.round(TW*0.80),py+(TH>>1)],
+      [px+(TW>>1),py+Math.round(TH*0.20)],[px+(TW>>1),py+Math.round(TH*0.80)]];
+    const zr0=ZG[pts[0][1]]; if(!zr0||zr0[pts[0][0]]!==z) return false;
+    let hit=1; for(let i=1;i<pts.length;i++){ const zr=ZG[pts[i][1]]; if(zr&&zr[pts[i][0]]===z) hit++; }
+    return hit>=4; };                                                            // centre + 3 of 4 arms
   const clear=(px,py)=>{ if(px<1||py<1||px+TW>=R.w-1||py+TH>=R.h-1) return false;
     if(!inZone(px,py)) return false;
-    for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){ const row=R.grid[ty]; const c=row&&row[tx];
-      if(c==null||'wWhHlXFb'.indexOf(c)>=0) return false; }                      // no ocean/bridge/other-lair footprint
+    // A rim clump beside the sea can never fit a big arena if a SINGLE ocean tile disqualifies it,
+    // which is what pinned Magmaw's Lv50 caldera below the Lv42 hall. The carve already skips
+    // non-ground cells, so a few tiles of shore just bite an organic notch out of the edge — allow
+    // a small fraction, but keep the middle strictly clear so the arena can never be cut in two.
+    let bad=0, tot=0;
+    for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){
+      if(!_inside(tx-px,ty-py)) continue;                                        // skip the dead corners
+      const row=R.grid[ty]; const c=row&&row[tx], off=(c==null||'wWhHlXFb'.indexOf(c)>=0);
+      tot++; if(off){ bad++;
+        const nx=(tx-px-TW/2)/(TW/2), ny=(ty-py-TH/2)/(TH/2);
+        if(nx*nx+ny*ny<=0.42) return false; } }                                  // core must be solid ground
+    if(bad>tot*0.04) return false;
     if(P){ const cx2=px+TW/2, cy2=py+TH/2; if(Math.hypot(cx2-P.x,cy2-P.y)<TW) return false; }  // keep clear of the portal ruins
     for(const pl of (R.pillars||[])){ const plx=(pl.x!=null?pl.x/TILE:pl.tx),ply=(pl.y!=null?pl.y/TILE:pl.ty);
       if(plx>px-2&&plx<px+TW+2&&ply>py-2&&ply<py+TH+2) return false; }
@@ -455,20 +348,32 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     return true; };
   // spiral outward from the anchor for a clear footprint (the Voronoi warp is severe, so the
   // reach needs to be generous — 28 rings at a 2-tile step ≈ 56 tiles)
-  const spiral=(ax,ay)=>{ const sx=Math.round(ax-TW/2), sy=Math.round(ay-TH/2);
-    for(let r=0;r<28;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+  // rmax is capped hard on the full-size attempts. WHERE a lair sits decides its level and which
+  // clump it belongs to, so a big footprint must SHRINK rather than wander — letting it roam 56
+  // tiles to find room dragged the Sawgrass Reaper from Lv16 to Lv6 and made the Lv50 arenas
+  // smaller than the Lv34 one. Only the final, smallest attempt is allowed to range widely.
+  const spiral=(ax,ay,rmax)=>{ const sx=Math.round(ax-TW/2), sy=Math.round(ay-TH/2);
+    for(let r=0;r<(rmax||28);r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;                      // ring at radius r only
       const px=sx+dx*2, py=sy+dy*2; if(clear(px,py)) return {px,py}; }
     return null; };
-  let place=spiral(tcx,tcy);
-  // last resort: thin coastal clumps can have a centroid that isn't even in their own territory,
-  // so find the nearest tile that actually IS and spiral again from there. Without this the clamp
-  // below would drop the lair into a neighbouring province and its boss would never spawn.
-  if(!place && ZG && z>=0){ let bx=-1,by=-1,bd=1e18;
+  // nearest tile that genuinely belongs to this clump — thin coastal clumps can have a centroid
+  // that isn't even inside their own territory
+  const inClump=()=>{ if(!ZG||z<0) return null; let bx=-1,by=-1,bd=1e18;
     for(let ty=0;ty<R.h;ty++){ const zr=ZG[ty]; if(!zr) continue;
       for(let tx=0;tx<R.w;tx++){ if(zr[tx]!==z) continue;
         const d=(tx-tcx)*(tx-tcx)+(ty-tcy)*(ty-tcy); if(d<bd){bd=d;bx=tx;by=ty;} } }
-    if(bx>=0) place=spiral(bx,by); }
+    return bx>=0?[bx,by]:null; };
+  // Big arenas can simply not fit a cramped coastal clump. Rather than clamp one into a
+  // neighbour's territory (which silently kills its boss's spawn), shrink and try again —
+  // so the level-scaled size is a TARGET, and the land gets the final say.
+  let place=null;
+  const STEPS=[[1,8],[0.92,8],[0.84,10],[0.76,10],[0.68,12],[0.58,28]];   // [shrink, spiral reach]
+  for(const s of STEPS){
+    TW=Math.max(15,Math.round(SZ[0]*s[0])); TH=Math.max(12,Math.round(SZ[1]*s[0]));
+    place=spiral(tcx,tcy,s[1]);
+    if(!place && s[1]>=28){ const st=inClump(); if(st) place=spiral(st[0],st[1],28); }
+    if(place){ if(s[0]<1) console.info('stampLairs: boss '+b+' fitted at '+TW+'x'+TH); break; } }
   if(!place){ const cx0=Math.round(tcx-TW/2), cy0=Math.round(tcy-TH/2);
     console.warn('stampLairs: no clear footprint for boss '+b+' (zone '+z+') — clamping');
     place={px:Math.max(1,Math.min(R.w-TW-1,cx0)), py:Math.max(1,Math.min(R.h-TH-1,cy0))}; }
@@ -491,7 +396,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
                            _disc(nx,ny,-0.8,-0.8,0.30)||_disc(nx,ny,0.8,-0.8,0.30)||
                            _disc(nx,ny,-0.8,0.8,0.30)||_disc(nx,ny,0.8,0.8,0.30);       // ...+ 4 corner bastions
      case 'crypt':  return _sup(nx,ny*2.1,8,0.95)||_sup(nx*2.1,ny,8,0.95);              // cross plan, nave + transept
-     case 'nave':   return (nx<0.35 && _sup(nx,ny*1.7,8,0.95)) || _disc(nx,ny,0.35,0,0.60);  // hall + rounded apse
+     case 'nave':   return (nx<0.45 && _sup(nx,ny*1.28,8,0.96)) || _disc(nx,ny,0.42,0,0.62); // hall + rounded apse
      case 'pans':   return _sup(nx,ny,6,0.94+0.02*n);                                   // plain rectangular works
      case 'tower':  return d2 < Math.pow(0.90+0.025*n,2);                               // drum
      case 'caldera':return d2 < Math.pow(0.93+0.05*Math.sin(a*7)+0.03*n,2);             // crater rim, scalloped
@@ -549,9 +454,22 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
       if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') return {x:(tx+0.5)*TILE,y:(ty+0.5)*TILE}; }
     return {x:ox*TILE,y:oy*TILE}; };
   const sp0=A.spawn||[0,0.20], dn0=A.den||[0,-0.55];
+  // ---- STAGING for the arena's presence (drawLairs): a lit gateway, braziers ringing the
+  // floor, and a sigil under the boss. Anchors are computed HERE, once, against the carved
+  // grid, so the renderer never has to search tiles per frame.
+  const _door=(A.doors&&A.doors.length)?A.doors[0][0]:1.57;
+  const gate={x:(cx+Math.cos(_door)*rx*0.99)*TILE, y:(cy+Math.sin(_door)*ry*0.99)*TILE, a:_door};
+  // brazier count follows the arena's size, or a huge floor ends up lit by a handful of dots
+  const _nb=Math.max(6,Math.min(16,Math.round((rx+ry)/5)));
+  const braz=[]; for(let i=0;i<_nb;i++){ const a=(i/_nb)*6.283+0.39;
+    let da=Math.abs(a-_door); if(da>Math.PI) da=6.2832-da; if(da<0.42) continue;   // never in the doorway
+    const tx=Math.round(cx+Math.cos(a)*rx*0.72), ty=Math.round(cy+Math.sin(a)*ry*0.72);
+    if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') braz.push({x:(tx+0.5)*TILE, y:(ty+0.5)*TILE, p:i*0.7}); }
   R.lairs[b]={ b, px, py, tw:TW, th:TH, arch:A.k,
     spawn:snap(sp0[0],sp0[1]),                              // where the boss stands
     sprite:snap(dn0[0],dn0[1]),                             // den centrepiece
+    cx:cx*TILE, cy:cy*TILE, rx:rx*TILE, ry:ry*TILE,         // arena bounds, for staging + tint
+    gate, braz, col:(typeof GBOSS!=='undefined'&&GBOSS[b])?GBOSS[b].col:'#c8a06a',
     decos:_decos };
   // drop any arrival landing points that now fall inside this compound (avoid spawning trapped)
   if(R.arrivals) R.arrivals=R.arrivals.filter(a=>!(a[0]>=px-1&&a[0]<=px+TW&&a[1]>=py-1&&a[1]<=py+TH));

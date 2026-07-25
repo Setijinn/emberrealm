@@ -720,8 +720,51 @@ function drawLairs(){
   const R=curRoom; if(!R||!R.rings||R.dungeon||R.town||!R.lairs) return;
   if(typeof _lair==='undefined') return;
   ctx.imageSmoothingEnabled=false;
+  const _t=performance.now()/1000;
   for(const b in R.lairs){ const L=R.lairs[b];
     const ba=(typeof bossArt==='function')?bossArt(+b):+b;   // for..in gives STRING keys — coerce
+    // ---- ARENA STAGING (user: the arenas weren't dramatic enough) ----
+    // Only for the arena you're actually at: a boss ground-sigil, braziers ringing the floor and
+    // a lit gateway, all in that boss's own colour, so walking in reads as entering somewhere.
+    if(L.cx!=null && Math.abs(player.x-L.cx)<L.rx+900 && Math.abs(player.y-L.cy)<L.ry+700){
+      const col=L.col||'#c8a06a';
+      // ground sigil under the boss's stand — slow counter-rotating rings + radial ticks
+      const sr=Math.min(L.rx,L.ry)*0.62, sx=L.spawn.x, sy=L.spawn.y;
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.strokeStyle=col;
+      ctx.globalAlpha=0.13+0.05*Math.sin(_t*1.6); ctx.lineWidth=3;
+      ctx.beginPath(); ctx.ellipse(sx,sy,sr,sr*0.55,0,0,6.29); ctx.stroke();
+      ctx.globalAlpha=0.10; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(sx,sy,sr*0.66,sr*0.36,0,0,6.29); ctx.stroke();
+      ctx.globalAlpha=0.14;
+      for(let i=0;i<12;i++){ const a=(i/12)*6.283+_t*0.12;
+        const ax=sx+Math.cos(a)*sr*0.78, ay=sy+Math.sin(a)*sr*0.43;
+        const bx2=sx+Math.cos(a)*sr, by2=sy+Math.sin(a)*sr*0.55;
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx2,by2); ctx.stroke(); }
+      ctx.restore(); ctx.globalAlpha=1;
+      // braziers: a pool of light, a flame, and a lazy ember
+      if(L.braz) for(const z of L.braz){ const fl=0.72+0.28*Math.sin(_t*6+z.p);
+        ctx.save(); ctx.globalCompositeOperation='lighter';
+        const g=ctx.createRadialGradient(z.x,z.y-6,2,z.x,z.y-6,86*fl);
+        g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.globalAlpha=0.30*fl; ctx.fillStyle=g;
+        ctx.beginPath(); ctx.arc(z.x,z.y-6,86*fl,0,6.29); ctx.fill(); ctx.restore();
+        ctx.fillStyle='rgba(18,14,10,0.85)'; ctx.fillRect(z.x-5,z.y-4,10,12);      // bowl
+        ctx.fillStyle=col; ctx.globalAlpha=0.9;
+        ctx.beginPath(); ctx.ellipse(z.x,z.y-8,4.5*fl,7*fl,0,0,6.29); ctx.fill();  // flame
+        ctx.globalAlpha=1;
+        if(typeof emitP==='function'&&Math.random()<0.5*(1/60)*8)
+          emitP(z.x,z.y-10,{vx:(Math.random()*14-7),vy:-26,life:1.1,col:col,sz:2,g:-14,glow:true}); }
+      // gateway: two standing flames marking the way in
+      if(L.gate){ const gx=L.gate.x, gy=L.gate.y, pa=L.gate.a+1.5708, ox=Math.cos(pa)*26, oy=Math.sin(pa)*26;
+        for(const s of [-1,1]){ const fx2=gx+ox*s, fy2=gy+oy*s, fl=0.7+0.3*Math.sin(_t*5+s);
+          ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.26*fl;
+          const g2=ctx.createRadialGradient(fx2,fy2-10,2,fx2,fy2-10,70);
+          g2.addColorStop(0,col); g2.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(fx2,fy2-10,70,0,6.29); ctx.fill(); ctx.restore();
+          ctx.fillStyle='rgba(20,16,12,0.9)'; ctx.fillRect(fx2-3,fy2-16,6,20);
+          ctx.fillStyle=col; ctx.globalAlpha=0.95;
+          ctx.beginPath(); ctx.ellipse(fx2,fy2-19,4*fl,8*fl,0,0,6.29); ctx.fill(); ctx.globalAlpha=1; } }
+    }
     // corner decorations (bones, mushrooms, lava pools, braziers…)
     const dec=(typeof _lairDec!=='undefined')?_lairDec[ba]:null;
     if(dec) for(const d of L.decos){ const im=dec[d.i]; if(im&&im.naturalWidth){
