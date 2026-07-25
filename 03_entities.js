@@ -77,35 +77,42 @@ const GBOSS=[
   bark:['I gave my crown to open the way, to save what remained of us.','I am the last lie of a dying world. Kneel — or join it.'],
   death:'We fled a dying world and carried its death here on our backs. The rift still bleeds it. Close it, human — before your world becomes the next dream we drown in.',
   home:'the Molten Crown, at the heart of a world now gone'},
- // ---- Starter island (Lv1-20). LORE-LIGHT ON PURPOSE ----
- // These three came through early and drifted west, far from the rift, barely touched by the
- // corruption. They know nothing of the exodus and cannot reveal it — each line is a loose thread
- // a player only recognises later: a tide from no sea, a bird that only ever flies east, armour
- // no local smith made. Their `home` names a LOCAL place, so nothing hints at a lost world.
+ // ---- Starter island (Lv1-20) ----
+ // Same canon as the nine: refugees from a world the corruption ate, who came through the rift.
+ // But these three are NOBODIES. They crossed early, drifted west as far as land goes, and are
+ // barely touched. They had no hand in opening the door and never knew one was planned — they
+ // only know they ran. So they can grieve openly without spoiling anything: everything they say
+ // is TRUE and none of it is THE truth. It is an ordinary refugee's account of the same
+ // catastrophe the nine will later confess to having CAUSED, which is what makes the confession
+ // land. `lore` is the human record — what the isles observed and wrote down; the barks are the
+ // creature answering that record mid-fight, in its own words.
  {n:'The Tidewrack',dn:'The Saltworks',col:'#4a90a8',pat:'aimed3',pat2:'nova',mech:'pools',
   gate:'none',dsub:'the salt-house has new tenants',
   title:'thing the tide left behind',
   desc:'It drags itself from the shallows and floods the ground with brine. Keep to dry sand.',
-  lore:'The salt-crews found it tangled in their nets after a tide that came in from no sea the fishers know — running the wrong way, warm, and carrying weed no one could name. They cut it free. It has been growing in the flooded salt-house ever since.',
-  bark:['(it makes a sound like water pulled backwards)','(the brine rises to meet it, and it does not drown)'],
-  death:'...the water came the wrong way. I only followed it in.',
-  home:'the salt-house on the Landing Sands'},
+  lore:'The salt-crews found it tangled in their nets after a tide that came in from no sea the fishers know — running the wrong way, warm, and carrying weed no one could name. They cut it free. It has kept the pans flooded ever since, as though something were still expected to arrive by water.',
+  bark:['When the way opened, our sea came through it with us. I have been following the water home ever since.',
+        'You are standing where my shore should be. It was HERE. I followed the tide exactly.'],
+  death:'...the water never ran back. Nothing we carried through ever did.',
+  home:'the tide-shrines of a drowned coast, before the rot reached the water'},
  {n:'The Gullwind Harrier',dn:'Gullwind Light',col:'#8fae6a',pat:'spread5',pat2:'charge',mech:'clones',
   gate:'none',dsub:'the lamp is out and the stair is full of wings',
   title:'bird that will not turn',
   desc:'It splits into a wheeling flock and stoops from odd angles. Watch which shadow has weight.',
-  lore:'The lighthouse keeper logged it for nine years: every dusk it climbs, turns east, and beats itself bloody against the wind until dark. It has never once flown west. The keeper stopped writing after the light went out; the flock roosts in his stair now.',
-  bark:['(it screams east, at nothing you can see)','(the flock turns as one — all of them facing the same way)'],
-  death:'...east. It is always east. Something over there is calling and I am so tired.',
-  home:'the lamp room at Gullwind Light'},
+  lore:'The lighthouse keeper logged it for nine years: every dusk it climbs, turns east, and beats itself bloody against the wind until dark. It has never once flown west. The keeper stopped writing after the light went out; the flock roosts in his stair now, and every one of them faces the same way.',
+  bark:['I went through first. Scouts always go first. My flock was to follow at dusk — they have not followed yet.',
+        'Nine years I have flown east to meet them. Stand ASIDE. They are still coming.'],
+  death:'...it is not a flock. I made them, so the sky would not be empty. The real ones never crossed.',
+  home:'the cliff-roosts its flock never left'},
  {n:'The Sawgrass Reaper',dn:'Marrow Chapel',col:'#7ea44a',pat:'ring8',pat2:'spiral',mech:'bloom',
   gate:'none',dsub:'someone is still alive in the cloister',
   title:'reaper in borrowed armour',
   desc:'It cuts in wide rings through the reeds. Break the rhythm and step inside its swing.',
-  lore:'It wears plate — dented, ill-fitting, and stamped with a maker’s mark no smith in the isles has ever used. Whoever it took the armour from, it took the walk as well: the reeds are cut in neat rows, the way a farmer would.',
-  bark:['(the armour does not fit, and it does not care)','(it cuts in rows — patient, tidy, wrong)'],
-  death:'...he taught me to cut this way. Before the rot took his hands.',
-  home:'the hedge-chapel at the edge of the Sawgrass'},
+  lore:'It wears plate — dented, ill-fitting, and stamped with a maker’s mark no smith in the isles has ever used. Whoever it took the armour from, it took the walk as well: the reeds are cut in neat rows, the way a farmer would. It has never once cut outside its own rows.',
+  bark:['I worked fields once. The rot came up the furrows a row at a time, and we ran ahead of it until there was nowhere left to run to.',
+        'He gave me the armour. He showed me the rows. Then his hands went grey and I finished the field alone.'],
+  death:'...I kept his rows. It was all I could keep. It will reach here too — it always reaches.',
+  home:'the reed-fields it worked until the rot took them'},
 ];
 // per-ring projectile themes (colour/core/shape/size) — suited to each biome & creature
 // Projectile theme per BOSS — indexed by boss id, exactly parallel to GBOSS above.
