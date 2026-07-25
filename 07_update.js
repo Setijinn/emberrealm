@@ -502,10 +502,12 @@ function update(dt){
   for(let i=texts.length-1;i>=0;i--){ const t2=texts[i];
     t2.y-=28*dt; t2.life-=dt; if(t2.life<=0) texts.splice(i,1); }
   // per-ring mini-boss spawner (grove only) — one unique boss per ring at a time
-  if(curRoom.rings){ const cb=grvBandXY(player.x/TILE,player.y/TILE);
-    ringBossCd[cb]=(ringBossCd[cb]||0)-dt;
-    if(ringBossCd[cb]<=0){ ringBossCd[cb]=14+Math.random()*12;
-      if(!ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } }
+  // keyed on the TERRITORY's boss, not the theme band — and -1 (ocean, bridge, the reserved
+  // Molten Heart) must never touch ringBossCd, which players cross constantly.
+  if(curRoom.rings){ const cb=zoneBossAt(player.x/TILE,player.y/TILE);
+    if(cb>=0){ ringBossCd[cb]=(ringBossCd[cb]||0)-dt;
+      if(ringBossCd[cb]<=0){ ringBossCd[cb]=14+Math.random()*12;
+        if(!ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } } }
   // release the portal lock once we've stepped clear of every portal.
   // (dungeons have no fixed curRoom.portals, so without this the lock set on
   //  entry never cleared and the return-home portal could never fire.)

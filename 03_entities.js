@@ -98,6 +98,23 @@ const BOSS_PROJ=[
 ];
 let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
 function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
+// ===== BOSS PLACEMENT =====
+// Boss identity used to BE the theme band, which pinned the deepest-lore bosses to the starter
+// island (the Grovewarden — the root-lord that anchored the rift — was a Lv4 fight). Identity is
+// now CLUMP-indexed while terrain stays BAND-indexed: `grvBandAt` remains the sole authority for
+// tilesets/tone/trees/boulders/map colour, and ZBOSS says who rules each of the 13 territories.
+// _territories() lays clumps down in a fixed order: 0-2 starter, 3-7 inner main, 8-12 grind rim.
+//   -1 = no boss. Clump 10 is The Molten Heart — the rift's own province, held for the final boss.
+const ZBOSS=[-1,-1,-1, 0,1,2,3,4, 6,5,-1,7,8];   // starter slots get bosses 9/10/11 in a later step
+const BOSS_ZONE=[]; for(let i=0;i<ZBOSS.length;i++) if(ZBOSS[i]>=0) BOSS_ZONE[ZBOSS[i]]=i;
+// boss id at a tile (ocean/bridge/unclaimed -> -1). THE spawner key; never assume it equals a band.
+function zoneBossAt(tx,ty){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
+ return (z>=0&&ZBOSS[z]!==undefined)?ZBOSS[z]:-1; }
+// the territory a boss rules — carries {name, band, lvmin, lvmax, sx,sy,n} straight off _territories
+function bossClump(bid){ const R=rooms['G'], RG=R&&R.rings; if(!RG||!RG.radial) return null;
+ const T=_territories(R), z=BOSS_ZONE[bid]; return (T&&z!=null&&T[z])?T[z]:null; }
+// a boss's THEME band — for art fallbacks and dungeon mob naming/tint (NOT for its identity)
+function bossBand(bid){ const t=bossClump(bid); return t?t.band:Math.max(0,Math.min(8,bid)); }
 // ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
 // 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
 const LAIR_TEMPLATES={
@@ -247,27 +264,38 @@ const LAIR_TEMPLATES={
   'X.....................X',
   'XXXXXXXXXX...XXXXXXXXXX'],
 };
-const LAIR_STAMP_BANDS=[0,1,2,3,4,5,6,7,8];   // all 9 zones have lairs
+const LAIR_BOSSES=[0,1,2,3,4,5,6,7,8];        // every boss gets a lair (starter bosses join later)
+const LAIR_SIZE={9:[17,13],10:[17,13],11:[18,14]};   // footprint for bosses with no ASCII template
 let _lairsStamped=false;
-// Per-band lair anchor angles (radians, 0 = due east from the core). Spread so the lairs ring
-// the island instead of lining up; chosen to dodge the waypoint pillars and the portal ruins.
-// Starter bands (0-2) ring the starter centre (any angle, kept off the west spawn). Main bands
-// (3-8) MUST point east (cos>0) onto the island, with the lateral (sin) offset shrinking as the
-// radius grows so the far rings stay on land instead of swinging off the north/south coasts.
-const LAIR_ANG={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3};
+// Lair NUDGE angles (radians). The anchor is the clump's own centroid; this only pushes the lair
+// off-centre so it doesn't sit under the zone label drawn at that same centroid on the map screen.
+const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 9:1.8,10:-1.8,11:0.3};
 function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return; _lairsStamped=true; R.lairs={};
  const RG=R.rings, NZ=(RG&&RG.names.length)||9;
  const P=(RG&&RG.portal)||null;
- for(const b of LAIR_STAMP_BANDS){ const T=LAIR_TEMPLATES[b]; if(!T) continue;
-  const TH=T.length, TW=T[0].length;
-  // RADIAL anchor: starter bands (0-2) ring the starter centre; main bands (3-8) sit at rising
-  // radius from the core. Non-radial (old vertical) worlds fall back to the band-Y row.
+ // Territories are built HERE, before any carving — deliberately. The clump raster must be sampled
+ // from the natural grid so the 'X'/'F' tiles carved below inherit the zone they sit in. Do not
+ // "fix" this to run after stamping.
+ const TT=(RG&&RG.radial)?_territories(R):null, ZG=(RG&&RG._zg)||null;
+ for(const b of LAIR_BOSSES){ const T=LAIR_TEMPLATES[b];
+  // the ASCII templates are never READ — only measured — so a size pair is enough for new lairs
+  const TH=T?T.length:(LAIR_SIZE[b]?LAIR_SIZE[b][1]:14), TW=T?T[0].length:(LAIR_SIZE[b]?LAIR_SIZE[b][0]:19);
+  const z=(BOSS_ZONE[b]!==undefined)?BOSS_ZONE[b]:-1;
+  // CLUMP-CENTROID anchor. This is the only anchor that guarantees the lair lands inside the
+  // territory its boss rules — and it must, because spawnRingBoss rejects every candidate whose
+  // clump doesn't match and then just gives up after 40 tries, SILENTLY.
   let tcx, tcy;
-  if(RG&&RG.radial){ const ang=(LAIR_ANG[b]!==undefined?LAIR_ANG[b]:b*0.9);
-    if(b<=2){ const f=0.30+b*0.26; tcx=RG.starter.cx+Math.cos(ang)*RG.starter.r*f; tcy=RG.starter.cy+Math.sin(ang)*RG.starter.r*f; }
-    else { const f=(b-2)/6*(RG.rmax)*0.84; tcx=RG.core.cx+Math.cos(ang)*f; tcy=RG.core.cy+Math.sin(ang)*f; }
+  if(TT&&z>=0&&TT[z]&&TT[z].n>0){ const t=TT[z];
+    const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
+    tcx=t.sx/t.n+Math.cos(ang)*nud; tcy=t.sy/t.n+Math.sin(ang)*nud;
   } else { tcx=R.w/2; tcy=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ)))); }
+  // every sampled corner + the centre must belong to this boss's clump
+  const inZone=(px,py)=>{ if(!ZG||z<0) return true;
+    const pts=[[px,py],[px+TW-1,py],[px,py+TH-1],[px+TW-1,py+TH-1],[px+(TW>>1),py+(TH>>1)]];
+    for(const q of pts){ const zr=ZG[q[1]]; if(!zr||zr[q[0]]!==z) return false; }
+    return true; };
   const clear=(px,py)=>{ if(px<1||py<1||px+TW>=R.w-1||py+TH>=R.h-1) return false;
+    if(!inZone(px,py)) return false;
     for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){ const row=R.grid[ty]; const c=row&&row[tx];
       if(c==null||'wWhHlXFb'.indexOf(c)>=0) return false; }                      // no ocean/bridge/other-lair footprint
     if(P){ const cx2=px+TW/2, cy2=py+TH/2; if(Math.hypot(cx2-P.x,cy2-P.y)<TW) return false; }  // keep clear of the portal ruins
@@ -275,12 +303,25 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
       if(plx>px-2&&plx<px+TW+2&&ply>py-2&&ply<py+TH+2) return false; }
     for(const pt of (R.portals||[])){ const ptx=pt.x/TILE,pty=pt.y/TILE; if(ptx>px-2&&ptx<px+TW+2&&pty>py-2&&pty<py+TH+2) return false; }
     return true; };
-  // spiral outward from the radial anchor for a clear footprint
-  let place=null; const cx0=Math.round(tcx-TW/2), cy0=Math.round(tcy-TH/2);
-  for(let r=0;r<20 && !place;r++)for(let dy=-r;dy<=r&&!place;dy++)for(let dx=-r;dx<=r&&!place;dx++){
-    if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;                        // ring at radius r only
-    const px=cx0+dx*2, py=cy0+dy*2; if(clear(px,py)) place={px,py}; }
-  if(!place) place={px:Math.max(1,Math.min(R.w-TW-1,cx0)), py:Math.max(1,Math.min(R.h-TH-1,cy0))};
+  // spiral outward from the anchor for a clear footprint (the Voronoi warp is severe, so the
+  // reach needs to be generous — 28 rings at a 2-tile step ≈ 56 tiles)
+  const spiral=(ax,ay)=>{ const sx=Math.round(ax-TW/2), sy=Math.round(ay-TH/2);
+    for(let r=0;r<28;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;                      // ring at radius r only
+      const px=sx+dx*2, py=sy+dy*2; if(clear(px,py)) return {px,py}; }
+    return null; };
+  let place=spiral(tcx,tcy);
+  // last resort: thin coastal clumps can have a centroid that isn't even in their own territory,
+  // so find the nearest tile that actually IS and spiral again from there. Without this the clamp
+  // below would drop the lair into a neighbouring province and its boss would never spawn.
+  if(!place && ZG && z>=0){ let bx=-1,by=-1,bd=1e18;
+    for(let ty=0;ty<R.h;ty++){ const zr=ZG[ty]; if(!zr) continue;
+      for(let tx=0;tx<R.w;tx++){ if(zr[tx]!==z) continue;
+        const d=(tx-tcx)*(tx-tcx)+(ty-tcy)*(ty-tcy); if(d<bd){bd=d;bx=tx;by=ty;} } }
+    if(bx>=0) place=spiral(bx,by); }
+  if(!place){ const cx0=Math.round(tcx-TW/2), cy0=Math.round(tcy-TH/2);
+    console.warn('stampLairs: no clear footprint for boss '+b+' (zone '+z+') — clamping');
+    place={px:Math.max(1,Math.min(R.w-TW-1,cx0)), py:Math.max(1,Math.min(R.h-TH-1,cy0))}; }
   const {px,py}=place;
   // ORGANIC arena (user: "boss arenas less square — almost nothing should be perfect squares").
   // Instead of stamping the rectangular template, carve an irregular LOBED cavern inside the
@@ -324,10 +365,9 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
 function grvLairXY(b){ const R=rooms['G']; if(!R) return null;
  if(R.lairs && R.lairs[b]) return R.lairs[b].spawn;
  const RG=R.rings; if(!RG) return null;
- if(RG.radial){ const ang=(typeof LAIR_ANG!=='undefined'&&LAIR_ANG[b]!==undefined?LAIR_ANG[b]:b*0.9);
-   let x,y; if(b<=2){ const f=0.30+b*0.26; x=RG.starter.cx+Math.cos(ang)*RG.starter.r*f; y=RG.starter.cy+Math.sin(ang)*RG.starter.r*f; }
-   else { const f=(b-2)/6*RG.rmax*0.84; x=RG.core.cx+Math.cos(ang)*f; y=RG.core.cy+Math.sin(ang)*f; }
-   return {x:x*TILE, y:y*TILE}; }
+ if(RG.radial){ const t=bossClump(b); if(!t||!t.n) return null;      // same centroid anchor as stampLairs
+   const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
+   return {x:(t.sx/t.n+Math.cos(ang)*nud)*TILE, y:(t.sy/t.n+Math.sin(ang)*nud)*TILE}; }
  const NZ=RG.names.length, tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
  return {x:(R.w/2)*TILE, y:(tyc+0.5)*TILE}; }
 // lairs are stamped once the world exists — radially for the new isles, band-Y for old worlds
@@ -343,7 +383,7 @@ function spawnRingBoss(b){
   else { const a=Math.random()*6.283, d=300+Math.random()*220; bx=player.x+Math.cos(a)*d; by=player.y+Math.sin(a)*d; }
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
   if(solid(bx,by)) continue;
-  if(grvBandXY(bx/TILE,by/TILE)!==b) continue;
+  if(zoneBossAt(bx/TILE,by/TILE)!==b) continue;   // must stand in ITS OWN territory, not just its band
   const lv=grvLvAt(bx/TILE,by/TILE);   // boss level matches where its lair sits in the zone
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
   // matched to zone: modest early, monstrous late — on the unified difficulty curve
@@ -406,9 +446,11 @@ const DSHAPE=[
  {room:'round',irr:0.08,rmin:10,rmax:13,wob:1.0,cw:2.2,gap:10},  // 8 grand sanctums
 ];
 function genDungeon(ring){
- const _n=rooms['G'].rings.names[ring];
- // the mind is a step beyond the zone's peak — "matching but a little more difficult"
- const lv=Math.min(160,(_n.lv2!==undefined?_n.lv2:_n.lv)+5);
+ // the mind is a step beyond the zone's peak — "matching but a little more difficult".
+ // Measured off the boss's OWN clump (which _territories already samples from the smooth radial
+ // curve), so there's no parallel level table to keep in sync — and no names[8] to fall off.
+ const _t=bossClump(ring), _n=rooms['G'].rings.names[ring]||{lv:1};
+ const lv=Math.min(LV_CAP+10,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+5);
  // seeded PRNG — every ring gets its OWN layout, stable across visits.
  // MIRRORED 1:1 by scratchpad dun_gen2.py (structural validation) — keep in sync.
  let _s=(ring*7919+1013)>>>0;
@@ -730,10 +772,15 @@ function safeSpot(r,px,py){
 // distance from its spawn centre; the bridge is the Lv20 gate; the main island (east) is
 // Lv20-50 by distance from the CORE (bridge landing), with a flat Lv50 grind ring at the rim.
 function _onBridge(R,tx,ty){ const B=R.bridge; return tx>=B.x0&&tx<=B.x1&&Math.abs(ty-B.cy)<=(B.w>>1); }
+// Starter-island test. NOT `tx<bridge.x0`: the island is noise-shaped and its east shore spills
+// past bridge.x0 (176), so those tiles fell through to the MAIN formulas and read Lv27 +
+// main-island corruption on what is plainly the safe island. The bridge gap is pure ocean
+// (starter land ends ~190, main land starts ~230), so its MIDPOINT cleanly divides the two.
+function _onStarter(R,tx,ty){ return tx<(R.bridge.x0+R.bridge.x1)*0.5; }
 // LEVEL is still smooth-radial (danger climbs outward), computed from the rings geometry.
 function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
  if(_onBridge(RG,tx,ty)) return 20;
- if(tx<RG.bridge.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r);
+ if(_onStarter(RG,tx,ty)){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r);
    // EASED starter ramp (f^1.7, not linear): the inner ~40% around the spawn stays Lv1-4 so a
    // brand-new Lv1 hero isn't immediately swarmed by Lv10+ foes it can't dent, and only the far
    // edge / bridge approach reaches the Lv20 gate. (Linear made the whole starter island too steep.)
@@ -765,14 +812,18 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
      zr[tx]=bi; const t=T[bi], lv=grvLvAtR(RG,tx,ty);
      if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; t.sx+=tx; t.sy+=ty; t.n++; } }
  RG._zg=zg; RG._terr=T; return T; }
+// tx/ty arrive as FLOAT tile coords from every entity-position caller (px/TILE), so they MUST be
+// floored — an unfloored _zg[222.3] is undefined, which silently returned -1 and made every such
+// lookup fall through to the coarse radial approximation instead of the real clump.
 function zoneAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return -1;
- _territories(R); const zr=RG._zg&&RG._zg[ty]; return (zr&&tx>=0&&tx<zr.length)?zr[tx]:-1; }
+ _territories(R); const x=Math.floor(tx), y=Math.floor(ty);
+ const zr=RG._zg&&RG._zg[y]; return (zr&&x>=0&&x<zr.length)?zr[x]:-1; }
 // THEME band from the clump the tile sits in (drives tileset/tone/tree/boulder + map colour).
 function grvBandAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return 0;
  const T=_territories(R), zi=zoneAt(tx,ty);
  if(zi>=0) return T[zi].band;
  if(_onBridge(RG,tx,ty)) return 3;                       // bridge/water: theme unused, approximate radially
- if(tx<RG.bridge.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
+ if(_onStarter(RG,tx,ty)){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
  const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
 // zone identity: the clump's name + its actual level range (min..max of the smooth curve within it).
 // Off-land tiles (bridge/coast) have no territory, so fall back to the NEAREST clump — never the
@@ -790,7 +841,7 @@ function corruptAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.portal) ret
  const dd=Math.hypot(tx-R.portal.x,ty-R.portal.y);
  const local=Math.max(0,1-dd/70);                       // fierce bloom at the rift itself
  let grad=0.04;                                         // starter island: a faint taint only
- if(R.core && !(R.bridge && tx<R.bridge.x0)){
+ if(R.core && !(R.bridge && _onStarter(R,tx,ty))){
    const f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/(R.rmax||300));
    grad=0.10+f*0.78; }                                  // main island: deepens core -> rift
  return Math.max(0,Math.min(1, Math.max(local,grad))); }
