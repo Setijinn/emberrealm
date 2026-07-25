@@ -143,6 +143,8 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   // single lairset cell, so this rolls out per theme without breaking anything.
   for(const b of LAIR_BANDS) _floorSet[b]=_img('assets/tiles/floor_'+b+'.png');
   for(const b of LAIR_BANDS) _wallSet[b]=_img('assets/tiles/wall_'+b+'.png');
+  // open-world ground, one atlas per terrain band -- same no-repeat rule outdoors as in the arenas
+  for(let b=0;b<=8;b++) _terrSet[b]=_img('assets/tiles/terr_'+b+'.png');
   const _decDone={};
   for(const b of _artSlots){ const s=(typeof bossDecArt==='function')?bossDecArt(b):b;   // decor may still be borrowed
     if(_decDone[s]){ _lairDec[b]=_decDone[s]; continue; }

@@ -1,4 +1,4 @@
-﻿const CACHE = 'emberrealm-v243';
+﻿const CACHE = 'emberrealm-v245';
 const ASSETS = ['.', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

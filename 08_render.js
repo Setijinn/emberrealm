@@ -72,17 +72,41 @@ function vnoise(x,y,scale){
 // from a smaller subset, so its room reads as a plainer version of that place rather than as the
 // theme's native arena — the Tidewrack's salt-house should not look as elaborate as the warren
 // the tiles were made for.
+// How beaten-up the ground at this tile should look, 0 clean .. 1 wrecked.
+// The atlas is authored pristine->damaged, so this picks the cell. Wear follows traffic rather
+// than noise: the middle of an arena, where the whole fight happens, is ground to rubble, and the
+// untrodden rim stays clean. The noise term only ragged-edges the transition so it isn't a ring.
+function tileWear(x,y){
+  let w=0;
+  const L=curRoom.lairAt&&curRoom.lairs?curRoom.lairs[curRoom.lairAt[y*curRoom.w+x]]:null;
+  // px/py are the arena's top-left in TILES. (Its cx/cy fields are the centre in PIXELS -- do not
+  // mix them in here; that unit mismatch silently puts the worn patch outside the arena.)
+  if(L){ const dx=(x-(L.px+L.tw/2))/(L.tw/2), dy=(y-(L.py+L.th/2))/(L.th/2);
+         w=1-Math.min(1,Math.hypot(dx,dy)); }
+  else if(!curRoom.rings) w=0.35;                    // dungeon corridors: walked, not fought in
+  return Math.max(0,Math.min(1,w+(vnoise(x+91,y+37,7)-0.5)*0.45));
+}
 function drawAtlas(atlas,x,y,tx,ty,hh,nv){
   if(!atlas || !atlas.complete || !atlas.naturalWidth) return false;
-  const i=((hh>>>7)&15)%(nv||16), sx=(i&3)*32, sy=(i>>2)*32;
+  const n=nv||16, w=tileWear(x,y);
+  // squared, so most ground sits near-pristine and heavy damage stays a local event
+  const lo=Math.floor(w*w*(n-1)), i=lo+(((hh>>>7)&15)%Math.max(1,Math.min(3,n-lo)));
+  const sx=(i&3)*32, sy=(i>>2)*32;
   ctx.imageSmoothingEnabled=false;
   // quarter-turns as well as mirrors: a mirror keeps the texture's own axes, so it still reads
   // as the same tile. With 16 variants x 8 orientations a repeat is essentially unfindable.
   ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
   ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale((hh&1)?-1:1,(hh&2)?-1:1);
   ctx.drawImage(atlas,sx,sy,32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+  // Faint lattice marking the tile squares. Drawn here rather than baked into the art: painted
+  // into the tiles it would rotate and mirror with them and land at a different strength on every
+  // cell, which is what made the old accidental version read as a defect. One line, one alpha,
+  // identical everywhere.
+  ctx.fillStyle=GRID_INK;
+  ctx.fillRect(tx,ty,TILE,1); ctx.fillRect(tx,ty,1,TILE);
   return true;
 }
+const GRID_INK='rgba(150,152,160,0.055)';   // tile lattice strength — one knob
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -358,6 +382,33 @@ function drawTileG(x,y){
       const wr=vnoise(x+311,y+127,9.5);
       if(wr>0.63){ const a2=Math.min(0.34,(wr-0.63)*1.5);
         ctx.fillStyle='rgba(24,18,12,'+a2.toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // ---- MULTI-TILE SURFACE FEATURES ----
+      // A gouge of lava, a pool of standing water, a drift of ash: these have to read as ONE
+      // continuous shape, so they cannot live in the tile art. A streak drawn inside a 32x32 tile
+      // stops dead at its border and never lines up with the next tile — which is exactly why the
+      // veined lava tiles looked like scattered slashes. Driven by continuous noise instead, so a
+      // feature flows across as many tiles as it needs and closes properly at its own edge.
+      if(c==='F'){
+        const FEAT=({5:'lava',7:'lava',8:'lava',2:'water',0:'moss',1:'moss',6:'ash'})[bd];
+        if(FEAT){ const fv=vnoise(x+17,y+43,5.2);
+          if(fv>0.575){ const k=Math.min(1,(fv-0.575)/0.20), tt2=performance.now()/1000;
+            if(FEAT==='lava'){
+              ctx.fillStyle='rgba(24,11,7,'+(0.60*k).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);  // cooled crust rim
+              if(k>0.40){ const g2=Math.min(1,(k-0.40)/0.60), pu=0.80+0.20*Math.sin(tt2*2.1+x*0.5+y*0.35);
+                ctx.save(); ctx.globalCompositeOperation='lighter';
+                ctx.globalAlpha=g2*pu*0.95; ctx.fillStyle='#ff6a12'; ctx.fillRect(tx,ty,TILE,TILE);
+                if(g2>0.5){ ctx.globalAlpha=(g2-0.5)*1.9*pu; ctx.fillStyle='#ffdf9a';
+                  ctx.fillRect(tx+3,ty+3,TILE-6,TILE-6); }                                          // white-hot core
+                ctx.restore(); ctx.globalAlpha=1; } }
+            else if(FEAT==='water'){
+              ctx.fillStyle='rgba(14,34,40,'+(0.52*k).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+              if(k>0.5){ const sh=0.16+0.10*Math.sin(tt2*1.6+x*0.7);
+                ctx.fillStyle='rgba(150,214,224,'+(sh*(k-0.5)*2).toFixed(3)+')';
+                ctx.fillRect(tx+4,ty+TILE*0.42,TILE-8,2); } }
+            else if(FEAT==='moss'){
+              ctx.fillStyle='rgba(58,104,44,'+(0.50*k).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+            else if(FEAT==='ash'){
+              ctx.fillStyle='rgba(196,190,180,'+(0.42*k).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); } } } }
       // per-block variety on top: brightness + weathering so no two blocks read identical
       const v=(hh>>2)%7;
       if(v===0){ ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(tx,ty,TILE,TILE); }
@@ -423,6 +474,10 @@ function drawTileG(x,y){
         if(wat(x-1,y)) ctx.fillRect(tx,ty,4,TILE); if(wat(x+1,y)) ctx.fillRect(tx+TILE-4,ty,4,TILE);
         return; }
     }
+    // 16-variant open-world ground. Same rule as the arenas: no spot in the world repeats a single
+    // ground sprite. Drawn before the old single-tile path so the sheet wins wherever it shipped,
+    // and the secondary-terrain patch logic below still runs over the top of it.
+    if(drawAtlas(_terrSet[bd],x,y,tx,ty,hmix(x,y),16)) return;
     const _gset=_groundSet[bd];
     if(_gset && _gset.naturalWidth){ ctx.imageSmoothingEnabled=false;
       const hh=hmix(x,y), o=hh&3;   // mixed hash -> flip is random per-cell, not parity-checkerboard
