@@ -821,7 +821,7 @@ function render(){
       if(im&&im.complete&&im.naturalWidth){
         ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(d.x,d.y+9,13,5,0,0,6.29); ctx.fill();
         drawObjBottom(im,d.x,d.y+12,38); } }
-    // the warden: a kneeling man inside a failing ward ring (art placeholder — procedural sprite)
+    // the warden: a kneeling man inside a failing ward ring
     if(curRoom.npc){ const np=curRoom.npc, wob=0.55+Math.sin(t9*2.2)*0.12;
       ctx.save(); ctx.globalCompositeOperation='lighter';
       ctx.strokeStyle=np.col||'#e8d8a0'; ctx.globalAlpha=wob*0.5; ctx.lineWidth=2;
@@ -829,7 +829,10 @@ function render(){
       ctx.globalAlpha=wob*0.22; ctx.beginPath(); ctx.ellipse(np.x,np.y+10,26,10,0,0,6.29); ctx.stroke();
       ctx.restore(); ctx.globalAlpha=1;
       ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(np.x,np.y+12,14,6,0,0,6.29); ctx.fill();
-      blit(sprBram,np.x,np.y+Math.sin(t9*1.3)*0.8,1.7,false); }
+      const wi=(typeof _wardenImg!=='undefined')?_wardenImg:null, bob=Math.sin(t9*1.3)*0.8;
+      if(wi&&wi.complete&&wi.naturalWidth){ ctx.imageSmoothingEnabled=false;
+        const w=58, h=w*wi.height/wi.width; ctx.drawImage(wi,np.x-w/2,np.y+10-h+bob,w,h); }
+      else blit(sprBram,np.x,np.y+bob,1.7,false); }
     if(curRoom.orbs) for(const o of curRoom.orbs){ if(o.got) continue;
       const bob=Math.sin(t9*3+o.x)*3;
       ctx.save(); ctx.globalCompositeOperation='lighter';

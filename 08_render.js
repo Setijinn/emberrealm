@@ -113,8 +113,9 @@ function drawTileG(x,y){
   // dunset_<ring> (falls back to that boss's lair tileset, then procedural).
   // 'D' = locked dream-gate: wall block + pulsing boss-colored seal.
   if(curRoom.dungeon){
-    // the dream wears the BOSS's art slot, not its current territory's band — ring is a boss id
-    const rg=curRoom.ring||0, ra=(typeof bossArt==='function')?bossArt(rg):rg;
+    // the dream wears the BOSS's art slot, not its current territory's band — ring is a boss id.
+    // TILE art borrows separately from sprite art (a boss gets its face before its tileset).
+    const rg=curRoom.ring||0, ra=(typeof bossTileArt==='function')?bossTileArt(rg):rg;
     const set=(typeof _dunSet!=='undefined'&&_dunSet[ra]&&_dunSet[ra].complete&&_dunSet[ra].naturalWidth)?_dunSet[ra]
              :(typeof _lairSet!=='undefined'&&_lairSet[ra]&&_lairSet[ra].complete&&_lairSet[ra].naturalWidth)?_lairSet[ra]:null;
     if(set){

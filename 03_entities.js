@@ -149,11 +149,19 @@ function bossBand(bid){ const t=bossClump(bid); return t?t.band:Math.max(0,Math.
 // default; an entry here lets a boss without its own art borrow an existing slot. Loader loops
 // walk the DISTINCT values, so a borrowed slot costs zero extra image requests.
 // (named BOSS_SLOT, not BOSS_ART — 09_sprites already owns BOSS_ART, the procedural sprite table)
-// 9/10/11 borrow existing art until their own sprites land — delete an entry as each ships.
-const BOSS_SLOT={9:2,10:1,11:0};
+// Add an entry here to make a boss BORROW another's art slot until its own sprites land
+// (9/10/11 did, until v218). Empty = every boss wears its own slot.
+const BOSS_SLOT={};
 function bossArt(i){ return (BOSS_SLOT[i]!==undefined)?BOSS_SLOT[i]:i; }
 const BOSS_SLOT_N=12;                            // grows with the roster
 function bossArtSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
+// Borrowing is PER ASSET KIND, because a boss gets its sprite long before it gets a whole
+// tileset and its scatter decor. Leave a boss in one of these and it still wears its own face.
+const TILE_SLOT={};                    // dungeon tilesets — 9/10/11 have their own since v218
+const DEC_SLOT={9:0,10:1,11:2};        // lair scatter decor — shared, same idea as DECAL_SRC
+function bossTileArt(i){ return (TILE_SLOT[i]!==undefined)?TILE_SLOT[i]:bossArt(i); }
+function bossDecArt(i){ return (DEC_SLOT[i]!==undefined)?DEC_SLOT[i]:bossArt(i); }
+function bossTileSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossTileArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
 // ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
 // 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
 const LAIR_TEMPLATES={
