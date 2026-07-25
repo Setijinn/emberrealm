@@ -355,6 +355,7 @@ function update(dt){
       if(e.phase===undefined) e.phase=0;
       const frac=e.hp/e.maxhp, np = frac>0.66?0 : frac>0.33?1 : 2;
       if(np>e.phase){ e.phase=np; bossEnterPhase(e,np); }
+      if(typeof bossChatter==='function') bossChatter(e);       // engage line + HP-milestone dialogue
       if(e.phaseInv>0) e.phaseInv-=dt;
       if(e.phaseFlash>0) e.phaseFlash-=dt;
       if(!e.hidden){                              // hidden while its clone puzzle is up — images do the work

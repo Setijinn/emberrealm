@@ -47,6 +47,8 @@ const _portalPillars=(typeof window!=='undefined')?[_img('assets/env/pillar_0.pn
 // Waypoint (fast-travel) pillar — a beautiful light-magic shrine; drawn base-anchored in drawPillar.
 const _waypointImg=(typeof window!=='undefined')?_img('assets/env/waypoint.png'):null;
 const _wardenImg=(typeof window!=='undefined')?_img('assets/env/warden.png'):null;   // Warden Ivor
+// 9-sliced plaque behind boss dialogue (17_bossmech drawBossQuote); QUOTE_INSET must match its border
+const _quoteFrame=(typeof window!=='undefined')?_img('assets/ui/quote_frame.png'):null;
 // Awakened dungeons: per-ring consciousness tileset + spectral awakened-boss sprite
 // (render falls back to lairset / normal boss art until these land)
 // ART SLOTS, not boss ids: a boss borrowing an existing slot adds no image request.

@@ -19,22 +19,90 @@ function bossPunishDmg(e){ return Math.min((player&&player.maxhp?player.maxhp*0.
 // speaks a couple words of TRUTH as it goes. Shown as a slow, sombre centred quote (separate from
 // the action banner). The final boss's line drops the whole reveal. (user, 2026-07-24) ----
 let bossQuote=null;
-function bossSayDeath(line){ if(!line) return; bossQuote={line:line, born:performance.now(), dur:6200}; }
+function bossSayDeath(line,who){ if(!line) return;
+  bossQuote={line:line, born:performance.now(), dur:6200, who:who||null,
+             x:who?who.x:0, y:who?who.y:0, r:who?who.r:0}; }
+// ---- IN-FIGHT DIALOGUE ----
+// The two phase banners alone left the Lv30-50 bosses nearly silent through a long fight, so the
+// confession they are supposed to be building landed in two lines. Each canon boss now speaks on
+// ENGAGE and at four HP milestones as well, in the same sombre quote treatment as its dying words
+// — the phase banners stay the loud beats, this is the boss talking THROUGH the fight.
+const BOSS_CHAT_AT=[0.86,0.52,0.24,0.09];
+function bossSayLine(line,dur,who){ if(!line) return;
+  // never talk over a line still on screen — the phase banner and dying words outrank chatter
+  if(bossQuote && (performance.now()-bossQuote.born) < bossQuote.dur-700) return;
+  bossQuote={line:line, born:performance.now(), dur:dur||4600, who:who||null,
+             x:who?who.x:0, y:who?who.y:0, r:who?who.r:0}; }
+function bossChatter(e){
+  const gb=(typeof GBOSS!=='undefined' && e && e.ring!=null && e.ring>=0)?GBOSS[e.ring]:null;
+  if(!gb || e.decoy) return;
+  if(typeof bossBar==='undefined' || bossBar!==e) return;      // only the boss you're actually fighting
+  if(!e.saidOpen){ e.saidOpen=1; if(gb.open){ bossSayLine(gb.open,5000,e); return; } }
+  if(!gb.mid || !gb.mid.length) return;
+  if(e.chat===undefined) e.chat=0;
+  if(e.phaseInv>0) return;                                     // let the phase beat land alone
+  const f=e.hp/e.maxhp; let spoke=null;
+  while(e.chat<BOSS_CHAT_AT.length && f<=BOSS_CHAT_AT[e.chat]){ spoke=gb.mid[e.chat]; e.chat++; }
+  if(spoke) bossSayLine(spoke,0,e); }
+// 9-SLICE the plaque so one bitmap fits any line count: corners drawn at native size, edges and
+// centre stretched. INSET must match the art's actual border thickness or the corners smear.
+const QUOTE_INSET=26;   // == the corner size baked into assets/ui/quote_frame.png (60x60 atlas)
+// s = corner size in the SOURCE atlas, ds = size to draw it at (so the border scales with the
+// text/UI, not with the bitmap). Corners stay square; edges and centre stretch to fill.
+function _slice9(im,x,y,w,h,s,ds){
+  const iw=im.width, ih=im.height, d=Math.min(ds||s, Math.floor(w/2), Math.floor(h/2));
+  const mw=iw-s*2, mh=ih-s*2, cw=w-d*2, ch=h-d*2;
+  ctx.drawImage(im,0,0,s,s, x,y,d,d);                       ctx.drawImage(im,iw-s,0,s,s, x+w-d,y,d,d);
+  ctx.drawImage(im,0,ih-s,s,s, x,y+h-d,d,d);                ctx.drawImage(im,iw-s,ih-s,s,s, x+w-d,y+h-d,d,d);
+  if(cw>0){ ctx.drawImage(im,s,0,mw,s, x+d,y,cw,d);         ctx.drawImage(im,s,ih-s,mw,s, x+d,y+h-d,cw,d); }
+  if(ch>0){ ctx.drawImage(im,0,s,s,mh, x,y+d,d,ch);         ctx.drawImage(im,iw-s,s,s,mh, x+w-d,y+d,d,ch); }
+  if(cw>0&&ch>0) ctx.drawImage(im,s,s,mw,mh, x+d,y+d,cw,ch);
+}
+// Boss dialogue floats ABOVE THE SPEAKER'S HEAD in a framed plaque that sizes itself to the text
+// (user). It tracks the boss while it lives and holds its last position afterwards, so dying words
+// stay put over the corpse. Falls back to the old centred caption if the art hasn't loaded.
 function drawBossQuote(){
   if(!bossQuote) return;
-  const el=performance.now()-bossQuote.born;
-  if(el>bossQuote.dur){ bossQuote=null; return; }
-  const a=Math.min(1, el/500)*Math.min(1,(bossQuote.dur-el)/900);   // fade in / out
+  const q=bossQuote, el=performance.now()-q.born;
+  if(el>q.dur){ bossQuote=null; return; }
+  const a=Math.min(1, el/500)*Math.min(1,(q.dur-el)/900);           // fade in / out
+  if(q.who && typeof enemies!=='undefined' && enemies.indexOf(q.who)>=0){ q.x=q.who.x; q.y=q.who.y; q.r=q.who.r; }
+  const fs=Math.max(13, Math.round(17*(typeof UIS!=='undefined'?UIS:1)));
   ctx.save(); ctx.globalAlpha=a; ctx.textAlign='center';
-  ctx.font='italic 20px "Pixelify Sans",serif';
-  const maxw=Math.min(W*0.82,760); const words=bossQuote.line.split(' '); let lines=[],cur='';
+  ctx.font='italic '+fs+'px "Pixelify Sans",serif';
+  const anchored=!!q.who;
+  const maxw=anchored?Math.min(W*0.56,460):Math.min(W*0.82,760);
+  const words=q.line.split(' '); let lines=[],cur='';
   for(const w of words){ const test=cur?cur+' '+w:w;
     if(ctx.measureText(test).width>maxw){ if(cur)lines.push(cur); cur=w; } else cur=test; }
   if(cur) lines.push(cur);
-  const y0=H*0.70;
-  for(let i=0;i<lines.length;i++){ const yy=y0+i*27;
-    ctx.fillStyle='rgba(0,0,0,.72)'; ctx.fillText(lines[i],W/2+1,yy+1);
-    ctx.fillStyle='#d6c2ec'; ctx.fillText(lines[i],W/2,yy); }
+  const lh=Math.round(fs*1.35);
+  let tw=0; for(const L of lines) tw=Math.max(tw,ctx.measureText(L).width);
+  const im=(typeof _quoteFrame!=='undefined')?_quoteFrame:null;
+  // The plaque is sized FROM the text, and the padding is the frame's own border thickness plus a
+  // breathing gap — so however long the line is, the words always sit inside the carved border
+  // instead of running under it, and a one-line box never collapses the 9-slice corners.
+  // the border is drawn proportional to the text, so a bigger UI scale gets a bigger frame too
+  const framed=!!(im && im.complete && im.naturalWidth);
+  const ins=framed?Math.max(14,Math.round(QUOTE_INSET*(fs/17))):8;
+  const padX=ins+Math.round(fs*0.45), padY=ins+Math.round(fs*0.15);
+  const bw=Math.max(ins*2+8, Math.ceil(tw)+padX*2), bh=Math.max(ins*2+8, lines.length*lh+padY*2);
+  let cxq, top;
+  if(anchored){
+    // sit above the head, then clamp on-screen so it never slides off at the edges
+    const sx=q.x-(typeof camX!=='undefined'?camX:0), sy=q.y-(typeof camY!=='undefined'?camY:0);
+    cxq=Math.max(bw/2+8, Math.min(W-bw/2-8, sx));
+    top=Math.max(8, sy-(q.r||24)-18-bh);
+  } else { cxq=W/2; top=H*0.70-padY-lh*0.8; }
+  if(framed){
+    ctx.imageSmoothingEnabled=false;
+    _slice9(im, Math.round(cxq-bw/2), Math.round(top), bw, bh, QUOTE_INSET, ins);
+  } else {                                                          // frame not loaded: plain slab
+    ctx.fillStyle='rgba(12,9,16,0.82)'; ctx.fillRect(cxq-bw/2,top,bw,bh);
+    ctx.strokeStyle='rgba(150,120,190,0.55)'; ctx.lineWidth=2; ctx.strokeRect(cxq-bw/2,top,bw,bh); }
+  for(let i=0;i<lines.length;i++){ const yy=top+padY+lh*(i+0.78);
+    ctx.fillStyle='rgba(0,0,0,.72)'; ctx.fillText(lines[i],cxq+1,yy+1);
+    ctx.fillStyle='#e4d6f5'; ctx.fillText(lines[i],cxq,yy); }
   ctx.restore(); ctx.textAlign='left';
 }
 
