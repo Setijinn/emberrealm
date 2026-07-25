@@ -68,9 +68,13 @@ function vnoise(x,y,scale){
 // A 128x128 sheet holding sixteen 32x32 tiles of the SAME material (create_tiles_pro). Draws the
 // variant chosen by position hash, so no surface is ever one cell repeated. Returns false when the
 // atlas for that theme hasn't shipped yet, and the caller keeps its old single-cell path.
-function drawAtlas(atlas,x,y,tx,ty,hh){
+// `nv` caps how many of the 16 variants are used. A boss BORROWING another theme's sheet draws
+// from a smaller subset, so its room reads as a plainer version of that place rather than as the
+// theme's native arena — the Tidewrack's salt-house should not look as elaborate as the warren
+// the tiles were made for.
+function drawAtlas(atlas,x,y,tx,ty,hh,nv){
   if(!atlas || !atlas.complete || !atlas.naturalWidth) return false;
-  const i=(hh>>>7)&15, sx=(i&3)*32, sy=(i>>2)*32;
+  const i=((hh>>>7)&15)%(nv||16), sx=(i&3)*32, sy=(i>>2)*32;
   ctx.imageSmoothingEnabled=false;
   // quarter-turns as well as mirrors: a mirror keeps the texture's own axes, so it still reads
   // as the same tile. With 16 variants x 8 orientations a repeat is essentially unfindable.
@@ -334,7 +338,9 @@ function drawTileG(x,y){
       // orientation. 4 rotations x 2 mirrors from one clean cell = 8 readings of a single tile.
       // 16-variant atlas when this theme has one; otherwise the old single hand-verified cell
       const _atl=(c==='F')?_floorSet[bd]:_wallSet[bd];
-      if(!drawAtlas(_atl,x,y,tx,ty,hh)){
+      // a borrowed theme uses only the first 5 variants; its owner uses all 16
+      const _bor=(_lo!==undefined&&typeof LAIR_TILE!=='undefined'&&LAIR_TILE[_lo]!==undefined);
+      if(!drawAtlas(_atl,x,y,tx,ty,hh,_bor?5:16)){
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
         ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale(o&1?-1:1,o&2?-1:1);
         ctx.drawImage(set,src[0],src[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore(); }
