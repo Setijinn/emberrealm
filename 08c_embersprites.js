@@ -83,7 +83,11 @@ if(typeof window!=='undefined') for(let i=0;i<6;i++) _dunDec.push(_img('assets/e
 // key = wpn_<type> | arm_<mat> | helm_<mat> | ring_<st> | potion. Band = min(2, floor(tier/4)).
 const _itemArt={};
 if(typeof window!=='undefined'){
-  ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
+  // Weapons get SIX bands, one per pair of tiers, so the ladder actually escalates: with three
+  // bands a T1 Cracked sword and a T4 Steel sword were the same picture. The bands line up with
+  // the tier-name pairs -- Cracked/Worn, Iron/Steel, Tempered/Runed, Ember/Obsidian,
+  // Storm-forged/Dragonbone, Mythril/Hearthfire. Armour and rings stay on three.
+  ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2,3,4,5].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
   ['plate','leather','robe'].forEach(m=>{ _itemArt['arm_'+m]=[0,1,2].map(b=>_img('assets/items/arm_'+m+'_'+b+'.png'));
     _itemArt['helm_'+m]=[0,1,2].map(b=>_img('assets/items/helm_'+m+'_'+b+'.png')); });
   ['hp','dmg','def','mp','vit','wis','dex','spd','luck'].forEach(s=>{ _itemArt['ring_'+s]=[0,1,2].map(b=>_img('assets/items/ring_'+s+'_'+b+'.png')); });
@@ -96,14 +100,22 @@ const _abilImgCache={};
 function abilImg(id){ if(typeof window==='undefined'||!id) return null;
   if(_abilImgCache[id]===undefined){ const i=new Image(); i.src='assets/abilities/'+id+'.png'; _abilImgCache[id]=i; }
   const im=_abilImgCache[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+// TIER_NAMES lives in 11_ui.js, which loads after this file; read its length lazily so this never
+// depends on load order, and fall back to the known 12 if it is somehow not there yet.
+function _nTiers(){ return (typeof TIER_NAMES!=='undefined')?TIER_NAMES.length:12; }
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
-  // coins use their denomination (0/1/2) as the band directly, not tier/4
-  const band=(it.k==='coin')?Math.min(2,it.t||0):Math.min(2,Math.floor((it.t||0)/4)); let key=null;
+  const NTIERS=_nTiers();
+  let key=null;
   if(it.k==='wpn') key='wpn_'+it.wt; else if(it.k==='arm') key='arm_'+it.mt;
   else if(it.k==='helm') key='helm_'+it.mt; else if(it.k==='ring') key='ring_'+it.st;
   else if(it.k==='coin') key='coin'; else if(it.k==='pot') key='potion';
   const arr=_itemArt[key]; if(!arr) return null;
-  const im=arr[Math.min(band,arr.length-1)];
+  // Spread the 12 tiers evenly over however many bands this key actually ships, so a set can be
+  // deepened without touching this: 3 bands -> 4 tiers each, 6 bands -> 2 tiers each. Coins are
+  // the exception — their denomination IS the band, not something derived from a tier.
+  const band=(it.k==='coin')?Math.min(arr.length-1,it.t||0)
+            :Math.min(arr.length-1,Math.floor((it.t||0)*arr.length/NTIERS));
+  const im=arr[band];
   return (im&&im.complete&&im.naturalWidth)?im:null; }
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
