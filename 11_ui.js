@@ -310,7 +310,16 @@ function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let
   else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t}; }
  return rollAffixes(it,(typeof player!=='undefined'&&player.fortune)||0); }
 function bagAt(e,item){ const rar=(item&&item.rar)||0;
- return {x:e.x+(Math.random()*22-11),y:e.y+(Math.random()*22-11),item:item,rar:rar,life:rar>=2?150:60}; }
+ let bx=e.x+(Math.random()*22-11), by=e.y+(Math.random()*22-11);
+ // A clump of trees leaves pockets the player can never reach: each trunk only blocks a small
+ // circle, but several together enclose the gap between them. Loot scattered into one of those is
+ // simply lost, so nudge the bag to the nearest spot a body actually fits, falling back to the
+ // kill point itself if the whole area is walled in.
+ if(typeof nearestStandable==='function'){
+   const p=nearestStandable(bx,by,11,4);
+   if(p){ bx=p.x; by=p.y; } else { bx=e.x; by=e.y; }
+ }
+ return {x:bx,y:by,item:item,rar:rar,life:rar>=2?150:60}; }
 function rollLoot(e){
  const lv=e.lv||1;
  const F=(typeof player!=='undefined'&&player.fortune)||0;

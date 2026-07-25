@@ -87,7 +87,7 @@ function drawBossQuote(){
   for(const w of words){ const test=cur?cur+' '+w:w;
     if(ctx.measureText(test).width>maxw){ if(cur)lines.push(cur); cur=w; } else cur=test; }
   if(cur) lines.push(cur);
-  const lh=Math.round(fs*1.35);
+  const lh=Math.round(fs*1.18);        // tighter leading; 1.35 left visible dead space between lines
   let tw=0; for(const L of lines) tw=Math.max(tw,ctx.measureText(L).width);
   const im=(typeof _quoteFrame!=='undefined')?_quoteFrame:null;
   // The plaque is sized FROM the text, and the padding is the frame's own border thickness plus a
@@ -95,9 +95,12 @@ function drawBossQuote(){
   // instead of running under it, and a one-line box never collapses the 9-slice corners.
   // the border is drawn proportional to the text, so a bigger UI scale gets a bigger frame too
   const framed=!!(im && im.complete && im.naturalWidth);
-  const ins=framed?Math.max(14,Math.round(QUOTE_INSET*(fs/17))):8;
-  const padX=ins+Math.round(fs*0.45), padY=ins+Math.round(fs*0.15);
-  const bw=Math.max(ins*2+8, Math.ceil(tw)+padX*2), bh=Math.max(ins*2+8, lines.length*lh+padY*2);
+  // Keep the plaque tight to the words. The border is drawn at a smaller inset than the atlas's
+  // own 26px corner and the padding adds only a thin gap on top of it, so the frame hugs the text
+  // instead of the box being mostly border with a sentence lost in the middle of it.
+  const ins=framed?Math.max(10,Math.round(QUOTE_INSET*0.52*(fs/17))):6;
+  const padX=ins+Math.round(fs*0.16), padY=ins-Math.round(fs*0.10);
+  const bw=Math.max(ins*2+8, Math.ceil(tw)+padX*2), bh=Math.max(ins*2+6, lines.length*lh+padY*2);
   let cxq, top;
   if(anchored){
     // sit above the head, then clamp on-screen so it never slides off at the edges

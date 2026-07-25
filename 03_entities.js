@@ -506,7 +506,9 @@ function spawnRingBoss(b){
   if(lair && tries<14){ const a=Math.random()*6.283, d=15+Math.random()*45; bx=lair.x+Math.cos(a)*d; by=lair.y+Math.sin(a)*d; } // guard its lair (stay inside)
   else { const a=Math.random()*6.283, d=300+Math.random()*220; bx=player.x+Math.cos(a)*d; by=player.y+Math.sin(a)*d; }
   if(bx<TILE*2||by<TILE*2||bx>(curRoom.w-2)*TILE||by>(curRoom.h-2)*TILE) continue;
-  if(solid(bx,by)) continue;
+  // a boss is a big body -- test that it actually FITS, not merely that the centre point is clear,
+  // or it lands wedged in a tree clump where neither it nor the player can move
+  if(typeof standable==='function' ? !standable(bx,by,30) : solid(bx,by)) continue;
   if(zoneBossAt(bx/TILE,by/TILE)!==b) continue;   // must stand in ITS OWN territory, not just its band
   const lv=grvLvAt(bx/TILE,by/TILE);   // boss level matches where its lair sits in the zone
   const GB=GBOSS[b], PJ=BOSS_PROJ[b]||{};
@@ -523,6 +525,14 @@ function spawnRingBoss(b){
    def:edef,dr:edr,dex:edex,maxmp:emp,mp:emp,mech:GB.mech,
    pat:GB.pat,pat2:GB.pat2,chargeT:0,sumT:3,
    pcol:PJ.col,pcore:PJ.core,pshape:PJ.shape,psize:PJ.size||7};
+  // Bind the boss to its den. The lair footprint is in TILES; store it in world units, padded a
+  // little so the boss can use the doorway lip without escaping. Without this a boss drifts out
+  // into open ground where its arena mechanics mean nothing.
+  const _L=curRoom.lairs&&curRoom.lairs[b];
+  if(_L){ const pad=TILE*0.5;
+    boss.arena={x0:_L.px*TILE-pad, y0:_L.py*TILE-pad,
+                x1:(_L.px+_L.tw)*TILE+pad, y1:(_L.py+_L.th)*TILE+pad};
+    boss.woke=false; }
   enemies.push(boss);
   msg('\u2620 '+GB.n,GB.title);
   setTimeout(function(){ if(enemies.indexOf(boss)>=0) msg(GB.n,GB.desc); },1700);

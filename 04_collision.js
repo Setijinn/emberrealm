@@ -18,6 +18,32 @@ function solid(px,py){
     return ax*ax+ay*ay < rr*rr; }
   return 'WhlHwXD'.indexOf(c)>=0;  // walls / structures / water / lair walls / locked gates: full tile
 }
+// Is there room to STAND at this world point, given a body radius?
+// A single tree only blocks a small circle, so one is easy to walk around -- but a clump of them
+// leaves pockets that are fully enclosed. Anything spawned into such a pocket (an enemy, a dropped
+// item) is unreachable, so spawners and drops test with this instead of a bare solid() check.
+function standable(px,py,r){
+  r=r||12;
+  if(solid(px,py)) return false;
+  for(let i=0;i<8;i++){ const a=i*(Math.PI/4);
+    if(solid(px+Math.cos(a)*r, py+Math.sin(a)*r)) return false; }
+  return true;
+}
+// Nearest standable point to (px,py), searching outward in rings. Returns null if genuinely walled
+// in, so callers can skip the spawn rather than drop it somewhere silly.
+function nearestStandable(px,py,r,maxRings){
+  if(standable(px,py,r)) return {x:px,y:py};
+  const R=maxRings||6;
+  for(let ring=1;ring<=R;ring++){
+    const step=Math.max(6,Math.round(24/ring));
+    for(let a=0;a<360;a+=step){
+      const t=a*Math.PI/180, d=ring*TILE*0.75;
+      const nx=px+Math.cos(t)*d, ny=py+Math.sin(t)*d;
+      if(standable(nx,ny,r)) return {x:nx,y:ny};
+    }
+  }
+  return null;
+}
 function moveCircle(e,dx,dy){
   // axis-separated with corner sampling
   const pts=[[e.r,0],[-e.r,0],[0,e.r],[0,-e.r],[e.r*.7,e.r*.7],[-e.r*.7,e.r*.7],[e.r*.7,-e.r*.7],[-e.r*.7,-e.r*.7]];

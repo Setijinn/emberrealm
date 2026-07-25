@@ -37,6 +37,31 @@ function ambientParts(dt){
         {vx:Math.random()*10-5, vy:fiery?(-22-Math.random()*30):(-8-Math.random()*10),
          life:1.1, col:fiery?'#ff9a4d':((+b)<3?'#9fd08a':'#c9c2b8'), sz:2, glow:fiery}); } }
 }
+// Is anyone standing in this arena? Co-op peers count, or a boss would drop aggro the moment the
+// host stepped out while a teammate was still fighting it.
+// Put a disengaged boss back exactly as it was found: full health, phase 0, no statuses, no
+// lingering mechanic state, and none of the adds or images it spawned. A partial reset would let
+// you chip a boss down over several trips, which is precisely what the arena lock is meant to stop.
+function bossReset(e){
+  e.hp=e.maxhp;
+  e.phase=0; e.phaseInv=0; e.dlgInv=0; e.phaseFlash=0; e.mechInv=0;
+  e.st={}; e.slowT=0; e.stunT=0; e.flash=0;
+  e.hidden=false; e.chargeT=0; e.cdur=0; e.sumT=3; e.fireT=1.4; e.ang=0;
+  e.bloom=0; e.pools=null; e.clones=null; e.said=null; e.chatAt=0;
+  if(e.mp!==undefined) e.mp=e.maxmp;
+  // clear anything this boss put on the field
+  for(let i=enemies.length-1;i>=0;i--){ const o=enemies[i];
+    if(o!==e && (o.decoy||o.summoned) && (o.owner===e||o.ring===e.ring)) enemies.splice(i,1); }
+  if(typeof eShots!=='undefined'&&eShots) eShots.length=0;
+  if(e.arena){ e.x=(e.arena.x0+e.arena.x1)/2; e.y=(e.arena.y0+e.arena.y1)/2; }
+}
+function bossArenaHasPlayer(A){
+  if(player.x>A.x0&&player.x<A.x1&&player.y>A.y0&&player.y<A.y1) return true;
+  const ps=(typeof coopPeers!=='undefined'&&coopPeers)?coopPeers:null;
+  if(ps) for(const k in ps){ const p=ps[k];
+    if(p&&p.x>A.x0&&p.x<A.x1&&p.y>A.y0&&p.y<A.y1) return true; }
+  return false;
+}
 // ---- Awakened-dungeon objective engine ----
 // Checks each locked chamber's objective; completing one melts its gate open.
 function _dunSparkle(x,y,col){ if(typeof emitP!=='function') return;
@@ -357,6 +382,17 @@ function update(dt){
         for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, psp); }
     }
     if(e.type==='B' && !e.decoy){
+      // ---- ARENA LOCK ----
+      // A world boss belongs to its den. It does not begin the fight until someone walks in, and
+      // it cannot be pulled out of it: otherwise a boss wanders off across the zone, aggroes from
+      // a screen away, and can be kited forever in open ground where none of its mechanics matter.
+      if(e.wb && e.arena){
+        const A=e.arena;
+        const pIn = player.x>A.x0 && player.x<A.x1 && player.y>A.y0 && player.y<A.y1;
+        if(pIn) e.woke=true;
+        else if(e.woke && !bossArenaHasPlayer(A)){ e.woke=false; bossReset(e); }  // left -> full reset
+        if(!e.woke){ e.fireT=Math.max(e.fireT,0.6); continue; }   // dormant until someone walks in
+      }
       if(typeof bossMechTick==='function') bossMechTick(e,dt);   // signature mechanic / puzzle
       // --- PHASES: escalating stages at 66% / 33% HP, each with a dramatic transition beat ---
       if(e.phase===undefined) e.phase=0;
@@ -383,6 +419,10 @@ function update(dt){
       } else {
         moveCircle(e,(dx/dd)*e.spd*mv*slowF(e)*dt,(dy/dd)*e.spd*mv*slowF(e)*dt);
       }
+      // tether: whatever the movement did, the boss stays inside its den
+      if(e.wb && e.arena){ const A=e.arena, m=e.r*0.5;
+        e.x=Math.max(A.x0+m,Math.min(A.x1-m,e.x));
+        e.y=Math.max(A.y0+m,Math.min(A.y1-m,e.y)); }
       // during the transition beat the boss holds fire (you're dodging the shockwave)
       if((e.phaseInv||0)<=0){
         e.fireT-=dt;

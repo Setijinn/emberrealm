@@ -203,15 +203,29 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
     if(_decDone[s]){ _lairDec[b]=_decDone[s]; continue; }
     const a=[]; for(let i=0;i<4;i++) a.push(_img('assets/env/ldec_'+s+'_'+i+'.png'));
     _decDone[s]=a; _lairDec[b]=a; }
-  _bandTree[0]=_img('assets/env/tree_grass.png');
-  _bandTree[1]=_img('assets/env/tree_pine.png');
-  _bandTree[2]=_img('assets/env/tree_willow.png');
+  // Flora per band, matched to the ground it stands on. Only bands 0-2 were mapped before, and
+  // they were mapped wrong: Gullwind Shore drew a PINE on shore shingle, and every band from the
+  // Verdant Belt outward had no tree at all so it fell through to the procedural green blob.
+  const tScrub=_img('assets/env/tree_scrub.png'), tGrass=_img('assets/env/tree_grass.png'),
+        tWillow=_img('assets/env/tree_willow.png'), tPine=_img('assets/env/tree_pine.png'),
+        tBare=_img('assets/env/tree_bare.png'), tDead=_img('assets/env/tree_dead.png');
+  _bandTree[0]=tScrub;    // Landing Sands   - salt scrub, nothing tall grows in sand
+  _bandTree[1]=tScrub;    // Gullwind Shore  - same, wind-bent
+  _bandTree[2]=tWillow;   // Sawgrass Flats
+  _bandTree[3]=tGrass;    // Verdant Belt    - proper broadleaf
+  _bandTree[4]=tPine;     // Wolfwood
+  _bandTree[5]=tPine;     // Deep Timber
+  _bandTree[6]=tBare;     // Stonebrow Rise  - stunted and windswept on rock
+  _bandTree[7]=tDead;     // Cinderwatch     - burnt
+  _bandTree[8]=tDead;     // The Ashfall
   const bGrass=_img('assets/env/boulder_grass.png'), bGrey=_img('assets/env/boulder_grey.png'),
         bScorch=_img('assets/env/boulder_scorched.png'), bVolc=_img('assets/env/boulder_volcanic.png');
-  _bandBoulder[0]=_bandBoulder[1]=_bandBoulder[2]=bGrass;
-  _bandBoulder[3]=_bandBoulder[4]=bGrey;
-  _bandBoulder[5]=_bandBoulder[6]=bScorch;
-  _bandBoulder[7]=_bandBoulder[8]=bVolc;
+  // mossy boulders belong where there is moss, not on sand
+  _bandBoulder[0]=_bandBoulder[1]=bGrey;
+  _bandBoulder[2]=_bandBoulder[3]=_bandBoulder[4]=_bandBoulder[5]=bGrass;
+  _bandBoulder[6]=bGrey;
+  _bandBoulder[7]=bScorch;
+  _bandBoulder[8]=bVolc;
   _bandTone[0]='rgba(22,44,16,0.40)';   // toned-down vivid grass (per feedback)
   _bandTone[7]='rgba(8,4,12,0.32)';     // calm the volcanic glow -> dark rock w/ glowing cracks
   _bandTone[8]='rgba(8,3,10,0.46)';     // molten: darker still, subdue the busy lava grid
