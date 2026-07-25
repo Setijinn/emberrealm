@@ -86,18 +86,43 @@ function tileWear(x,y){
   else if(!curRoom.rings) w=0.35;                    // dungeon corridors: walked, not fought in
   return Math.max(0,Math.min(1,w+(vnoise(x+91,y+37,7)-0.5)*0.45));
 }
+// Each 32x32 cell cut out into its own canvas, cached per atlas. Drawing a sub-rect straight out
+// of the 128x128 sheet lets the sampler reach a fraction of a texel past the cell edge and pull in
+// the neighbouring cell, which paints a faint dotted seam around every tile. An isolated cell has
+// no neighbour to bleed from.
+// Cells are cached at the exact size they will occupy on screen (TILE_DEV_PX, set by render()).
+// Two reasons. Cutting the cell out of the sheet stops the sampler reaching past its edge into the
+// neighbouring cell. Pre-scaling it to the final device size means the 32px art is resampled ONCE,
+// identically for every tile, instead of every tile independently resolving a 2.219x ratio -- that
+// per-tile difference is what darkened the tile borders and drew the grid.
+const _atlCells=new WeakMap();
+let TILE_DEV_PX=0;
+function atlasCell(atlas,i){
+  const px=TILE_DEV_PX||32;
+  let e=_atlCells.get(atlas);
+  if(!e || e.px!==px){ e={px:px, cells:[]}; _atlCells.set(atlas,e); }
+  let c=e.cells[i];
+  if(!c){
+    c=document.createElement('canvas'); c.width=px; c.height=px;
+    const g2=c.getContext('2d'); g2.imageSmoothingEnabled=false;
+    g2.drawImage(atlas,(i&3)*32,(i>>2)*32,32,32,0,0,px,px);
+    e.cells[i]=c;
+  }
+  return c;
+}
 function drawAtlas(atlas,x,y,tx,ty,hh,nv){
   if(!atlas || !atlas.complete || !atlas.naturalWidth) return false;
   const n=nv||16, w=tileWear(x,y);
   // squared, so most ground sits near-pristine and heavy damage stays a local event
   const lo=Math.floor(w*w*(n-1)), i=lo+(((hh>>>7)&15)%Math.max(1,Math.min(3,n-lo)));
-  const sx=(i&3)*32, sy=(i>>2)*32;
+  const cell=atlasCell(atlas,i);
   ctx.imageSmoothingEnabled=false;
   // quarter-turns as well as mirrors: a mirror keeps the texture's own axes, so it still reads
   // as the same tile. With 16 variants x 8 orientations a repeat is essentially unfindable.
   ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
-  ctx.rotate(((hh>>4)&3)*1.5708); ctx.scale((hh&1)?-1:1,(hh&2)?-1:1);
-  ctx.drawImage(atlas,sx,sy,32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
+  // exact quarter turns, so the rotation is rigid and introduces no resampling of its own
+  ctx.rotate(((hh>>4)&3)*(Math.PI/2)); ctx.scale((hh&1)?-1:1,(hh&2)?-1:1);
+  ctx.drawImage(cell,0,0,cell.width,cell.height,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
   return true;
 }
 // A patch of ground beneath a standing feature, so it has something to grow out of. Without it a

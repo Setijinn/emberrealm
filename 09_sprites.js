@@ -424,7 +424,9 @@ function drawEnemySprite(e,pn){
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
  else { // awakened dungeon bosses use their spectral sprite when it exists
    const _ba=(typeof bossArt==='function')?bossArt(e.ring):e.ring;   // art slot, NOT the boss id
-   if(e.awk && typeof _awakImg!=='undefined'){ const ai=_awakImg[_ba];
+   // awakened dream bosses AND starter-dungeon den elders both use the alternate sprite, so a
+   // dungeon fight never shows the identical creature you already beat in the open world
+   if((e.awk||e.den) && typeof _awakImg!=='undefined'){ const ai=_awakImg[_ba];
      if(ai&&ai.complete&&ai.naturalWidth){ blit(ai,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/ai.width,flip); return; } }
    const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[_ba]:null,e,pn);
    if(fr) blit(fr,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/fr.width,flip);
@@ -984,13 +986,24 @@ function drawWorldFeatures(){
 function render(){
   ctx.fillStyle='#0b0a10'; ctx.fillRect(0,0,W,H);
   const roomW=curRoom.w*TILE, roomH=curRoom.h*TILE;
-  const zoom=H/(viewTilesH()*TILE);
+  const _dpr=(typeof DPR!=='undefined')?DPR:1;
+  // PIXEL SNAPPING. Tiles are drawn with smoothing off, so if a tile edge lands on a fractional
+  // device pixel the nearest-neighbour sampler rounds each edge differently and paints a seam --
+  // and because the fraction changes as the camera scrolls, those seams crawl while you walk.
+  // Snap the zoom so one tile is a whole number of device pixels, then snap the camera to that
+  // same grid, and every tile edge is exact and stays put.
+  let zoom=H/(viewTilesH()*TILE);
+  const _tilePx=Math.max(1,Math.round(TILE*zoom*_dpr));
+  zoom=_tilePx/(TILE*_dpr);
+  TILE_DEV_PX=_tilePx;                       // atlas cells are cached pre-scaled to this
   const vw=W/zoom, vh=H/zoom;
   camX = roomW<=vw ? (roomW-vw)/2 : Math.max(0,Math.min(roomW-vw, player.x-vw/2));
   camY = roomH<=vh ? (roomH-vh)/2 : Math.max(0,Math.min(roomH-vh, player.y-vh/2));
   if(typeof _shake!=='undefined' && _shake>0.2){                 // boss-phase screen shake
     camX+=(Math.random()*2-1)*_shake; camY+=(Math.random()*2-1)*_shake; _shake*=0.85; }
   else if(typeof _shake!=='undefined') _shake=0;
+  const _sp=zoom*_dpr;                       // world unit -> device pixel
+  camX=Math.round(camX*_sp)/_sp; camY=Math.round(camY*_sp)/_sp;
   ctx.save(); ctx.scale(zoom,zoom);
   const rot=(typeof camRot!=='undefined')?camRot:0;
   if(rot){ ctx.translate(vw/2,vh/2); ctx.rotate(rot); ctx.translate(-vw/2,-vh/2); }

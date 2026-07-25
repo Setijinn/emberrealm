@@ -141,7 +141,7 @@ const GBOSS=[
  // land. `lore` is the human record — what the isles observed and wrote down; the barks are the
  // creature answering that record mid-fight, in its own words.
  {n:'The Tidewrack',dn:'The Saltworks',col:'#4a90a8',pat:'aimed3',pat2:'nova',mech:'pools',
-  gate:'none',dsub:'the salt-house has new tenants',
+  gate:'none',dsub:'the salt-house has new tenants',denN:'The Brine Mother',
   title:'thing the tide left behind',
   desc:'It drags itself from the shallows and floods the ground with brine. Keep to dry sand.',
   lore:'The salt-crews found it tangled in their nets after a tide that came in from no sea the fishers know — running the wrong way, warm, and carrying weed no one could name. They cut it free. It has kept the pans flooded ever since, as though something were still expected to arrive by water.',
@@ -150,7 +150,7 @@ const GBOSS=[
   death:'...the water never ran back. Nothing we carried through ever did.',
   home:'the tide-shrines of a drowned coast, before the rot reached the water'},
  {n:'The Gullwind Harrier',dn:'Gullwind Light',col:'#8fae6a',pat:'spread5',pat2:'charge',mech:'clones',
-  gate:'none',dsub:'the lamp is out and the stair is full of wings',
+  gate:'none',dsub:'the lamp is out and the stair is full of wings',denN:'The Roost Tyrant',
   title:'bird that will not turn',
   desc:'It splits into a wheeling flock and stoops from odd angles. Watch which shadow has weight.',
   lore:'The lighthouse keeper logged it for nine years: every dusk it climbs, turns east, and beats itself bloody against the wind until dark. It has never once flown west. The keeper stopped writing after the light went out; the flock roosts in his stair now, and every one of them faces the same way.',
@@ -159,7 +159,7 @@ const GBOSS=[
   death:'...it is not a flock. I made them, so the sky would not be empty. The real ones never crossed.',
   home:'the cliff-roosts its flock never left'},
  {n:'The Sawgrass Reaper',dn:'Marrow Chapel',col:'#7ea44a',pat:'ring8',pat2:'spiral',mech:'bloom',
-  gate:'none',dsub:'someone is still alive in the cloister',
+  gate:'none',dsub:'someone is still alive in the cloister',denN:'The Cloister Reaper',
   title:'reaper in borrowed armour',
   desc:'It cuts in wide rings through the reeds. Break the rhythm and step inside its swing.',
   lore:'It wears plate — dented, ill-fitting, and stamped with a maker’s mark no smith in the isles has ever used. Whoever it took the armour from, it took the walk as well: the reeds are cut in neat rows, the way a farmer would. It has never once cut outside its own rows.',
@@ -877,10 +877,16 @@ function makeEnemy(sp){
     // The starter three are NOT dreams — just the creature itself, holed up in a human
     // building — so they keep their own name and don't get the awakened buff or sprite.
     const _awk=!!GB&&GB.gate!=='none';
-    e={type:'B',r:GB?32+(lv/LV_CAP)*16:30,hp:Math.round(600*hpm*(GB?(_awk?1.9:1.35):1)),spd:(GB?44:38)*espd,fireT:1.5,ang:0,
-     col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?(_awk?1.25:1.1):1),
-     name:GB?(_awk?'Awakened '+GB.n:GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
-     ring:bring,mech:GB?GB.mech:null,chargeT:0,sumT:3,wb:!!GB,awk:_awk}; }
+    // A starter dungeon is not a dream, so its boss is not "Awakened" -- but it must not be the
+    // exact same creature you already killed outside either. It is the elder of the ones that
+    // moved into the building: its own name, its own sprite (awak_9..11), and a little bigger and
+    // harder than the overworld encounter without reaching the awakened tier.
+    const _den=!!GB&&!_awk&&bring>=0;
+    e={type:'B',r:(GB?32+(lv/LV_CAP)*16:30)*(_den?1.18:1),
+     hp:Math.round(600*hpm*(GB?(_awk?1.9:_den?1.55:1.35):1)),spd:(GB?44:38)*espd,fireT:1.5,ang:0,
+     col:GB?GB.col:'#e07a2e',boss:true,bd:(8+dm*0.63)*(GB?(_awk?1.25:_den?1.18:1.1):1),
+     name:GB?(_awk?'Awakened '+GB.n:(_den&&GB.denN)?GB.denN:GB.n):null,pat:GB?GB.pat:'ring8',pat2:GB?GB.pat2:'spiral',
+     ring:bring,mech:GB?GB.mech:null,chargeT:0,sumT:3,wb:!!GB,awk:_awk,den:_den}; }
   e.x=(sp.x+.5)*TILE; e.y=(sp.y+.5)*TILE; e.sref=sp; e.lv=lv; if(sp.ch!==undefined) e.ch=sp.ch;
   // attach the scaling stat block (nodes stay armour-free so their timed destruction is exact)
   e.def=(sp.t==='N')?0:edef; e.dr=(sp.t==='N')?0:edr; e.dex=edex; e.maxmp=emp; e.mp=emp;
