@@ -77,24 +77,50 @@ const GBOSS=[
   bark:['I gave my crown to open the way, to save what remained of us.','I am the last lie of a dying world. Kneel — or join it.'],
   death:'We fled a dying world and carried its death here on our backs. The rift still bleeds it. Close it, human — before your world becomes the next dream we drown in.',
   home:'the Molten Crown, at the heart of a world now gone'},
+ // ---- Starter island (Lv1-20). LORE-LIGHT ON PURPOSE ----
+ // These three came through early and drifted west, far from the rift, barely touched by the
+ // corruption. They know nothing of the exodus and cannot reveal it — each line is a loose thread
+ // a player only recognises later: a tide from no sea, a bird that only ever flies east, armour
+ // no local smith made. Their `home` names a LOCAL place, so nothing hints at a lost world.
+ {n:'The Tidewrack',dn:'The Saltworks',col:'#4a90a8',pat:'aimed3',pat2:'nova',mech:'pools',
+  title:'thing the tide left behind',
+  desc:'It drags itself from the shallows and floods the ground with brine. Keep to dry sand.',
+  lore:'The salt-crews found it tangled in their nets after a tide that came in from no sea the fishers know — running the wrong way, warm, and carrying weed no one could name. They cut it free. It has been growing in the flooded salt-house ever since.',
+  bark:['(it makes a sound like water pulled backwards)','(the brine rises to meet it, and it does not drown)'],
+  death:'...the water came the wrong way. I only followed it in.',
+  home:'the salt-house on the Landing Sands'},
+ {n:'The Gullwind Harrier',dn:'Gullwind Light',col:'#8fae6a',pat:'spread5',pat2:'charge',mech:'clones',
+  title:'bird that will not turn',
+  desc:'It splits into a wheeling flock and stoops from odd angles. Watch which shadow has weight.',
+  lore:'The lighthouse keeper logged it for nine years: every dusk it climbs, turns east, and beats itself bloody against the wind until dark. It has never once flown west. The keeper stopped writing after the light went out; the flock roosts in his stair now.',
+  bark:['(it screams east, at nothing you can see)','(the flock turns as one — all of them facing the same way)'],
+  death:'...east. It is always east. Something over there is calling and I am so tired.',
+  home:'the lamp room at Gullwind Light'},
+ {n:'The Sawgrass Reaper',dn:'Marrow Chapel',col:'#7ea44a',pat:'ring8',pat2:'spiral',mech:'bloom',
+  title:'reaper in borrowed armour',
+  desc:'It cuts in wide rings through the reeds. Break the rhythm and step inside its swing.',
+  lore:'It wears plate — dented, ill-fitting, and stamped with a maker’s mark no smith in the isles has ever used. Whoever it took the armour from, it took the walk as well: the reeds are cut in neat rows, the way a farmer would.',
+  bark:['(the armour does not fit, and it does not care)','(it cuts in rows — patient, tidy, wrong)'],
+  death:'...he taught me to cut this way. Before the rot took his hands.',
+  home:'the hedge-chapel at the edge of the Sawgrass'},
 ];
 // per-ring projectile themes (colour/core/shape/size) — suited to each biome & creature
+// Projectile theme per BOSS — indexed by boss id, exactly parallel to GBOSS above.
+// (It used to be a 15-entry leftover from the dead 14-zone world whose slots no longer lined up
+//  with the bosses reading them — the Grovewarden was firing the Tideworn's brine globs.)
 const BOSS_PROJ=[
- {col:'#4a90a8',core:'#cfeaf3',shape:'orb',size:9},    // Tideworn — brine globs
- {col:'#8fae6a',core:'#eef4cf',shape:'dart',size:6},   // Gullwind — feather-darts
- {col:'#7ea44a',core:'#e0f2a8',shape:'dart',size:6},   // Sawgrass — reed spines
- {col:'#4f9a3f',core:'#cdf2b6',shape:'orb',size:7},    // Verdant — thorn seeds
- {col:'#6f5a3a',core:'#d8c49a',shape:'orb',size:7},    // Wolfwood — bone shards
- {col:'#356b40',core:'#bcdcae',shape:'orb',size:8},    // Timberfell — spores
- {col:'#3f6b58',core:'#c6e6d6',shape:'dart',size:6},   // Bramble — barbs
- {col:'#8a8f9a',core:'#e2e7ee',shape:'orb',size:9},    // Stonebrow — boulders
- {col:'#9a8f80',core:'#e6ded0',shape:'orb',size:7},    // Scree — rockslide
- {col:'#c86a3a',core:'#ffdca6',shape:'orb',size:7},    // Cinderwatch — cinders
- {col:'#c05a3a',core:'#ffc7a0',shape:'diamond',size:7},// Ashfall — scythes
- {col:'#d4622a',core:'#ffd3a0',shape:'orb',size:9},    // Charstep — magma bombs
- {col:'#e0a83a',core:'#fff4c8',shape:'diamond',size:7},// Glowing — light lances
- {col:'#e0552a',core:'#ffd39a',shape:'orb',size:8},    // Emberflow — fire coils
- {col:'#ff7a3d',core:'#fff0c0',shape:'orb',size:9},    // Heart Devourer — core fire
+ {col:'#4f9a3f',core:'#cdf2b6',shape:'orb',size:7},    // 0  Grovewarden — thorn seeds
+ {col:'#356b40',core:'#bcdcae',shape:'orb',size:8},    // 1  Mistantler — drifting spores
+ {col:'#3f6b58',core:'#c6e6d6',shape:'dart',size:6},   // 2  Bog Horror — barbed vine
+ {col:'#8a8f9a',core:'#e2e7ee',shape:'orb',size:9},    // 3  Stonefist — boulders
+ {col:'#9a8f80',core:'#e6ded0',shape:'orb',size:7},    // 4  Crag Gargoyle — rockslide
+ {col:'#d4622a',core:'#ffd3a0',shape:'orb',size:9},    // 5  Magmaw — magma bombs
+ {col:'#c05a3a',core:'#ffc7a0',shape:'diamond',size:7},// 6  Ash Wraith — ash scythes
+ {col:'#c86a3a',core:'#ffdca6',shape:'orb',size:7},    // 7  Cinder Demon — cinders
+ {col:'#e0552a',core:'#ffd39a',shape:'orb',size:8},    // 8  Molten Titan — fire coils
+ {col:'#4a90a8',core:'#cfeaf3',shape:'orb',size:9},    // 9  Tidewrack — brine globs
+ {col:'#8fae6a',core:'#eef4cf',shape:'dart',size:6},   // 10 Gullwind Harrier — feather-darts
+ {col:'#7ea44a',core:'#e0f2a8',shape:'dart',size:6},   // 11 Sawgrass Reaper — reed spines
 ];
 let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
 function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
@@ -105,7 +131,7 @@ function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return
 // tilesets/tone/trees/boulders/map colour, and ZBOSS says who rules each of the 13 territories.
 // _territories() lays clumps down in a fixed order: 0-2 starter, 3-7 inner main, 8-12 grind rim.
 //   -1 = no boss. Clump 10 is The Molten Heart — the rift's own province, held for the final boss.
-const ZBOSS=[-1,-1,-1, 0,1,2,3,4, 6,5,-1,7,8];   // starter slots get bosses 9/10/11 in a later step
+const ZBOSS=[9,10,11, 0,1,2,3,4, 6,5,-1,7,8];
 const BOSS_ZONE=[]; for(let i=0;i<ZBOSS.length;i++) if(ZBOSS[i]>=0) BOSS_ZONE[ZBOSS[i]]=i;
 // boss id at a tile (ocean/bridge/unclaimed -> -1). THE spawner key; never assume it equals a band.
 function zoneBossAt(tx,ty){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
@@ -120,9 +146,10 @@ function bossBand(bid){ const t=bossClump(bid); return t?t.band:Math.max(0,Math.
 // default; an entry here lets a boss without its own art borrow an existing slot. Loader loops
 // walk the DISTINCT values, so a borrowed slot costs zero extra image requests.
 // (named BOSS_SLOT, not BOSS_ART — 09_sprites already owns BOSS_ART, the procedural sprite table)
-const BOSS_SLOT={};
+// 9/10/11 borrow existing art until their own sprites land — delete an entry as each ships.
+const BOSS_SLOT={9:2,10:1,11:0};
 function bossArt(i){ return (BOSS_SLOT[i]!==undefined)?BOSS_SLOT[i]:i; }
-const BOSS_SLOT_N=9;                             // grows with the roster
+const BOSS_SLOT_N=12;                            // grows with the roster
 function bossArtSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
 // ---- Boss surface lairs: tile-built enterable compounds stamped into the grove ----
 // 'X' = lair wall (solid, themed tileset), '.' = interior floor -> 'F'. Bottom gap = doorway.
@@ -273,12 +300,28 @@ const LAIR_TEMPLATES={
   'X.....................X',
   'XXXXXXXXXX...XXXXXXXXXX'],
 };
-const LAIR_BOSSES=[0,1,2,3,4,5,6,7,8];        // every boss gets a lair (starter bosses join later)
+const LAIR_BOSSES=[0,1,2,3,4,5,6,7,8,9,10,11];       // every boss gets a lair
 const LAIR_SIZE={9:[17,13],10:[17,13],11:[18,14]};   // footprint for bosses with no ASCII template
 let _lairsStamped=false;
 // Lair NUDGE angles (radians). The anchor is the clump's own centroid; this only pushes the lair
 // off-centre so it doesn't sit under the zone label drawn at that same centroid on the map screen.
 const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 9:1.8,10:-1.8,11:0.3};
+// Starter lairs need an explicit RADIUS, not a centroid. The three starter clumps are wedges
+// radiating from the spawn, so each spans the whole Lv1-20 range and their centroids all sit at
+// much the same distance — three bosses at Lv8/11/9 in no order. This walks them out along their
+// own wedge instead, as a fraction of starter.r, giving ~Lv4 / Lv10 / Lv17 to match the zones'
+// stated ranges (Landing Sands 1-8, Gullwind Shore 8-14, Sawgrass Flats 14-20).
+const LAIR_RAD={9:0.34,10:0.62,11:0.88};
+// Where a boss's lair wants to be, in TILES. Shared by stampLairs and grvLairXY so the stamped
+// footprint and the spawn fallback can never drift apart.
+function lairAnchor(RG,T,z,b){
+ const t=(T&&z>=0)?T[z]:null; if(!t||!t.n) return null;
+ const cx=t.sx/t.n, cy=t.sy/t.n;
+ if(LAIR_RAD[b]!==undefined && RG.starter){                     // radial walk-out along its wedge
+   const S=RG.starter, a=Math.atan2(cy-S.cy,cx-S.cx), f=LAIR_RAD[b];
+   return {x:S.cx+Math.cos(a)*S.r*f, y:S.cy+Math.sin(a)*S.r*f}; }
+ const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
+ return {x:cx+Math.cos(ang)*nud, y:cy+Math.sin(ang)*nud}; }
 function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return; _lairsStamped=true; R.lairs={};
  const RG=R.rings, NZ=(RG&&RG.names.length)||9;
  const P=(RG&&RG.portal)||null;
@@ -294,10 +337,9 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
   // territory its boss rules — and it must, because spawnRingBoss rejects every candidate whose
   // clump doesn't match and then just gives up after 40 tries, SILENTLY.
   let tcx, tcy;
-  if(TT&&z>=0&&TT[z]&&TT[z].n>0){ const t=TT[z];
-    const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
-    tcx=t.sx/t.n+Math.cos(ang)*nud; tcy=t.sy/t.n+Math.sin(ang)*nud;
-  } else { tcx=R.w/2; tcy=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ)))); }
+  const an=(RG&&RG.radial)?lairAnchor(RG,TT,z,b):null;
+  if(an){ tcx=an.x; tcy=an.y; }
+  else { tcx=R.w/2; tcy=Math.max(TH,Math.min(R.h-TH-1,Math.round(R.h*(1-(b+0.5)/NZ)))); }
   // every sampled corner + the centre must belong to this boss's clump
   const inZone=(px,py)=>{ if(!ZG||z<0) return true;
     const pts=[[px,py],[px+TW-1,py],[px,py+TH-1],[px+TW-1,py+TH-1],[px+(TW>>1),py+(TH>>1)]];
@@ -374,9 +416,8 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
 function grvLairXY(b){ const R=rooms['G']; if(!R) return null;
  if(R.lairs && R.lairs[b]) return R.lairs[b].spawn;
  const RG=R.rings; if(!RG) return null;
- if(RG.radial){ const t=bossClump(b); if(!t||!t.n) return null;      // same centroid anchor as stampLairs
-   const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
-   return {x:(t.sx/t.n+Math.cos(ang)*nud)*TILE, y:(t.sy/t.n+Math.sin(ang)*nud)*TILE}; }
+ if(RG.radial){ const an=lairAnchor(RG,_territories(R),BOSS_ZONE[b],b);   // same anchor as stampLairs
+   return an?{x:an.x*TILE, y:an.y*TILE}:null; }
  const NZ=RG.names.length, tyc=Math.max(1,Math.min(R.h-2,Math.floor(R.h*(1-(b+0.5)/NZ))));
  return {x:(R.w/2)*TILE, y:(tyc+0.5)*TILE}; }
 // lairs are stamped once the world exists — radially for the new isles, band-Y for old worlds
@@ -415,20 +456,12 @@ function spawnRingBoss(b){
 // A long 4-chamber gauntlet — each middle chamber locks the next gate behind a themed
 // objective (destroy nodes / gather essences / awaken seals / slay every phantom),
 // ending in the AWAKENED boss's arena. Themed nouns keep each mind distinct.
-const DOBJ_NOUN={
- 0:{slay:'Root-Hearts',collect:'Spirit Seeds', switch:'Grove Seals'},
- 1:{slay:'Fog Anchors', collect:'Wisp Lights',  switch:'Antler Shrines'},
- 2:{slay:'Spore Sacs',  collect:'Marsh Pearls', switch:'Drain Valves'},
- 3:{slay:'Rune Cores',  collect:'Vault Shards', switch:'Rune Seals'},
- 4:{slay:'Wind Totems', collect:'Storm Feathers',switch:'Gale Horns'},
- 5:{slay:'Ember Hearts',collect:'Magma Tears',  switch:'Fire Seals'},
- 6:{slay:'Soul Urns',   collect:'Grave Candles',switch:'Crypt Bells'},
- 7:{slay:'War Idols',   collect:'Cinder Crowns',switch:'Gate Braziers'},
- 8:{slay:'Crown Sigils',collect:'Gold Motes',   switch:'Titan Locks'},
-};
+// (DOBJ_NOUN lived here — defined, never referenced anywhere. Removed rather than grown to 12.)
 // Every mind has ONE signature puzzle (alternating with combat chambers):
 // regrow / chase / order / simon / hold / relay / candles / ambush / timing.
-const DPUZ=['regrow','chase','order','simon','hold','relay','candles','ambush','timing'];
+// 9-11 (the starter three) REUSE implemented puzzle keys — no new puzzle code.
+const DPUZ=['regrow','chase','order','simon','hold','relay','candles','ambush','timing',
+ 'order','chase','hold'];
 const DPUZ_LABEL=[
  'Sever the Root-Hearts before the grove reknits',
  'Catch the fleeing Wisp',
@@ -438,9 +471,12 @@ const DPUZ_LABEL=[
  'Ember Relay — keep the flame moving',
  'Keep every Grave Candle lit',
  'Shatter the War Idols — survive the ambush',
- 'Awaken the Titan Locks as they glow'];
+ 'Awaken the Titan Locks as they glow',
+ 'Work the Sluice Gates — seaward first',
+ 'Run down the Lamp-Thief',
+ 'Hold the Chapel Wards while they burn'];
 const DOBJ_PLAN={};
-for(let r=0;r<9;r++) DOBJ_PLAN[r]=[DPUZ[r],'waves'];
+for(let r=0;r<DPUZ.length;r++) DOBJ_PLAN[r]=[DPUZ[r],'waves'];
 // Per-ring dungeon ARCHITECTURE: room shape, edge irregularity, radii, corridor
 // wobble/width, spacing. This is what makes each mind read differently on the map.
 const DSHAPE=[
@@ -453,13 +489,28 @@ const DSHAPE=[
  {room:'cells',irr:0.35,rmin:8, rmax:11,wob:1.5,cw:1.6,gap:9 },  // 6 catacomb cell-clusters
  {room:'vault',irr:0.0, rmin:9, rmax:12,wob:0.0,cw:2.4,gap:15},  // 7 fortress halls
  {room:'round',irr:0.08,rmin:10,rmax:13,wob:1.0,cw:2.2,gap:10},  // 8 grand sanctums
+ // 9-11: HUMAN structures the fleeing creatures moved into — not corruption-dreams. Built rooms,
+ // straight walls, short runs: a salt-house, a lighthouse stair, a hedge-chapel.
+ {room:'cells',irr:0.20,rmin:6, rmax:9, wob:1.2,cw:1.8,gap:11},  // 9  flooded salt-house
+ {room:'vault',irr:0.0, rmin:5, rmax:8, wob:0.0,cw:1.6,gap:13},  // 10 lighthouse + keeper's stair
+ {room:'cells',irr:0.15,rmin:6, rmax:9, wob:1.0,cw:1.9,gap:10},  // 11 chapel cloister
 ];
+// Dungeon DEPTH drives length/size. Boss ids keep their old depth so every canon dungeon is
+// byte-identical to before; the starter three are deliberately short (4-5 chambers).
+const DDEPTH=[0,1,2,3,4,5,6,7,8, 0,0,1];
 function genDungeon(ring){
  // the mind is a step beyond the zone's peak — "matching but a little more difficult".
  // Measured off the boss's OWN clump (which _territories already samples from the smooth radial
  // curve), so there's no parallel level table to keep in sync — and no names[8] to fall off.
  const _t=bossClump(ring), _n=rooms['G'].rings.names[ring]||{lv:1};
- const lv=Math.min(LV_CAP+10,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+5);
+ let lv;
+ if(LAIR_RAD[ring]!==undefined){
+   // Starter dungeons step past THIS BOSS, not the island's peak. The three starter clumps are
+   // wedges spanning all of Lv1-20, so their lvmax is 20 for every one of them — a Lv4 boss would
+   // otherwise drop a Lv25 dungeon nobody at that level could enter.
+   const L=grvLairXY(ring), RGs=rooms['G'].rings;
+   lv=Math.max(3,Math.min(LV_CAP-26,Math.round(grvLvAtR(RGs,L.x/TILE,L.y/TILE))+4));
+ } else lv=Math.min(LV_CAP+10,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+5);
  // seeded PRNG — every ring gets its OWN layout, stable across visits.
  // MIRRORED 1:1 by scratchpad dun_gen2.py (structural validation) — keep in sync.
  let _s=(ring*7919+1013)>>>0;
@@ -469,11 +520,11 @@ function genDungeon(ring){
  const seed=ring*7919+1013;
  const chash=(x,y)=>{ let h=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(seed,971))>>>0;
   h=Math.imul(h^(h>>>13),1274126177)>>>0; return ((h^(h>>>16))>>>0)/4294967296; };
- const st=DSHAPE[ring];
- const W2=170+ring*26, H2=84, g=[];
+ const st=DSHAPE[ring], dep=(DDEPTH[ring]!==undefined)?DDEPTH[ring]:ring;
+ const W2=170+dep*26, H2=84, g=[];
  for(let y=0;y<H2;y++){ const row=[]; for(let x=0;x<W2;x++) row.push('W'); g.push(row); }
  // deeper minds are LONGER: ring 0 ~4-5 chambers, ring 8 ~8-9
- const NCH=4+Math.floor(ring*0.55)+Math.floor(rng()*2);
+ const NCH=4+Math.floor(dep*0.55)+Math.floor(rng()*2);
  const chs=[]; let cx=18, cy=36;
  const step=st.rmax+st.gap+st.rmax;
  for(let i=0;i<NCH;i++){

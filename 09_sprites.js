@@ -436,13 +436,19 @@ function drawEnemySprite(e,pn){
 const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // Zone-themed mob variants (roadmap #3 polish): same base art, per-band name +
 // cached hue wash so packs read native to their zone (band 5 = base cinder look).
+// Indices 0-8 are theme bands (overworld) AND art slots 0-8; 9-11 are the starter bosses' own
+// art slots, used once their sprites ship and they stop borrowing. Keep this parallel to the
+// art slots, not to the boss ids.
 const MOBNAME={
- c:['Briar Hound','Mist Hound','Bog Hound','Stone Hound','Crag Hound','Cinder Hound','Ash Hound','Char Hound','Molten Hound'],
- s:['Grove Cultist','Fog Cultist','Mire Cultist','Vault Cultist','Wind Cultist','Ember Cultist','Ashbound Cultist','Flame Cultist','Core Cultist'],
+ c:['Briar Hound','Mist Hound','Bog Hound','Stone Hound','Crag Hound','Cinder Hound','Ash Hound','Char Hound','Molten Hound',
+    'Brine Hound','Gull Hound','Reed Hound'],
+ s:['Grove Cultist','Fog Cultist','Mire Cultist','Vault Cultist','Wind Cultist','Ember Cultist','Ashbound Cultist','Flame Cultist','Core Cultist',
+    'Salt Cultist','Lamp Cultist','Reed Cultist'],
 };
 const MOBTINT=['rgba(96,168,72,0.30)','rgba(120,190,160,0.30)','rgba(128,148,64,0.30)',
  'rgba(148,150,160,0.30)','rgba(186,196,206,0.30)',null,'rgba(150,138,132,0.30)',
- 'rgba(255,116,44,0.28)','rgba(255,176,64,0.28)'];
+ 'rgba(255,116,44,0.28)','rgba(255,176,64,0.28)',
+ 'rgba(74,144,168,0.30)','rgba(143,174,106,0.30)','rgba(126,164,74,0.30)'];
 function enemyBand(e){
  if(curRoom&&curRoom.rings) return grvBandXY(e.x/TILE,e.y/TILE);
  // In a dungeon curRoom.ring is a BOSS ID, which would run off the end of the 9-entry
