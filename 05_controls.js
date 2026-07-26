@@ -60,7 +60,8 @@ addEventListener('keydown',e=>{
   if(e.repeat) return;
   if(k==='escape'){
     if(typeof closeSkills==='function' && (document.getElementById('skillScr')||{}).style && document.getElementById('skillScr').style.display==='flex') closeSkills();
-    for(const id of ['invScr','loadScr','shopScr']){ const el=document.getElementById(id);
+    if(typeof closeBagPanel==='function') closeBagPanel();
+    for(const id of ['invScr','loadScr','shopScr','bagScr']){ const el=document.getElementById(id);
       if(el && el.style.display && el.style.display!=='none') el.style.display='none'; }
     return;
   }

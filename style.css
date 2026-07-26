@@ -258,6 +258,81 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #satHead #invInfo{font-family:inherit;font-size:10px;color:#8a8494;letter-spacing:0;}
 #invActs{display:flex;gap:8px;margin:8px 0 4px;}
 #invActs .mbtn{flex:1;}
+/* ---- BAG PANEL: what a sack holds, each piece measured against what you wear ---- */
+#bagCard{position:relative;width:min(94vw,660px);max-height:92vh;display:flex;padding:0;
+ background:url(assets/ui/equip_panel_wide2.png) center/100% 100% no-repeat;
+ filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
+/* the frame art has a carved top bar — clear it or the subtitle sits half behind the woodwork */
+#bagInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:52px 52px 44px;
+ display:flex;flex-direction:column;}
+#bagInner::-webkit-scrollbar{width:5px;} #bagInner::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
+#bagTitle{font-family:'Pixelify Sans',monospace;font-size:20px;color:#ffce7a;text-align:center;
+ text-shadow:0 2px 3px #000;letter-spacing:.06em;}
+#bagSub{text-align:center;margin:2px 0 10px;}
+#bagList{display:flex;flex-direction:column;gap:8px;}
+/* one row per piece: art, name + stat deltas, and its two actions */
+.bagRow{display:flex;gap:10px;align-items:center;padding:7px 9px;border-radius:9px;
+ background:linear-gradient(180deg,rgba(38,29,52,.86),rgba(16,12,22,.86));
+ border:1px solid #4a3a26;border-left-width:4px;}
+.bagRow.taken{opacity:.42;filter:grayscale(.7);}
+/* the global `canvas` rule is position:fixed/inset:0/100vw — it exists for the fullscreen game
+   canvas, so every in-panel canvas has to opt out explicitly or it stacks at the card's origin
+   at full viewport size (which is what .eqCv and .isprite already do) */
+.bagIco{position:relative;flex:0 0 auto;width:46px;height:46px;inset:auto;
+ image-rendering:pixelated;border-radius:7px;
+ background:#15111c url(assets/ui/equip_slot.png) center/100% 100% no-repeat;}
+.bagMid{flex:1 1 auto;min-width:0;}
+/* names wrap rather than truncate — "Vicious T12 Hearthfire Bow" ellipsised to "Vicious T12
+   Hearth..." hides the two things you actually read it for: the tier and the piece */
+.bagNm{font:700 12px 'Pixelify Sans',monospace;text-shadow:0 1px 2px #000;line-height:1.3;}
+.bagDelta{font-size:10px;color:#a89e8c;margin-top:2px;line-height:1.45;}
+.bagDelta b{font-weight:700;}
+.bagUp{color:#8fd48c;} .bagDown{color:#d4796a;} .bagSame{color:#7a7484;}
+.bagWho{font-size:9px;color:#8a8494;margin-top:1px;}
+/* .mbtn is width:min(78vw,300px) by default, which made every action span the row */
+.bagBtns{flex:0 0 92px;display:flex;flex-direction:column;gap:4px;}
+.bagBtns .mbtn{width:100%;padding:6px 4px;font-size:11px;letter-spacing:.04em;}
+#bagActs{display:flex;gap:8px;margin:12px 0 2px;}
+#bagActs .mbtn{flex:1;}
+/* ---- COMPARE: the drop and the worn piece side by side, difference down the middle ---- */
+.bagCmp{display:flex;gap:8px;align-items:stretch;margin:-2px 0 2px;padding:9px;
+ background:rgba(10,8,14,.72);border:1px solid #3b3348;border-radius:9px;}
+.bagCmpSide{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.bagCmpSide.bagCmpNew{background:rgba(224,122,46,.07);border-radius:7px;padding:3px 2px;}
+.bagCmpIco{position:relative;inset:auto;flex:0 0 auto;width:54px;height:54px;
+ image-rendering:pixelated;border-radius:7px;
+ background:#15111c url(assets/ui/equip_slot.png) center/100% 100% no-repeat;}
+.bagCmpHd{font:700 9px 'Pixelify Sans',monospace;color:#c9a04a;letter-spacing:.08em;margin-top:4px;}
+.bagCmpNm{font-size:10px;line-height:1.3;margin:1px 0 4px;word-break:break-word;}
+.bagCmpStats{width:100%;display:flex;flex-direction:column;gap:1px;}
+.bagCmpRow{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#a89e8c;
+ padding:0 4px;}
+.bagCmpMid{flex:0 0 88px;display:flex;flex-direction:column;justify-content:center;gap:2px;
+ font:700 11px 'Pixelify Sans',monospace;text-align:center;}
+@media(max-width:560px){
+ .bagCmp{flex-wrap:wrap;}
+ .bagCmpSide{flex:1 1 42%;}
+ .bagCmpMid{flex:1 1 100%;order:3;flex-direction:row;flex-wrap:wrap;justify-content:center;gap:8px;
+  padding-top:6px;border-top:1px solid #322b3d;}
+}
+/* Touch first: the panel frame's art inset eats most of a phone's width, and 10px buttons are not
+   thumbable. Narrow screens drop the inset, stack each row's actions under its text, and take
+   every tap target up to the 44px the platform guidelines ask for. */
+@media(max-width:560px){
+ #bagCard{width:96vw;max-height:94vh;background-size:100% 100%;}
+ #bagInner{padding:30px 20px 26px;}
+ #bagTitle{font-size:17px;}
+ .bagRow{flex-wrap:wrap;gap:8px;padding:8px;}
+ .bagIco{width:52px;height:52px;}
+ .bagMid{flex:1 1 140px;}
+ .bagNm{font-size:12px;white-space:normal;}
+ .bagDelta{font-size:11px;}
+ .bagBtns{flex:1 1 100%;flex-direction:row;}
+ .bagBtns .mbtn{flex:1;width:auto;min-height:44px;font-size:12px;}
+ #bagActs .mbtn{min-height:46px;font-size:13px;}
+}
+/* very small / landscape-short phones: keep the list scrollable rather than clipping it */
+@media(max-height:520px){ #bagInner{padding-top:26px;padding-bottom:20px;} #bagList{max-height:52vh;overflow-y:auto;} }
 /* small top-right close ✕ for tab/overlay menus (equipment, loadout, skills) */
 .tabX{position:absolute;top:10px;right:12px;z-index:5;width:30px;height:30px;padding:0;
  display:flex;align-items:center;justify-content:center;font:700 17px/1 'Pixelify Sans',monospace;

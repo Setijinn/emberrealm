@@ -97,7 +97,11 @@ function netBroadcast(){
   for(const b of loots){ if(!b.lid) b.lid=_netNid++;
     const row=[b.lid, Math.round(b.x), Math.round(b.y), netPackBag(b)];
     if(!b.own) ltPub.push(row);
-    else if(b.own!==me) (ltOwn[b.own]=ltOwn[b.own]||[]).push(row);
+    // A bound sack's REAL contents ride along, but only on the row going to the one player it
+    // belongs to — so they can open the sack panel and compare before choosing, exactly like the
+    // host can. It is their own loot; nobody else's connection ever sees this array.
+    else if(b.own!==me){ row.push((typeof bagItems==='function')?bagItems(b):[b.item]);
+      (ltOwn[b.own]=ltOwn[b.own]||[]).push(row); }
     // my own bound sacks are never broadcast: I render them straight out of `loots`
   }
   const m={t:'W', rm:(curRoom.key||'?'), seq:++_netSeq, ents:ents, sh:sh, lt:ltPub};
@@ -165,6 +169,8 @@ function netApplyWorld(m){
   for(const b of m.lt){ lseen[b[0]]=1;
     let g=null; for(const x of loots){ if(x.lid===b[0]){ g=x; break; } }
     if(!g){ const u=netUnpackBag(b[3]);
+      // b[4] is present only on MY OWN bound sacks: real contents, so the panel can compare them
+      if(b[4]&&b[4].length){ u.items=b[4]; }
       // life is effectively infinite here: the host owns despawn and the lseen cull below is what
       // removes it. A shorter local life expired bags the host still had, which then reappeared on
       // the next snapshot — a visible flicker on exactly the long-lived rare bags you care about.

@@ -70,6 +70,139 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
     else claimBag(p.bag); }
   navigator.vibrate&&navigator.vibrate(30);
 }
+// ============================================================
+// THE SACK PANEL (user, 2026-07-26)
+// A soulbound sack can hold several pieces, so it opens instead of vanishing into the satchel:
+// you see each piece measured against what you are actually wearing, and decide per item.
+// ------------------------------------------------------------
+let bagOpen=null;                   // the bag currently on screen, or null
+let bagCmp=-1;                      // index of the row whose full comparison is expanded
+function bagPanelShown(){ const s=$s('bagScr'); return !!(s&&s.style.display==='flex'); }
+function closeBagPanel(){ bagOpen=null; const s=$s('bagScr'); if(s) s.style.display='none'; }
+function openBagPanel(lb){
+  if(!lb) return;
+  // A client holds only a DISPLAY shadow of a bag unless the host sent it the real contents
+  // (which it only does for that client's own soulbound sacks). Anything else goes straight
+  // through the request/grant handshake — a ghost must never reach an inventory.
+  const its=bagItems(lb);
+  if(lb.remote && (!its.length || its[0].ghost)){ claimBag(lb); return; }
+  if(!its.length){ claimBag(lb); return; }
+  bagOpen=lb; bagCmp=-1; $s('bagScr').style.display='flex'; paintBagPanel();
+}
+// stat delta of `it` against what is worn in its slot, as coloured chips
+function bagDeltaHtml(it,ch){
+  if(!it||it.k==='pot'||it.k==='coin'||it.k==='scroll') return '';
+  if(!canEquip(it,ch)) return '<span class="bagSame">not for your class</span>';
+  const cur=equippedItemFor(it.k,ch);
+  const a=itemStats(it,ch.cls), b=cur?itemStats(cur,ch.cls):newStats();
+  let out='', any=false;
+  for(const k of STATS){ const d=(a[k]||0)-(b[k]||0); if(!d) continue; any=true;
+    out+='<b class="'+(d>0?'bagUp':'bagDown')+'">'+(d>0?'+':'')+d+' '+STAT_META[k].s+'</b>&nbsp; '; }
+  if(!any) out='<span class="bagSame">no change</span>';
+  return out+'<div class="bagWho">vs '+(cur?itemName(cur):'nothing equipped')+'</div>';
+}
+// Full side-by-side: the drop's sprite and every stat it gives, against the worn piece's sprite
+// and stats, with the difference in the middle column.
+function bagCompareBlock(it,ch){
+  const wrap=document.createElement('div'); wrap.className='bagCmp';
+  const cur=equippedItemFor(it.k,ch);
+  const a=itemStats(it,ch.cls), b=cur?itemStats(cur,ch.cls):newStats();
+  function side(item,stats,label,cls){
+    const d=document.createElement('div'); d.className='bagCmpSide';
+    const cv=document.createElement('canvas'); cv.width=54; cv.height=54; cv.className='bagCmpIco';
+    if(item&&typeof drawItemIcon==='function') drawItemIcon(cv.getContext('2d'),item,54,54);
+    d.appendChild(cv);
+    const h=document.createElement('div'); h.className='bagCmpHd'; h.textContent=label;
+    d.appendChild(h);
+    const nm=document.createElement('div'); nm.className='bagCmpNm';
+    nm.style.color=item?itemRarCol(item):'#7a7484';
+    nm.textContent=item?itemName(item):'nothing equipped';
+    d.appendChild(nm);
+    let rows='';
+    for(const k of STATS){ if(!stats[k]) continue;
+      rows+='<div class="bagCmpRow"><span>'+STAT_META[k].s+'</span><b style="color:'+STAT_META[k].col+'">'+stats[k]+'</b></div>'; }
+    if(!rows) rows='<div class="bagCmpRow"><span>—</span><b></b></div>';
+    const sd=document.createElement('div'); sd.className='bagCmpStats'; sd.innerHTML=rows;
+    d.appendChild(sd);
+    if(cls) d.classList.add(cls);
+    return d;
+  }
+  wrap.appendChild(side(it,a,'THIS DROP','bagCmpNew'));
+  const mid=document.createElement('div'); mid.className='bagCmpMid';
+  let ml='';
+  for(const k of STATS){ const df=(a[k]||0)-(b[k]||0); if(!df) continue;
+    ml+='<div class="'+(df>0?'bagUp':'bagDown')+'">'+(df>0?'+':'')+df+' '+STAT_META[k].s+'</div>'; }
+  mid.innerHTML=ml||'<div class="bagSame">identical</div>';
+  wrap.appendChild(mid);
+  wrap.appendChild(side(cur,b,'EQUIPPED',null));
+  return wrap;
+}
+function paintBagPanel(){
+  const lb=bagOpen; if(!lb) return closeBagPanel();
+  const ch=curChar(); if(!ch||!rpg) return closeBagPanel();
+  const its=bagItems(lb);
+  if(!its.length){ closeBagPanel(); return; }
+  const band=bagBand(lb), bn=LOOT_BANDS[band], top=bagTopTier(lb);
+  $s('bagTitle').textContent=(bn&&bn.bound)?'SOULBOUND SACK':'SACK';
+  $s('bagSub').innerHTML='<span style="color:'+tierCol(top)+'">T'+(top+1)+' '+(TIER_NAMES[top]||'')+'</span>'
+    +' · '+its.length+' piece'+(its.length===1?'':'s')
+    +((bn&&bn.bound)?' · <span style="color:#ff9c50">bound to you</span>':' · anyone may take this');
+  const L=$s('bagList'); L.innerHTML='';
+  its.forEach((it,i)=>{
+    const row=document.createElement('div'); row.className='bagRow';
+    row.style.borderLeftColor=itemRarCol(it);
+    const cv=document.createElement('canvas'); cv.width=46; cv.height=46; cv.className='bagIco';
+    if(typeof drawItemIcon==='function') drawItemIcon(cv.getContext('2d'),it,46,46);
+    row.appendChild(cv);
+    const mid=document.createElement('div'); mid.className='bagMid';
+    mid.innerHTML='<div class="bagNm" style="color:'+itemRarCol(it)+'">'+itemName(it)+'</div>'
+      +'<div class="bagDelta">'+bagDeltaHtml(it,ch)+'</div>';
+    row.appendChild(mid);
+    const btns=document.createElement('div'); btns.className='bagBtns';
+    const bt=document.createElement('button'); bt.className='mbtn dev'; bt.textContent='TAKE';
+    bt.onclick=()=>bagTakeOne(i,false); btns.appendChild(bt);
+    const be=document.createElement('button'); be.className='mbtn go'; be.textContent='EQUIP';
+    be.disabled=!canEquip(it,ch);
+    if(be.disabled) be.style.opacity='.4';
+    else be.onclick=()=>bagTakeOne(i,true);
+    btns.appendChild(be);
+    const bc=document.createElement('button'); bc.className='mbtn dev'+(bagCmp===i?' on':'');
+    bc.textContent='COMPARE'; bc.onclick=()=>{ bagCmp=(bagCmp===i?-1:i); paintBagPanel(); };
+    btns.appendChild(bc);
+    row.appendChild(btns);
+    L.appendChild(row);
+    // COMPARE opens the full side-by-side underneath: every stat of the drop against every stat
+    // of what you are wearing, so you can judge a trade the one-line delta cannot express
+    if(bagCmp===i){ L.appendChild(bagCompareBlock(it,ch)); }
+  });
+}
+// Pull one piece out of the open bag. `wear` equips it straight away and sends the displaced
+// piece to the satchel instead; otherwise it just goes to the satchel.
+function bagTakeOne(i,wear){
+  const lb=bagOpen; if(!lb) return;
+  const its=bagItems(lb), it=its[i]; if(!it) return;
+  const ch=curChar(); if(!ch||!rpg) return; if(!ch.inv) ch.inv=[];
+  if(wear && canEquip(it,ch)){
+    const r=equipItem(it,ch); if(!r) return;
+    if(r.old){ if(ch.inv.length<20) ch.inv.push(r.old);
+      else { texts.push({x:player.x,y:player.y-30,txt:'satchel full — old gear dropped',col:'#c04a3d',life:1.4});
+        loots.push(bagAt({x:player.x,y:player.y},[r.old])); } }
+    msg(itemName(it),'equipped');
+  } else {
+    if(!awardItem(it,lb.x,lb.y)) return;      // satchel full: leave it in the sack
+  }
+  its.splice(i,1); lb.items=its; lb.item=its[0]||null;
+  if(!its.length){ const k=loots.indexOf(lb); if(k>=0) loots.splice(k,1); saveRPG(); closeBagPanel(); return; }
+  saveRPG(); paintBagPanel();
+}
+function bagTakeAll(){
+  const lb=bagOpen; if(!lb) return;
+  const its=bagItems(lb), left=[];
+  for(const it of its) if(!awardItem(it,lb.x,lb.y)) left.push(it);
+  lb.items=left; lb.item=left[0]||null;
+  if(!left.length){ const k=loots.indexOf(lb); if(k>=0) loots.splice(k,1); saveRPG(); closeBagPanel(); return; }
+  saveRPG(); paintBagPanel();     // satchel filled up — whatever is left stays in the sack
+}
 function travelTo(pl){ closeFastTravel(); const g=rooms['G']; const sp=safeSpot(g,pl.x,pl.y);
   player.x=sp.x; player.y=sp.y; enemies=enemies.filter(e=>e.boss); portalLock=true; msg('WARPED',pl.name); }
 function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
@@ -430,6 +563,13 @@ function rollBagSlots(layout,tier,fort,guarantee){
 // ------------------------------------------------------------
 // BAG BANDS — the sack you see is decided by the best TIER inside it, never by rarity.
 // Data-driven so the planned tier above T12 is one row here plus one sprite: no logic change.
+//
+// ART BUDGET (user, 2026-07-26): T9-T12 are only the FIRST soulbound bands, not the ceiling.
+// Higher tiers are coming, so these sacks stay deliberately restrained — plain leather with a wax
+// seal, then studded canvas with an iron clasp. Ornament is spent in order: gold thread, gems,
+// ember glow and rift-light are all still unused, and belong to the bands above these. The engine
+// already escalates the light beam and the glow radius by band index, so a future row reads as
+// more special without the sprite having to shout.
 const LOOT_BANDS=[
  {min:0,  spr:'_lootSack',    bound:false, life:60,  label:''},        // public   T1-T8
  {min:8,  spr:'_lootSackT9',  bound:true,  life:240, label:'BOUND'},   // soulbound T9-T10
@@ -882,19 +1022,39 @@ $s('loadBtn').addEventListener('click',function(){ if(typeof openLoadout==='func
 $s('skillBtn').addEventListener('click',function(){ if(typeof openSkills==='function') openSkills(); });
 if($s('statsBtn')) $s('statsBtn').addEventListener('click',function(){ if(typeof openStats==='function') openStats(); });
 $s('invX').addEventListener('click',()=>{$s('invScr').style.display='none';});
+$s('bagX').addEventListener('click',closeBagPanel);
+$s('bagLeave').addEventListener('click',closeBagPanel);
+$s('bagAll').addEventListener('click',bagTakeAll);
+// Reconstruct the item currently WORN in a slot, rolls and all, so it can be compared against or
+// handed back to the satchel. rpg.eqAff keeps the rarity/affixes separately from the tier.
+function equippedItemFor(slot,ch){
+  if(!rpg||!ch) return null;
+  const e=(rpg.eqAff||{})[slot], ex=e?{rar:e.r,aff:e.a}:{};
+  if(slot==='wpn')  return rpg.wpnL?null:Object.assign({k:'wpn',wt:CWEAP[ch.cls],t:rpg.wpn||0},ex);
+  if(slot==='arm')  return rpg.armL?null:Object.assign({k:'arm',mt:CARMOR[ch.cls],t:rpg.arm||0},ex);
+  if(slot==='helm') return (rpg.helm>=0)?Object.assign({k:'helm',mt:CARMOR[ch.cls],t:rpg.helm},ex):null;
+  if(slot==='ring') return rpg.ring?Object.assign({k:'ring',st:rpg.ring.st,t:rpg.ring.t},ex):null;
+  return null;
+}
+// Wear an item. Returns the piece it displaced (or null), which the caller decides what to do with.
+function equipItem(it,ch){
+  if(!it||!ch||!rpg||!canEquip(it,ch)) return false;
+  if(!rpg.eqAff) rpg.eqAff={};
+  const slot=it.k, old=equippedItemFor(slot,ch);
+  if(slot==='wpn'){ rpg.wpn=it.t; rpg.wpnL=null; }
+  else if(slot==='arm'){ rpg.arm=it.t; rpg.armL=null; }
+  else if(slot==='helm'){ rpg.helm=it.t; }
+  else if(slot==='ring'){ rpg.ring={st:it.st,t:it.t}; }
+  else return false;
+  rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null};
+  recalcStats(); saveRPG(); hudRPG();
+  return {old:old};
+}
 $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it||!canEquip(it,ch)) return;
- if(!rpg.eqAff) rpg.eqAff={};
- let old=null; const slot=it.k;
- function oldAff(s){ const e=rpg.eqAff[s]; return e?{rar:e.r,aff:e.a}:{}; }
- if(it.k==='wpn'){ if(!rpg.wpnL) old=Object.assign({k:'wpn',wt:CWEAP[ch.cls],t:rpg.wpn||0},oldAff('wpn')); rpg.wpn=it.t; rpg.wpnL=null; }
- else if(it.k==='arm'){ if(!rpg.armL) old=Object.assign({k:'arm',mt:CARMOR[ch.cls],t:rpg.arm||0},oldAff('arm')); rpg.arm=it.t; rpg.armL=null; }
- else if(it.k==='helm'){ if(rpg.helm>=0) old=Object.assign({k:'helm',mt:CARMOR[ch.cls],t:rpg.helm},oldAff('helm')); rpg.helm=it.t; }
- else if(it.k==='ring'){ if(rpg.ring) old=Object.assign({k:'ring',st:rpg.ring.st,t:rpg.ring.t},oldAff('ring')); rpg.ring={st:it.st,t:it.t}; }
- rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null};
- const nm=itemName(it);
- ch.inv.splice(invSelIdx,1); if(old) ch.inv.push(old);
- invSelIdx=-1; recalcStats(); saveRPG(); hudRPG(); paintInv();
+ const nm=itemName(it), r=equipItem(it,ch); if(!r) return;
+ ch.inv.splice(invSelIdx,1); if(r.old) ch.inv.push(r.old);
+ invSelIdx=-1; saveRPG(); paintInv();
  msg(nm,'equipped'); });
 $s('invSell').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it) return;

@@ -871,6 +871,11 @@ function update(dt){
   // loot bags: despawn + HYBRID pickup. Public sacks auto-collect on walk-over; soulbound sacks
   // are left for the INTERACT prompt, which opens the bag UI. Decided by BAND, not rarity.
   if(typeof netReapBound==='function') netReapBound(dt);
+  // the open sack panel must not outlive its sack, and the sack must not rot while you read it
+  if(typeof bagOpen!=='undefined' && bagOpen){
+    if(loots.indexOf(bagOpen)<0){ if(typeof closeBagPanel==='function') closeBagPanel(); }
+    else bagOpen.life=Math.max(bagOpen.life,8);
+  }
   for(let i=loots.length-1;i>=0;i--){ const lb=loots[i];
     // A `remote` bag is a shadow of one the host owns; the only cull for it lives inside
     // netApplyWorld. If this machine stops being a client (disconnect, host migration) that cull
