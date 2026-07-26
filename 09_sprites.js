@@ -198,7 +198,10 @@ const _TIER_CORNERS=[[1,1],[0,1],[1,0],[0,0]];   // BR, BL, TR, TL — preferenc
 function drawItemTier(g,it,cw,ch){
   if(!it || it.t===undefined || it.t===null) return;
   if(it.k==='pot'||it.k==='coin'||it.k==='scroll') return;      // these have no tier ladder
-  const label='T'+((it.t|0)+1);
+  // A relic stamps R, not T13. It is read in the same corner, in the same place, by the same
+  // glance that reads a tier — which is the point: one mark per item, and R means "above the
+  // ladder" without asking anyone to remember what the thirteenth number was.
+  const label=it.relic?'R':('T'+((it.t|0)+1));
   const fs=Math.max(8,Math.round(Math.min(cw,ch)*0.26));
   g.save();
   g.font='bold '+fs+'px "Pixelify Sans",monospace';

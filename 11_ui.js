@@ -105,15 +105,21 @@ function bagDeltaHtml(it,ch){
   if(it&&it.k==='leg'){ const L=legById(it.id);
     return '<span style="color:#ff9c50">'+(L?L.d:'a relic')+'</span>'
       +'<div class="bagWho">equip it from the Loadout screen</div>'; }
+  // a relic compares like any other item -- it is one -- but its trait is the part that decides
+  // whether you want it, so that goes first and the stat deltas follow underneath
   if(!it||it.k==='pot'||it.k==='coin'||it.k==='scroll') return '';
   if(!canEquip(it,ch)) return '<span class="bagSame">not for your class</span>';
+  let head='';
+  if(it.relic){ const R=relicDef(it.relic);
+    head='<div class="relTrait">'+(R?R.d:'')+'</div>';
+    if(R&&R.trait) head+='<div class="relTrait on">✦ '+R.trait.n+' — '+R.trait.d+'</div>'; }
   const cur=equippedItemFor(it.k,ch);
   const a=itemStats(it,ch.cls), b=cur?itemStats(cur,ch.cls):newStats();
   let out='', any=false;
   for(const k of STATS){ const d=(a[k]||0)-(b[k]||0); if(!d) continue; any=true;
     out+='<b class="'+(d>0?'bagUp':'bagDown')+'">'+(d>0?'+':'')+d+' '+STAT_META[k].s+'</b>&nbsp; '; }
   if(!any) out='<span class="bagSame">no change</span>';
-  return out+'<div class="bagWho">vs '+(cur?itemName(cur):'nothing equipped')+'</div>';
+  return head+out+'<div class="bagWho">vs '+(cur?itemName(cur):'nothing equipped')+'</div>';
 }
 // Full side-by-side: the drop's sprite and every stat it gives, against the worn piece's sprite
 // and stats, with the difference in the middle column.
@@ -157,7 +163,7 @@ function paintBagPanel(){
   const its=bagItems(lb);
   if(!its.length){ closeBagPanel(); return; }
   const band=bagBand(lb), bn=LOOT_BANDS[band], top=bagTopTier(lb);
-  const relic=its.some(x=>x&&x.k==='leg');
+  const relic=its.some(x=>x&&(x.k==='leg'||x.relic));
   $s('bagTitle').textContent=relic?'A RELIC':((bn&&bn.bound)?'SOULBOUND SACK':'SACK');
   $s('bagSub').innerHTML=(relic
       ? '<span style="color:#ff9c50">kept by its dungeon — there is only one</span>'
@@ -352,40 +358,104 @@ const LEGENDS=[
  {id:'duskfang',slot:'wpn',n:'Duskfang',price:9000,add:55,rof:0.72,d:'+55 dmg · strikes 40% faster'},
  {id:'aegisflame',slot:'arm',n:'Aegis of the First Flame',price:11000,def:22,hp:120,spd:0,d:'+22 DEF · +120 HP'},
  {id:'wandershroud',slot:'arm',n:"Wanderer's Shroud",price:8000,def:10,hp:40,spd:35,d:'+10 DEF · +40 HP · +35 SPD'},
- // ---- DUNGEON RELICS (user, 2026-07-26) ----
- // One unique per dungeon, named for the thing that kept it. price:0 means it is not for sale —
- // the only way to hold one is to take it off the boss whose dungeon it belongs to. Its dungeon
- // form drops it at a real rate; the OVERWORLD form has only a very minimal chance, so meeting a
- // world boss always carries a thin thread of "this could be the one".
- {id:'r_heartwood', slot:'wpn',n:'Heartwood Bough',      price:0,add:78, rof:0.88,d:'+78 dmg · faster · the root that would not burn'},
- {id:'r_fogbound',  slot:'arm',n:'Fogbound Mantle',      price:0,def:14,hp:70, spd:28,d:'+14 DEF · +70 HP · +28 SPD'},
- {id:'r_warren',    slot:'arm',n:'Warren Carapace',      price:0,def:26,hp:130,spd:-10,d:'+26 DEF · +130 HP · heavy'},
- {id:'r_vault',     slot:'wpn',n:'Stonefist Maul',       price:0,add:132,rof:1.24,d:'+132 dmg · slow · it does not need a second swing'},
- {id:'r_roost',     slot:'wpn',n:'Windward Talon',       price:0,add:52, rof:0.66,d:'+52 dmg · strikes 50% faster'},
- {id:'r_barrows',   slot:'wpn',n:'Scorchmaw',            price:0,add:104,rof:0.96,d:'+104 dmg · still hot from the barrows'},
- {id:'r_crypt',     slot:'arm',n:'Cinder Crypt Shroud',  price:0,def:18,hp:90, spd:34,d:'+18 DEF · +90 HP · +34 SPD'},
- {id:'r_keep',      slot:'wpn',n:'Ashen Keepblade',      price:0,add:118,rof:0.9, d:'+118 dmg · faster · keen with old grief'},
- {id:'r_sanctum',   slot:'arm',n:'Core Sanctum Plate',   price:0,def:32,hp:170,spd:-6,d:'+32 DEF · +170 HP · the last wall'},
- {id:'r_saltworks', slot:'wpn',n:'Salt-Eaten Harpoon',   price:0,add:44, rof:0.82,d:'+44 dmg · faster · pitted by a sea nobody knows'},
- {id:'r_lamp',      slot:'arm',n:"Lightkeeper's Coat",   price:0,def:9, hp:46, spd:40,d:'+9 DEF · +46 HP · +40 SPD'},
- {id:'r_chapel',    slot:'arm',n:'Marrow Chapel Vestment',price:0,def:12,hp:58,spd:22,d:'+12 DEF · +58 HP · +22 SPD'},
 ];
+// ============================================================
+// DUNGEON RELICS — T13 RIFTFORGED (user, 2026-07-26)
+// ------------------------------------------------------------
+// A relic IS a tiered item, exactly like everything else you wear: same object shape, same slot,
+// same equip path, same satchel, same compare, same icon. What makes it a relic is that it sits
+// one band ABOVE the ladder (RELIC_T), so its tier base already beats the best T12 that can ever
+// drop — and that it carries fixed EXCLUSIVE affixes at values no roll can reach. Ordinary gear
+// rolls its affixes at random out of AFFIX_PREFIX; a relic's are written here and never vary.
+//
+// Some of them also carry a TRAIT — a real combat rule, not a number. Those reuse the flags the
+// ascension capstones already set on `player`, so every one of them is behaviour the engine has
+// always enforced rather than a new special case bolted onto the damage path.
+//
+// One per dungeon, and nothing rolls or sells one: the only way to hold a relic is to take it off
+// the boss whose dungeon kept it.
+const RELICS=[
+ {id:'r_heartwood', slot:'wpn', n:'Heartwood Bough',        d:'the root that would not burn',
+  aff:[{s:'atk',v:58},{s:'vit',v:26}],
+  trait:{n:'Quickening', d:'every kill returns 4% of your health', flag:'killHeal', v:0.04}},
+ {id:'r_fogbound',  slot:'arm', n:'Fogbound Mantle',        d:'never quite where you looked',
+  aff:[{s:'spd',v:54},{s:'dex',v:26},{s:'def',v:22}], trait:null},
+ {id:'r_warren',    slot:'arm', n:'Warren Carapace',        d:'grown, not forged — and grown thick',
+  aff:[{s:'def',v:38},{s:'hp',v:150},{s:'spd',v:-14}],
+  trait:{n:'Barbed', d:'attackers take 12% of what they deal', flag:'thorns', v:0.12}},
+ {id:'r_vault',     slot:'wpn', n:'Stonefist Maul',         d:'it does not need a second swing',
+  aff:[{s:'atk',v:70},{s:'spd',v:-10}],
+  trait:{n:'Concussive', d:'every hit shakes the ground for 35% splash', flag:'splash', v:0.35}},
+ {id:'r_roost',     slot:'wpn', n:'Windward Talon',         d:'taken off something that never landed',
+  aff:[{s:'atk',v:44},{s:'dex',v:30},{s:'spd',v:24}],
+  trait:{n:'Galebound', d:'you strike 30% faster while moving', flag:'moveRof', v:0.30}},
+ {id:'r_barrows',   slot:'wpn', n:'Scorchmaw',              d:'still hot from the barrows',
+  aff:[{s:'atk',v:56},{s:'luck',v:22}],
+  trait:{n:'Everburning', d:'everything you hit catches fire', flag:'burnHit', v:0.5}},
+ {id:'r_crypt',     slot:'arm', n:'Cinder Crypt Shroud',    d:'ash woven while it was still warm',
+  aff:[{s:'def',v:26},{s:'hp',v:110},{s:'spd',v:40}], trait:null},
+ {id:'r_keep',      slot:'wpn', n:'Ashen Keepblade',        d:'keen with old grief',
+  aff:[{s:'atk',v:62},{s:'luck',v:24}],
+  trait:{n:'Mercy', d:'+45% damage to anything nearly dead', flag:'execute', v:0.45}},
+ {id:'r_sanctum',   slot:'arm', n:'Core Sanctum Plate',     d:'the last wall, and it held',
+  aff:[{s:'def',v:44},{s:'hp',v:180},{s:'spd',v:-18}],
+  trait:{n:'Bulwark', d:'everything near you moves slower', flag:'slowAura', v:1}},
+ {id:'r_saltworks', slot:'wpn', n:'Salt-Eaten Harpoon',     d:'pitted by a sea nobody knows',
+  aff:[{s:'atk',v:40},{s:'dex',v:28},{s:'fort',v:16}],
+  trait:{n:'Trailing Line', d:'hits carry to a second foe for 40%', flag:'chainHit', v:0.40}},
+ {id:'r_lamp',      slot:'arm', n:"Lightkeeper's Coat",     d:'someone kept the light on for years',
+  aff:[{s:'spd',v:60},{s:'dex',v:24},{s:'luck',v:28}], trait:null},
+ {id:'r_chapel',    slot:'arm', n:'Marrow Chapel Vestment', d:'the last vestment of a small faith',
+  aff:[{s:'wis',v:34},{s:'mp',v:120},{s:'def',v:20}], trait:null},
+];
+function relicDef(id){ for(const R of RELICS) if(R.id===id) return R; return null; }
+function isRelic(it){ return !!(it&&it.relic); }
+function relicOf(it){ return it&&it.relic?relicDef(it.relic):null; }
+// A relic drops SHAPED FOR THE HERO WHO FOUND IT: it takes their class's weapon type or armour
+// material, so it passes the ordinary canEquip check and fights like the weapon they trained on.
+// A relic's identity is its name, its affixes and its trait — not its silhouette.
+function mkRelicItem(id,cls){
+  const R=relicDef(id); if(!R) return null;
+  const it={ k:R.slot, t:RELIC_T, relic:R.id, rar:5, aff:R.aff.map(a=>({s:a.s,v:a.v})) };
+  if(R.slot==='wpn') it.wt=CWEAP[cls]||'sword'; else it.mt=CARMOR[cls]||'plate';
+  return it;
+}
 // boss id -> the relic its dungeon keeps. Parallel to GBOSS, so a new boss is one more row.
 const BOSS_RELIC=['r_heartwood','r_fogbound','r_warren','r_vault','r_roost','r_barrows',
                   'r_crypt','r_keep','r_sanctum','r_saltworks','r_lamp','r_chapel'];
 const RELIC_P_WORLD=0.015;   // overworld boss: a very minimal chance, by design
 const RELIC_P_DUNGEON=0.12;  // its dungeon form is the real source
 function relicFor(ring){ return (ring>=0&&ring<BOSS_RELIC.length)?BOSS_RELIC[ring]:null; }
-function ownsRelic(id){ return !!(rpg&&rpg.legends&&rpg.legends.indexOf(id)>=0); }
+// `rpg.relics` is the RECORD of which relics this hero has ever taken. It is not where the item
+// lives -- the item lives in the satchel or on your body like any other -- but a record is what
+// stops a boss dropping you a second copy, and what the death screen scores.
+function ownsRelic(id){
+  if(!rpg) return false;
+  if(rpg.relics && rpg.relics.indexOf(id)>=0) return true;
+  const ch=(typeof curChar==='function')?curChar():null;
+  if(ch&&ch.inv) for(const it of ch.inv) if(it&&it.relic===id) return true;
+  for(const sl of ['wpn','arm']){ const e=(rpg.eqAff||{})[sl]; if(e&&e.rel===id) return true; }
+  return false;
+}
+function noteRelicTaken(id){ if(!rpg) return;
+  if(!rpg.relics) rpg.relics=[];
+  if(rpg.relics.indexOf(id)<0){ rpg.relics.push(id);
+    if(typeof runNote==='function') runNote('relics'); } }
 function legById(id){ return LEGENDS.filter(function(L){return L.id===id;})[0]||null; }
-const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire'];
+// THE LADDER. Index 0-11 are T1-T12, the tiers the world can actually roll. Index 12 is the band
+// ABOVE the ladder: T13 Riftforged, which nothing rolls and nothing sells -- it exists only as the
+// twelve dungeon relics, one per dungeon.
+const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire','Riftforged'];
+// MAXT is the top ROLLABLE tier and every random draw still clamps to MAXT-1, so widening the
+// ladder above it cannot leak a T13 into a drop table, an auction shelf or a shop row.
 const MAXT=12;
+const RELIC_T=12;                    // 0-based index of the Riftforged band == T13
 function classWT(cls){ return WTYPE[CWEAP[cls]]||WTYPE.sword; }
 function weaponAt(cls,t){ t=Math.max(0,Math.min(MAXT-1,t)); const wt=classWT(cls);
  return {n:TIER_NAMES[t]+' '+wt.n, add:Math.round(t*t*1.35+t*2),
   cost:t===0?0:Math.round(30*Math.pow(1.9,t)), tier:t+1}; }
 function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
-function tierCol(t){ return t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
+function tierCol(t){ return t>=12?'#ffe08a':t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
 
 // ============================================================
 // LOOT TIERS BY AREA (user, 2026-07-26)
@@ -558,10 +628,12 @@ function itemBaseName(it){
 function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
  if(it.k==='scroll')return (typeof scrollName==='function')?scrollName(it.st):'Scroll';
  if(it.k==='leg'){ const L=legById(it.id); return '★ '+(L?L.n:'Relic'); }
+ // a relic wears its own name -- it is one specific object, not a roll off a table
+ if(it.relic){ const R=relicDef(it.relic); if(R) return '★ '+R.n; }
  let nm=itemBaseName(it);
  if(it.rar && it.aff && it.aff.length) nm=AFFIX_PREFIX[it.aff[0].s]+' '+nm;
  return nm; }
-function itemRarCol(it){ if(it&&it.k==='leg') return '#ff9c50';   // relics have their own colour
+function itemRarCol(it){ if(it&&(it.k==='leg'||it.relic)) return tierCol(RELIC_T);  // relics have their own colour
  return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
 // a relic is equipped from the loadout screen (it owns the wpnL/armL slot), not from a bag row
 function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg')return false;
@@ -589,7 +661,7 @@ function itemGlory(it){
   // the ladder on purpose, and scaled by the 20:1 merge ratio so the tiers stay consistent with
   // each other. A Gold coin is a trophy worth tens of runs, not something you shop for.
   if(it.k==='coin')   return [300,6000,120000][it.t||0]||300;
-  if(it.k==='leg')    return 2600;            // a relic is priced, even if it rarely changes hands
+  if(it.k==='leg')    return 2600;            // the old relic form; the new one prices off its tier
   const t=(it.t|0)+1;
   const base=12*Math.pow(t,1.85);             // T1 ~12, T6 ~330, T9 ~700, T12 ~1170
   const km=GLORY_KIND[it.k]||1;
@@ -700,15 +772,15 @@ function awardItem(it,x,y){
     texts.push({x:px,y:py-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); return true; }
   if(it.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG();
     texts.push({x:px,y:py-14,txt:'+Tonic',col:'#7dc47a',life:1}); return true; }
-  // a relic joins the legend collection rather than the satchel — it has its own equip slot and
-  // must never occupy one of the 20 bag slots or be sellable
-  if(it.k==='leg'){ const L=legById(it.id); if(!L) return true;
-    if(!rpg.legends) rpg.legends=[];
-    if(rpg.legends.indexOf(it.id)<0){ rpg.legends.push(it.id);
-      if(typeof runNote==='function') runNote('relics'); }
-    if(typeof msg==='function') msg('★ '+L.n,'a relic of '+((GBOSS[BOSS_RELIC.indexOf(it.id)]||{}).dn||'the deep'));
-    texts.push({x:px,y:py-14,txt:'★ '+L.n,col:'#ff9c50',life:2.2});
-    return true; }
+  // the OLD relic form (k:'leg'), kept only so a sack minted before relics became real items still
+  // hands you something. It converts on the spot into the item the relic is now.
+  if(it.k==='leg'){ const R=relicDef(it.id); if(!R) return true;
+    const conv=mkRelicItem(it.id,ch.cls); if(conv) it=conv; else return true; }
+  if(it.relic){ const R=relicDef(it.relic);
+    noteRelicTaken(it.relic);
+    if(typeof msg==='function') msg('★ '+R.n,'a relic of '+((GBOSS[BOSS_RELIC.indexOf(it.relic)]||{}).dn||'the deep'));
+    texts.push({x:px,y:py-14,txt:'★ '+R.n,col:tierCol(RELIC_T),life:2.2});
+    /* falls through: a relic goes into the satchel like any other item */ }
   if(it.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,it.st,1);
     const col=(typeof STAT_META!=='undefined'&&STAT_META[it.st])?STAT_META[it.st].col:'#e6c76a';
     texts.push({x:px,y:py-14,txt:'📜 '+((typeof scrollName==='function')?scrollName(it.st):'Scroll'),col:col,life:1.5});
@@ -740,9 +812,9 @@ function takeLoot(item){
   const ch=(typeof curChar==='function')?curChar():null;
   if(!item||!ch||!rpg) return;
   if(!ch.inv) ch.inv=[];
-  // relics have their own home (the legend collection) and their own duplicate rule, so the
-  // network grant goes through the same award path the local pickup does
-  if(item.k==='leg'){ awardItem(item,player.x,player.y); saveRPG(); return; }
+  // relics carry a duplicate rule and a record, so a granted one goes through the same award path
+  // the local pickup does rather than being pushed straight into the satchel
+  if(item.k==='leg'||item.relic){ awardItem(item,player.x,player.y); saveRPG(); return; }
   if(item.k==='coin'){ if(typeof addCoin==='function') addCoin(); if(typeof recalcStats==='function') recalcStats(); }
   else if(item.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG(); }
   else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
@@ -806,7 +878,11 @@ function rollRelic(e,who){
  if(mine && ownsRelic(id)) return;
  const p=(inDun?RELIC_P_DUNGEON:RELIC_P_WORLD)*(1+(who.fort||0)*0.004);
  if(Math.random()>=p) return;
- const b=bagAt(e,[{k:'leg',id:id}]);
+ // shaped for whoever it is rolled for -- in co-op `who` is the peer, so fall back to the local
+ // hero's class only when there is no better answer. A relic is a real item from here on.
+ const _cls=(who&&who.cls)||((typeof curChar==='function'&&curChar())?curChar().cls:'knight');
+ const _it=mkRelicItem(id,_cls); if(!_it) return;
+ const b=bagAt(e,[_it]);
  b.band=LOOT_BANDS.length-1; b.life=LOOT_BANDS[b.band].life;   // always the top sack
  b.relic=1;
  if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
@@ -1030,10 +1106,13 @@ function paintClassIcon(cv,cls){ if(!cv) return; const g=cv.getContext('2d'); g.
 }
 // paper-doll equipment sockets: draw each equipped item's sprite into its slot canvas
 function paintEqSlots(ch){ const cls=ch.cls, mt=CARMOR[cls]||'plate', wt=CWEAP[cls]||'sword';
+ // read the slots back through equippedItemFor so a worn relic keeps its id here too -- that is
+ // what puts its own sprite and its R in the paper doll instead of generic tier art
+ const _w=equippedItemFor('wpn',ch), _a=equippedItemFor('arm',ch);
  const items={
    helm: rpg.helm>=0 ? {k:'helm',mt:mt,t:rpg.helm} : null,
-   wpn:  rpg.wpnL ? {k:'wpn',wt:wt,t:11,leg:1} : {k:'wpn',wt:wt,t:rpg.wpn||0},
-   arm:  rpg.armL ? {k:'arm',mt:mt,t:11,leg:1} : {k:'arm',mt:mt,t:rpg.arm||0},
+   wpn:  rpg.wpnL ? {k:'wpn',wt:wt,t:11,leg:1} : (_w||{k:'wpn',wt:wt,t:rpg.wpn||0}),
+   arm:  rpg.armL ? {k:'arm',mt:mt,t:11,leg:1} : (_a||{k:'arm',mt:mt,t:rpg.arm||0}),
    ring: rpg.ring ? {k:'ring',st:rpg.ring.st,t:rpg.ring.t} : null };
  document.querySelectorAll('#eqDoll .eqSlot').forEach(el=>{
    const it=items[el.getAttribute('data-slot')];
@@ -1161,6 +1240,8 @@ $s('bagAll').addEventListener('click',bagTakeAll);
 function equippedItemFor(slot,ch){
   if(!rpg||!ch) return null;
   const e=(rpg.eqAff||{})[slot], ex=e?{rar:e.r,aff:e.a}:{};
+  // a relic keeps its id in the slot record, so what comes back out is the relic itself
+  if(e&&e.rel) ex.relic=e.rel;
   if(slot==='wpn')  return rpg.wpnL?null:Object.assign({k:'wpn',wt:CWEAP[ch.cls],t:rpg.wpn||0},ex);
   if(slot==='arm')  return rpg.armL?null:Object.assign({k:'arm',mt:CARMOR[ch.cls],t:rpg.arm||0},ex);
   if(slot==='helm') return (rpg.helm>=0)?Object.assign({k:'helm',mt:CARMOR[ch.cls],t:rpg.helm},ex):null;
@@ -1177,7 +1258,7 @@ function equipItem(it,ch){
   else if(slot==='helm'){ rpg.helm=it.t; }
   else if(slot==='ring'){ rpg.ring={st:it.st,t:it.t}; }
   else return false;
-  rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null};
+  rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null,rel:it.relic||null};
   recalcStats(); saveRPG(); hudRPG();
   return {old:old};
 }
@@ -1192,12 +1273,34 @@ $s('invDrop').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it) return;
  if(it.k==='wpn'&&it.t>=6&&!confirm('Discard '+itemName(it)+'?')) return;
  ch.inv.splice(invSelIdx,1); invSelIdx=-1; saveRPG(); paintInv(); });
+// Relics used to be a parallel system: an id in rpg.legends, worn through rpg.wpnL/armL, outside
+// the tier ladder entirely. They are ordinary T13 items now, so a save written before that has to
+// be carried across: the ids move to rpg.relics (the record), and one that was actually WORN is
+// re-equipped as the item it has become. The four purchasable legendaries are NOT relics and stay
+// exactly where they were, on the old wpnL/armL path.
+function migrateRelics(ch){
+  if(!rpg||rpg._relicMig) return; rpg._relicMig=1;
+  if(!rpg.relics) rpg.relics=[];
+  const legs=rpg.legends||[];
+  for(const id of legs.slice()){
+    if(!relicDef(id)) continue;                       // a real legendary, leave it alone
+    if(rpg.relics.indexOf(id)<0) rpg.relics.push(id);
+    rpg.legends.splice(rpg.legends.indexOf(id),1);
+    const worn=(rpg.wpnL===id)?'wpn':(rpg.armL===id)?'arm':null;
+    const it=mkRelicItem(id,ch.cls); if(!it) continue;
+    if(worn){ if(!rpg.eqAff) rpg.eqAff={};
+      if(worn==='wpn'){ rpg.wpn=RELIC_T; rpg.wpnL=null; } else { rpg.arm=RELIC_T; rpg.armL=null; }
+      rpg.eqAff[worn]={r:it.rar,a:it.aff,rel:id};
+    } else if(ch.inv && ch.inv.length<20) ch.inv.push(it);
+  }
+}
 function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.arm===undefined)rpg.arm=0; if(rpg.helm===undefined)rpg.helm=-1;
  if(rpg.ring===undefined)rpg.ring=null;
  if(rpg.pets===undefined)rpg.pets=[]; if(rpg.pet===undefined)rpg.pet=null;
  if(rpg.legends===undefined)rpg.legends=[]; if(rpg.wpnL===undefined)rpg.wpnL=null;
  if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[];
+ migrateRelics(ch);
  if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null;
  if(rpg.arenaBest===undefined) rpg.arenaBest=0;
  if(typeof initTrain==='function') initTrain(rpg); }   // max-stat scrolls/training (16_maxstats.js)
@@ -1212,7 +1315,9 @@ const HP_SCALE=0.80, MP_SCALE=0.80;
 function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const ci=Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls)); const c=CLASSES[ci];
  player.cname=ch.name; player.hue=ci*20;
- rpg.wpn=Math.min(rpg.wpn||0,MAXT-1);
+ // the weapon slot clamps to the top ROLLABLE tier, except when a relic is in it -- a relic is the
+ // one thing allowed to sit on the Riftforged band, and clamping would quietly demote it to T12
+ rpg.wpn=Math.min(rpg.wpn||0,((rpg.eqAff&&rpg.eqAff.wpn&&rpg.eqAff.wpn.rel)?RELIC_T:MAXT-1));
  player.wt=classWT(ch.cls);
  if(!rpg.eqAff) rpg.eqAff={};
  const mt=CARMOR[ch.cls]||'plate';
@@ -1281,6 +1386,13 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
     'burnHit','bloodNova','moveDr','curse','shatter','slowAura','critBolt','moveRof',
     'summonX2','homing','terrainGhost','stun3','groundHeal','allyDot','allyHaste',
     'echoCast','spiritDur','dashBlast','poisonHit','shockHit','bleedHit','weakHit']) player[k]=T[k]||0; }
+ // RELIC TRAITS. A relic's trait sets exactly the same player flag an ascension capstone would, so
+ // it is enforced by combat paths that already exist rather than by a special case. Applied AFTER
+ // the tree assignment above (which overwrites) and additively, so a relic stacks with a capstone
+ // that happens to share its flag instead of one silently erasing the other.
+ for(const _sl of ['wpn','arm']){ const _e=(rpg.eqAff||{})[_sl];
+   const _R=(_e&&_e.rel)?relicDef(_e.rel):null;
+   if(_R&&_R.trait) player[_R.trait.flag]=(player[_R.trait.flag]||0)+_R.trait.v; }
  if(player.shield===undefined) player.shield=0;
  // projectile colour reflects the STATUS your shots inflict (user, 2026-07-24): a burn build
  // fires orange, poison green, frost blue... read off the on-hit flags, highest-signal first
@@ -1481,13 +1593,13 @@ function tickPotions(dt){
     if(typeof hudRPG==='function') hudRPG(); saveRPG(); }
 }
 $s('potBtn').addEventListener('click',usePotion);
-// RELICS live on the equipment screen. They own the wpnL/armL slot, so the only place they could
-// ever be equipped from used to be a vendor's shop rows -- which meant retiring a stall could
-// leave a relic you had earned with nowhere to put it on. Shows only what you actually own.
+// The four purchasable LEGENDARIES (not relics -- relics are ordinary T13 items now and equip from
+// the satchel like anything else). These still own the wpnL/armL slot wholesale, and the only place
+// they could ever be equipped from used to be a vendor's shop rows, so they live here instead.
 function paintRelics(){ const box=$s('eqRelics'); if(!box||!rpg) return;
  const owned=(rpg.legends||[]).map(legById).filter(Boolean);
  if(!owned.length){ box.innerHTML=''; return; }
- let h='<div class="relHead">★ RELICS</div><div class="relRow">';
+ let h='<div class="relHead">★ LEGENDARIES</div><div class="relRow">';
  for(const L of owned){ const eq=(L.slot==='wpn'?rpg.wpnL:rpg.armL)===L.id;
   h+='<div class="relChip'+(eq?' on':'')+'" data-rel="'+L.id+'" title="'+(L.d||'')+'">'
     +'<b>'+L.n+'</b><span>'+(eq?'in use':(L.slot==='wpn'?'weapon':'armor'))+'</span></div>'; }

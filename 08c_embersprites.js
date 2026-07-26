@@ -113,10 +113,18 @@ const _abilImgCache={};
 function abilImg(id){ if(typeof window==='undefined'||!id) return null;
   if(_abilImgCache[id]===undefined){ const i=new Image(); i.src='assets/abilities/'+id+'.png'; _abilImgCache[id]=i; }
   const im=_abilImgCache[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
-// TIER_NAMES lives in 11_ui.js, which loads after this file; read its length lazily so this never
-// depends on load order, and fall back to the known 12 if it is somehow not there yet.
-function _nTiers(){ return (typeof TIER_NAMES!=='undefined')?TIER_NAMES.length:12; }
+// The band maths below spreads the ROLLABLE tiers over whatever art a key ships, so it keys off
+// MAXT and not TIER_NAMES.length -- the ladder grew a thirteenth entry (Riftforged, relics only)
+// and counting that one would have re-mapped every existing tier onto the wrong sprite.
+function _nTiers(){ return (typeof MAXT!=='undefined')?MAXT:12; }
+// Each relic ships its OWN sprite, drawn for the boss whose dungeon kept it. Lazy-loaded by id so
+// twelve more images cost nothing until one actually drops.
+const _relicArt={};
+function relicArtImg(id){ if(typeof window==='undefined'||!id) return null;
+  if(_relicArt[id]===undefined){ const i=new Image(); i.src='assets/items/relic_'+id+'.png'; _relicArt[id]=i; }
+  const im=_relicArt[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
+  if(it.relic){ const r=relicArtImg(it.relic); if(r) return r; }   // its own art wins outright
   const NTIERS=_nTiers();
   let key=null;
   if(it.k==='wpn') key='wpn_'+it.wt; else if(it.k==='arm') key='arm_'+it.mt;

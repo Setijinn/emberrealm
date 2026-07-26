@@ -217,6 +217,9 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .relChip span{font-size:10px;color:#8a8494;}
 .relChip.on{border-color:#ffc94d;background:#2a2033;}
 .relChip.on span{color:#ffc94d;}
+/* a relic's flavour line and its trait, shown above the stat deltas wherever it is compared */
+.relTrait{font-size:11px;color:#9a94a0;font-style:italic;margin-bottom:3px;}
+.relTrait.on{color:#ffe08a;font-style:normal;}
 
 /* PC mode: gather the thumb-scattered HUD buttons into one tidy top-right row
    (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
