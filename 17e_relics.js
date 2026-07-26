@@ -129,34 +129,38 @@ const RELICS=[
  {id:'r_barrows', set:'meltdown', slot:'wpn', n:'Scorchmaw', d:'still hot from the barrows',
   aff:[{s:'atk',v:56},{s:'luck',v:22}],
   trait:{n:'Everburning', d:'everything you hit catches fire', flag:'burnHit', v:0.5}},
+ // the furnace is a CASTER set: it is fire itself, and the classes that throw fire are the ones
+ // that should want it. Its weapon still carries the burn; the cloth carries the mana to spend.
  {id:'r_slagplate', set:'meltdown', slot:'arm', n:'Slagplate Harness', d:'poured, not forged',
-  aff:[{s:'def',v:34},{s:'hp',v:130},{s:'atk',v:24}], trait:null},
+  aff:[{s:'wis',v:28},{s:'mp',v:80},{s:'def',v:24},{s:'hp',v:90}], trait:null},
  {id:'r_furnacemask', set:'meltdown', slot:'helm', n:'Furnace Mask', d:'you could look into it and live',
-  aff:[{s:'def',v:22},{s:'vit',v:26},{s:'atk',v:20}], trait:null},
- {id:'r_moltencore', set:'meltdown', slot:'ring', st:'dmg', n:'Molten Core Band', d:'a drop of the furnace, cooled around a finger',
-  aff:[{s:'atk',v:36},{s:'luck',v:24}], trait:null},
+  aff:[{s:'wis',v:34},{s:'mp',v:100},{s:'def',v:14}], trait:null},
+ {id:'r_moltencore', set:'meltdown', slot:'ring', st:'mp', n:'Molten Core Band', d:'a drop of the furnace, cooled around a finger',
+  aff:[{s:'wis',v:26},{s:'mp',v:70},{s:'atk',v:24}], trait:null},
 
  // ===== THE ROOT THAT WOULD NOT BURN — sustain, you outlast it =====
  {id:'r_heartwood', set:'regrowth', slot:'wpn', n:'Heartwood Bough', d:'the root that would not burn',
   aff:[{s:'atk',v:58},{s:'vit',v:26}],
   trait:{n:'Quickening', d:'every kill returns 4% of your health', flag:'killHeal', v:0.04}},
+ // the keeper set: WIS and VIT rather than DEF, so it lands with the classes that hold a party up
  {id:'r_greenribs', set:'regrowth', slot:'arm', n:'Greenwood Ribs', d:'grown around a wound and kept growing',
-  aff:[{s:'def',v:30},{s:'hp',v:140},{s:'vit',v:30}], trait:null},
+  aff:[{s:'wis',v:26},{s:'vit',v:32},{s:'hp',v:110},{s:'def',v:20}], trait:null},
  {id:'r_sapcrown', set:'regrowth', slot:'helm', n:'Sapcrown', d:'it is still sticky',
-  aff:[{s:'vit',v:34},{s:'wis',v:20},{s:'hp',v:60}], trait:null},
- {id:'r_seedring', set:'regrowth', slot:'ring', st:'vit', n:'Seedring', d:'something in it is still alive',
-  aff:[{s:'vit',v:30},{s:'luck',v:20}], trait:null},
+  aff:[{s:'wis',v:34},{s:'mp',v:90},{s:'vit',v:26}], trait:null},
+ {id:'r_seedring', set:'regrowth', slot:'ring', st:'wis', n:'Seedring', d:'something in it is still alive',
+  aff:[{s:'wis',v:24},{s:'mp',v:60},{s:'vit',v:24}], trait:null},
 
  // ===== OLD GRIEF — execute, you end things =====
  {id:'r_keep', set:'grief', slot:'wpn', n:'Ashen Keepblade', d:'keen with old grief',
   aff:[{s:'atk',v:62},{s:'luck',v:24}],
   trait:{n:'Mercy', d:'+45% damage to anything nearly dead', flag:'execute', v:0.45}},
+ // crit, not armour: the execute set belongs to whoever can land the finishing hit fastest
  {id:'r_keepplate', set:'grief', slot:'arm', n:'Keepwarden Plate', d:'it held the hall for a while',
-  aff:[{s:'def',v:32},{s:'hp',v:120},{s:'luck',v:22}], trait:null},
+  aff:[{s:'luck',v:32},{s:'dex',v:26},{s:'def',v:22},{s:'hp',v:80}], trait:null},
  {id:'r_griefhelm', set:'grief', slot:'helm', n:'Grief-Wrought Helm', d:'beaten out of something that used to be a bell',
-  aff:[{s:'luck',v:32},{s:'def',v:20},{s:'atk',v:22}], trait:null},
+  aff:[{s:'luck',v:34},{s:'dex',v:24},{s:'atk',v:20}], trait:null},
  {id:'r_firstclaimed', set:'grief', slot:'ring', st:'luck', n:'Band of the First Claimed', d:'it went first so the rest would know how',
-  aff:[{s:'luck',v:36},{s:'atk',v:26}], trait:null},
+  aff:[{s:'luck',v:36},{s:'dex',v:22},{s:'atk',v:24}], trait:null},
 
  // ===== THE PARTED VEIL — evasion, they lose track of you =====
  {id:'r_fogbound', set:'veil', slot:'arm', n:'Fogbound Mantle', d:'never quite where you looked',
