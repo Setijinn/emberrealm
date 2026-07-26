@@ -594,7 +594,9 @@ function drawLootBag(lb,pn){
     ctx.lineTo(lb.x+bw,lb.y+2); ctx.lineTo(lb.x-bw,lb.y+2); ctx.closePath(); ctx.fill(); }
   shadow(lb.x,lb.y+8,10);
   const bn=(typeof LOOT_BANDS!=='undefined')?LOOT_BANDS[band]:null;
-  let img=(bn&&typeof window[bn.spr]!=='undefined')?window[bn.spr]:null;
+  // resolve the band's sack through the real table, NOT off `window` -- the images are `const`, so
+  // they are lexical bindings and were never window properties (every bag drew as plain burlap)
+  let img=(bn&&typeof lootSackImg==='function')?lootSackImg(bn.spr):null;
   if(!img||!img.naturalWidth) img=(typeof _lootSack!=='undefined')?_lootSack:null;   // until the art lands
   const bob=band>=1?Math.sin(t*2.2+lb.x*0.03)*1.5:0;
   if(img&&img.complete&&img.naturalWidth){ const sc=(22+band*3)/img.naturalWidth;

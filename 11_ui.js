@@ -714,9 +714,14 @@ function bagBand(lb){ return (lb&&lb.band!==undefined)?lb.band:bandOfTier(bagTop
 function bagBound(lb){ return !!LOOT_BANDS[bagBand(lb)].bound; }
 // walk-over vs INTERACT: public sacks auto-collect, soulbound sacks are worth pressing a button for.
 // Decided by BAND, not by ownership, so solo and host behave identically.
+// WALK-OVER vs INTERACT. A sack that holds anything worth looking at opens the panel, so you see
+// what is in it and choose -- that is the whole point of a sack holding several things. Only a
+// lone consumable still vacuums up as you walk over it, because stopping to read a panel about one
+// tonic is worse than not having the panel. Public gear used to auto-collect too, which meant the
+// bag UI existed but most players never saw it.
 function bagAuto(lb){ const its=bagItems(lb); if(!its.length) return true;
- if(its.length===1 && (its[0].k==='pot'||its[0].k==='coin'||its[0].k==='scroll')) return true;
- return !bagBound(lb); }
+ const junk=it=>it&&(it.k==='pot'||it.k==='coin'||it.k==='scroll');
+ return its.length===1 && junk(its[0]); }
 
 function bagAt(e,items){
  const list=Array.isArray(items)?items:(items?[items]:[]);
@@ -803,24 +808,35 @@ function takeLoot(item){
 // Both run host-side only (07_update gates rollLoot on netSimulates).
 const PUB_GEAR={c:0.025, s:0.06, N:0.025};   // gear-bag chance by enemy type; bosses are handled below
 const PUB_POT ={c:0.10,  s:0.14, N:0.10};
-function rollPublicLoot(e,row,F){
+// ONE PUBLIC SACK PER KILL (user, 2026-07-26). Every public thing a kill pays out goes in the same
+// sack: gear, the tonic, the coin, the scroll. It used to push a separate bag per item, so a
+// dungeon boss carpeted the floor with five or six sacks that each held one thing, and a "bag"
+// stopped meaning anything. `extra` is what rollLoot already rolled outside the gear table.
+function rollPublicLoot(e,row,F,extra){
  const fmul=1+F*0.012;
  const tier=Math.min(PUB_TMAX,pickWeighted(row.pub,F));    // public gear never exceeds T8
  const r=Math.random();
+ const items=(extra||[]).slice();
  if(e.type==='B'){
-   const items=rollBagSlots(BAG_SLOTS.pub,tier,F,true);     // a boss always pays out publicly
-   loots.push(bagAt(e,items));
-   if(Math.random()<0.4) loots.push(bagAt(e,{k:'pot'}));
-   return; }
- const gp=(PUB_GEAR[e.type]||0)*fmul, pp=(PUB_POT[e.type]||0)*fmul;
- if(r<gp){ const items=rollBagSlots(BAG_SLOTS.pub,tier,F,false);
-   if(items.length) loots.push(bagAt(e,items)); }     // every slot missed -> no bag at all
- else if(r<gp+pp) loots.push(bagAt(e,{k:'pot'}));
+   // a boss rolls the public table TWICE into the one sack. Same number of sacks, a sack worth
+   // opening: one slot roll averages 1.3 pieces, which is how a "bag" ended up meaning "an item".
+   for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true)) items.push(it);  // a boss always pays out
+   for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false)) items.push(it);
+   if(Math.random()<0.4) items.push({k:'pot'});
+ } else {
+   const gp=(PUB_GEAR[e.type]||0)*fmul, pp=(PUB_POT[e.type]||0)*fmul;
+   if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false)) items.push(it);
+   else if(r<gp+pp) items.push({k:'pot'});
+ }
+ if(items.length) loots.push(bagAt(e,items));            // everything missed -> no sack at all
 }
 // One recipient's private roll. `who` is {id,fort}; id is undefined in solo, and bagAt's owner tag
 // is only applied when actually networked, so solo bags never carry the field.
-function rollSoulbound(e,row,who){
- if(!row.sb) return;                                    // this area has no soulbound band
+// One player's private roll, as ITEMS. Whether they end up in their own sack or merged into the
+// single sack a kill leaves behind is rollLoot's decision -- see the note there.
+function rollSoulboundItems(e,row,who){
+ const items=[];
+ if(!row.sb) return items;                              // this area has no soulbound band
  const F=who.fort||0;
  let p;
  if(e.type==='B') p=1;                                  // bosses are the reliable T9+ path
@@ -830,46 +846,60 @@ function rollSoulbound(e,row,who){
  for(let q=0;q<n;q++){
    if(Math.random()>=p) continue;
    const tier=pickWeighted(row.sb,F);
-   const items=rollBagSlots(BAG_SLOTS.bound,tier,F,true);   // never empty
-   const b=bagAt(e,items);
-   if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
-   loots.push(b); }
+   for(const it of rollBagSlots(BAG_SLOTS.bound,tier,F,true)) items.push(it); }   // never empty
+ return items;
+}
+function rollSoulbound(e,row,who){
+ const items=rollSoulboundItems(e,row,who);
+ if(!items.length) return;
+ const b=bagAt(e,items);
+ if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
+ loots.push(b);
 }
 // A boss may yield the relic its dungeon keeps. Rolled per eligible player like any bound drop,
 // because a unique that only the host could ever see would be worthless in co-op — and skipped for
 // anyone who already owns it, so it can never be a duplicate you cannot use.
-function rollRelic(e,who){
- if(e.type!=='B') return;
+// Returns the relic ITEM (or null). rollRelic keeps its own sack for co-op; solo merges it into
+// the one sack the kill leaves -- the band follows the top tier either way, so a merged sack with
+// a relic in it still shows the reliquary.
+function rollRelicItem(e,who){
+ if(e.type!=='B') return null;
  const ring=(e.ring!==undefined&&e.ring>=0)?e.ring
    :((typeof curRoom!=='undefined'&&curRoom&&typeof curRoom.bossRing==='number')?curRoom.bossRing:-1);
  const inDun=!!(typeof curRoom!=='undefined'&&curRoom&&curRoom.dungeon);
  // DUNGEONS ONLY, AND ONLY DEEP ONES (user, 2026-07-26). An overworld boss never drops a relic now,
  // and neither does any dungeon below the Lv40 band -- relicChanceFor returns 0 for both.
- if(!inDun) return;
+ if(!inDun) return null;
  const p0=(typeof relicChanceFor==='function')?relicChanceFor(ring):0;
- if(p0<=0) return;
+ if(p0<=0) return null;
  // this dungeon hosts two sets; you can be given any piece of either that you do not already hold
  const pool=(typeof relicsForRing==='function')?relicsForRing(ring):[];
  const mineHere=(typeof netSelfId!=='function')||!who.id||who.id===netSelfId();
  const want=pool.filter(R=>!(mineHere&&ownsRelic(R.id)));
- if(!want.length) return;
+ if(!want.length) return null;
  // Only the LOCAL player's collection is knowable here, which is why `want` was filtered against it
  // above; a peer's duplicate is caught when the grant is awarded instead.
  const id=want[Math.floor(Math.random()*want.length)].id;
  const p=p0*(1+(who.fort||0)*0.004);
- if(Math.random()>=p) return;
+ if(Math.random()>=p) return null;
  // shaped for whoever it is rolled for -- in co-op `who` is the peer, so fall back to the local
  // hero's class only when there is no better answer. A relic is a real item from here on.
  const _cls=(who&&who.cls)||((typeof curChar==='function'&&curChar())?curChar().cls:'knight');
- const _it=mkRelicItem(id,_cls); if(!_it) return;
- const b=bagAt(e,[_it]);
+ const _it=mkRelicItem(id,_cls); if(!_it) return null;
+ // AND SAY SO. A relic is 0.25%-1% off a boss most players will never see the inside of; it must
+ // not scroll past in the same 12px text a potion gets. Only for the player it was rolled for.
+ if(mineHere && typeof insaneDrop==='function') insaneDrop(_it);
+ return _it;
+}
+// co-op path: the relic gets its own sack, because a shared sack cannot carry one player's bound
+// row without the whole per-connection filter the netsync deliberately avoids
+function rollRelic(e,who){
+ const it=rollRelicItem(e,who); if(!it) return;
+ const b=bagAt(e,[it]);
  b.band=LOOT_BANDS.length-1; b.life=LOOT_BANDS[b.band].life;   // the reliquary band, ten minutes
  b.relic=1;
  if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
  loots.push(b);
- // AND SAY SO. A relic is 0.25%-1% off a boss most players will never see the inside of; it must
- // not scroll past in the same 12px text a potion gets. Only for the player it was rolled for.
- if(mineHere && typeof insaneDrop==='function') insaneDrop(_it);
 }
 function rollLoot(e){
  const row=zoneTierRow(e.x,e.y);
@@ -877,12 +907,32 @@ function rollLoot(e){
  // Fortune Coin (bronze) — its own roll, can drop alongside gear. Rare on purpose: a coin boosts
  // EVERY future drop for as long as you carry it, so it compounds where gear does not. At the old
  // 4%/85% they were routine, which quietly made Fortune the cheapest stat in the game.
- if(Math.random() < (e.type==='B'?0.10:0.006)) loots.push(bagAt(e,{k:'coin'}));
- if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) loots.push(bagAt(e,sc)); }  // max-stat scrolls
+ // the coin and the scroll ride in the same public sack as the gear rather than each getting one
+ const extra=[];
+ if(Math.random() < (e.type==='B'?0.10:0.006)) extra.push({k:'coin'});
+ if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) extra.push(sc); }  // max-stat scrolls
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
  if(e.type==='B' && typeof spawnEggDrop==='function') spawnEggDrop(e);   // loose EGG, not a bag
- rollPublicLoot(e,row,F);
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
+ // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
+ // bandOfTier(bagTopTier) already decides, so a relic in the sack makes it a reliquary by itself.
+ //
+ // Alone, that is exactly one sack: public gear, the tonic, the coin, the scroll, your bound roll
+ // and any relic, together. WITH OTHER PLAYERS PRESENT the channels stay apart, because a shared
+ // sack cannot carry one player's bound row: the netsync keeps bound loot off everyone else's wire
+ // entirely rather than tagging it and trusting clients to filter, and merging would trade that
+ // guarantee for tidiness. So: alone, one sack; in company, one shared sack plus your own.
+ const alone = roster.length<=1 &&
+   (!roster[0] || !roster[0].id || (typeof netSelfId!=='function') || roster[0].id===netSelfId());
+ if(alone){
+   const who=roster[0]||{id:null,fort:F};
+   for(const it of rollSoulboundItems(e,row,who)) extra.push(it);
+   const rel=(typeof rollRelicItem==='function')?rollRelicItem(e,who):null;
+   if(rel) extra.push(rel);
+   rollPublicLoot(e,row,F,extra);
+   return;
+ }
+ rollPublicLoot(e,row,F,extra);
  for(const who of roster){ rollSoulbound(e,row,who); rollRelic(e,who); }
 }
 const ABIL={

@@ -41,6 +41,14 @@ const _lootSackT9  = (typeof window!=='undefined') ? (()=>{ const i=new Image();
 const _lootSackT11 = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t11.png'; return _track(i); })() : null;
 //   _lootSackRelic bound    T13     violet and gold, gems in the seams, light coming out of it
 const _lootSackRelic = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_relic.png'; return _track(i); })() : null;
+// LOOT_BANDS names its sack by STRING so a new band is one row plus one file. Resolving that name
+// needs a real table: these are `const`, which binds in the global LEXICAL scope and never becomes
+// a property of `window`, so the old `window[bn.spr]` lookup silently returned undefined for every
+// band and every sack in the game drew as the plain burlap one. The T9, T11 and relic art had
+// never appeared on screen.
+const _LOOT_SPR={_lootSack:_lootSack, _lootSackT9:_lootSackT9, _lootSackT11:_lootSackT11,
+                 _lootSackRelic:_lootSackRelic};
+function lootSackImg(name){ const im=_LOOT_SPR[name]; return (im&&im.naturalWidth)?im:_lootSack; }
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',
