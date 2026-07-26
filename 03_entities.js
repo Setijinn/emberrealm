@@ -889,58 +889,58 @@ const EBEH={
 const MOBSPEC=[
  // 0 THE LANDING SANDS (Lv1-8) — open beach. The first thing a new hero meets, so it is slow,
  // legible and forgiving: it scuttles at you in the open with nowhere to hide.
- {c:{n:'Sand Crawler',   hp:0.72,spd:0.88,tch:0.75,r:0.90, w:{roamer:40,hunter:34,sentinel:18,pack:8},
+ {c:{n:'Sand Crawler',   inf:null,                 hp:0.72,spd:0.88,tch:0.75,r:0.90, w:{roamer:40,hunter:34,sentinel:18,pack:8},
      sig:{sway:0.62,swayF:3.4,commit:40,harry:0,lunge:null}},   // sidles; never dashes
-  s:{n:'Tide Spitter',   hp:0.85,spd:0.80,bd:0.80,r:0.95, w:{sentinel:48,skirmisher:26,roamer:26}}},
+  s:{n:'Tide Spitter',   inf:{id:'chill',dur:2.0},  hp:0.85,spd:0.80,bd:0.80,r:0.95, w:{sentinel:48,skirmisher:26,roamer:26}}},
 
  // 1 GULLWIND SHORE (Lv8-14) — wind-scoured cliffs and wrecks. Things here come at you from above.
- {c:{n:'Cliff Skua',     hp:0.70,spd:1.22,tch:1.20,r:0.88, w:{ambusher:52,roamer:26,hunter:14,pack:8},
+ {c:{n:'Cliff Skua',     inf:{id:'bleed',dur:3.0},  hp:0.70,spd:1.22,tch:1.20,r:0.88, w:{ambusher:52,roamer:26,hunter:14,pack:8},
      sig:{sway:0.66,swayF:2.9,commit:70,harry:88,
           lunge:{min:130,max:320,mul:3.0,dur:0.34,cd:2.0},breakoff:1.7,rehide:250}},  // stoops, climbs away
-  s:{n:'Wreck Scavenger',hp:0.95,spd:1.05,bd:0.90,r:0.98, w:{skirmisher:52,roamer:24,sentinel:14,hunter:10}}},
+  s:{n:'Wreck Scavenger',inf:{id:'bleed',dur:3.0},  hp:0.95,spd:1.05,bd:0.90,r:0.98, w:{skirmisher:52,roamer:24,sentinel:14,hunter:10}}},
 
  // 2 SAWGRASS FLATS (Lv14-20) — waist-deep marsh grass. Everything here is slow and hard to see.
- {c:{n:'Reed Lurcher',   hp:1.45,spd:0.74,tch:1.25,r:1.12, w:{ambusher:44,sentinel:30,hunter:20,roamer:6},
+ {c:{n:'Reed Lurcher',   inf:{id:'poison',dur:4.0}, hp:1.45,spd:0.74,tch:1.25,r:1.12, w:{ambusher:44,sentinel:30,hunter:20,roamer:6},
      sig:{sway:0.22,swayF:0.9,harry:0,lunge:null,breakoff:1.6,rehide:250}},   // wades; cannot dash
-  s:{n:'Sawgrass Spitter',hp:1.10,spd:0.78,bd:1.10,r:1.02, w:{sentinel:46,skirmisher:28,roamer:26}}},
+  s:{n:'Sawgrass Spitter',inf:{id:'poison',dur:4.5},hp:1.10,spd:0.78,bd:1.10,r:1.02, w:{sentinel:46,skirmisher:28,roamer:26}}},
 
  // 3 THE VERDANT BELT (Lv20-26) — the first true forest, and the Grovewarden's province. Cultists
  // begin here because this is where the corruption has taken root.
- {c:{n:'Briar Hound',    hp:0.88,spd:1.10,tch:0.95,r:0.95, w:{pack:48,hunter:24,roamer:16,ambusher:12},
+ {c:{n:'Briar Hound',    inf:{id:'bleed',dur:3.0},  hp:0.88,spd:1.10,tch:0.95,r:0.95, w:{pack:48,hunter:24,roamer:16,ambusher:12},
      sig:{sway:0.58,swayF:2.4,harry:72,lunge:{min:100,max:250,mul:2.5,dur:0.32,cd:2.2}}},
-  s:{n:'Grove Cultist',  hp:1.00,spd:1.00,bd:1.00,r:1.00, w:{skirmisher:40,sentinel:24,roamer:20,hunter:16}}},
+  s:{n:'Grove Cultist',  inf:{id:'weak',dur:4.0},   hp:1.00,spd:1.00,bd:1.00,r:1.00, w:{skirmisher:40,sentinel:24,roamer:20,hunter:16}}},
 
  // 4 WOLFWOOD (Lv26-32) — it is named for what hunts there. The definitive pack: they surround
  // first and commit together.
- {c:{n:'Dire Wolf',      hp:0.95,spd:1.18,tch:1.10,r:1.02, w:{pack:70,hunter:18,ambusher:8,roamer:4},
+ {c:{n:'Dire Wolf',      inf:{id:'bleed',dur:4.0},  hp:0.95,spd:1.18,tch:1.10,r:1.02, w:{pack:70,hunter:18,ambusher:8,roamer:4},
      sig:{sway:0.44,swayF:2.6,commit:90,harry:78,flank:168,collapse:230,
           lunge:{min:105,max:280,mul:2.9,dur:0.32,cd:1.9}}},
-  s:{n:'Wolfwood Seer',  hp:1.05,spd:0.98,bd:1.10,r:1.00, w:{sentinel:40,skirmisher:32,roamer:16,hunter:12}}},
+  s:{n:'Wolfwood Seer',  inf:{id:'curse',dur:5.0},  hp:1.05,spd:0.98,bd:1.10,r:1.00, w:{sentinel:40,skirmisher:32,roamer:16,hunter:12}}},
 
  // 5 DEEP TIMBER (Lv32-39) — old growth gone to rot, the Bog Horror's ground. Nothing charges you
  // here; it waits in the standing water until you are past it.
- {c:{n:'Timber Lurker',  hp:1.30,spd:0.92,tch:1.35,r:1.05, w:{ambusher:62,sentinel:20,hunter:12,pack:6},
+ {c:{n:'Timber Lurker',  inf:{id:'poison',dur:5.0}, hp:1.30,spd:0.92,tch:1.35,r:1.05, w:{ambusher:62,sentinel:20,hunter:12,pack:6},
      sig:{sway:0.68,swayF:1.6,commit:150,breakoff:2.1,rehide:280,harry:0}},
-  s:{n:'Mire Cultist',   hp:1.15,spd:0.86,bd:1.15,r:1.02, w:{sentinel:44,skirmisher:28,roamer:18,hunter:10}}},
+  s:{n:'Mire Cultist',   inf:{id:'poison',dur:5.5}, hp:1.15,spd:0.86,bd:1.15,r:1.02, w:{sentinel:44,skirmisher:28,roamer:18,hunter:10}}},
 
  // 6 STONEBROW RISE (Lv39-45) — bare rock and Stonefist's terraces. Guards, not hunters: they hold
  // a line and make you come through it.
- {c:{n:'Stone Warden',   hp:1.85,spd:0.80,tch:1.30,r:1.16, w:{sentinel:60,hunter:26,ambusher:8,roamer:6},
+ {c:{n:'Stone Warden',   inf:{id:'stun',dur:0.7},   hp:1.85,spd:0.80,tch:1.30,r:1.16, w:{sentinel:60,hunter:26,ambusher:8,roamer:6},
      sig:{sway:0.12,swayF:0.8,harry:0,lunge:null,pace:96,leash:430}},
-  s:{n:'Scree Slinger',  hp:1.25,spd:0.76,bd:1.30,r:1.05, w:{sentinel:56,skirmisher:20,hunter:16,roamer:8}}},
+  s:{n:'Scree Slinger',  inf:{id:'stun',dur:0.6},   hp:1.25,spd:0.76,bd:1.30,r:1.05, w:{sentinel:56,skirmisher:20,hunter:16,roamer:8}}},
 
  // 7 CINDERWATCH (Lv45-50) — the volcanic shelf the Crag Gargoyle roosts on. Everything here leaps.
- {c:{n:'Crag Leaper',    hp:0.80,spd:1.12,tch:1.20,r:0.94, w:{hunter:38,ambusher:26,pack:22,roamer:14},
+ {c:{n:'Crag Leaper',    inf:{id:'burn',dur:3.5},   hp:0.80,spd:1.12,tch:1.20,r:0.94, w:{hunter:38,ambusher:26,pack:22,roamer:14},
      sig:{sway:0.50,swayF:2.8,commit:90,harry:96,
           lunge:{min:120,max:340,mul:3.3,dur:0.40,cd:1.7}}},    // the longest dash in the world
-  s:{n:'Ember Cultist',  hp:1.05,spd:1.08,bd:1.05,r:0.98, w:{skirmisher:58,hunter:18,roamer:14,sentinel:10}}},
+  s:{n:'Ember Cultist',  inf:{id:'burn',dur:4.0},   hp:1.05,spd:1.08,bd:1.05,r:0.98, w:{skirmisher:58,hunter:18,roamer:14,sentinel:10}}},
 
  // 8 THE ASHFALL and the grind ring beyond it (Lv50) — burnt ground at the rift's edge. These do
  // not circle, do not break off and do not stop coming.
- {c:{n:'Ash Revenant',   hp:1.70,spd:0.90,tch:1.35,r:1.10, w:{hunter:58,sentinel:22,pack:12,roamer:8},
+ {c:{n:'Ash Revenant',   inf:{id:'burn',dur:4.5},   hp:1.70,spd:0.90,tch:1.35,r:1.10, w:{hunter:58,sentinel:22,pack:12,roamer:8},
      sig:{sway:0.24,swayF:1.1,commit:60,harry:0,
           lunge:{min:110,max:220,mul:1.9,dur:0.40,cd:3.2}}},
-  s:{n:'Core Cultist',   hp:1.30,spd:0.88,bd:1.40,r:1.06, w:{sentinel:44,skirmisher:30,hunter:16,roamer:10}}},
+  s:{n:'Core Cultist',   inf:{id:'burn',dur:5.0},   hp:1.30,spd:0.88,bd:1.40,r:1.06, w:{sentinel:44,skirmisher:30,hunter:16,roamer:10}}},
 ];
 function mobSpec(band,t){ const S=MOBSPEC[Math.max(0,Math.min(MOBSPEC.length-1,band|0))];
   return S?S[t==='s'?'s':'c']:null; }
@@ -1016,7 +1016,7 @@ function makeEnemy(sp){
     e.band=Math.max(0,Math.min(MOBSPEC.length-1,_bd));
     const S=mobSpec(e.band,e.type);
     if(S){
-      e.spn=S.n; e.sig=S.sig||null;
+      e.spn=S.n; e.sig=S.sig||null; e.inf=S.inf||null;   // what it leaves on you when it connects
       if(S.hp) e.hp*=S.hp;
       if(S.spd) e.spd*=S.spd;
       if(S.tch&&e.touch) e.touch*=S.tch;

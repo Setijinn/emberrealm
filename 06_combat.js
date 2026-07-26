@@ -58,6 +58,64 @@ function tickStatuses(e,dt){ if(!e.st) return true;
  return act; }
 function statusDmgOut(e){ return hasStatus(e,'weak')?0.7:1; }                       // weakened hit softer
 function statusDmgIn(e){ return hasStatus(e,'curse')?(1+(e.st.curse.v||0.15)):1; }  // cursed take more
+
+// ===== THE SAME NINE STATUSES, ON THE PLAYER (user, 2026-07-26) =====
+// Statuses only ever existed on enemies: the whole vocabulary was something you did TO the world
+// and nothing the world could do back. These are the mirror, deliberately built from the same
+// table and the same rules so "burn" means one thing in this game and not two.
+// Differences from the enemy side, and why:
+//   - a DoT on the player is a fraction of MAX HP per second, not a flat number. Enemy DoTs are
+//     tuned against your damage; a flat value carried across a 100-level HP curve would be lethal
+//     at Lv1 and unnoticeable at Lv50.
+//   - freeze/stun cost you your ACTIONS (firing and casting), not a movement lock you cannot see
+//     the end of. Being unable to act is already the harshest thing in a game about dodging.
+//   - every application is capped in duration. A stun-lock you cannot escape is not difficulty.
+const PSTAT={
+  burn:  {dot:0.022, cap:6},
+  poison:{dot:0.014, cap:9},
+  bleed: {dot:0.018, cap:6},
+  shock: {dot:0.020, cap:5},
+  chill: {cap:5},          // -35% move
+  freeze:{cap:1.6},        // cannot act; short by design
+  stun:  {cap:1.4},        // cannot act
+  weak:  {cap:6},          // -30% damage you deal
+  curse: {cap:8},          // +damage you take
+};
+function playerStatus(id,dur,val){
+  if(!PSTAT[id]) return;
+  if(player.inv>0 && (id==='freeze'||id==='stun')) return;   // i-frames stop control loss outright
+  if(!player.st) player.st={};
+  const cap=PSTAT[id].cap, d=Math.min(dur||0,cap);
+  const s=player.st[id];
+  if(s){ s.t=Math.max(s.t,d); s.v=Math.max(s.v||0,val||0); }
+  else player.st[id]={t:d,v:val||0};
+  if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,
+    txt:id.toUpperCase(),col:(STATUS[id]&&STATUS[id].col)||'#fff',life:0.7});
+}
+function playerHas(id){ return !!(player.st&&player.st[id]&&player.st[id].t>0); }
+// true if the player may act this frame (fire / cast). Called by fire() and doAbility().
+function playerCanAct(){ return !(playerHas('freeze')||playerHas('stun')); }
+function playerSpdMul(){ return playerHas('chill')?0.65:1; }
+function playerDmgMul(){ return playerHas('weak')?0.70:1; }
+function playerDmgTaken(){ return playerHas('curse')?(1+(player.st.curse.v||0.15)):1; }
+function tickPlayerStatuses(dt){
+  if(!player.st) return;
+  for(const id in player.st){ const s=player.st[id];
+    s.t-=dt;
+    const P=PSTAT[id];
+    if(P&&P.dot&&player.hp>0){
+      // straight to hp: a DoT must not re-enter damagePlayer, or it would spend the i-frames that
+      // exist to stop CONTACT chip damage and you could stand in a boss with impunity while burning
+      player.hp-=player.maxhp*P.dot*dt;
+      if(player.hp<1&&player.hp>0) player.hp=1;   // a lingering tick never lands the killing blow
+    }
+    if(typeof emitP==='function'&&Math.random()<5*dt){ const c=STATUS[id];
+      if(c) emitP(player.x+(Math.random()*22-11),player.y-8,
+        {vx:0,vy:id==='burn'?-26:-14,life:0.5,col:c.col,sz:2,glow:id==='burn'||id==='shock'}); }
+    if(s.t<=0) delete player.st[id];
+  }
+}
+function clearPlayerStatuses(){ player.st={}; }
 // ===== ONE funnel for every point of PLAYER-SOURCE damage =====
 // Shots, abilities, zones, minions and perk procs all land here, so the multipliers that
 // should apply everywhere (curse / execute / shatter, lifesteal) and the on-hit perk
@@ -120,6 +178,7 @@ function aimPoint(e,spd,life){
 function fire(dt){
   player.fireT-=dt;
   if(player.fireT>0) return;
+  if(!playerCanAct()) return;              // frozen / stunned: the shot does not go off
   const wt=player.wt||WTYPE.sword;
   let ang=null;
   // Manual aim (PC opt-in, Settings toggle): fire straight toward the cursor with
@@ -153,7 +212,7 @@ function fire(dt){
   const de3=player.deadeye>0;
   const critC=(player.crit||0)+((typeof dynCrit==='function')?dynCrit():0);
   const crit=Math.random()<critC;                     // LUCK + conditional perks -> crit chance
-  let dm=player.dmg*(wt.dm||1)*(player.bDmgT>0?(player.bDmgM||1.5):1)*((typeof dynAtk==='function')?dynAtk():1);
+  let dm=player.dmg*(wt.dm||1)*(player.bDmgT>0?(player.bDmgM||1.5):1)*((typeof dynAtk==='function')?dynAtk():1)*playerDmgMul();
   if(crit) dm*=(player.critMult||1.5);
   let pr=(wt.pierce||0)+(player.pierce||0);
   if(de3){ dm*=3; pr=99; }
@@ -199,7 +258,8 @@ function eFire(e,ang,spd=200){
   // per-family forged look: each boss by name, mobs by type + level bracket
   const pk='e:'+(e.name?('B_'+e.name):(e.type+'_'+Math.floor((e.lv||1)/12)));
   eShots.push({x:e.x,y:e.y,px:e.x,py:e.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
-    r:e.psize||6,life:3,bd:(e.bd||8)*statusDmgOut(e),col:e.pcol||null,core:e.pcore||null,shape:e.pshape||null,pk:pk});
+    r:e.psize||6,life:3,bd:(e.bd||8)*statusDmgOut(e),col:e.pcol||null,core:e.pcore||null,shape:e.pshape||null,pk:pk,
+    inf:e.inf||null});   // the caster's affliction rides the bolt
 }
 function boom(x,y,col,n=10){
   for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=40+Math.random()*120;

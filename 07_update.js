@@ -243,7 +243,7 @@ function healPlayer(amt){ if(!amt||amt<=0) return;
       try{ aoe(player.x,player.y,90,Math.round(Math.min(over*2,player.maxhp*0.45)),'#c0392b'); }
       finally{ _inBloodNova=false; } } } }
 // damage to the player through Juggernaut (less while moving), shields, Nightblade (vanish)
-function damagePlayer(raw){ let hit=raw;
+function damagePlayer(raw){ let hit=raw*playerDmgTaken();   // cursed players take more, same as foes
   if(player.moveDr&&player._moving) hit*=(1-player.moveDr);
   if(typeof dynDr==='function') hit*=(1-dynDr());          // conditional perks (below X% HP, ...)
   hit=Math.max(1,Math.round(hit));
@@ -349,16 +349,12 @@ function enemyAI(e,dx,dy,dd,dt){
     }
     // inside the lunge band with the dash on cooldown: HARRY. Orbit at bite range and wait for
     // the opening instead of pressing in and standing on the player as a contact-damage aura.
-    if(B.harry && dd<L.min){
-      // 0.5 rad of lead, not more: steering at a point far around the circle cuts the chord and
-      // spirals the orbit inward, which lands it back on top of the player anyway.
-      // Falls THROUGH to separation below — five hounds orbiting the same circle at the same
-      // radius in the same direction is one hound as far as the player can tell.
-      const a=Math.atan2(e.y-player.y,e.x-player.x)+(e.wp>3.14?1:-1)*0.5;
-      tx=player.x+Math.cos(a)*B.harry; ty=player.y+Math.sin(a)*B.harry; smul=1.15;
-      harrying=true;
-    }
-    if(e.lungeCd<=0 && dd>L.min && dd<L.max*cor){
+    // The LUNGE is tested before the harry, and its lower bound is a body-space check rather than
+    // L.min. Ordered the other way (harry first, lunge only when dd>L.min) every harrying creature
+    // deadlocked: its orbit radius sits INSIDE its own lunge band, so after the first dash it could
+    // never satisfy dd>L.min again and circled at bite range forever without ever attacking.
+    // Now it orbits only while the dash is cooling and commits the moment it is ready.
+    if(e.lungeCd<=0 && dd>28 && dd<L.max*cor){
       e.lungeT=L.dur; e.lungeCd=L.dur+(L.cd/cor)*(0.8+Math.random()*0.4);
       // aim the dash PAST the player so it carries through rather than stopping on contact
       e.lx=player.x+(dx/dd)*70; e.ly=player.y+(dy/dd)*70;
@@ -368,6 +364,21 @@ function enemyAI(e,dx,dy,dd,dt){
       if(typeof emitP==='function') for(let i=0;i<5;i++){ const a=Math.atan2(-dy,-dx)+(Math.random()-0.5)*1.2;
         emitP(e.x,e.y+6,{vx:Math.cos(a)*90,vy:Math.sin(a)*90-20,life:0.4,col:'#9a8a74',sz:2.5}); }
       return {tx:e.lx,ty:e.ly,smul:L.mul,move:true,lunging:true};
+    }
+    // dash still cooling and we are already at bite range: HARRY. Circle and wait for the opening
+    // instead of pressing in and standing on the player as a contact-damage aura.
+    // 0.5 rad of lead, not more: steering at a point far around the circle cuts the chord and
+    // spirals the orbit inward, which lands it back on top of the player anyway. Falls THROUGH to
+    // separation below — five hounds orbiting the same circle in lockstep read as one hound.
+    if(B.harry && dd<L.min){
+      // A dash aims 70px PAST you, so it ends the lunge standing on top of you — where atan2 of a
+      // 1px offset is meaningless and the orbit target jitters randomly, pinning it there forever
+      // (it can neither harry out nor re-enter its own lunge band). Below ~14px, drive the angle
+      // off the gait clock instead: a stable bearing it can actually walk out on.
+      const a=((dd>14)?Math.atan2(e.y-player.y,e.x-player.x):(e.wp+e.aiT*1.6))
+              +(e.wp>3.14?1:-1)*0.5;
+      tx=player.x+Math.cos(a)*B.harry; ty=player.y+Math.sin(a)*B.harry; smul=1.15;
+      harrying=true;
     }
   }
   // Separation. Nothing in this game gives enemies a body that other enemies collide with, so a
@@ -404,8 +415,10 @@ let _pmove=false;   // true only while the PLAYER is being moved (Pathwarden ter
 function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
+  tickPlayerStatuses(dt);                       // burn/poison/bleed/shock tick, chill/weak/curse apply
+  const frozen=!playerCanAct();                 // freeze and stun cost you the frame entirely
   const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1)
-    *((typeof dynSpd==='function')?dynSpd():1);
+    *((typeof dynSpd==='function')?dynSpd():1)*playerSpdMul()*(frozen?0:1);
   player._moving=false; _pmove=true;
   if(m.id!==null){
     const d=Math.hypot(m.dx,m.dy)||1;
@@ -498,6 +511,7 @@ function update(dt){
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt); }
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
       if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e)*(1-(player.dr||0)));
+        if(e.inf) playerStatus(e.inf.id,e.inf.dur,0);        // what this creature leaves on you
         player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
         const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
         if(_th>0){ const rf=Math.round(hit*_th*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
@@ -628,6 +642,8 @@ function update(dt){
       if(typeof netReportHit==='function') netReportHit(e,dmg,s.crit);
       s.lastHit=e; chargeRes('hit');
       if(s.slow) applyStatus(e,'chill',1,0);
+      // the ability that threw this shot brands what it HIT, not what stood near the caster
+      if(s.st) applyStatus(e,s.st.id,s.st.dur,s.st.valPct?Math.round(dmg*s.st.valPct):(s.st.val||0));
       // ---- on-hit capstones (all through the unified status system) ----
       if(player.burnHit) applyStatus(e,'burn',3,dmg*player.burnHit/3);
       if(player.poisonHit) applyStatus(e,'poison',4,dmg*player.poisonHit/4);
@@ -707,7 +723,11 @@ function update(dt){
     if(!_netCl){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
       if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; } }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
-      damagePlayer((s.bd||8)*(1-(player.dr||0))); player.inv=Math.max(player.inv,0.35); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
+      damagePlayer((s.bd||8)*(1-(player.dr||0)));
+      // the shot carries whatever its caster inflicts — a Sawgrass Spitter's bolt poisons you the
+      // same way your poison bolts poison it. Stamped at eFire from the species.
+      if(s.inf) playerStatus(s.inf.id,s.inf.dur,0);
+      player.inv=Math.max(player.inv,0.35); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
   }
   // particles (gravity + drag are optional per-particle fields)
   for(let i=particles.length-1;i>=0;i--){ const p=particles[i];
@@ -917,6 +937,7 @@ function update(dt){
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0;
+    clearPlayerStatuses();
     const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE); spawnPet(); }
   document.getElementById('hpTxt').textContent='HP '+Math.ceil(player.hp);
 }

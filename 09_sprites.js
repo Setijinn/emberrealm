@@ -1267,6 +1267,21 @@ function render(){
       const tsz=al.spr==='wisp'?26:al.spr==='wolf'?36:32;
       blit(aim,al.x,al.y+bob,tsz/Math.max(aim.width,aim.height),player.x<al.x); }
     else blit(al.spr==='wolf'?sprWolf:al.spr==='skel'?sprSkel:sprWisp,al.x,al.y,al.spr==='wisp'?2.2:1.6,player.x<al.x); }
+  // what is currently ON you: a row of coloured pips above the head, longest-remaining first, with
+  // the bar draining. Statuses that take your controls (freeze/stun) sit first and pulse, because
+  // "why can't I move" has to be answerable in the half second you have to read it.
+  if(player.st){ const ids=Object.keys(player.st).filter(k=>player.st[k].t>0);
+    if(ids.length){
+      ids.sort((a,b)=>((a==='freeze'||a==='stun')?-1:0)-((b==='freeze'||b==='stun')?-1:0)||player.st[b].t-player.st[a].t);
+      const w=14, gap=3, tot=ids.length*w+(ids.length-1)*gap;
+      let bx=player.x-tot/2, by=player.y-46;
+      for(const id of ids){ const s=player.st[id], C=(STATUS[id]&&STATUS[id].col)||'#fff';
+        const lock=(id==='freeze'||id==='stun');
+        const cap=(typeof PSTAT!=='undefined'&&PSTAT[id])?PSTAT[id].cap:5;
+        ctx.globalAlpha=lock?(0.75+0.25*Math.sin(performance.now()/90)):0.9;
+        ctx.fillStyle='rgba(8,6,10,0.72)'; ctx.fillRect(bx-1,by-1,w+2,7);
+        ctx.fillStyle=C; ctx.fillRect(bx,by,Math.max(1,Math.round(w*Math.min(1,s.t/cap))),5);
+        ctx.globalAlpha=1; bx+=w+gap; } } }
   // ascension shield (Bishop/Warden/Guardian/Soulflayer): cyan ward ring while charged
   if((player.shield||0)>0){ const sf=Math.min(1,player.shield/(player.maxhp*0.2));
     const r=26+Math.sin(performance.now()/200)*2, n=Math.max(20,Math.round(r*0.9)), base=0.25+sf*0.35;

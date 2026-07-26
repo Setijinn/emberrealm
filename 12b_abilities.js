@@ -49,9 +49,13 @@ function abilFx(kind,x,y,col,ang){
 // def, so perks can target a whole family of abilities ({kind:'dash'}) rather than one id.
 function K(kind,fn){ fn.kind=kind; return fn; }
 const P = {
- fan:(n,sp,spd,dm,col,r,life,pc)=>(c)=>{ const a0=c.aim;
+ // st (optional, last arg on the projectile primitives) rides ON the shot and lands when it
+ // connects, so an ability that throws something brands what it actually HIT rather than
+ // everything that happened to be standing near the caster. {id,dur,valPct} — valPct ties a
+ // damage-over-time to the damage dealt, so it scales with the character instead of going stale.
+ fan:(n,sp,spd,dm,col,r,life,pc,st)=>(c)=>{ const a0=c.aim;
    for(let i=0;i<n;i++){ const sa=a0+(i-(n-1)/2)*sp;
-     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*spd,vy:Math.sin(sa)*spd,r:r,life:life,dmg:Math.round(c.dmg*dm*c.AP),pierce:pc||0,lastHit:null}); }
+     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*spd,vy:Math.sin(sa)*spd,r:r,life:life,dmg:Math.round(c.dmg*dm*c.AP),pierce:pc||0,lastHit:null,st:st||null}); }
    abilFx('fan',player.x,player.y,col,a0); },
  nova:(rad,dm,col,slow)=>(c)=>{ fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.38,col:col});
    for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ dealDamage(e,c.dmg*dm*c.AP,{ability:true,col:col}); if(slow)applyStatus(e,'chill',slow,0); } }
@@ -69,8 +73,8 @@ const P = {
      emitP(ox+(player.x-ox)*t,oy+(player.y-oy)*t,
        {vx:0,vy:0,life:0.3+t*0.15,col:col||'#c9d2da',sz:3.5,glow:true});
    if(player.dashBlast) aoe(player.x,player.y,80,Math.round(c.dmg*1.2*c.AP),'#e8b34b'); }, // Skylord crater
- whirl:(n,dm,col,spd,life)=>(c)=>{ for(let i=0;i<n;i++){ const sa=i*6.283/n;
-     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*(spd||420),vy:Math.sin(sa)*(spd||420),r:7,life:life||0.5,dmg:Math.round(c.dmg*dm*c.AP),pierce:0,lastHit:null}); }
+ whirl:(n,dm,col,spd,life,st)=>(c)=>{ for(let i=0;i<n;i++){ const sa=i*6.283/n;
+     pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(sa)*(spd||420),vy:Math.sin(sa)*(spd||420),r:7,life:life||0.5,dmg:Math.round(c.dmg*dm*c.AP),pierce:0,lastHit:null,st:st||null}); }
    abilFx('whirl',player.x,player.y,col); },
  chain:(n,dm,col)=>(c)=>{ const s=enemies.slice().sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y)).slice(0,n);
    const pts=[{x:player.x,y:player.y}];
@@ -90,6 +94,13 @@ const P = {
    player.hp=Math.min(player.maxhp,player.hp+n*healPer*c.AP); fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.35,col:col}); abilFx('drain',player.x,player.y,col); },
  spirit:(dur)=>(c)=>{ player.spiritT=dur*(1+(player.spiritDur||0));   // Spiritcaller lingering
    player.spiritAP=c.AP; abilFx('summon',player.x,player.y); },
+ // brand everything in a radius with a status and no damage of its own — the primitive for
+ // abilities whose POINT is the affliction (a curse, a plague, a cry that shakes the nerve).
+ // Combines with the damaging ones through P.combo, so a blast can leave its mark behind it.
+ brand:(rad,id,dur,valPct,col,atCast)=>(c)=>{ const cx=atCast?c.x:player.x, cy=atCast?c.y:player.y;
+   fx.push({t:'ring',x:cx,y:cy,r:rad,life:0.34,col:col||(STATUS[id]&&STATUS[id].col)||'#c07ad4'});
+   for(const e of enemies){ if(Math.hypot(e.x-cx,e.y-cy)<rad)
+     applyStatus(e,id,dur,valPct?Math.round(c.dmg*valPct*c.AP):0); } },
  combo:(...fns)=>(c)=>{ for(const f of fns) f(c); },
 };
 // stamp the kind on every cast closure without touching the bodies above; a combo carries
@@ -105,123 +116,123 @@ function A(id,name,mp,cd,icon,desc,cast,ground){ return {id:id,name:name,mp:mp,c
 // ----- per-class ability pools (first 3 = default loadout) -----
 const APOOL = {
  ranger:[
-  A('ranger_volley','Volley',24,10,'🏹','12-arrow fan along your aim',P.fan(12,0.12,640,1,'#7dc47a',5,1.1,0)),
+  A('ranger_volley','Volley',24,10,'🏹','12-arrow fan along your aim',P.fan(12,0.12,640,1,'#7dc47a',5,1.1,0,{id:'bleed',dur:3,val:2})),
   A('ranger_pierce','Piercing Shot',16,5,'➶','One arrow, pierces everything',P.fan(1,0,940,3,'#7dc47a',6,1.4,99)),
   A('ranger_rain','Arrow Rain',26,11,'☔','A volley crashes down at the target',P.blast(120,2.6,'#7dc47a'),true),
   A('ranger_sprint','Sprint',12,7,'💨','+60% move speed for 4s',P.buff('bSpd',1.6,4)),
   A('ranger_snare','Snare Volley',20,9,'❄️','Slow + damage at the target',P.blast(110,1.4,'#9ad4ef',2.5),true),
  ],
  pyro:[
-  A('pyro_deto','Detonate',26,10,'🔥','Fiery blast around you',P.nova(170,3,'#ff7a3d')),
-  A('pyro_fireball','Fireball',18,5,'☄️','Explosion at the target',P.blast(120,3.2,'#ff7a3d'),true),
-  A('pyro_flames','Flame Fan',16,6,'🌋','Cone of piercing embers',P.fan(7,0.14,560,1.3,'#ff7a3d',6,0.7,1)),
+  A('pyro_deto','Detonate',26,10,'🔥','Fiery blast around you',P.combo(P.nova(170,3,'#ff7a3d'),P.brand(170,'burn',5,0.24,'#ffb347'))),
+  A('pyro_fireball','Fireball',18,5,'☄️','Explosion at the target',P.combo(P.blast(120,3.2,'#ff7a3d'),P.brand(120,'burn',4,0.20,'#ffb347',1)),true),
+  A('pyro_flames','Flame Fan',16,6,'🌋','Cone of piercing embers',P.fan(7,0.14,560,1.3,'#ff7a3d',6,0.7,1,{id:'burn',dur:4,valPct:0.22})),
   A('pyro_immol','Immolate',20,9,'♨️','Burning ring that slows',P.nova(150,2,'#ff7a3d',1.5)),
   A('pyro_dash','Ember Dash',12,6,'💨','Blink through foes',P.dash(160,1,'#ff7a3d')),
  ],
  knight:[
   A('knight_bulwark','Bulwark',22,12,'🛡️','4s invulnerable',P.invuln(4)),
-  A('knight_slam','Shield Slam',16,6,'💥','Shockwave at the target',P.blast(110,2.4,'#c9d2da'),true),
-  A('knight_whirl','Sweeping Blow',18,7,'🌀','Ring of steel around you',P.whirl(12,1.4,'#c9d2da',400,0.5)),
+  A('knight_slam','Shield Slam',16,6,'💥','Shockwave at the target',P.combo(P.blast(110,2.4,'#c9d2da'),P.brand(110,'stun',0.9,0,'#ffe08a',1)),true),
+  A('knight_whirl','Sweeping Blow',18,7,'🌀','Ring of steel around you',P.whirl(12,1.4,'#c9d2da',400,0.5,{id:'bleed',dur:3,val:2})),
   A('knight_rally','Rally',14,10,'💪','+50% damage for 5s',P.buff('bDmg',1.5,5)),
   A('knight_charge','Charge',12,6,'⚡','Dash forward',P.dash(170,0.8,'#c9d2da')),
  ],
  rogue:[
   A('rogue_step','Shadowstep',14,6,'🌑','Blink forward, untouchable',P.dash(150,1.2,'#c07ad4')),
-  A('rogue_fan','Fan of Knives',18,7,'🔪','Spread of daggers',P.fan(9,0.16,620,1.1,'#c07ad4',5,0.7,0)),
+  A('rogue_fan','Fan of Knives',18,7,'🔪','Spread of daggers',P.fan(9,0.16,620,1.1,'#c07ad4',5,0.7,0,{id:'bleed',dur:3,val:2})),
   A('rogue_mark','Deathmark',20,11,'🎯','+120% damage + evade, 4s',P.buff('bDmg',2.2,4,0.8)),
   A('rogue_smoke','Smoke Bomb',16,9,'💨','Vanish; slow ring',P.combo(P.invuln(1.2),P.nova(140,1,'#c07ad4',2))),
-  A('rogue_poison','Poison Vial',16,8,'☠️','Toxic blast at the target',P.blast(110,2.2,'#8fd48c'),true),
+  A('rogue_poison','Poison Vial',16,8,'☠️','Toxic blast at the target',P.combo(P.blast(110,2.2,'#8fd48c'),P.brand(110,'poison',6,0.20,'#7dc47a',1)),true),
  ],
  assassin:[
   A('assassin_mark','Deathmark',20,11,'🎯','+120% damage + evade, 4s',P.buff('bDmg',2.2,4,0.8)),
   A('assassin_blink','Blink',12,5,'🌑','Dash, brief evade',P.dash(160,1,'#c0304a')),
-  A('assassin_exec','Execute',22,9,'☠️','Heavy blast at the target',P.blast(100,3.4,'#c0304a'),true),
-  A('assassin_fan','Shadow Fan',16,6,'🔪','Dagger spread',P.fan(7,0.14,660,1.2,'#c0304a',5,0.7,0)),
+  A('assassin_exec','Execute',22,9,'☠️','Heavy blast at the target',P.combo(P.blast(100,3.4,'#c0304a'),P.brand(100,'weak',5,0,'#8a8494',1)),true),
+  A('assassin_fan','Shadow Fan',16,6,'🔪','Dagger spread',P.fan(7,0.14,660,1.2,'#c0304a',5,0.7,0,{id:'bleed',dur:4,val:3})),
   A('assassin_veil','Veil',14,9,'👤','Vanish (invuln 2s)',P.invuln(2)),
  ],
  cleric:[
   A('cleric_sanct','Sanctuary',26,12,'✨','Full heal',P.heal(1)),
-  A('cleric_smite','Smite',18,6,'🌟','Holy blast at the target',P.blast(120,2.6,'#fff0c0'),true),
+  A('cleric_smite','Smite',18,6,'🌟','Holy blast at the target',P.combo(P.blast(120,2.6,'#fff0c0'),P.brand(120,'weak',5,0,'#8a8494',1)),true),
   A('cleric_ward','Ward',16,9,'🛡️','Invulnerable 2.5s',P.invuln(2.5)),
   A('cleric_mend','Mend',14,6,'💛','Heal 35%',P.heal(0.35)),
   A('cleric_ground','Consecrate',20,10,'⛪','Holy ground at the target',P.zone(100,6,'#fff0c0'),true),
  ],
  berserker:[
-  A('berserker_whirl','Whirlwind',24,10,'🌀','16-blade ring',P.whirl(16,1.2,'#e2604c',420,0.5)),
+  A('berserker_whirl','Whirlwind',24,10,'🌀','16-blade ring',P.whirl(16,1.2,'#e2604c',420,0.5,{id:'bleed',dur:4,val:3})),
   A('berserker_rage','Rage',14,9,'💢','+60% damage for 5s',P.buff('bDmg',1.6,5)),
   A('berserker_leap','Leap',16,6,'💥','Dash then slam',P.combo(P.dash(160,0.6,'#e2604c'),P.nova(120,2,'#e2604c'))),
-  A('berserker_quake','Quake',20,9,'⛰️','Earthshock at the target',P.blast(140,2.4,'#e2604c'),true),
+  A('berserker_quake','Quake',20,9,'⛰️','Earthshock at the target',P.combo(P.blast(140,2.4,'#e2604c'),P.brand(140,'stun',0.8,0,'#ffe08a',1)),true),
   A('berserker_frenzy','Frenzy',16,8,'⚔️','+50% attack speed, 6s',P.buff('bRof',1.5,6)),
  ],
  warlock:[
   A('warlock_burst','Soulburst',24,10,'💜','Drain all nearby foes',P.drain(200,2,'#8a5ac0',15)),
-  A('warlock_bolt','Shadow Bolt',14,4,'🟣','Piercing bolt',P.fan(1,0,760,2.4,'#8a5ac0',7,1.3,99)),
+  A('warlock_bolt','Shadow Bolt',14,4,'🟣','Piercing bolt',P.fan(1,0,760,2.4,'#8a5ac0',7,1.3,99,{id:'curse',dur:5})),
   A('warlock_imps','Summon Imps',20,12,'👿','2 imps fight for you, 12s',P.summon('skel',2,0.9,12)),
-  A('warlock_curse','Curse',18,8,'☠️','Blast + slow at the target',P.blast(130,2,'#8a5ac0',2),true),
+  A('warlock_curse','Curse',18,8,'☠️','Blast + slow at the target',P.combo(P.blast(130,2,'#8a5ac0',2),P.brand(150,'curse',7,0,'#c07ad4',1)),true),
   A('warlock_tap','Life Tap',14,7,'🩸','Drain ring, heal per foe',P.drain(150,1.4,'#8a5ac0',12)),
  ],
  frost:[
-  A('frost_nova','Winter Nova',24,10,'❄️','Freeze everything near',P.nova(220,1,'#9ad4ef',3)),
+  A('frost_nova','Winter Nova',24,10,'❄️','Freeze everything near',P.combo(P.nova(220,1,'#9ad4ef',3),P.brand(220,'freeze',1.6,0,'#d8f0fa'))),
   A('frost_bolt','Frostbolt',14,4,'🔵','Piercing chill bolt',(c)=>{const a=c.aim; pShots.push({x:player.x,y:player.y,px:player.x,py:player.y,vx:Math.cos(a)*720,vy:Math.sin(a)*720,r:6,life:1.3,dmg:Math.round(c.dmg*2.2*c.AP),pierce:99,lastHit:null,slow:true});}),
   A('frost_blizzard','Blizzard',22,10,'🌨️','Chilling blast at the target',P.blast(150,2,'#9ad4ef',3),true),
   A('frost_shield','Ice Barrier',16,9,'🛡️','Invulnerable 2.5s',P.invuln(2.5)),
-  A('frost_lance','Ice Lance',16,6,'🧊','Cone of shards',P.fan(5,0.12,640,1.5,'#9ad4ef',6,0.9,1)),
+  A('frost_lance','Ice Lance',16,6,'🧊','Cone of shards',P.fan(5,0.12,640,1.5,'#9ad4ef',6,0.9,1,{id:'chill',dur:3})),
  ],
  storm:[
   A('storm_chain','Chain Storm',24,10,'⚡','Lightning arcs to 6 foes',P.chain(6,2.5,'#ffe9b0')),
-  A('storm_strike','Thunderstrike',20,8,'🌩️','Bolt strikes the target',P.blast(120,2.8,'#ffe9b0'),true),
+  A('storm_strike','Thunderstrike',20,8,'🌩️','Bolt strikes the target',P.combo(P.blast(120,2.8,'#ffe9b0'),P.brand(120,'stun',0.9,0,'#ffe08a',1)),true),
   A('storm_bolt','Lightning',14,4,'⚡','Arcs to 3 foes',P.chain(3,2,'#ffe9b0')),
   A('storm_rush','Static Rush',12,7,'💨','+60% move speed, 4s',P.buff('bSpd',1.6,4)),
-  A('storm_nova','Static Nova',20,9,'🔆','Shock ring around you',P.nova(180,2,'#ffe9b0')),
+  A('storm_nova','Static Nova',20,9,'🔆','Shock ring around you',P.combo(P.nova(180,2,'#ffe9b0'),P.brand(180,'shock',5,0.18,'#5a9cc0'))),
  ],
  hunter:[
   A('hunter_pack','Wolfpack',22,12,'🐺','2 wolves fight for you, 10s',P.summon('wolf',2,0.8,10)),
   A('hunter_shot','Piercing Shot',14,5,'➶','Arrow pierces everything',P.fan(1,0,940,3,'#7dc47a',6,1.4,99)),
-  A('hunter_trap','Snare',18,9,'🕸️','Slow blast at the target',P.blast(120,1.6,'#7dc47a',2.5),true),
-  A('hunter_volley','Volley',22,10,'🏹','10-arrow fan',P.fan(10,0.13,640,1,'#7dc47a',5,1.1,0)),
+  A('hunter_trap','Snare',18,9,'🕸️','Slow blast at the target',P.combo(P.blast(120,1.6,'#7dc47a',2.5),P.brand(120,'stun',0.7,0,'#ffe08a',1)),true),
+  A('hunter_volley','Volley',22,10,'🏹','10-arrow fan',P.fan(10,0.13,640,1,'#7dc47a',5,1.1,0,{id:'bleed',dur:3,val:2})),
   A('hunter_sprint','Sprint',12,7,'💨','+60% move speed, 4s',P.buff('bSpd',1.6,4)),
  ],
  monk:[
   A('monk_zephyr','Zephyr',16,8,'💨','+80% speed + dodge, 5s',P.buff('bSpd',1.8,5,1.5)),
-  A('monk_palm','Palm Strike',14,4,'🖐️','Force blast at the target',P.blast(100,2.4,'#7ab8d4'),true),
-  A('monk_flurry','Flurry',16,6,'👊','Ring of fists',P.whirl(10,1.2,'#7ab8d4',380,0.45)),
+  A('monk_palm','Palm Strike',14,4,'🖐️','Force blast at the target',P.combo(P.blast(100,2.4,'#7ab8d4'),P.brand(100,'stun',0.8,0,'#ffe08a',1)),true),
+  A('monk_flurry','Flurry',16,6,'👊','Ring of fists',P.whirl(10,1.2,'#7ab8d4',380,0.45,{id:'weak',dur:4})),
   A('monk_calm','Meditate',16,10,'🧘','Heal 40%',P.heal(0.4)),
   A('monk_dash','Wind Dash',12,5,'🌀','Dash, evade',P.dash(170,1,'#7ab8d4')),
  ],
  paladin:[
   A('paladin_conse','Consecrate',22,10,'⛪','Holy ground for 6s',P.zone(95,6,'#ffd07a'),true),
-  A('paladin_smite','Smite',16,5,'🌟','Holy blast at the target',P.blast(120,2.6,'#ffd07a'),true),
+  A('paladin_smite','Smite',16,5,'🌟','Holy blast at the target',P.combo(P.blast(120,2.6,'#ffd07a'),P.brand(120,'burn',4,0.18,'#ffb347',1)),true),
   A('paladin_shield','Divine Shield',20,12,'🛡️','Invulnerable 3.5s',P.invuln(3.5)),
   A('paladin_heal','Lay on Hands',18,10,'💛','Heal 45%',P.heal(0.45)),
   A('paladin_zeal','Zeal',14,9,'✨','+50% damage for 5s',P.buff('bDmg',1.5,5)),
  ],
  necro:[
   A('necro_raise','Raise Dead',22,12,'💀','2 skeletons, 12s',P.summon('skel',2,0.9,12)),
-  A('necro_bolt','Bone Spear',14,4,'🦴','Piercing bolt',P.fan(1,0,760,2.4,'#8fd48c',7,1.3,99)),
-  A('necro_nova','Death Nova',22,10,'☠️','Ring of decay',P.nova(180,2,'#8fd48c')),
+  A('necro_bolt','Bone Spear',14,4,'🦴','Piercing bolt',P.fan(1,0,760,2.4,'#8fd48c',7,1.3,99,{id:'poison',dur:5,valPct:0.18})),
+  A('necro_nova','Death Nova',22,10,'☠️','Ring of decay',P.combo(P.nova(180,2,'#8fd48c'),P.brand(180,'poison',7,0.22,'#7dc47a'))),
   A('necro_blast','Corpse Blast',18,8,'🟢','Blast at the target',P.blast(130,2.6,'#8fd48c'),true),
   A('necro_siphon','Siphon',16,8,'🩸','Drain ring, heal per foe',P.drain(160,1.4,'#8fd48c',12)),
  ],
  bard:[
   A('bard_cresc','Crescendo',18,10,'🎵','+50% attack speed, 6s',P.buff('bRof',1.5,6)),
-  A('bard_note','Sonic Shot',14,4,'🎶','Piercing note',P.fan(1,0,820,2.2,'#c07ad4',6,1.2,99)),
+  A('bard_note','Sonic Shot',14,4,'🎶','Piercing note',P.fan(1,0,820,2.2,'#c07ad4',6,1.2,99,{id:'weak',dur:4})),
   A('bard_march','March',12,7,'💨','+60% move speed, 4s',P.buff('bSpd',1.6,4)),
   A('bard_rest','Rest',16,9,'💛','Heal 35%',P.heal(0.35)),
-  A('bard_discord','Discord',20,9,'🔊','Blast + slow at the target',P.blast(130,2,'#c07ad4',2),true),
+  A('bard_discord','Discord',20,9,'🔊','Blast + slow at the target',P.combo(P.blast(130,2,'#c07ad4',2),P.brand(160,'weak',6,0,'#8a8494',1)),true),
  ],
  shaman:[
   A('shaman_ring','Spirit Ring',22,12,'🌀','8 orbiting wards, 8s',P.spirit(8)),
   A('shaman_bolt','Spirit Bolt',14,4,'🔷','Piercing bolt',P.fan(1,0,760,2.2,'#7ab8d4',6,1.3,99)),
   A('shaman_mend','Ancestral Mend',16,9,'💧','Heal 40%',P.heal(0.4)),
-  A('shaman_nova','Tempest',20,9,'🌊','Shock ring that slows',P.nova(180,2,'#7ab8d4',1.5)),
+  A('shaman_nova','Tempest',20,9,'🌊','Shock ring that slows',P.combo(P.nova(180,2,'#7ab8d4',1.5),P.brand(180,'shock',5,0.16,'#5a9cc0'))),
   A('shaman_chain','Spirit Link',18,8,'⚡','Arcs to 4 foes',P.chain(4,2.2,'#7ab8d4')),
  ],
  dragoon:[
   A('dragoon_sky','Skyfall',22,11,'🌠','Leap and crater the ground',P.combo(P.dash(160,0.6,'#e07a2e'),P.nova(130,2.2,'#e07a2e'))),
   A('dragoon_thrust','Lance Thrust',14,4,'🔱','Piercing thrust',P.fan(1,0,880,2.6,'#e07a2e',7,1.2,99)),
   A('dragoon_leap','High Jump',12,6,'⬆️','Long dash, evade',P.dash(190,1,'#e07a2e')),
-  A('dragoon_sweep','Lance Sweep',16,6,'🌀','Ring sweep',P.whirl(10,1.3,'#e07a2e',420,0.5)),
-  A('dragoon_impact','Impact',20,9,'💥','Blast at the target',P.blast(140,2.4,'#e07a2e'),true),
+  A('dragoon_sweep','Lance Sweep',16,6,'🌀','Ring sweep',P.whirl(10,1.3,'#e07a2e',420,0.5,{id:'bleed',dur:3,val:3})),
+  A('dragoon_impact','Impact',20,9,'💥','Blast at the target',P.combo(P.blast(140,2.4,'#e07a2e'),P.brand(140,'stun',0.8,0,'#ffe08a',1)),true),
  ],
 };
 // ----- 7 more abilities per class -> 12 total (unlocked via skill-tree ability nodes) -----
@@ -402,6 +413,10 @@ function updateAbilCooldowns(dt){ if(!player.acd) return; for(const k in player.
 function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch) return; ensureLoadout();
   const a=armedAbility();
   if(!a){ texts.push({x:player.x,y:player.y-30,txt:'empty slot',col:'#c9c2b8',life:0.7}); return; }
+  // frozen or stunned costs you your abilities too, not just your shots — otherwise the control
+  // statuses the world now puts on you would be a movement inconvenience and nothing more
+  if(typeof playerCanAct==='function' && !playerCanAct()){
+    texts.push({x:player.x,y:player.y-30,txt:playerHas('freeze')?'✳ frozen':'✳ stunned',col:'#d8f0fa',life:0.7}); return; }
   if(abilCd(a.id)>0){ texts.push({x:player.x,y:player.y-30,txt:'◷ cooldown',col:'#c9c2b8',life:0.6}); navigator.vibrate&&navigator.vibrate(15); return; }
   if((player.mp||0)<a.mp){ texts.push({x:player.x,y:player.y-30,txt:'◇ low mana',col:'#7ab8d4',life:0.7}); navigator.vibrate&&navigator.vibrate(20); return; }
   player.mp-=a.mp; player.acd[a.id]=a.cd;

@@ -871,7 +871,7 @@ function permaDeath(){ const ch=curChar(); if(!ch) return;
  recordBest(player.kills); saveRPG(); LS.set('er-users',users);
  runLive=false; runChar=null; inGame=false;
  res=0; allies=[]; zones=[]; fx=[]; enemies.length=0; pShots.length=0; eShots.length=0;
- player.spiritT=0; player.deadeye=0; player.thornT=0;
+ player.spiritT=0; player.deadeye=0; player.thornT=0; if(typeof clearPlayerStatuses==='function') clearPlayerStatuses();
  const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))];
  $s('deathWho').textContent=ch.name+' the '+(cc?cc.n:ch.cls);
  $s('deathCard').innerHTML=
@@ -1113,7 +1113,7 @@ function play(){
  if(isDead(ch)){ openChar(); return; }        // a fallen hero can never be played again
  loadRPG(); recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
  player.kills=0; player.inv=1;
- res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0;
+ res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0; if(typeof clearPlayerStatuses==='function') clearPlayerStatuses();
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
  player.acd={}; armedSlot=0; if(typeof ensureLoadout==='function') ensureLoadout();
  if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);   // backfill earned perk points

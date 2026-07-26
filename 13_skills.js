@@ -44,8 +44,8 @@ const CLASS_TREE = {
   branches: [
    { key:'bulwark', name:'Bulwark', color:'#7d8a99', nodes:[
      {id:'k_b1', name:'Iron Skin', desc:'+7 DEF and +5 VIT per rank', cost:1, max:3, req:[], eff:{def:7,vit:5}},
-     {id:'k_b2', name:'Defiant Stand', desc:'Below 50% HP, take 9% less damage per rank', cost:2, max:2, req:['k_b1'],
-      cond:{when:'lowHp',v:0.50,eff:{dr:0.09}}},
+     {id:'k_b2', name:'Defiant Stand', desc:'Below 50% HP, take 9% less damage per rank; foes that strike you are Stunned 0.6s', cost:2, max:2, req:['k_b1'],
+      cond:{when:'lowHp',v:0.50,eff:{dr:0.09}},trig:{on:'hurt',icd:1.6,do:{status:{id:'stun',dur:0.6}}}},
      {id:'k_b3', name:'Retaliate', desc:'Being hurt looses a shockwave — 70% ATK around you (0.9s)', cost:2, max:1, req:['k_b1'],
       trig:{on:'hurt',icd:0.9,do:{dmgNearby:{r:100,pct:0.7,col:'#c9d2da'}},emits:'shock'}},
      {id:'k_b4', name:'Aegis', desc:'At full Defiance, spend 60 for a shield worth 15% max HP', cost:2, max:2, req:['k_b2'],
@@ -104,8 +104,8 @@ const CLASS_TREE = {
    {id:'r_t1',name:'Fleet',desc:'+5% move speed and +4 VIT per rank',cost:1,max:3,req:[],eff:{spd:0.05,vit:4}},
    {id:'r_t2',name:'Kiting',desc:'While moving, take 7% less damage per rank',cost:2,max:2,req:['r_t1'],
     cond:{when:'moving',eff:{dr:0.07}}},
-   {id:'r_t3',name:'Open Ground',desc:'With no foe within 260, +12% damage per rank',cost:2,max:2,req:['r_t1'],
-    cond:{when:'alone',r:260,eff:{atkPct:0.12}}},
+   {id:'r_t3',name:'Open Ground',desc:'With no foe within 260, +12% damage per rank; foes in the open are Chilled 3s',cost:2,max:2,req:['r_t1'],
+    cond:{when:'alone',r:260,eff:{atkPct:0.12}},trig:{on:'hit',chance:0.22,perRank:false,do:{status:{id:'chill',dur:3}}}},
    {id:'r_t4',name:'Disengage',desc:'Your dashes snare everything you leave behind (chill 2s)',cost:2,max:1,req:['r_t2'],
     mod:{kind:'dash',do:{status:{r:120,id:'chill',dur:2}}}},
    {id:'r_t5',name:'Windstep',desc:'Keystone: +10% move, +12% attack speed; kills refund 0.7s of cooldown',cost:3,max:1,req:['r_t3','r_t4'],
@@ -155,7 +155,7 @@ const CLASS_TREE = {
   ]},
   {key:'ashwarden',name:'Ashwarden',color:'#7d8a99',nodes:[
    {id:'p_a1',name:'Emberskin',desc:'+6 DEF per rank',cost:1,max:3,req:[],eff:{def:6}},
-   {id:'p_a2',name:'Warmth',desc:'+8% max HP per rank',cost:2,max:2,req:['p_a1'],eff:{hpPct:0.08}},
+   {id:'p_a2',name:'Warmth',desc:'+8% max HP per rank; foes that strike you are Weakened 4s',cost:2,max:2,req:['p_a1'],eff:{hpPct:0.08},trig:{on:'hurt',icd:1.2,do:{status:{id:'weak',dur:4}}}},
    {id:'p_a3',name:'Backdraft',desc:'When hurt, wash 70% ATK of flame around you (1.1s)',cost:2,max:1,req:['p_a1'],
     trig:{on:'hurt',icd:1.1,do:{dmgNearby:{r:110,pct:0.7,col:'#ff7a3d',status:{id:'burn',dur:2,val:5}},res:{n:14}}}},
    {id:'p_a4',name:'Mana Shield',desc:'+25 max MP; below 40% HP take 12% less damage',cost:2,max:1,req:['p_a1'],
@@ -175,8 +175,8 @@ const CLASS_TREE = {
  rogue:{ branches:[
   {key:'assassinate',name:'Cutthroat',color:'#c0304a',nodes:[
    {id:'ro_a1',name:'Sharpen',desc:'+4 ATK and +2 DEX per rank',cost:1,max:3,req:[],eff:{atk:4,dex:2}},
-   {id:'ro_a2',name:'Lethality',desc:'+1% crit per 12 Combo, per rank',cost:2,max:2,req:['ro_a1'],
-    cond:{when:'resScale',per:12,eff:{crit:0.01}}},
+   {id:'ro_a2',name:'Lethality',desc:'+1% crit per 12 Combo, per rank; crits Bleed for 4s',cost:2,max:2,req:['ro_a1'],
+    cond:{when:'resScale',per:12,eff:{crit:0.01}},trig:{on:'crit',icd:0.3,do:{status:{id:'bleed',dur:4,val:3}}}},
    {id:'ro_a3',name:'Backstab',desc:'+25% crit damage per rank',cost:2,max:2,req:['ro_a1'],eff:{critMult:0.25}},
    {id:'ro_a4',name:'Exploit',desc:'Attacks pierce +1',cost:3,max:1,req:['ro_a2'],eff:{pierce:1}},
    {id:'ro_a5',name:'Finisher',desc:'Keystone: at full Combo, spend it on a 10-blade fan (110% ATK)',
@@ -197,7 +197,7 @@ const CLASS_TREE = {
   ]},
   {key:'bloodletter',name:'Bloodletter',color:'#6aae7a',nodes:[
    {id:'ro_b1',name:'Flurry',desc:'+6% attack speed per rank',cost:1,max:2,req:[],eff:{rof:0.06}},
-   {id:'ro_b2',name:'Bloodthirst',desc:'Heal 4% of damage dealt per rank',cost:2,max:2,req:['ro_b1'],eff:{ls:0.04}},
+   {id:'ro_b2',name:'Bloodthirst',desc:'Heal 4% of damage dealt per rank; hits Poison for 4s',cost:2,max:2,req:['ro_b1'],eff:{ls:0.04},trig:{on:'hit',chance:0.30,perRank:false,do:{status:{id:'poison',dur:4,val:3}}}},
    {id:'ro_b3',name:'Frenzy',desc:'+14% attack speed while Combo is above half',cost:2,max:1,req:['ro_b1'],
     cond:{when:'resAbove',v:0.5,eff:{rof:0.14}}},
    {id:'ro_b4',name:'Vital',desc:'+8% max HP per rank',cost:2,max:2,req:[],eff:{hpPct:0.08}},
@@ -466,8 +466,8 @@ const CLASS_TREE = {
   // keeps the living, and buffs them by hunting WITH them.
   {key:'beastmaster',name:'Beastmaster',color:'#6aae7a',nodes:[
    {id:'hu_b1',name:'Bond',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'hu_b2',name:'Kinship',desc:'Your beasts live 70% longer and bite 30% harder',cost:2,max:1,req:['hu_b1'],
-    mod:{kind:'summon',pre:{sumLife:1.7,sumDmg:1.3}}},
+   {id:'hu_b2',name:'Kinship',desc:'Your beasts live 70% longer and bite 30% harder; hits Bleed for 3s',cost:2,max:1,req:['hu_b1'],
+    mod:{kind:'summon',pre:{sumLife:1.7,sumDmg:1.3}},trig:{on:'hit',chance:0.30,perRank:false,do:{status:{id:'bleed',dur:3,val:2}}}},
    {id:'hu_b3',name:'Piercing Shot',desc:'Shots pierce +1',cost:3,max:1,req:['hu_b1'],eff:{pierce:1}},
    {id:'hu_b4',name:'Wild Aim',desc:'+5% crit per rank; kills feed 6 Instinct',cost:2,max:2,req:['hu_b1'],
     eff:{crit:0.05}, trig:{on:'kill',do:{res:{n:6,perRank:false}}}},
@@ -477,8 +477,8 @@ const CLASS_TREE = {
   ]},
   {key:'trapper',name:'Trapper',color:'#5a9cc0',nodes:[
    {id:'hu_t1',name:'Deft Hands',desc:'+3 DEX per rank',cost:1,max:3,req:[],eff:{dex:3}},
-   {id:'hu_t2',name:'Snare',desc:'Attacks chill; casting plants a snare field for 5s',cost:2,max:1,req:['hu_t1'],
-    eff:{slow:1}, mod:{do:{zone:{r:100,life:5,dmgPct:0.12,col:'#5a9cc0'}}}},
+   {id:'hu_t2',name:'Snare',desc:'Attacks chill; casting plants a snare field for 5s; your quarry is Chilled 3s',cost:2,max:1,req:['hu_t1'],
+    eff:{slow:1}, mod:{do:{zone:{r:100,life:5,dmgPct:0.12,col:'#5a9cc0'}}},trig:{on:'hit',chance:0.28,perRank:false,do:{status:{id:'chill',dur:3}}}},
    {id:'hu_t3',name:'Rapid Trap',desc:'+8% attack speed per rank',cost:2,max:2,req:['hu_t1'],eff:{rof:0.08}},
    {id:'hu_t4',name:'Barbed Trap',desc:'Shots pierce +1; hits root the wounded (1-in-5 stun 0.5s)',cost:3,max:1,req:['hu_t2'],
     eff:{pierce:1}, trig:{on:'hit',chance:0.2,icd:1.5,do:{status:{id:'stun',dur:0.5}}}},
@@ -507,8 +507,8 @@ const CLASS_TREE = {
   // pays out only while the Monk is in motion — the anti-turret.
   {key:'fists',name:'Fists of Fury',color:'#c0504a',nodes:[
    {id:'mo_f1',name:'Rapid Palm',desc:'+5% attack speed per rank',cost:1,max:2,req:[],eff:{rof:0.05}},
-   {id:'mo_f2',name:'Pressure Point',desc:'Every 3rd hit staggers the target (stun 0.6s)',cost:2,max:1,req:['mo_f1'],
-    eff:{stun3:1}},
+   {id:'mo_f2',name:'Pressure Point',desc:'Every 3rd hit staggers the target (stun 0.6s); crits Stun for 0.7s',cost:2,max:1,req:['mo_f1'],
+    eff:{stun3:1},trig:{on:'crit',icd:1.0,do:{status:{id:'stun',dur:0.7}}}},
    {id:'mo_f3',name:'Flowing Strikes',desc:'+1.4% attack speed per 10 Flow, per rank',cost:2,max:2,req:['mo_f1'],
     cond:{when:'resScale',per:10,eff:{rof:0.014}}},
    {id:'mo_f4',name:'Iron Fist',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
@@ -529,7 +529,7 @@ const CLASS_TREE = {
   ]},
   {key:'ki',name:'Inner Ki',color:'#d4b96a',nodes:[
    {id:'mo_k1',name:'Meditation',desc:'+5 WIS per rank',cost:1,max:3,req:[],eff:{wis:5}},
-   {id:'mo_k2',name:'Chi Flow',desc:'+8% ability power per rank',cost:2,max:2,req:['mo_k1'],eff:{abilPow:0.08}},
+   {id:'mo_k2',name:'Chi Flow',desc:'+8% ability power per rank; your strikes leave foes Weakened 4s',cost:2,max:2,req:['mo_k1'],eff:{abilPow:0.08},trig:{on:'hit',chance:0.25,perRank:false,do:{status:{id:'weak',dur:4}}}},
    {id:'mo_k3',name:'Life Sap',desc:'Heal 5% of damage dealt per rank',cost:2,max:2,req:['mo_k1'],eff:{ls:0.05}},
    {id:'mo_k4',name:'Deep Well',desc:'+25 max MP; casting costs no Flow and grants 3s of +20% damage',cost:2,max:1,req:[],
     eff:{mp:25}, trig:{on:'cast',icd:3,do:{buff:{f:'bDmg',m:1.2,dur:3,col:'#d4b96a'}}}},
@@ -549,7 +549,7 @@ const CLASS_TREE = {
   // rather than kiting.
   {key:'aegis',name:'Aegis',color:'#7d8a99',nodes:[
    {id:'pa_a1',name:'Plating',desc:'+8 DEF per rank',cost:1,max:3,req:[],eff:{def:8}},
-   {id:'pa_a2',name:'Vigor',desc:'+8% max HP per rank',cost:2,max:2,req:['pa_a1'],eff:{hpPct:0.08}},
+   {id:'pa_a2',name:'Vigor',desc:'+8% max HP per rank; foes that strike you are Weakened 4s',cost:2,max:2,req:['pa_a1'],eff:{hpPct:0.08},trig:{on:'hurt',icd:1.2,do:{status:{id:'weak',dur:4}}}},
    {id:'pa_a3',name:'Shield Wall',desc:'Take 12% less damage; while shielded, another 8%',cost:3,max:1,req:['pa_a2'],
     eff:{dr:0.12}, cond:{when:'shielded',eff:{dr:0.08}}},
    {id:'pa_a4',name:'Thornmail',desc:'reflect 25% melee damage; being struck banks 6 Faith',cost:2,max:1,req:['pa_a1'],
@@ -560,7 +560,7 @@ const CLASS_TREE = {
   ]},
   {key:'zeal',name:'Zeal',color:'#e8b34b',nodes:[
    {id:'pa_z1',name:'Righteous',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'pa_z2',name:'Fervor',desc:'+6% crit per rank',cost:2,max:2,req:['pa_z1'],eff:{crit:0.06}},
+   {id:'pa_z2',name:'Fervor',desc:'+6% crit per rank; hits set foes Burning 3s',cost:2,max:2,req:['pa_z1'],eff:{crit:0.06},trig:{on:'hit',chance:0.28,perRank:false,do:{status:{id:'burn',dur:3,val:3}}}},
    {id:'pa_z3',name:'Cleave',desc:'Attacks cleave +1',cost:3,max:1,req:['pa_z1'],eff:{cleave:1}},
    {id:'pa_z4',name:'Crusade',desc:'+9% damage per rank while standing on your own ground (still 1s)',cost:2,max:2,req:['pa_z2'],
     cond:{when:'still',v:1,eff:{atkPct:0.09}}},
@@ -633,7 +633,7 @@ const CLASS_TREE = {
   // the CRESCENDO buffs the Bard AND every ally on the field.
   {key:'cadence',name:'Cadence',color:'#c07ad4',nodes:[
    {id:'ba_c1',name:'Rhythm',desc:'+6% attack speed per rank',cost:1,max:2,req:[],eff:{rof:0.06}},
-   {id:'ba_c2',name:'Sharp Note',desc:'+4 ATK per rank',cost:1,max:3,req:['ba_c1'],eff:{atk:4}},
+   {id:'ba_c2',name:'Sharp Note',desc:'+4 ATK per rank; your notes leave foes Weakened 3s',cost:1,max:3,req:['ba_c1'],eff:{atk:4},trig:{on:'hit',chance:0.30,perRank:false,do:{status:{id:'weak',dur:3}}}},
    {id:'ba_c3',name:'Allegro',desc:'+1.3% attack speed per 10 Tempo, per rank',cost:2,max:2,req:['ba_c1'],
     cond:{when:'resScale',per:10,eff:{rof:0.013}}},
    {id:'ba_c4',name:'Sharp Ear',desc:'+6% crit per rank',cost:2,max:2,req:['ba_c2'],eff:{crit:0.06}},
@@ -656,7 +656,7 @@ const CLASS_TREE = {
    {id:'ba_h2',name:'Resonance',desc:'+8% ability power per rank',cost:2,max:2,req:['ba_h1'],eff:{abilPow:0.08}},
    {id:'ba_h3',name:'Encore',desc:'+25 MP, +2 mana regen; casting adds 16 Tempo',cost:3,max:1,req:['ba_h1'],
     eff:{mp:25,mpregen:2}, trig:{on:'cast',do:{res:{n:16,perRank:false}}}},
-   {id:'ba_h4',name:'Fortune Song',desc:'+6 FORTUNE per rank',cost:2,max:2,req:[],eff:{fort:6}},
+   {id:'ba_h4',name:'Fortune Song',desc:'+6 FORTUNE per rank; crits ring in the skull — Shock 3s',cost:2,max:2,req:[],eff:{fort:6},trig:{on:'crit',icd:0.4,do:{status:{id:'shock',dur:3,val:3}}}},
    {id:'ba_h5',name:'Symphony',desc:'Keystone: +16% ability power; a crescendo also rings out for 120% ATK',
     cost:3,max:1,req:['ba_h2','ba_h3'],ifOwn:'ba_c5',eff:{abilPow:0.16,wis:6},
     trig:{on:'proc',filter:{tag:'crescendo'},do:{dmgNearby:{r:200,pct:1.2,col:'#c07ad4'}}}},
@@ -672,7 +672,7 @@ const CLASS_TREE = {
   // timer, the Shaman spends abilities to summon TOTEMS — ground that fights for them.
   {key:'spirits',name:'Spirits',color:'#4fb0a0',nodes:[
    {id:'sh_s1',name:'Totemic',desc:'+4 ATK per rank',cost:1,max:3,req:[],eff:{atk:4}},
-   {id:'sh_s2',name:'Spirit Brand',desc:'Hits weaken foes (they deal 30% less)',cost:3,max:1,req:['sh_s1'],eff:{weakHit:1}},
+   {id:'sh_s2',name:'Spirit Brand',desc:'Hits weaken foes (they deal 30% less); hits Shock for 3s',cost:3,max:1,req:['sh_s1'],eff:{weakHit:1},trig:{on:'hit',chance:0.28,perRank:false,do:{status:{id:'shock',dur:3,val:3}}}},
    {id:'sh_s3',name:'Spirit Power',desc:'+8% ability power per rank',cost:2,max:2,req:['sh_s1'],eff:{abilPow:0.08}},
    {id:'sh_s4',name:'Wild Spirit',desc:'+6% crit per rank; casting plants a spirit totem (6s)',cost:2,max:2,req:['sh_s2'],
     eff:{crit:0.06}, mod:{do:{zone:{r:110,life:6,dmgPct:0.18,col:'#4fb0a0'}}}},
