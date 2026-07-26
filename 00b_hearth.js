@@ -94,7 +94,10 @@
  const cos=room(28,18,'f');
  [[10,6],[14,6],[18,6]].forEach(p=>put(cos,p[0],p[1],'l')); // display pedestals
  put(cos,14,14,'P');
+ // The mirror between the three pedestals is the interactable: stand at it and the wardrobe opens
+ // (07_update turns `wardrobe` into a prompt, exactly like a stall or a portal).
  ROOM_DEFS['COSMETICS']={ name:'The Wardrobe', town:false, safe:true, map:cos,
   portalDefs:[ {tx:14, ty:16, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
-  decor:[{t:'sign',x:14,y:11,txt:'COSMETICS — coming soon'}] };
+  wardrobe:{x:14.5, y:7.2},
+  decor:[{t:'sign',x:14,y:11,txt:'DRESS AS YOU LIKE'}] };
 })();

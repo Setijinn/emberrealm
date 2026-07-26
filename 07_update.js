@@ -851,7 +851,11 @@ function update(dt){
     // Anchored above the hanging sign (y-118), which the stall art and sign already occupy.
     if(curRoom.town) for(const np of SHOPNPCS){ const d=Math.hypot(np.x-player.x,np.y-player.y);
       if(d<85 && d<_pbest){ _pbest=d; portalPrompt={kind:'vendor',x:np.x,y:np.y-118,np:np,
-        ctx:np.name, label:np.auction?'AUCTION':'SHOP'}; } }
+        ctx:np.name, label:np.auction?'AUCTION':np.event?'BOUNTIES':np.diamond?'DIAMONDS':'SHOP'}; } }
+    // the Wardrobe's mirror — a room-level interactable with no vendor behind it
+    if(curRoom.wardrobe){ const wd=curRoom.wardrobe, d=Math.hypot(wd.x-player.x,wd.y-player.y);
+      if(d<70 && d<_pbest){ _pbest=d; portalPrompt={kind:'wardrobe',x:wd.x,y:wd.y-40,
+        ctx:'The Wardrobe', label:'WARDROBE'}; } }
   }
   // dungeon: objective progress + orb pickup + dream motes
   if(curRoom.dungeon){
@@ -876,14 +880,11 @@ function update(dt){
     const near=nd<85?nn:null;
     if((near?near.id:null)!==curShopNear){
       curShopNear=near?near.id:null; shopNear=!!near;
-      // Changing stall closes whichever panel the last one owned -- the auction shuts with the
-      // shop. Closing on a CHANGE, not only on leaving, stops one vendor's panel being read at
-      // another's counter.
-      document.getElementById('shopScr').style.display='none';
-      const a=document.getElementById('aucScr'); if(a) a.style.display='none'; }
+      // Changing stall closes whichever panel the last one owned. Closing on a CHANGE, not only
+      // on leaving, stops one vendor's panel being read at another's counter.
+      if(typeof closeVendorPanels==='function') closeVendorPanels(); }
   } else if(shopNear){ shopNear=false; curShopNear=null;
-    document.getElementById('shopScr').style.display='none';
-    const a=document.getElementById('aucScr'); if(a) a.style.display='none'; }
+    if(typeof closeVendorPanels==='function') closeVendorPanels(); }
   // loot bags: despawn + HYBRID pickup. Public sacks auto-collect on walk-over; soulbound sacks
   // are left for the INTERACT prompt, which opens the bag UI. Decided by BAND, not rarity.
   if(typeof netReapBound==='function') netReapBound(dt);

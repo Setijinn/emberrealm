@@ -784,14 +784,19 @@ function enterDungeon(ring){
  msg(gb.dn, gb.dsub || (gb.n+' dreams of '+(gb.home||'a world now lost')));
 }
 
-// Maren keeps her id (and so her stall art) but not her old trade: potions refill themselves now,
-// so a provisioner with nothing to provision was the free slot. She calls the house rotation --
-// `auction:true` is what routes her stall button to openAuction() instead of the shop panel.
+// THE FOUR STALLS (user, 2026-07-26). Everyone keeps their id -- and so their stall art -- but
+// three of the four changed trade, because what they sold either no longer exists or was glory
+// buying power, which the economy forbids:
+//   bram   BLACKSMITH   reserved for the item-fusion system. Do not repurpose.
+//   sella  DIAMONDS     cosmetics and the premium currency (`diamond:true`)
+//   maren  AUCTIONEER   the date-seeded house rotation (`auction:true`)
+//   odo    BOUNTIES     the daily board (`event:true`)
+// The flag on the row is the whole dispatch: usePortalPrompt reads it to pick the panel.
 const SHOPNPCS=[
- {id:'bram', name:'Bram', role:'WEAPONS', title:"BRAM'S WEAPONWORKS", awn:'#b5482f', x:9.5*TILE,  y:10.8*TILE},
- {id:'sella',name:'Sella',role:'ARMOR',   title:"SELLA'S ARMORY",     awn:'#e07a2e', x:9.5*TILE,  y:18.3*TILE},
+ {id:'bram', name:'Bram', role:'BLACKSMITH', title:"BRAM'S WEAPONWORKS", awn:'#b5482f', x:9.5*TILE,  y:10.8*TILE},
+ {id:'sella',name:'Sella',role:'CURIOS',     title:'THE DIAMOND EXCHANGE', awn:'#c46ee0', diamond:true, x:9.5*TILE,  y:18.3*TILE},
  {id:'maren',name:'Maren',role:'AUCTIONEER', title:'THE AUCTION HOUSE', awn:'#e8b34b', auction:true, x:32.5*TILE, y:10.8*TILE},
- {id:'odo',  name:'Odo',  role:'PETS',    title:"ODO'S MENAGERIE",    awn:'#7ab8d4', x:32.5*TILE, y:18.3*TILE},
+ {id:'odo',  name:'Odo',  role:'BOUNTIES',   title:'THE BOUNTY BOARD',  awn:'#7dc47a', event:true,   x:32.5*TILE, y:18.3*TILE},
 ];
 function shopNpc(id){ for(const n of SHOPNPCS) if(n.id===id) return n; return null; }
 let curShopNear=null;

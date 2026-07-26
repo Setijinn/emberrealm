@@ -1434,9 +1434,11 @@ function render(){
   const _es = (typeof emberSprite==='function')
     ? emberSprite(player.look||{cls:'knight'}, {aim:faceAng, moving, attacking:_attacking, atkPhase:phase, clock:pn})
     : null;
+  // a worn cosmetic recolours the hero's own art (skinImg is identity when nothing is worn)
+  const _skin=(typeof skinImg==='function')?skinImg:(x=>x);
   if(_es){
     // real PixelLab art: 92px sprite, scaled down; already holds its weapon
-    blit(_es.img, player.x+lx, player.y-8+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
+    blit(_skin(_es.img), player.x+lx, player.y-8+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
   } else {
     blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
   }

@@ -39,6 +39,9 @@ for(const key in rooms){
   r.pillars=(ROOM_DEFS[key].pillars||[]).map(p=>({x:(p.tx+.5)*TILE,y:(p.ty+.5)*TILE,band:p.b,name:p.name}));
   r.hub=!!ROOM_DEFS[key].hub; r.arena=!!ROOM_DEFS[key].arena; r.safe=!!ROOM_DEFS[key].safe;
   r.decor=ROOM_DEFS[key].decor||null; r.stalls=ROOM_DEFS[key].stalls||null;
+  // the Wardrobe's mirror, in pixels — a room-level interactable, like a stall without a vendor
+  const _wd=ROOM_DEFS[key].wardrobe;
+  r.wardrobe=_wd?{x:_wd.x*TILE, y:_wd.y*TILE}:null;
   // explicit destination portals (hub + sub-rooms)
   const pd=ROOM_DEFS[key].portalDefs;
   if(pd) for(const p of pd){

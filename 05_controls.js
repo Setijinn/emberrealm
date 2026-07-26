@@ -61,7 +61,7 @@ addEventListener('keydown',e=>{
   if(k==='escape'){
     if(typeof closeSkills==='function' && (document.getElementById('skillScr')||{}).style && document.getElementById('skillScr').style.display==='flex') closeSkills();
     if(typeof closeBagPanel==='function') closeBagPanel();
-    for(const id of ['invScr','loadScr','shopScr','bagScr','aucScr']){ const el=document.getElementById(id);
+    for(const id of ['invScr','loadScr','shopScr','bagScr','aucScr','bntScr','dmdScr','wrdScr']){ const el=document.getElementById(id);
       if(el && el.style.display && el.style.display!=='none') el.style.display='none'; }
     return;
   }

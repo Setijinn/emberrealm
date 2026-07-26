@@ -190,6 +190,29 @@
  <div id="aucRows"></div>
  <button class="mbtn go" id="aucClose">LEAVE</button>
 </div></div></div>
+<!-- The daily bounty board (17c_bounty.js). Same card vocabulary as the shop and the auction:
+     three date-seeded objectives, claimed to BANK glory onto the run, paid when the run ends. -->
+<div class="scr" id="bntScr" style="background:rgba(9,7,12,.9);"><div id="shopCard"><div id="shopInner">
+ <div id="shopTitle">THE BOUNTY BOARD</div>
+ <div id="bntBanked"></div>
+ <div class="mnote" id="bntNote"></div>
+ <div id="bntRows"></div>
+ <button class="mbtn go" id="bntClose">LEAVE</button>
+</div></div></div>
+<!-- The diamond exchange (Sella) and the Wardrobe (17d_cosmetics.js). Diamonds are declared but
+     cannot be bought: taking payment needs a server, so the packs explain themselves instead. -->
+<div class="scr" id="dmdScr" style="background:rgba(9,7,12,.9);"><div id="shopCard"><div id="shopInner">
+ <div id="shopTitle">THE DIAMOND EXCHANGE</div>
+ <div id="dmdPurse"></div>
+ <div id="dmdRows"></div>
+ <button class="mbtn go" id="dmdClose">LEAVE</button>
+</div></div></div>
+<div class="scr" id="wrdScr" style="background:rgba(9,7,12,.9);"><div id="shopCard"><div id="shopInner">
+ <div id="shopTitle">THE WARDROBE</div>
+ <div class="mnote" id="wrdNote"></div>
+ <div id="wrdRows"></div>
+ <button class="mbtn go" id="wrdClose">LEAVE</button>
+</div></div></div>
 <button id="abBtn">—</button>
 <div class="scr" id="invScr" style="background:rgba(9,7,12,.9);"><div id="invCard"><button class="tabX" id="invX" aria-label="Close">✕</button><div id="invInner">
  <div id="invTitle">EQUIPMENT</div>
@@ -203,6 +226,9 @@
     <div class="eqSlot" data-slot="ring"><canvas class="eqCv" width="52" height="52"></canvas><span class="eqTb"></span><span class="eqLbl">Ring</span></div>
    </div>
    <div id="eqStats"></div>
+   <!-- Relics used to be equipped from inside the weapon/armour SHOP panels, which meant a stall
+        closing could strand one. They belong with the rest of your gear. -->
+   <div id="eqRelics"></div>
   </div>
   <div id="eqRight">
    <div id="satHead">SATCHEL <span id="invInfo"></span></div>
@@ -259,6 +285,8 @@
 <script src="16_maxstats.js"></script>
 <script src="17_bossmech.js"></script>
 <script src="17b_auction.js"></script>
+<script src="17c_bounty.js"></script>
+<script src="17d_cosmetics.js"></script>
 <script src="12_devpanel.js"></script>
 
 </body>

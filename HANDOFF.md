@@ -1,7 +1,12 @@
 # EmberRealm — session handoff
 
 Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v303`** (`sw.js`, bump every release).
+Current service-worker version: **`emberrealm-v308`** (`sw.js`, bump every release).
+
+**How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
+`ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
+so a new numbered file is live as soon as `index.html` lists it. The cache-first trap is the *browser's*
+HTTP cache, not the SW — hence the fresh-port rule below, which is real and cost time again today.
 
 ---
 
@@ -62,16 +67,40 @@ Current service-worker version: **`emberrealm-v303`** (`sw.js`, bump every relea
 
 ---
 
-## Do this next, in order
+## The four stalls (items 1–3 — done 2026-07-26)
 
-1. **Wire the auctioneer NPC to `openAuction()`.** It works and is tested but *nothing calls it*.
-   Smallest, most self-contained next step.
-2. **Rework the four Hearth vendors** → blacksmith, event NPC, auctioneer, diamond merchant.
-   **LEAVE THE BLACKSMITH ALONE** — it is reserved for a future item-**fusion** system. Open design
-   work: invent the items fusion consumes (materials / catalysts / duplicate gear) and where they drop.
-3. **Cosmetics portal + diamonds.** The Wardrobe room exists as a "coming soon" sign. The currency,
-   catalogue, gating and UI are all buildable; **collecting real money is not possible client-side**
-   (needs a payment provider and a server to verify).
+| stall | role | opens |
+|---|---|---|
+| **Bram** | **BLACKSMITH — reserved for item fusion, untouched** | the old shop panel (T1–T3 weapons, weapon relics) |
+| Sella | diamond merchant | the exchange: diamond packs (stubbed) + the cosmetic catalogue |
+| Maren | auctioneer | the date-seeded house rotation |
+| Odo | event NPC | the daily bounty board |
+
+- **Stalls are opened at the stall.** The HUD shop button is gone; vendors register a `portalPrompt`
+  of `kind:'vendor'` and the prompt above the stall reads SHOP / AUCTION / BOUNTIES / DIAMONDS.
+  The Wardrobe's mirror uses the same path (`kind:'wardrobe'`, from `ROOM_DEFS.COSMETICS.wardrobe`).
+- **Bounties** (`17c_bounty.js`): 3 date-seeded objectives, first slot always an everyday kill goal
+  so a short session can always touch the board. Progress is per account per day, collected off the
+  existing `runNote()` calls. **Claiming BANKS the glory onto the run** and it pays out on death —
+  nothing may mint spendable glory mid-run.
+- **Cosmetics** (`17d_cosmetics.js`): account-level diamonds (`u.gems`), a 7-item catalogue priced in
+  glory *or* diamonds but never both, worn via `u.skin`, applied by recolouring the class's own art
+  through `_tintImg`. **Colour only — never a stat, never a silhouette.** Diamond packs are a stub;
+  `diamondPacks()` is the one function a payment provider would replace.
+- **Relics moved to the equipment screen** (`paintRelics`). They own the `wpnL`/`armL` slot and used
+  to be equippable *only* from inside a vendor's shop rows, so retiring a stall would have stranded
+  any armour relic you had earned.
+- **Retired**: Sella's T2/T3 armour + helms and Odo's three bought pets — both were glory buying
+  power, and the pets were a second follower system running beside the egg/Sanctuary one.
+
+## Do this next
+
+1. **Fusion for the blacksmith.** Still the open design work: invent the items fusion consumes
+   (materials / catalysts / duplicate gear) and where they drop. Nothing is built.
+2. **Art for the two changed stalls.** Sella still shows an armour rack and Odo a menagerie; they now
+   sell cosmetics and bounties. PixelLab MCP is available (`assets/hearth/stall_*.png`).
+3. **`Sell` in the satchel is a lie** — with gold gone it deletes the item and pays nothing, i.e. it
+   is a second Discard button. Remove it or make it mean something.
 
 ### Then, older outstanding items
 - **1–20 zone progression.** The user's long-standing complaint that "the spawn is weird with how

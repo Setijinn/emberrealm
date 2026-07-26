@@ -499,7 +499,7 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
 // rests over one of the 3 slots — but only while actually playing (no menu open).
 function _abilMenuOpen(){
   const ids=['menuScr','charScr','classScr','devScr','setScr','loginScr',
-             'invScr','loadScr','shopScr','aucScr','skillScr','mapScr','coopScr'];
+             'invScr','loadScr','shopScr','aucScr','bntScr','dmdScr','wrdScr','skillScr','mapScr','coopScr'];
   for(const id of ids){ const el=document.getElementById(id);
     if(el && getComputedStyle(el).display!=='none') return true; }
   return false;

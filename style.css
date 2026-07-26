@@ -206,6 +206,18 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .schip.res{grid-column:1/-1;}
 .schip.res b{color:#ffc94d;}
 
+/* relic strip on the equipment screen — a relic owns the weapon/armour slot, so it toggles
+   rather than stacking with the tier gear underneath it */
+#eqRelics{margin-top:9px;}
+.relHead{font-family:'Pixelify Sans',monospace;font-size:12px;color:#ff9c50;letter-spacing:1px;margin-bottom:5px;}
+.relRow{display:flex;flex-wrap:wrap;gap:5px;}
+.relChip{background:#1c1626;border:1px solid #5a3a22;border-radius:8px;padding:5px 9px;cursor:pointer;
+ display:flex;flex-direction:column;line-height:1.25;min-width:96px;}
+.relChip b{color:#ff9c50;font-family:'Pixelify Sans',monospace;font-size:12px;}
+.relChip span{font-size:10px;color:#8a8494;}
+.relChip.on{border-color:#ffc94d;background:#2a2033;}
+.relChip.on span{color:#ffc94d;}
+
 /* PC mode: gather the thumb-scattered HUD buttons into one tidy top-right row
    (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
 #mapBtn,#coopBtn{display:none;align-items:center;justify-content:center;
@@ -382,6 +394,26 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  background:#0f0c14;border:1px solid #2a2433;border-radius:8px;padding:6px 10px;}
 .shopprice.free{color:#7dc47a;}
 .shopnote{font-size:11px;color:#8a8494;text-align:center;padding:5px 8px;font-style:italic;}
+/* bounty board + diamond exchange reuse the shop card; these are the only additions.
+   The exchange lists packs AND the whole catalogue, which is long enough to run past the frame's
+   ornate border, so the LIST scrolls inside the panel rather than the panel growing to fit it. */
+#bntRows,#dmdRows,#wrdRows{display:flex;flex-direction:column;width:100%;gap:7px;padding:2px 0;margin-bottom:8px;
+ max-height:56vh;overflow-y:auto;overflow-x:hidden;}
+#dmdRows::-webkit-scrollbar,#wrdRows::-webkit-scrollbar,#bntRows::-webkit-scrollbar{width:5px;}
+#dmdRows::-webkit-scrollbar-thumb,#wrdRows::-webkit-scrollbar-thumb,#bntRows::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
+.shopcard.ready{border-color:#7dc47a;background:linear-gradient(180deg,#16241a,#101a13);}
+.shopcard.ready .shopprice{color:#7dc47a;}
+.bntBar{margin-top:5px;height:5px;background:#0f0c14;border:1px solid #2a2433;border-radius:4px;overflow:hidden;}
+.bntBar i{display:block;height:100%;background:linear-gradient(90deg,#7a4a1e,#ffc94d);}
+.shopcard.ready .bntBar i{background:linear-gradient(90deg,#3f7a3a,#7dc47a);}
+/* diamonds: the premium mark is violet everywhere it appears, never gold (that is glory) */
+.purse.gem{border-color:#8a4ac0;color:#e0a6ff;}
+.shopprice.gem{color:#e0a6ff;border-color:#4a2a5c;}
+.shopcard.gem{border-color:#4a2a5c;background:linear-gradient(180deg,#221630,#160f1e);}
+.shopcard.gem .shopname{color:#e0a6ff;}
+.shopcard.worn{border-color:#ffc94d;}
+.dmdStub{font-size:11px;color:#8a8494;text-align:center;padding:8px;font-style:italic;
+ border:1px dashed #4a2a5c;border-radius:10px;margin-bottom:9px;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
 #menuBtn,#potBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{

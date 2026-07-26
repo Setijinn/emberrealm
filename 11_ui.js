@@ -19,9 +19,14 @@ function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov
 function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=null;
   // teleports suppress re-prompt; loot doesn't -- and neither does a stall, or closing the shop
   // while still standing at the counter would leave you unable to open it again
-  if(p.kind!=='loot' && p.kind!=='vendor') portalLock=true;
+  if(p.kind!=='loot' && p.kind!=='vendor' && p.kind!=='wardrobe') portalLock=true;
+  if(p.kind==='wardrobe'){ if(typeof openWardrobe==='function') openWardrobe();
+    navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='vendor'){ const np=p.np;
+    // one flag per stall picks the panel; anything unflagged is a plain shop
     if(np.auction){ if(typeof openAuction==='function') openAuction(); }
+    else if(np.event){ if(typeof openBounties==='function') openBounties(); }
+    else if(np.diamond){ if(typeof openDiamonds==='function') openDiamonds(); }
     else openShop2(np.id);
     navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='switch'){ const sw=p.sw; if(sw&&!sw.on){
@@ -1065,6 +1070,7 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  sh+=chip('Pool HP',player.maxhp,'#8fd48c')+chip('Pool MP',player.maxmp,'#7ab8d4')
    +chip('Crit',Math.round(player.crit*100)+'%','#ffc94d');
  $s('eqStats').innerHTML=sh;
+ paintRelics();
  const dc=$s('dollCv'), d2=dc.getContext('2d'); d2.imageSmoothingEnabled=false;
  const bg=d2.createLinearGradient(0,0,0,dc.height); bg.addColorStop(0,'#241b33'); bg.addColorStop(1,'#120e18');
  d2.fillStyle=bg; d2.fillRect(0,0,dc.width,dc.height);
@@ -1084,7 +1090,10 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
    const bb=_imgBBox(im);
    const sc=Math.min((dc.width-10)/bb.w,(dc.height-16)/bb.h);
    const w=bb.w*sc, h=bb.h*sc;
-   d2.drawImage(im,bb.x,bb.y,bb.w,bb.h,Math.round((dc.width-w)/2),Math.round(dc.height-10-h),w,h);
+   // the portrait wears what the hero wears — bbox is measured off the untinted art, since a
+   // recolour paints only opaque pixels and so cannot change the outline
+   const _pim=(typeof skinImg==='function')?skinImg(im):im;
+   d2.drawImage(_pim,bb.x,bb.y,bb.w,bb.h,Math.round((dc.width-w)/2),Math.round(dc.height-10-h),w,h);
    drewReal=true;
   }
  }
@@ -1318,10 +1327,13 @@ const GLORY={
   relic:    400,    // pulling a relic out of the world at all
   deepest:  6,      // per level of the deepest zone entered — credit for how far you pushed
 };
-function newRunStats(){ return {mobs:0,elites:0,bosses:0,dungeons:0,relics:0,deepest:0,fog:0}; }
+function newRunStats(){ return {mobs:0,elites:0,bosses:0,dungeons:0,relics:0,deepest:0,fog:0,bounty:0}; }
 function runStats(){ const ch=(typeof curChar==='function')?curChar():null;
   if(!ch) return null; if(!ch.run) ch.run=newRunStats(); return ch.run; }
-function runNote(k,n){ const s=runStats(); if(s) s[k]=(s[k]||0)+(n===undefined?1:n); }
+function runNote(k,n){ const s=runStats(); if(s) s[k]=(s[k]||0)+(n===undefined?1:n);
+  // the daily board reads the same acts a run is scored on, so it hooks in here rather than
+  // growing its own counters. 'bounty' is the payout itself and must not feed back into progress.
+  if(k!=='bounty' && typeof bountyNote==='function') bountyNote(k,n); }
 function runDeepest(lv){ const s=runStats(); if(s&&lv>s.deepest) s.deepest=lv|0; }
 // percentage of the world this character has uncovered, read straight off the fog mask
 function fogPct(){
@@ -1338,7 +1350,8 @@ function gloryFor(s,lvl){
   return Math.round(
       (s.mobs||0)*GLORY.mob + (s.elites||0)*GLORY.elite + (s.bosses||0)*GLORY.boss
     + (s.dungeons||0)*GLORY.dungeon + (s.fog||0)*GLORY.fogTile + ((lvl||1)-1)*GLORY.level
-    + (s.relics||0)*GLORY.relic + (s.deepest||0)*GLORY.deepest);
+    + (s.relics||0)*GLORY.relic + (s.deepest||0)*GLORY.deepest
+    + (s.bounty||0));                                   // bounties are banked in glory already
 }
 // a readable breakdown for the death screen — you should be able to see what earned what
 function gloryRows(s,lvl){
@@ -1355,6 +1368,7 @@ function gloryRows(s,lvl){
   const fg=Math.round((s.fog||0)*GLORY.fogTile);
   if(fg>0) r.push({l:'World uncovered',n:Math.round(s.fog||0)+'%',g:fg});
   add('Deepest ground',s.deepest||0,GLORY.deepest);
+  if(s.bounty>0) r.push({l:'Bounties claimed',n:'',g:s.bounty});   // already in glory, not a rate
   return r;
 }
 function accountGlory(){ const u=users[curUser]; return (u&&u.glory)||0; }
@@ -1382,7 +1396,7 @@ function hcCheck(){ const ch=curChar(); if(!ch||!rpg||!inGame) return false;
  if(typeof onMainIsland!=='function' || !onMainIsland(player.x,player.y)) return false;
  rpg.hcSeen=1; markHardcore();       // the crossing itself is what makes this hero permanent
  player.inv=Math.max(player.inv||0,2.5);
- for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','aucScr','coopScr'])
+ for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','aucScr','bntScr','dmdScr','wrdScr','coopScr'])
    if($s(id)) $s(id).style.display='none';
  $s('hcScr').style.display='flex';
  navigator.vibrate&&navigator.vibrate([40,60,40]);
@@ -1469,6 +1483,24 @@ function tickPotions(dt){
     if(typeof hudRPG==='function') hudRPG(); saveRPG(); }
 }
 $s('potBtn').addEventListener('click',usePotion);
+// RELICS live on the equipment screen. They own the wpnL/armL slot, so the only place they could
+// ever be equipped from used to be a vendor's shop rows -- which meant retiring a stall could
+// leave a relic you had earned with nowhere to put it on. Shows only what you actually own.
+function paintRelics(){ const box=$s('eqRelics'); if(!box||!rpg) return;
+ const owned=(rpg.legends||[]).map(legById).filter(Boolean);
+ if(!owned.length){ box.innerHTML=''; return; }
+ let h='<div class="relHead">★ RELICS</div><div class="relRow">';
+ for(const L of owned){ const eq=(L.slot==='wpn'?rpg.wpnL:rpg.armL)===L.id;
+  h+='<div class="relChip'+(eq?' on':'')+'" data-rel="'+L.id+'" title="'+(L.d||'')+'">'
+    +'<b>'+L.n+'</b><span>'+(eq?'in use':(L.slot==='wpn'?'weapon':'armor'))+'</span></div>'; }
+ box.innerHTML=h+'</div>';
+ box.querySelectorAll('.relChip').forEach(el=>{ el.onclick=function(){
+   const L=legById(el.getAttribute('data-rel')); if(!L) return;
+   const eq=(L.slot==='wpn'?rpg.wpnL:rpg.armL)===L.id;
+   if(L.slot==='wpn') rpg.wpnL=eq?null:L.id; else rpg.armL=eq?null:L.id;
+   recalcStats(); saveRPG(); hudRPG(); paintInv();
+   navigator.vibrate&&navigator.vibrate(12); }; });
+}
 function legendRows(slot,out){ for(const L of LEGENDS){ if(L.slot!==slot) continue;
  const owned=rpg.legends&&rpg.legends.indexOf(L.id)>=0;
  // a relic (price 0) is not merchandise — it only appears here once you have taken it off the
@@ -1488,27 +1520,13 @@ function shopRowsFor(id){ const ch=curChar(); const out=[]; const cls=ch.cls;
     f:function(){rpg.wpn=nt; rpg.wpnL=null; if(rpg.eqAff)rpg.eqAff.wpn=null;}}); }
   else out.push({note:'Bram stocks up to T3 — finer steel is won in the field.'});
   legendRows('wpn',out); }
- if(id==='sella'){ const mt=CARMOR[cls]; const na=(rpg.arm||0)+1;
-  if(na<3){ const s=gearBaseStats('arm',na,mt);
-   out.push({l:'T'+(na+1)+' '+MATN[mt]+' Armor', desc:'+'+s.def+' DEF · +'+s.hp+' HP', ic:{k:'arm',mt:mt,t:na},
-    c:Math.round(tierCost(na)*0.8), f:function(){rpg.arm=na; rpg.armL=null; if(rpg.eqAff)rpg.eqAff.arm=null;}}); }
-  else out.push({note:'Armor above T3 must be found, not bought.'});
-  const nh=(rpg.helm===undefined||rpg.helm<0)?0:rpg.helm+1;
-  if(nh<3){ const s=gearBaseStats('helm',nh,mt);
-   out.push({l:'T'+(nh+1)+' '+MATN[mt]+' Helm', desc:'+'+s.wis+' WIS · +'+s.mp+' MP', ic:{k:'helm',mt:mt,t:nh},
-    c:Math.round(tierCost(Math.max(1,nh))*0.6), f:function(){rpg.helm=nh; if(rpg.eqAff)rpg.eqAff.helm=null;}}); }
-  else out.push({note:'Helms above T3 drop in the field.'});
-  legendRows('arm',out); }
- if(id==='odo'){ const pets=[['wolf','Grey Wolf',500,'a loyal hunter'],['skel','Bone Servant',1500,'tireless and grim'],['wisp','Ember Wisp',4000,'burns for you']];
-  if(!rpg.pets)rpg.pets=[];
-  for(const p of pets){ const pid=p[0],nm=p[1],cost=p[2];
-   if(rpg.pets.indexOf(pid)>=0)
-    out.push({l:nm, desc:(rpg.pet===pid?'✦ following you':'owned · tap to summon'), pet:pid, c:0,
-     f:function(){rpg.pet=(rpg.pet===pid?null:pid); spawnPet();}});
-   else out.push({l:nm, desc:p[3], pet:pid, c:cost, f:function(){rpg.pets.push(pid); rpg.pet=pid; spawnPet();}}); } }
- // Maren no longer stocks anything -- she runs the auction, and her button never reaches this
- // panel. Potions are not sold at all any more: they refill on their own, and glory must never
- // buy power.
+ // Only the blacksmith still trades through this panel. Sella sells cosmetics, Maren runs the
+ // auction and Odo keeps the board, and none of those reach openShop2 at all.
+ //
+ // What was here and why it is gone: Sella's T2/T3 armour and helms, and Odo's three pets, were
+ // all priced in GLORY -- which is exactly glory buying power, the one thing the economy forbids.
+ // Armour above T1 is found now. The pets were also a SECOND follower system running beside the
+ // eggs-and-Sanctuary one, so the game spawned two pets at once; the egg system is the real one.
  return out; }
 function openShop2(id){ const n=SHOPNPCS.filter(function(x){return x.id===id;})[0]||SHOPNPCS[0];
  $s('shopTitle').textContent=n.title;
@@ -1541,23 +1559,30 @@ function paintShop2(id){ if(!rpg) return;
    navigator.vibrate&&navigator.vibrate(15); };
   box.appendChild(card); }
 }
-function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allies.splice(i,1);
- if(!rpg||!rpg.pet) return;
- const dmg=rpg.pet==='wolf'?Math.max(3,Math.round(player.dmg*0.5))
-  :rpg.pet==='skel'?Math.max(4,Math.round(player.dmg*0.7))
-  :Math.max(5,Math.round(player.dmg*0.9));
- allies.push({pet:true,x:player.x,y:player.y,dmg:dmg,life:1e9,cd:0,spr:rpg.pet}); }
+// The legacy bought-pet follower is retired. It ran BESIDE the egg/Sanctuary pet, so a player who
+// had both walked around with two, and only this one dealt damage -- a per-character combat pet
+// bought with glory. `rpg.pet`/`rpg.pets` may still sit in old saves; nothing reads them now, and
+// this exists only so any follower left over from a previous session is cleared rather than
+// orphaned in `allies`. Pets live in 15_pets.js.
+function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allies.splice(i,1); }
 // Stalls are opened from the prompt above the stall (usePortalPrompt, kind 'vendor') -- there is
 // deliberately no HUD button to bind here any more.
+// Every stall panel closes the same way and in the same places (walking off, opening the menu,
+// crossing the bridge), so the list of them lives here once instead of in five call sites.
+const VENDOR_PANELS=['shopScr','aucScr','bntScr','dmdScr'];
+function closeVendorPanels(){ for(const id of VENDOR_PANELS){ const el=document.getElementById(id);
+  if(el) el.style.display='none'; } }
 $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none';});
 $s('aucClose').addEventListener('click',()=>{ if(typeof closeAuction==='function') closeAuction(); });
+$s('bntClose').addEventListener('click',()=>{ if(typeof closeBounties==='function') closeBounties(); });
+$s('dmdClose').addEventListener('click',()=>{ if(typeof closeDiamonds==='function') closeDiamonds(); });
+$s('wrdClose').addEventListener('click',()=>{ if(typeof closeWardrobe==='function') closeWardrobe(); });
 
 
 
 function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display=(s===id)?'flex':'none';
  $s('menuBtn').style.display='none'; $s('potBtn').style.display='none';
- $s('shopScr').style.display='none';
- if($s('aucScr'))$s('aucScr').style.display='none';
+ closeVendorPanels();
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
  $s('mapScr').style.display='none';
