@@ -1134,7 +1134,9 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
  const it=ch.inv[invSelIdx];
  if(it){ let html='<b style="color:'+itemRarCol(it)+'">'+itemName(it)+'</b>';
   if(it.rar) html+=' <span style="color:'+RAR_COL[it.rar]+'">('+RAR_NAMES[it.rar]+')</span>';
-  html+=' · '+itemValue(it)+'g';
+  // was a gold price, which has been unspendable and unearnable since gold was wiped. The auction
+  // still values items, so show THAT -- what the house would ask for it, not what you could get.
+  if(typeof itemGlory==='function') html+=' · worth '+itemGlory(it)+'✦ at auction';
   if(it.k!=='pot'&&!canEquip(it,ch)) html+=' · <span style="color:#c04a3d">wrong class</span>';
   if(it.k!=='pot'){ const s2=itemStats(it,ch.cls); let sl='';
    for(const k of STATS){ if(s2[k]) sl+='<span style="color:'+STAT_META[k].col+'">+'+s2[k]+' '+STAT_META[k].s+'</span> '; }
@@ -1142,7 +1144,6 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
   $s('invSel').innerHTML=html;
  } else $s('invSel').textContent='Tap an item';
  $s('invEquip').style.display = (it&&canEquip(it,ch)) ? '' : 'none';
- $s('invSell').style.display = it? '':'none';
  $s('invDrop').style.display = it? '':'none';
 }
 $s('invBtn').addEventListener('click',openInv);
@@ -1186,10 +1187,7 @@ $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  ch.inv.splice(invSelIdx,1); if(r.old) ch.inv.push(r.old);
  invSelIdx=-1; saveRPG(); paintInv();
  msg(nm,'equipped'); });
-$s('invSell').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
- const it=ch.inv[invSelIdx]; if(!it) return;
- ch.inv.splice(invSelIdx,1); invSelIdx=-1;
- saveRPG(); hudRPG(); paintInv(); });
+// (no Sell handler: see index.html — with gold gone it paid nothing and only destroyed the item)
 $s('invDrop').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it) return;
  if(it.k==='wpn'&&it.t>=6&&!confirm('Discard '+itemName(it)+'?')) return;
