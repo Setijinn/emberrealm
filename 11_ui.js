@@ -267,14 +267,13 @@ function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
  else if(slot==='ring'){ const rd=RING_DEF[extra]||RING_DEF.hp; s[rd.stat]=(s[rd.stat]||0)+rd.v(t); }
  return s;
 }
-// rarity + rolled prefix affixes on tier-7+ (index >=6) gear
+// RARITY (user, 2026-07-26) does exactly two things: it picks the item's border colour, and it
+// sets HOW MANY random stats the item rolls (count == rarity index, see rollAffixes). It does NOT
+// scale power. It used to: a RAR_MULT of up to 3.0x on base stats meant a lucky Mythical T5
+// out-stat a Common T9, so the two axes fought each other and the tier ladder stopped meaning
+// anything. TIER is now the only power axis and the only progression axis.
 const RAR_NAMES=['','Uncommon','Rare','Epic','Legendary','Mythical'];
 const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#c07ad4','#ff9c50','#ff4d5e'];
-// rarity POWER multiplier on an item's base gear stats — makes rarity a dominant power
-// axis (design rule 3): at any given tier each rarity step is a big jump, so a Mythical
-// always out-stats a Legendary of the same tier. (Affixes are added on top, unscaled.)
-const RAR_MULT=[1, 1.18, 1.42, 1.8, 2.3, 3.0];
-function rarMult(r){ return RAR_MULT[r|0]||1; }
 function scaleStats(s,m){ for(const k of STATS) s[k]*=m; return s; }
 const AFFIX_PREFIX={ atk:'Vicious', def:'Sturdy', hp:'Vital', mp:'Arcane',
  vit:'Hearty', wis:"Sage's", dex:'Nimble', spd:'Swift', luck:'Lucky', fort:'Prosperous' };
@@ -310,7 +309,7 @@ function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll') return newSta
  else if(it.k==='helm') base=gearBaseStats('helm',it.t,it.mt);
  else if(it.k==='ring') base=gearBaseStats('ring',it.t,it.st);
  else base=newStats();
- scaleStats(base,rarMult(it.rar));                 // rarity scales base power (design rule 3)
+ // base power is the TIER's, untouched by rarity — rarity only adds the rolled affixes below
  addStats(base,affStats(it.aff));
  for(const k of STATS) base[k]=Math.round(base[k]);
  return base;
@@ -335,7 +334,9 @@ function canEquip(it,ch){ if(!it||it.k==='pot')return false;
  return it.k==='ring'; }
 function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
  if(it.k==='scroll') return 40;
- return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*rarMult(it.rar))); }
+ // worth follows tier, plus a modest premium per rolled affix — rarity is no longer raw power,
+ // but more rolled stats is still more item, and a Mythical should not sell for a Common's price
+ return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*(1+(it.rar||0)*0.12))); }
 function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
  if(r<0.5){ const keys=Object.keys(WTYPE).filter(k=>k!=='fists');
   it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
@@ -756,10 +757,11 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const at=rpg.arm||0, ht=(rpg.helm===undefined?-1:rpg.helm), rg=rpg.ring;
  const wL=rpg.wpnL?legById(rpg.wpnL):null;
  const aL=rpg.armL?legById(rpg.armL):null;
- // ---- accumulate the 10 stats: class base + level + gear (base×rarity + affixes)
+ // ---- accumulate the 10 stats: class base + level + gear (tier base + rolled affixes)
  const st=addStats(classBaseStats(c), levelStats(c,rpg.lvl));
- // gear slot: base stats scaled by the equipped item's rarity, then affixes added on top
- function addSlot(base,slot){ scaleStats(base,rarMult(eqRar(slot))); addStats(base,affStats(eqAffArr(slot))); addStats(st,base); }
+ // gear slot: the TIER's base stats, plus whatever affixes that item rolled. Rarity contributes
+ // only through how many affixes there are — it no longer multiplies the base (see RAR_NAMES).
+ function addSlot(base,slot){ addStats(base,affStats(eqAffArr(slot))); addStats(st,base); }
  if(wL) st.atk+=wL.add; else addSlot(gearBaseStats('wpn',rpg.wpn),'wpn');
  if(aL){ st.def+=aL.def; st.hp+=aL.hp; st.spd+=aL.spd||0; }
  else addSlot(gearBaseStats('arm',at,mt),'arm');
