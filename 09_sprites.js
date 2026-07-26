@@ -459,7 +459,11 @@ function enemyBand(e){
  // the theme of whatever territory it happens to squat in now.
  if(curRoom&&typeof curRoom.ring==='number') return bossArt(curRoom.ring);
  return -1; }
-function mobLabel(e){ const t=MOBNAME[e.type]; if(!t) return ENAME[e.type]||'';
+// The creature's own name wins: MOBSPEC gives every band its own species rather than one
+// creature renamed per zone, so the name is stamped at spawn from the ground it stood on and
+// travels with it. MOBNAME stays as the fallback for anything built outside makeEnemy.
+function mobLabel(e){ if(e.spn) return e.spn;
+ const t=MOBNAME[e.type]; if(!t) return ENAME[e.type]||'';
  const bd=enemyBand(e); return (bd>=0&&t[bd])||ENAME[e.type]||''; }
 const _mobTintCache=new Map();
 function tintedMob(im,bd){ const tint=(bd>=0)?MOBTINT[bd]:null; if(!tint) return im;

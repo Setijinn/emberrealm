@@ -874,12 +874,90 @@ const EBEH={
               lunge:{min:110,max:250,mul:2.2,dur:0.30,cd:3.0}},
   skirmisher:{kiteMin:175, kiteMax:300, spdMul:2.4, root:0.42},
 };
+// ---- PER-AREA SPECIES (user, 2026-07-26) ----
+// Every theme band gets its OWN creatures, not the same two recoloured. A band's pair differs in
+// what it is made of (hp / speed / reach / size), in which behaviours it draws from, and in its
+// movement signature — so the Bog fights nothing like the Crags even at the same level.
+//   w    behaviour weights, drawn deterministically from the spawn position
+//   sig  movement-signature overrides merged over EBEH[beh] in enemyAI (07_update)
+//   hp/spd/tch/r  multipliers on the level-scaled base
+// Each pair is written for the ground it stands on, and the behaviour weights follow from the
+// creature rather than the other way round: a crab has no reason to pounce, a wolf has every
+// reason, and a thing that lives in a bog cannot dash through it.
+// Bands (rings.names): 0 Landing Sands, 1 Gullwind Shore, 2 Sawgrass Flats, 3 The Verdant Belt,
+// 4 Wolfwood, 5 Deep Timber, 6 Stonebrow Rise, 7 Cinderwatch, 8 The Ashfall.
+const MOBSPEC=[
+ // 0 THE LANDING SANDS (Lv1-8) — open beach. The first thing a new hero meets, so it is slow,
+ // legible and forgiving: it scuttles at you in the open with nowhere to hide.
+ {c:{n:'Sand Crawler',   hp:0.72,spd:0.88,tch:0.75,r:0.90, w:{roamer:40,hunter:34,sentinel:18,pack:8},
+     sig:{sway:0.62,swayF:3.4,commit:40,harry:0,lunge:null}},   // sidles; never dashes
+  s:{n:'Tide Spitter',   hp:0.85,spd:0.80,bd:0.80,r:0.95, w:{sentinel:48,skirmisher:26,roamer:26}}},
+
+ // 1 GULLWIND SHORE (Lv8-14) — wind-scoured cliffs and wrecks. Things here come at you from above.
+ {c:{n:'Cliff Skua',     hp:0.70,spd:1.22,tch:1.20,r:0.88, w:{ambusher:52,roamer:26,hunter:14,pack:8},
+     sig:{sway:0.66,swayF:2.9,commit:70,harry:88,
+          lunge:{min:130,max:320,mul:3.0,dur:0.34,cd:2.0},breakoff:1.7,rehide:250}},  // stoops, climbs away
+  s:{n:'Wreck Scavenger',hp:0.95,spd:1.05,bd:0.90,r:0.98, w:{skirmisher:52,roamer:24,sentinel:14,hunter:10}}},
+
+ // 2 SAWGRASS FLATS (Lv14-20) — waist-deep marsh grass. Everything here is slow and hard to see.
+ {c:{n:'Reed Lurcher',   hp:1.45,spd:0.74,tch:1.25,r:1.12, w:{ambusher:44,sentinel:30,hunter:20,roamer:6},
+     sig:{sway:0.22,swayF:0.9,harry:0,lunge:null,breakoff:1.6,rehide:250}},   // wades; cannot dash
+  s:{n:'Sawgrass Spitter',hp:1.10,spd:0.78,bd:1.10,r:1.02, w:{sentinel:46,skirmisher:28,roamer:26}}},
+
+ // 3 THE VERDANT BELT (Lv20-26) — the first true forest, and the Grovewarden's province. Cultists
+ // begin here because this is where the corruption has taken root.
+ {c:{n:'Briar Hound',    hp:0.88,spd:1.10,tch:0.95,r:0.95, w:{pack:48,hunter:24,roamer:16,ambusher:12},
+     sig:{sway:0.58,swayF:2.4,harry:72,lunge:{min:100,max:250,mul:2.5,dur:0.32,cd:2.2}}},
+  s:{n:'Grove Cultist',  hp:1.00,spd:1.00,bd:1.00,r:1.00, w:{skirmisher:40,sentinel:24,roamer:20,hunter:16}}},
+
+ // 4 WOLFWOOD (Lv26-32) — it is named for what hunts there. The definitive pack: they surround
+ // first and commit together.
+ {c:{n:'Dire Wolf',      hp:0.95,spd:1.18,tch:1.10,r:1.02, w:{pack:70,hunter:18,ambusher:8,roamer:4},
+     sig:{sway:0.44,swayF:2.6,commit:90,harry:78,flank:168,collapse:230,
+          lunge:{min:105,max:280,mul:2.9,dur:0.32,cd:1.9}}},
+  s:{n:'Wolfwood Seer',  hp:1.05,spd:0.98,bd:1.10,r:1.00, w:{sentinel:40,skirmisher:32,roamer:16,hunter:12}}},
+
+ // 5 DEEP TIMBER (Lv32-39) — old growth gone to rot, the Bog Horror's ground. Nothing charges you
+ // here; it waits in the standing water until you are past it.
+ {c:{n:'Timber Lurker',  hp:1.30,spd:0.92,tch:1.35,r:1.05, w:{ambusher:62,sentinel:20,hunter:12,pack:6},
+     sig:{sway:0.68,swayF:1.6,commit:150,breakoff:2.1,rehide:280,harry:0}},
+  s:{n:'Mire Cultist',   hp:1.15,spd:0.86,bd:1.15,r:1.02, w:{sentinel:44,skirmisher:28,roamer:18,hunter:10}}},
+
+ // 6 STONEBROW RISE (Lv39-45) — bare rock and Stonefist's terraces. Guards, not hunters: they hold
+ // a line and make you come through it.
+ {c:{n:'Stone Warden',   hp:1.85,spd:0.80,tch:1.30,r:1.16, w:{sentinel:60,hunter:26,ambusher:8,roamer:6},
+     sig:{sway:0.12,swayF:0.8,harry:0,lunge:null,pace:96,leash:430}},
+  s:{n:'Scree Slinger',  hp:1.25,spd:0.76,bd:1.30,r:1.05, w:{sentinel:56,skirmisher:20,hunter:16,roamer:8}}},
+
+ // 7 CINDERWATCH (Lv45-50) — the volcanic shelf the Crag Gargoyle roosts on. Everything here leaps.
+ {c:{n:'Crag Leaper',    hp:0.80,spd:1.12,tch:1.20,r:0.94, w:{hunter:38,ambusher:26,pack:22,roamer:14},
+     sig:{sway:0.50,swayF:2.8,commit:90,harry:96,
+          lunge:{min:120,max:340,mul:3.3,dur:0.40,cd:1.7}}},    // the longest dash in the world
+  s:{n:'Ember Cultist',  hp:1.05,spd:1.08,bd:1.05,r:0.98, w:{skirmisher:58,hunter:18,roamer:14,sentinel:10}}},
+
+ // 8 THE ASHFALL and the grind ring beyond it (Lv50) — burnt ground at the rift's edge. These do
+ // not circle, do not break off and do not stop coming.
+ {c:{n:'Ash Revenant',   hp:1.70,spd:0.90,tch:1.35,r:1.10, w:{hunter:58,sentinel:22,pack:12,roamer:8},
+     sig:{sway:0.24,swayF:1.1,commit:60,harry:0,
+          lunge:{min:110,max:220,mul:1.9,dur:0.40,cd:3.2}}},
+  s:{n:'Core Cultist',   hp:1.30,spd:0.88,bd:1.40,r:1.06, w:{sentinel:44,skirmisher:30,hunter:16,roamer:10}}},
+];
+function mobSpec(band,t){ const S=MOBSPEC[Math.max(0,Math.min(MOBSPEC.length-1,band|0))];
+  return S?S[t==='s'?'s':'c']:null; }
 // deterministic per-spawn so a given spot keeps its character across respawns (a guarded
-// chokepoint stays guarded). Variety + danger rise with the band.
-function pickBehaviour(sp,lv,type){
-  const b=Math.max(0,Math.min(8,Math.round(lv/5.5)));   // behaviour-variety band (Lv50 -> full set)
+// chokepoint stays guarded). Weights come from the SPECIES, so which behaviours an area even
+// contains is part of what makes that area itself.
+function pickBehaviour(sp,lv,type,band){
   const h=(Math.imul(sp.x|0,374761393)+Math.imul(sp.y|0,668265263))>>>0;
   const roll=(h^(h>>>13))%100;
+  const S=mobSpec(band===undefined?5:band,type);
+  if(S&&S.w){ let acc=0, tot=0;
+    for(const k in S.w) tot+=S.w[k];
+    const r=(roll/100)*tot;
+    for(const k in S.w){ acc+=S.w[k]; if(r<acc) return k; }
+  }
+  // fallback: the pre-species roll, kept so a caller with no band still gets sane variety
+  const b=Math.max(0,Math.min(8,Math.round(lv/5.5)));
   if(type==='s'){
     if(roll < 26+b*4) return 'skirmisher';
     if(roll < 42+b*2) return 'sentinel';
@@ -927,7 +1005,25 @@ function makeEnemy(sp){
   // assign a behaviour to roaming enemies (not dungeon nodes / bosses) and apply its spawn-time
   // tweaks. home = spawn point (sentinels leash to it); ambushers begin dormant.
   if(e.type==='c'||e.type==='s'){
-    e.beh=pickBehaviour(sp,lv,e.type); const B=EBEH[e.beh]||EBEH.hunter;
+    // WHICH creature this is comes from the ground it spawned on. In a dungeon there is no
+    // overworld band under the tile, so the boss's art slot stands in — the dream wears the theme
+    // of the homeland it remembers, which is the same rule the tileset and mob names already use.
+    let _bd = (typeof grvBandXY==='function' && curRoom && curRoom.rings) ? grvBandXY(sp.x,sp.y)
+            : (curRoom && typeof curRoom.band==='number') ? curRoom.band
+            : (curRoom && typeof curRoom.ring==='number' && typeof bossArt==='function') ? bossArt(curRoom.ring)
+            : 5;
+    if(!(_bd>=0)) _bd=5;
+    e.band=Math.max(0,Math.min(MOBSPEC.length-1,_bd));
+    const S=mobSpec(e.band,e.type);
+    if(S){
+      e.spn=S.n; e.sig=S.sig||null;
+      if(S.hp) e.hp*=S.hp;
+      if(S.spd) e.spd*=S.spd;
+      if(S.tch&&e.touch) e.touch*=S.tch;
+      if(S.bd&&e.bd) e.bd*=S.bd;
+      if(S.r) e.r=Math.round(e.r*S.r);
+    }
+    e.beh=pickBehaviour(sp,lv,e.type,e.band); const B=EBEH[e.beh]||EBEH.hunter;
     e.home={x:e.x,y:e.y}; e.roamA=Math.random()*6.283;
     if(B.hpMul) e.hp*=B.hpMul;
     if(B.spdMul) e.spd*=B.spdMul;

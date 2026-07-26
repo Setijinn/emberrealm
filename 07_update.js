@@ -257,7 +257,11 @@ function damagePlayer(raw){ let hit=raw;
 // The type-specific code (chase / kite / fire) in update() consumes it. One behaviour per
 // enemy, so only one branch ever applies.
 function enemyAI(e,dx,dy,dd,dt){
-  const B=(typeof EBEH!=='undefined'&&EBEH[e.beh])||{};
+  // the species' signature (MOBSPEC in 03_entities) overrides the behaviour's defaults, so a Reed
+  // Lurcher ambushing and a Cliff Skua ambushing are the same RULE with different bodies.
+  // Merged once and cached: this runs for every enemy every frame.
+  let B=(typeof EBEH!=='undefined'&&EBEH[e.beh])||{};
+  if(e.sig){ if(!e._mb || e._mbk!==e.beh){ e._mb=Object.assign({},B,e.sig); e._mbk=e.beh; } B=e._mb; }
   let tx=player.x, ty=player.y, smul=1;
   // per-enemy gait clock and phase. Lazily seeded from the spawn position so it survives enemies
   // built by paths that never touch makeEnemy (summons, decoys) and so two neighbours never sway
@@ -370,13 +374,18 @@ function enemyAI(e,dx,dy,dd,dt){
   // pack closing on one point ends up standing in the same 7px and reads as one animal. Push off
   // near neighbours: this is what turns a surrounding ring into five distinct hounds, and it keeps
   // the harry orbits from collapsing into a single lockstep circle.
-  if(e.type==='c'){
+  if(e.type==='c'||e.type==='s'){
     let sx=0, sy=0, sn=0;
-    for(const o of enemies){ if(o===e||o.type!=='c'||o.hp<=0) continue;
+    const SR=(e.r||15)+24;
+    for(const o of enemies){ if(o===e||o.hp<=0||(o.type!=='c'&&o.type!=='s')) continue;
       const ox=e.x-o.x, oy=e.y-o.y, od=Math.hypot(ox,oy);
-      if(od<42 && od>0.01){ const w=(42-od)/42; sx+=ox/od*w; sy+=oy/od*w; if(++sn>7) break; } }
-    if(sn){ const al=Math.hypot(tx-e.x,ty-e.y)||1;
-      tx+=sx*al*0.55; ty+=sy*al*0.55; }
+      if(od<SR && od>0.01){ const w=(SR-od)/SR; sx+=ox/od*w; sy+=oy/od*w; if(++sn>7) break; } }
+    // The push is scaled by the distance still to run, with a FLOOR: a creature already standing
+    // on its target has ~0 left to run, so a purely proportional nudge vanishes exactly where the
+    // stacking happens — which is how two of them ended up 1px apart on the player.
+    if(sn){ const al=Math.hypot(tx-e.x,ty-e.y);
+      const push=Math.max(46,al*0.55);
+      tx+=sx*push; ty+=sy*push; }
   }
   // Sway: swing the HEADING off the straight line, decaying to nothing inside `commit`, so the
   // creature loafs and jinks at range and goes straight for the throat up close.
