@@ -1611,32 +1611,22 @@ function paintRelics(){ const box=$s('eqRelics'); if(!box||!rpg) return;
    recalcStats(); saveRPG(); hudRPG(); paintInv();
    navigator.vibrate&&navigator.vibrate(12); }; });
 }
-function legendRows(slot,out){ for(const L of LEGENDS){ if(L.slot!==slot) continue;
- const owned=rpg.legends&&rpg.legends.indexOf(L.id)>=0;
- // a relic (price 0) is not merchandise — it only appears here once you have taken it off the
- // boss whose dungeon kept it. Without this the shop would hand them out for nothing.
- if(!owned && !L.price) continue;
- const eq=(slot==='wpn'?rpg.wpnL:rpg.armL)===L.id;
- if(owned) out.push({l:L.n, desc:(eq?'in use · tap to set aside':'owned · tap to equip'), legend:true, c:0,
-   f:function(){ if(slot==='wpn') rpg.wpnL=(eq?null:L.id); else rpg.armL=(eq?null:L.id); }});
- else out.push({l:L.n, desc:L.d, legend:true, c:L.price,
-   f:function(){ if(!rpg.legends)rpg.legends=[]; rpg.legends.push(L.id);
-     if(slot==='wpn') rpg.wpnL=L.id; else rpg.armL=L.id; }});
-} }
+// (legendRows is gone with Bram's stock -- it existed to SELL the four legendaries for glory. One
+//  already owned is equipped from the ★ LEGENDARIES strip on the equipment screen, same as before.)
+// NOTHING IS SOLD FOR GLORY ANY MORE.
+//
+// Glory must never buy power -- that rule is why selling items was removed, why potions refill
+// themselves, and why Sella's armour and Odo's pets went. Bram was the last hole in it: T1-T3
+// weapons and two legendaries, all priced in glory, all straightforwardly power. His stock is gone
+// for the same reason theirs was. Weapons are found in the field now, like armour.
+//
+// The stall itself is UNTOUCHED and stays reserved for the item-fusion system, which is why the
+// forge is cold rather than gone: it is waiting for something, and it says so.
 function shopRowsFor(id){ const ch=curChar(); const out=[]; const cls=ch.cls;
- if(id==='bram'){ const nt=(rpg.wpn||0)+1;
-  if(nt<3){ const w=weaponAt(cls,nt);
-   out.push({l:'T'+(nt+1)+' '+w.n, desc:'+'+w.add+' ATTACK', ic:{k:'wpn',wt:CWEAP[cls],t:nt}, c:w.cost,
-    f:function(){rpg.wpn=nt; rpg.wpnL=null; if(rpg.eqAff)rpg.eqAff.wpn=null;}}); }
-  else out.push({note:'Bram stocks up to T3 — finer steel is won in the field.'});
-  legendRows('wpn',out); }
- // Only the blacksmith still trades through this panel. Sella sells cosmetics, Maren runs the
- // auction and Odo keeps the board, and none of those reach openShop2 at all.
- //
- // What was here and why it is gone: Sella's T2/T3 armour and helms, and Odo's three pets, were
- // all priced in GLORY -- which is exactly glory buying power, the one thing the economy forbids.
- // Armour above T1 is found now. The pets were also a SECOND follower system running beside the
- // eggs-and-Sanctuary one, so the game spawned two pets at once; the egg system is the real one.
+ if(id==='bram'){
+  out.push({note:'The forge is banked and cold. Bram turns a broken blade over and sets it down again.'});
+  out.push({note:'"Steel is won out there, not bought in here. Bring me something worth joining and we will talk."'});
+ }
  return out; }
 function openShop2(id){ const n=SHOPNPCS.filter(function(x){return x.id===id;})[0]||SHOPNPCS[0];
  $s('shopTitle').textContent=n.title;

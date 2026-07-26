@@ -851,7 +851,7 @@ function update(dt){
     // Anchored above the hanging sign (y-118), which the stall art and sign already occupy.
     if(curRoom.town) for(const np of SHOPNPCS){ const d=Math.hypot(np.x-player.x,np.y-player.y);
       if(d<85 && d<_pbest){ _pbest=d; portalPrompt={kind:'vendor',x:np.x,y:np.y-118,np:np,
-        ctx:np.name, label:np.auction?'AUCTION':np.event?'BOUNTIES':np.diamond?'DIAMONDS':'SHOP'}; } }
+        ctx:np.name, label:np.auction?'AUCTION':np.event?'BOUNTIES':np.diamond?'DIAMONDS':(np.plabel||'SHOP')}; } }
     // the Wardrobe's mirror — a room-level interactable with no vendor behind it
     if(curRoom.wardrobe){ const wd=curRoom.wardrobe, d=Math.hypot(wd.x-player.x,wd.y-player.y);
       if(d<70 && d<_pbest){ _pbest=d; portalPrompt={kind:'wardrobe',x:wd.x,y:wd.y-40,

@@ -793,7 +793,8 @@ function enterDungeon(ring){
 //   odo    BOUNTIES     the daily board (`event:true`)
 // The flag on the row is the whole dispatch: usePortalPrompt reads it to pick the panel.
 const SHOPNPCS=[
- {id:'bram', name:'Bram', role:'BLACKSMITH', title:"BRAM'S WEAPONWORKS", awn:'#b5482f', x:9.5*TILE,  y:10.8*TILE},
+ // he sells nothing now (glory must never buy power), so the panel no longer claims to be a shop
+ {id:'bram', name:'Bram', role:'BLACKSMITH', title:"BRAM'S FORGE", plabel:'FORGE', awn:'#b5482f', x:9.5*TILE,  y:10.8*TILE},
  {id:'sella',name:'Sella',role:'CURIOS',     title:'THE DIAMOND EXCHANGE', awn:'#c46ee0', diamond:true, x:9.5*TILE,  y:18.3*TILE},
  {id:'maren',name:'Maren',role:'AUCTIONEER', title:'THE AUCTION HOUSE', awn:'#e8b34b', auction:true, x:32.5*TILE, y:10.8*TILE},
  {id:'odo',  name:'Odo',  role:'BOUNTIES',   title:'THE BOUNTY BOARD',  awn:'#7dc47a', event:true,   x:32.5*TILE, y:18.3*TILE},
