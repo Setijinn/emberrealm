@@ -114,7 +114,9 @@ if(typeof window!=='undefined'){
   // material: Cracked, Worn, Iron, Steel, Tempered, Runed, Ember, Obsidian, Storm-forged,
   // Dragonbone, Mythril, Hearthfire. Armour, helms and rings still ship three bands each; the
   // band maths below adapts to whatever a key actually provides.
-  ['sword','dagger','bow','xbow','staff','wand'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2,3,4,5,6,7,8,9,10,11].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
+  // literal list on purpose: building it from Object.keys(WTYPE) would run at load, before
+  // 11_ui.js declares WTYPE, and take the whole boot down with a TDZ ReferenceError
+  ['sword','dagger','bow','xbow','staff','wand','gauntlet'].forEach(k=>{ _itemArt['wpn_'+k]=[0,1,2,3,4,5,6,7,8,9,10,11].map(b=>_img('assets/items/wpn_'+k+'_'+b+'.png')); });
   // Armour and helms also ship one sprite per tier now. Rings are still on three bands; the band
   // maths below keys off each array's own length, so mixed depths coexist without a special case.
   const _T12=[0,1,2,3,4,5,6,7,8,9,10,11];
@@ -176,7 +178,8 @@ const _projArt={_list:['arrow','fireball','ice_shard','lightning','magic_orb','s
 // weapon in hand.
 const PROJ_BY_WEAPON={
   bow:'arrow', xbow:'spear', sword:'wind_slash',
-  dagger:'dagger', staff:'magic_orb', wand:'wisp', fists:'wind_slash'
+  dagger:'dagger', staff:'magic_orb', wand:'wisp',
+  gauntlet:'wind_slash', fists:'wind_slash'   // a struck-air arc: the punch itself is the sprite
 };
 // Signature hue per tier, matching the material each tier's gear is made of: rust, grey, iron blue,
 // steel, brass, rune blue, ember orange, obsidian red, storm white-blue, bone cream, mythril, gold.

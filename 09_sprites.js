@@ -148,6 +148,9 @@ const WSPR={
  xbow:["..W..W....","GGWWWWWWT.","..W..W...."],
  staff:["..........T.","GGGGGGGGGGTT","..........T."],
  wand:["GGWWWWT."],
+ // the monk's gauntlet: a wrapped forearm (G) opening into a knuckle block (W) with a tier-coloured
+ // stud (T). Drawn pointing right like every other glyph — blitRot pivots at -w*0.2.
+ gauntlet:["..WWW.","GGWWWT","GGWWWT","..WWW."],
 };
 const wpnCache={};
 function wpnSpr(type,tier){ const k=type+'_'+tier;
@@ -370,7 +373,8 @@ const HEADGEAR={ knight:'ghelm', paladin:'circlet', cleric:'circlet',
  berserker:'horns', dragoon:'crest', ranger:'hood', hunter:'hood', rogue:'hood',
  warlock:'skull', necro:'skull', monk:'topknot', bard:'feather', assassin:'hood',
  pyro:'wizhat', frost:'wizhat', storm:'wizhat', shaman:'mask' };
-const ATK_STYLE={ sword:'swing',dagger:'thrust', bow:'draw',xbow:'draw', staff:'cast',wand:'cast', fists:'thrust' };
+const ATK_STYLE={ sword:'swing',dagger:'thrust', bow:'draw',xbow:'draw', staff:'cast',wand:'cast',
+ gauntlet:'thrust', fists:'thrust' };
 const heroCache={};
 function buildHero(cls,frame,armT){
  const CW=26, CH=34, cv=document.createElement('canvas'); cv.width=CW; cv.height=CH;
@@ -1451,7 +1455,11 @@ function render(){
   } else {
     blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
   }
-  if(!_es && chW&&rpg && wtype!=='fists'){
+  // The gauntlet plays by the same rules as every other weapon: it draws in the hand like a sword
+  // or a bow does. The old `wtype!=='fists'` exception existed because fists were not an item at
+  // all — now that the monk carries a real weapon there is nothing to except.
+  // (fallback path only — this whole branch is skipped when the PixelLab sprite is present.)
+  if(!_es && chW&&rpg){
     const tier=rpg.wpnL?11:(rpg.wpn||0);
     let reach=player.r+2, wang=aa, glow=0;
     if(style==='swing'){ wang=aa+(phase-0.5)*1.7; reach+=swng*3; }

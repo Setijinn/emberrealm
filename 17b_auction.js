@@ -41,7 +41,8 @@ function auctionListings(){
     // triangular-ish tier draw: middle tiers common, the ends rare
     const t=Math.max(0,Math.min(MAXT-1, Math.round((rnd()+rnd()+rnd())/3*(MAXT-1))));
     let it;
-    if(k==='wpn'){ const ws=Object.keys(WTYPE).filter(x=>x!=='fists');
+    // same rule as mkItem: a retired type carries `legacy` and never reaches a shelf
+    if(k==='wpn'){ const ws=Object.keys(WTYPE).filter(x=>!WTYPE[x].legacy);
       it={k:'wpn',wt:ws[(rnd()*ws.length)|0],t:t}; }
     else if(k==='ring') it={k:'ring',st:RING_STATS[(rnd()*RING_STATS.length)|0],t:t};
     else it={k:k,mt:mats[(rnd()*3)|0],t:t};

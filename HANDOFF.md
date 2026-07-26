@@ -1,7 +1,7 @@
 # EmberRealm — session handoff
 
 Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v332`** (`sw.js`, bump every release).
+Current service-worker version: **`emberrealm-v334`** (`sw.js`, bump every release).
 
 **How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
 `ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
@@ -148,6 +148,32 @@ The band above the ladder exists, and forty-eight relics in twelve SETS live on 
   settings rows an input cannot use (manual aim on touch, vibration/fullscreen on desktop) grey out
   and refuse taps. All eight settings were audited against real behaviour.
 - **Minimap** shrunk to 148px, zoom buttons scale off the panel.
+
+## The Monk's weapon (done 2026-07-26)
+
+The Monk was the one class whose weapon slot did not work. `CWEAP.monk` was `'fists'`, and
+`'fists'` was filtered out of **both** item generators, so no drop, sack or auction shelf could
+ever produce a weapon a Monk could equip — `rpg.wpn` was frozen at 0 for the life of the character
+while every other class climbed to a T12 worth +218 ATK. `WSPR` had no `fists` entry either, so
+`wpnSpr` fell back to `WSPR.sword`: a Monk's weapon icon had always drawn as a sword.
+
+- **`WTYPE.gauntlet`** ("Gauntlets") is the Monk's weapon, carrying the *identical* numbers fists
+  had (reach `spd*life` ≈ 94px, the shortest in the game, hence the fastest rate). Nothing was
+  re-derived — the rate rule needs no revisit.
+- **`fists` is retired in place** with `legacy:1`, not deleted. The generators now filter on
+  `!WTYPE[x].legacy` (`mkItem`, `auctionListings`) instead of matching the name, so retiring a type
+  is one flag. Keeping the row is what stops a stale save throwing in `itemBaseName`.
+- **`migrateWpnType(ch)`** (beside `migrateRelics`, called from `loadRPG`) retypes satchel weapons
+  whose type is `legacy` to the class's current one. Only legacy types are touched — an off-class
+  weapon being carried to trade is a supported state and must never become free power. Without it
+  a Monk's **T13 relic weapon** would sit unequippable forever.
+- 12 sprites at `assets/items/wpn_gauntlet_0..11.png`, registered by adding one word to the list in
+  `08c_embersprites.js`; `WSPR.gauntlet` covers the procedural fallback.
+- **The gauntlet plays by the same rules as every other weapon** — including drawing in the hand in
+  the fallback path. The old `wtype!=='fists'` exception is gone.
+- Cost, accepted knowingly: the weapon pool went 6 → 7 types, so every *other* class's chance of a
+  usable weapon drop falls 16.7% → 14.3%. Biasing `mkItem` toward the roller's own `CWEAP` would
+  fix that (a knight currently sees ~83% unusable weapons) and is a separate design call.
 
 ## Do this next
 

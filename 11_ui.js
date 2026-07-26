@@ -303,9 +303,10 @@ const $s=id=>document.getElementById(id);
 //   staff    432    1.03  0.85    1.21    pierces everything
 //   wand     840    1.00  0.80    1.25    pierces everything AND reaches nearly as far as a bow
 //
-// Note `shots` here stacks with the CLASS's own shots (06_combat: wt.shots + player.shots - 1), so
-// a Shaman's staff fires three bolts rather than one. That is why the piercing weapons carry the
-// two lowest indices — on a multi-shot class every bolt pierces, and the two multiply.
+// `shots` is the WEAPON's alone (06_combat: `const n=Math.min(7,wt.shots||1)`). It used to stack
+// with the class's own, which is how a Shaman's staff threw three bolts; that is gone and
+// `player.shots` is display-only. The piercing weapons still carry the two lowest indices because
+// a bolt that bores through a rank is worth more than one that stops in the first body.
 const WTYPE={
  sword:{n:'Sword',shots:3,spread:0.35,spd:380,life:0.28,size:6,dm:1.0,rof:0.83},
  dagger:{n:'Dagger',shots:2,spread:0.12,spd:560,life:0.28,size:4,dm:0.7,rof:1.09},
@@ -318,10 +319,18 @@ const WTYPE={
  // One piercing bolt is the cleaner weapon.
  staff:{n:'Staff',shots:1,spd:480,life:0.9,size:6,dm:1.0,rof:1.21,pierce:99},
  wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:1.0,rof:1.25,pierce:99},
- fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.85,rof:0.60},
+ // The monk's weapon. Same numbers 'fists' always had -- reach spd*life = ~94px, the shortest in
+ // the game, which is why it carries the highest index and so the fastest rate. Nothing was
+ // re-derived: this is a rename with an item behind it.
+ gauntlet:{n:'Gauntlets',shots:1,spd:520,life:0.18,size:5,dm:0.85,rof:0.60},
+ // RETIRED, kept deliberately. `legacy` is what excludes a type from every generator (see mkItem
+ // and auctionListings), and keeping the row means a save still holding `wt:'fists'` renders and
+ // migrates instead of throwing in itemBaseName before migrateWpnType can repair it.
+ fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.85,rof:0.60,legacy:1},
 };
-// Melee -> sword; rogue/assassin -> dagger; ranger/hunter/bard -> bow (swap to xbow, see WSWAP); monk -> fists.
-const CWEAP={rogue:'dagger',assassin:'dagger',monk:'fists',ranger:'bow',hunter:'bow',bard:'bow',
+// Melee -> sword; rogue/assassin -> dagger; ranger/hunter/bard -> bow (swap to xbow, see WSWAP);
+// monk -> gauntlet (was 'fists', which no generator could ever produce -- see migrateWpnType).
+const CWEAP={rogue:'dagger',assassin:'dagger',monk:'gauntlet',ranger:'bow',hunter:'bow',bard:'bow',
  pyro:'staff',frost:'staff',cleric:'wand',storm:'wand',
  warlock:'wand',necro:'staff',berserker:'sword',knight:'sword',paladin:'sword',
  dragoon:'sword',shaman:'staff'};
@@ -586,7 +595,9 @@ function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll') return newSta
 }
 function itemBaseName(it){
  const p='T'+(it.t+1)+' '+TIER_NAMES[it.t]+' ';
- if(it.k==='wpn')return p+WTYPE[it.wt].n;
+ // guarded: an unknown type must not take the satchel down with it. A co-op peer on an older build
+ // can hand over a weapon whose type this client has never heard of.
+ if(it.k==='wpn')return p+(WTYPE[it.wt]||WTYPE.sword).n;
  if(it.k==='arm')return p+MATN[it.mt]+' Armor';
  if(it.k==='helm')return p+MATN[it.mt]+' Helm';
  if(it.k==='ring')return 'T'+(it.t+1)+' '+RINGN[it.st];
@@ -652,7 +663,9 @@ function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
  return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*(1+(it.rar||0)*0.12))); }
 // One item of a GIVEN kind at a given tier. The kind is chosen by the bag slot, not here.
 function mkItem(k,t,fort){ t=Math.max(0,Math.min(MAXT-1,t)); let it;
- if(k==='wpn'){ const keys=Object.keys(WTYPE).filter(x=>x!=='fists');
+ // data-driven rather than name-matched: a retired type carries `legacy` and drops out of every
+ // generator at once, which is what lets the monk's gauntlet appear here like any other weapon
+ if(k==='wpn'){ const keys=Object.keys(WTYPE).filter(x=>!WTYPE[x].legacy);
    it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
  else if(k==='arm'||k==='helm'){ const mats=['plate','leather','robe'];
    it={k:k,mt:mats[Math.floor(Math.random()*3)],t:t}; }
@@ -1327,6 +1340,24 @@ function migrateRelics(ch){
     } else if(ch.inv && ch.inv.length<20) ch.inv.push(it);
   }
 }
+// A class's weapon TYPE is decided by CWEAP and derived everywhere it is displayed -- the equipped
+// slot stores only a tier and its affixes, so renaming a class's type re-labels what they are
+// wearing for free. A SATCHEL item is different: it stores its own `wt`, so when the monk's type
+// became 'gauntlet' every `wt:'fists'` item already in a bag stopped matching canEquip. The one
+// that actually matters is a T13 relic weapon -- the most valuable object in the game -- which
+// would sit in the satchel reading "wrong class" forever.
+//
+// Only a type marked `legacy` is retyped. An off-class weapon someone is carrying to trade is a
+// real state the game supports, and must never be quietly converted into free power.
+function migrateWpnType(ch){
+  if(!rpg||!ch||!ch.inv) return;
+  const want=CWEAP[ch.cls]; if(!want) return;
+  let n=0;
+  for(const it of ch.inv)
+    if(it && it.k==='wpn' && it.wt && it.wt!==want && WTYPE[it.wt] && WTYPE[it.wt].legacy){
+      it.wt=want; n++; }
+  if(n) saveRPG();      // no one-shot flag: the sweep is 20 items and idempotent, and a flag set
+}                       // before the loop could half-apply and then skip forever
 function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.arm===undefined)rpg.arm=0; if(rpg.helm===undefined)rpg.helm=-1;
  if(rpg.ring===undefined)rpg.ring=null;
@@ -1334,6 +1365,7 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(rpg.legends===undefined)rpg.legends=[]; if(rpg.wpnL===undefined)rpg.wpnL=null;
  if(rpg.armL===undefined)rpg.armL=null; if(!ch.inv)ch.inv=[];
  migrateRelics(ch);
+ migrateWpnType(ch);        // after migrateRelics: it can push a relic weapon into the satchel
  if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null;
  if(rpg.arenaBest===undefined) rpg.arenaBest=0;
  if(typeof initTrain==='function') initTrain(rpg); }   // max-stat scrolls/training (16_maxstats.js)
