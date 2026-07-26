@@ -227,6 +227,11 @@ function drawItemTier(g,it,cw,ch){
   g.restore();
 }
 function itemSprite(it){ if(!it) return null;
+ // a relic has no art of its own yet, so it borrows the top-tier silhouette of the slot it fills —
+ // the ★ in its name and its own colour are what mark it as something else
+ if(it.k==='leg'){ const L=(typeof legById==='function')?legById(it.id):null;
+   if(!L) return null;
+   return L.slot==='wpn' ? wpnSpr('sword',MAXT-1) : armorSpr('plate',MAXT-1); }
  if(it.k==='pot') return sprPotion;
  if(it.k==='wpn') return wpnSpr(it.wt,it.t);
  if(it.k==='arm') return armorSpr(it.mt,it.t);

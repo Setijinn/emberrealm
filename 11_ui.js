@@ -91,6 +91,9 @@ function openBagPanel(lb){
 }
 // stat delta of `it` against what is worn in its slot, as coloured chips
 function bagDeltaHtml(it,ch){
+  if(it&&it.k==='leg'){ const L=legById(it.id);
+    return '<span style="color:#ff9c50">'+(L?L.d:'a relic')+'</span>'
+      +'<div class="bagWho">equip it from the Loadout screen</div>'; }
   if(!it||it.k==='pot'||it.k==='coin'||it.k==='scroll') return '';
   if(!canEquip(it,ch)) return '<span class="bagSame">not for your class</span>';
   const cur=equippedItemFor(it.k,ch);
@@ -143,8 +146,11 @@ function paintBagPanel(){
   const its=bagItems(lb);
   if(!its.length){ closeBagPanel(); return; }
   const band=bagBand(lb), bn=LOOT_BANDS[band], top=bagTopTier(lb);
-  $s('bagTitle').textContent=(bn&&bn.bound)?'SOULBOUND SACK':'SACK';
-  $s('bagSub').innerHTML='<span style="color:'+tierCol(top)+'">T'+(top+1)+' '+(TIER_NAMES[top]||'')+'</span>'
+  const relic=its.some(x=>x&&x.k==='leg');
+  $s('bagTitle').textContent=relic?'A RELIC':((bn&&bn.bound)?'SOULBOUND SACK':'SACK');
+  $s('bagSub').innerHTML=(relic
+      ? '<span style="color:#ff9c50">kept by its dungeon — there is only one</span>'
+      : '<span style="color:'+tierCol(top)+'">T'+(top+1)+' '+(TIER_NAMES[top]||'')+'</span>')
     +' · '+its.length+' piece'+(its.length===1?'':'s')
     +((bn&&bn.bound)?' · <span style="color:#ff9c50">bound to you</span>':' · anyone may take this');
   const L=$s('bagList'); L.innerHTML='';
@@ -335,7 +341,31 @@ const LEGENDS=[
  {id:'duskfang',slot:'wpn',n:'Duskfang',price:9000,add:55,rof:0.72,d:'+55 dmg · strikes 40% faster'},
  {id:'aegisflame',slot:'arm',n:'Aegis of the First Flame',price:11000,def:22,hp:120,spd:0,d:'+22 DEF · +120 HP'},
  {id:'wandershroud',slot:'arm',n:"Wanderer's Shroud",price:8000,def:10,hp:40,spd:35,d:'+10 DEF · +40 HP · +35 SPD'},
+ // ---- DUNGEON RELICS (user, 2026-07-26) ----
+ // One unique per dungeon, named for the thing that kept it. price:0 means it is not for sale —
+ // the only way to hold one is to take it off the boss whose dungeon it belongs to. Its dungeon
+ // form drops it at a real rate; the OVERWORLD form has only a very minimal chance, so meeting a
+ // world boss always carries a thin thread of "this could be the one".
+ {id:'r_heartwood', slot:'wpn',n:'Heartwood Bough',      price:0,add:78, rof:0.88,d:'+78 dmg · faster · the root that would not burn'},
+ {id:'r_fogbound',  slot:'arm',n:'Fogbound Mantle',      price:0,def:14,hp:70, spd:28,d:'+14 DEF · +70 HP · +28 SPD'},
+ {id:'r_warren',    slot:'arm',n:'Warren Carapace',      price:0,def:26,hp:130,spd:-10,d:'+26 DEF · +130 HP · heavy'},
+ {id:'r_vault',     slot:'wpn',n:'Stonefist Maul',       price:0,add:132,rof:1.24,d:'+132 dmg · slow · it does not need a second swing'},
+ {id:'r_roost',     slot:'wpn',n:'Windward Talon',       price:0,add:52, rof:0.66,d:'+52 dmg · strikes 50% faster'},
+ {id:'r_barrows',   slot:'wpn',n:'Scorchmaw',            price:0,add:104,rof:0.96,d:'+104 dmg · still hot from the barrows'},
+ {id:'r_crypt',     slot:'arm',n:'Cinder Crypt Shroud',  price:0,def:18,hp:90, spd:34,d:'+18 DEF · +90 HP · +34 SPD'},
+ {id:'r_keep',      slot:'wpn',n:'Ashen Keepblade',      price:0,add:118,rof:0.9, d:'+118 dmg · faster · keen with old grief'},
+ {id:'r_sanctum',   slot:'arm',n:'Core Sanctum Plate',   price:0,def:32,hp:170,spd:-6,d:'+32 DEF · +170 HP · the last wall'},
+ {id:'r_saltworks', slot:'wpn',n:'Salt-Eaten Harpoon',   price:0,add:44, rof:0.82,d:'+44 dmg · faster · pitted by a sea nobody knows'},
+ {id:'r_lamp',      slot:'arm',n:"Lightkeeper's Coat",   price:0,def:9, hp:46, spd:40,d:'+9 DEF · +46 HP · +40 SPD'},
+ {id:'r_chapel',    slot:'arm',n:'Marrow Chapel Vestment',price:0,def:12,hp:58,spd:22,d:'+12 DEF · +58 HP · +22 SPD'},
 ];
+// boss id -> the relic its dungeon keeps. Parallel to GBOSS, so a new boss is one more row.
+const BOSS_RELIC=['r_heartwood','r_fogbound','r_warren','r_vault','r_roost','r_barrows',
+                  'r_crypt','r_keep','r_sanctum','r_saltworks','r_lamp','r_chapel'];
+const RELIC_P_WORLD=0.015;   // overworld boss: a very minimal chance, by design
+const RELIC_P_DUNGEON=0.12;  // its dungeon form is the real source
+function relicFor(ring){ return (ring>=0&&ring<BOSS_RELIC.length)?BOSS_RELIC[ring]:null; }
+function ownsRelic(id){ return !!(rpg&&rpg.legends&&rpg.legends.indexOf(id)>=0); }
 function legById(id){ return LEGENDS.filter(function(L){return L.id===id;})[0]||null; }
 const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire'];
 const MAXT=12;
@@ -516,11 +546,14 @@ function itemBaseName(it){
  return p; }
 function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
  if(it.k==='scroll')return (typeof scrollName==='function')?scrollName(it.st):'Scroll';
+ if(it.k==='leg'){ const L=legById(it.id); return '★ '+(L?L.n:'Relic'); }
  let nm=itemBaseName(it);
  if(it.rar && it.aff && it.aff.length) nm=AFFIX_PREFIX[it.aff[0].s]+' '+nm;
  return nm; }
-function itemRarCol(it){ return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
-function canEquip(it,ch){ if(!it||it.k==='pot')return false;
+function itemRarCol(it){ if(it&&it.k==='leg') return '#ff9c50';   // relics have their own colour
+ return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
+// a relic is equipped from the loadout screen (it owns the wpnL/armL slot), not from a bag row
+function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
@@ -618,6 +651,14 @@ function awardItem(it,x,y){
     texts.push({x:px,y:py-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); return true; }
   if(it.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG();
     texts.push({x:px,y:py-14,txt:'+Tonic',col:'#7dc47a',life:1}); return true; }
+  // a relic joins the legend collection rather than the satchel — it has its own equip slot and
+  // must never occupy one of the 20 bag slots or be sellable
+  if(it.k==='leg'){ const L=legById(it.id); if(!L) return true;
+    if(!rpg.legends) rpg.legends=[];
+    if(rpg.legends.indexOf(it.id)<0) rpg.legends.push(it.id);
+    if(typeof msg==='function') msg('★ '+L.n,'a relic of '+((GBOSS[BOSS_RELIC.indexOf(it.id)]||{}).dn||'the deep'));
+    texts.push({x:px,y:py-14,txt:'★ '+L.n,col:'#ff9c50',life:2.2});
+    return true; }
   if(it.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,it.st,1);
     const col=(typeof STAT_META!=='undefined'&&STAT_META[it.st])?STAT_META[it.st].col:'#e6c76a';
     texts.push({x:px,y:py-14,txt:'📜 '+((typeof scrollName==='function')?scrollName(it.st):'Scroll'),col:col,life:1.5});
@@ -649,6 +690,9 @@ function takeLoot(item){
   const ch=(typeof curChar==='function')?curChar():null;
   if(!item||!ch||!rpg) return;
   if(!ch.inv) ch.inv=[];
+  // relics have their own home (the legend collection) and their own duplicate rule, so the
+  // network grant goes through the same award path the local pickup does
+  if(item.k==='leg'){ awardItem(item,player.x,player.y); saveRPG(); return; }
   if(item.k==='coin'){ if(typeof addCoin==='function') addCoin(); if(typeof recalcStats==='function') recalcStats(); }
   else if(item.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG(); }
   else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
@@ -695,6 +739,29 @@ function rollSoulbound(e,row,who){
    if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
    loots.push(b); }
 }
+// A boss may yield the relic its dungeon keeps. Rolled per eligible player like any bound drop,
+// because a unique that only the host could ever see would be worthless in co-op — and skipped for
+// anyone who already owns it, so it can never be a duplicate you cannot use.
+function rollRelic(e,who){
+ if(e.type!=='B') return;
+ const ring=(e.ring!==undefined&&e.ring>=0)?e.ring
+   :((typeof curRoom!=='undefined'&&curRoom&&typeof curRoom.bossRing==='number')?curRoom.bossRing:-1);
+ const id=relicFor(ring); if(!id) return;
+ const inDun=!!(typeof curRoom!=='undefined'&&curRoom&&curRoom.dungeon);
+ // Only the LOCAL player's collection is knowable here, so skip the roll if they already hold it.
+ // A peer's is not visible to the host; their duplicate is filtered when the grant is awarded.
+ // Test against netSelfId() rather than "no id" — solo still gets an id ('S'), so a falsy check
+ // never fired and the guard silently did nothing.
+ const mine=(typeof netSelfId!=='function')||!who.id||who.id===netSelfId();
+ if(mine && ownsRelic(id)) return;
+ const p=(inDun?RELIC_P_DUNGEON:RELIC_P_WORLD)*(1+(who.fort||0)*0.004);
+ if(Math.random()>=p) return;
+ const b=bagAt(e,[{k:'leg',id:id}]);
+ b.band=LOOT_BANDS.length-1; b.life=LOOT_BANDS[b.band].life;   // always the top sack
+ b.relic=1;
+ if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
+ loots.push(b);
+}
 function rollLoot(e){
  const row=zoneTierRow(e.x,e.y);
  const F=(typeof player!=='undefined'&&player.fortune)||0;
@@ -705,7 +772,7 @@ function rollLoot(e){
  if(e.type==='B' && typeof spawnEggDrop==='function') spawnEggDrop(e);   // loose EGG, not a bag
  rollPublicLoot(e,row,F);
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
- for(const who of roster) rollSoulbound(e,row,who);
+ for(const who of roster){ rollSoulbound(e,row,who); rollRelic(e,who); }
 }
 const ABIL={
  ranger:{res:'Focus',col:'#7dc47a',rule:'hit',d:'Volley: 12-arrow fan'},
@@ -1257,6 +1324,9 @@ function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
 $s('potBtn').addEventListener('click',usePotion);
 function legendRows(slot,out){ for(const L of LEGENDS){ if(L.slot!==slot) continue;
  const owned=rpg.legends&&rpg.legends.indexOf(L.id)>=0;
+ // a relic (price 0) is not merchandise — it only appears here once you have taken it off the
+ // boss whose dungeon kept it. Without this the shop would hand them out for nothing.
+ if(!owned && !L.price) continue;
  const eq=(slot==='wpn'?rpg.wpnL:rpg.armL)===L.id;
  if(owned) out.push({l:L.n, desc:(eq?'in use · tap to set aside':'owned · tap to equip'), legend:true, c:0,
    f:function(){ if(slot==='wpn') rpg.wpnL=(eq?null:L.id); else rpg.armL=(eq?null:L.id); }});
