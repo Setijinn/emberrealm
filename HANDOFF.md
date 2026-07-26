@@ -1,7 +1,7 @@
 # EmberRealm — session handoff
 
 Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v313`** (`sw.js`, bump every release).
+Current service-worker version: **`emberrealm-v332`** (`sw.js`, bump every release).
 
 **How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
 `ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
@@ -93,9 +93,10 @@ HTTP cache, not the SW — hence the fresh-port rule below, which is real and co
 - **Retired**: Sella's T2/T3 armour + helms and Odo's three bought pets — both were glory buying
   power, and the pets were a second follower system running beside the egg/Sanctuary one.
 
-## Relics are T13 items (done 2026-07-26)
+## Relics: twelve four-piece T13 sets (done 2026-07-26)
 
-The band above the ladder exists now, and the twelve dungeon relics are what live on it.
+The band above the ladder exists, and forty-eight relics in twelve SETS live on it. Data in
+`17e_relics.js`; `11_ui.js` keeps only the machinery that turns one into a wearable item.
 
 - `TIER_NAMES` has a 13th entry, **Riftforged**; `RELIC_T` (12) is its index.
 - **`MAXT` stays 12 — do not raise it.** It is the top *rollable* tier and every random draw clamps
@@ -108,10 +109,45 @@ The band above the ladder exists now, and the twelve dungeon relics are what liv
   reuses the `player` flag its matching ascension capstone already sets (`burnHit`, `splash`,
   `moveRof`, `execute`, `killHeal`, `thorns`, `slowAura`) — no new combat special cases.
 - A relic drops **shaped for its finder** (their class's `wt`/`mt`), so `canEquip` just works.
-- Twelve sprites, one per relic, themed to its boss: `assets/items/relic_<id>.png`. The icon stamps
-  **R** where ordinary items stamp their tier.
+- **Twelve sets of four** — weapon, armour, helm, ring. Wearing all four adds a rule none of the
+  pieces carries alone (`activeRelicSet()`), from the same verified flag family. Set bonuses only
+  use flags read in `06_combat`/`07_update`; flags read only by `12b_abilities` modify one ability
+  rather than always applying, so they are deliberately not used.
+- **Six dungeons drop them**, two sets each: Shattered Vault + Windward Roost at **0.25%**, and
+  Cinder Crypt / Scorch Barrows / Ashen Keep / Core Sanctum at **1%**, per boss kill, dungeon only.
+  `relicChanceFor()` returns 0 everywhere else — no overworld boss, no shallow dungeon.
+- Archetype spread is **5 caster / 4 agile / 3 tank** against 7 robe / 6 leather / 4 plate classes.
+  Every set fits every class (pieces adapt to `wt`/`mt`); the STATS are what suit an archetype.
+- Forty-eight sprites at `assets/items/relic_<id>.png`. The icon stamps **R** where ordinary items
+  stamp their tier, and `RELIC_COL` / `--relic` (#a06bff) is the one violet for everything relic.
+- **INSANE DROP!** (`insaneDrop`) fires for the finder as it hits the ground, showing the piece,
+  its set and your progress toward four.
 - `rpg.relics` is the record (duplicate rule + death-screen scoring); `migrateRelics()` carries old
   `wpnL`/`armL` saves across. The four purchasable legendaries are **not** relics and are unchanged.
+
+## Also shipped 2026-07-26 (later session)
+
+- **Loot: one sack per kill.** Everything a kill pays out goes in one sack (1/kill, ~4.7 pieces off
+  a boss). **With other players present the channels stay apart** — one shared sack plus your own
+  bound one — because the netsync keeps bound loot off other wires entirely rather than tagging it
+  and trusting clients to filter. The user confirmed one personal + one shared is the wanted shape.
+  A sack's art follows its best item (`bagAt` → `bandOfTier(bagTopTier)`), so a relic inside makes
+  it a reliquary. Anything with gear or 2+ pieces opens the panel; a lone tonic/coin still vacuums.
+- **`LOOT_BANDS` sprite lookup was broken** since the art landed: it resolved the sprite name off
+  `window`, but those images are `const` (lexical, never a window property), so **every** sack drew
+  as plain burlap. Use `lootSackImg()`. It was the only `window[...]` sprite lookup in the codebase.
+- **Co-op had no enemies for clients.** Clients never activate spawn points (deliberate), but the
+  host measured its spawn ring from its OWN hero, so a client anywhere else walked an empty world.
+  The host now anchors on every hero it simulates for (`netSimAnchors`), spawns and culls against
+  the nearest, and the swarm cap is per hero using the zone THAT hero stands in.
+- **Loading screen** (`10b_loading.js`). Images register in `ASSET_IMGS` at creation (`_track`);
+  the curtain waits on exactly that list (~3,500 images), capped at 12s, 404s count as settled.
+- **The 1–3s "refresh" was real**: `boot.js` called `location.reload()` the moment a new SW
+  activated. It is deferred while `inGame` and taken at the menu (`emberReloadIfPending`).
+- **Auto potion** at 5/10/15% with a standing warning that it will not keep you alive, and the
+  settings rows an input cannot use (manual aim on touch, vibration/fullscreen on desktop) grey out
+  and refuse taps. All eight settings were audited against real behaviour.
+- **Minimap** shrunk to 148px, zoom buttons scale off the panel.
 
 ## Do this next
 
