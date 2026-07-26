@@ -8,7 +8,7 @@
 // hollow -- you get its direction without pretending it is close.
 
 const MINI_PAD = 10;              // gap from the screen corner
-const MINI_BASE = 208;            // panel size in CSS px at UI scale 1
+const MINI_BASE = 148;            // panel size in CSS px at UI scale 1
 const MINI_ZOOMS = [26, 40, 60, 90, 130];   // half-window in TILES; index 0 = closest in
 let miniZoom = 2;
 let _miniCache = null;
@@ -98,7 +98,9 @@ function fogSeen(G,wx,wy){
 function miniRect(){
   const u=(typeof UIS!=='undefined')?UIS:1;
   const sz=Math.round(MINI_BASE*u), pad=Math.round(MINI_PAD*u);
-  return {x:pad, y:pad, w:sz, h:sz, btn:Math.round(26*u)};
+  // the zoom buttons scale WITH the panel rather than off a fixed 26px, or shrinking the map
+  // leaves two buttons nearly as wide as it is
+  return {x:pad, y:pad, w:sz, h:sz, btn:Math.round(sz*0.125)};
 }
 // Hit-test for the zoom buttons; controls call this on tap/click.
 function miniHit(mx,my){
