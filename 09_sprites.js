@@ -613,7 +613,7 @@ function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt
   const sp=w2s(portalPrompt.x,portalPrompt.y);    // through the full camera transform (incl. rotation)
   const cx=Math.max(w/2+8,Math.min(W-w/2-8,sp.x));
   const cy=Math.max(h/2+34,sp.y - h*0.6 - 62);
-  return {cx,cy,w,h,ctx:portalPrompt.ctx||''}; }
+  return {cx,cy,w,h,ctx:portalPrompt.ctx||'',label:portalPrompt.label||''}; }
 function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
   const x=b.cx-b.w/2, y=b.cy-b.h/2; const pulse=0.6+Math.sin(performance.now()/230)*0.3;
   ctx.save();
@@ -634,7 +634,9 @@ function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
   const plate=(typeof _btnInteract!=='undefined' && _btnInteract && _btnInteract.complete && _btnInteract.naturalWidth);
   const fs=Math.round(b.h*0.34);
   ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  const lbl=(typeof inputMode!=='undefined' && inputMode==='pc')?'[E] INTERACT':'INTERACT';
+  // a prompt may name its own action (a stall says SHOP / AUCTION); INTERACT is the fallback
+  const pc=(typeof inputMode!=='undefined' && inputMode==='pc');
+  const lbl=b.label ? (pc?('[E] '+b.label):b.label) : (pc?'[E] INTERACT':'INTERACT');
   ctx.fillStyle=plate?'rgba(255,232,180,0.6)':'rgba(0,0,0,0.85)'; ctx.fillText(lbl,b.cx,b.cy-1);   // highlight
   ctx.fillStyle=plate?'#3a2208':'#ffe6ad'; ctx.fillText(lbl,b.cx,b.cy+1);                          // main
   ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
@@ -1086,10 +1088,13 @@ function render(){
   // (brazier/lamp) plus the ember particles; no more painted orange orbs
   if(curRoom.glows) for(const gl of curRoom.glows){
     const fl=1+Math.sin(pn*9+gl.x)*0.10, warm=gl.t==='H';
-    const gy2=gl.y-(warm?8:16), rr=(warm?32:24)*fl;
+    // the close halo around the flame itself — widened and dimmed alongside the outer pool below,
+    // or the fire keeps a hard bright ring exactly where the light was supposed to soften
+    const gy2=gl.y-(warm?8:16), rr=(warm?54:40)*fl;
     ctx.save(); ctx.globalCompositeOperation='lighter';
     const gh=ctx.createRadialGradient(gl.x,gy2,2,gl.x,gy2,rr);
-    gh.addColorStop(0,warm?'rgba(255,150,60,0.34)':'rgba(255,230,160,0.28)');
+    gh.addColorStop(0,warm?'rgba(255,150,60,0.114)':'rgba(255,230,160,0.096)');
+    gh.addColorStop(0.55,warm?'rgba(255,150,60,0.048)':'rgba(255,230,160,0.042)');
     gh.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=gh; ctx.beginPath(); ctx.arc(gl.x,gy2,rr,0,6.29); ctx.fill();
     ctx.restore(); }
@@ -1458,9 +1463,17 @@ function render(){
     for(const gl of curRoom.glows){
       const fl=1+Math.sin(pn*7+gl.x)*0.06+Math.sin(pn*13+gl.y)*0.05;
       const rad=gl.r*fl;
+      // Dim and far, not bright and near. The old core sat at 0.42 and was gone by half radius,
+      // which read as a hot puddle at the brazier's feet. The peak is roughly halved and the
+      // falloff pushed outward (a real stop at 0.72) so the light carries to its edge instead of
+      // dying there — these are ADDITIVE, so overlapping fires still pool where they meet.
+      // Measured, not eyeballed: summing this profile over all 12 hearth glows gives 0.45 at the
+      // fire (was 0.96), 0.36 at 120px (was 0.51) and 0.35 at the plaza centre (was 0.005) --
+      // every near sample dimmer, every far sample brighter, which is the whole point.
       const gr=ctx.createRadialGradient(gl.x,gl.y,4,gl.x,gl.y,rad);
-      gr.addColorStop(0,'rgba(255,160,60,0.42)');
-      gr.addColorStop(0.5,'rgba(235,115,40,0.16)');
+      gr.addColorStop(0,'rgba(255,160,60,0.11)');
+      gr.addColorStop(0.35,'rgba(240,130,50,0.072)');
+      gr.addColorStop(0.72,'rgba(235,115,40,0.033)');
       gr.addColorStop(1,'rgba(235,115,40,0)');
       ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(gl.x,gl.y,rad,0,6.29); ctx.fill();
     }

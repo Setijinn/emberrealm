@@ -17,7 +17,13 @@ function unlockPillar(b){ _pillars().add(b); LS.set('er-pillars',[..._pillarSet]
 function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
 // USE-button handler for the portal/pillar prompt (see 07_update portalPrompt detection)
 function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=null;
-  if(p.kind!=='loot') portalLock=true;   // teleports suppress re-prompt; loot doesn't
+  // teleports suppress re-prompt; loot doesn't -- and neither does a stall, or closing the shop
+  // while still standing at the counter would leave you unable to open it again
+  if(p.kind!=='loot' && p.kind!=='vendor') portalLock=true;
+  if(p.kind==='vendor'){ const np=p.np;
+    if(np.auction){ if(typeof openAuction==='function') openAuction(); }
+    else openShop2(np.id);
+    navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='switch'){ const sw=p.sw; if(sw&&!sw.on){
     const ob=curRoom.objs&&curRoom.objs[sw.ch];
     if(ob&&!ob.done){
@@ -1376,7 +1382,7 @@ function hcCheck(){ const ch=curChar(); if(!ch||!rpg||!inGame) return false;
  if(typeof onMainIsland!=='function' || !onMainIsland(player.x,player.y)) return false;
  rpg.hcSeen=1; markHardcore();       // the crossing itself is what makes this hero permanent
  player.inv=Math.max(player.inv||0,2.5);
- for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','coopScr'])
+ for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','aucScr','coopScr'])
    if($s(id)) $s(id).style.display='none';
  $s('hcScr').style.display='flex';
  navigator.vibrate&&navigator.vibrate([40,60,40]);
@@ -1500,8 +1506,9 @@ function shopRowsFor(id){ const ch=curChar(); const out=[]; const cls=ch.cls;
     out.push({l:nm, desc:(rpg.pet===pid?'✦ following you':'owned · tap to summon'), pet:pid, c:0,
      f:function(){rpg.pet=(rpg.pet===pid?null:pid); spawnPet();}});
    else out.push({l:nm, desc:p[3], pet:pid, c:cost, f:function(){rpg.pets.push(pid); rpg.pet=pid; spawnPet();}}); } }
- if(id==='maren'){ out.push({l:'Ember Tonic', desc:'restores +60 HP', ic:{k:'pot'}, c:15, f:function(){rpg.pots++;}});
-  out.push({note:'Carrying '+rpg.pots+' tonic'+(rpg.pots===1?'':'s')+'.'}); }
+ // Maren no longer stocks anything -- she runs the auction, and her button never reaches this
+ // panel. Potions are not sold at all any more: they refill on their own, and glory must never
+ // buy power.
  return out; }
 function openShop2(id){ const n=SHOPNPCS.filter(function(x){return x.id===id;})[0]||SHOPNPCS[0];
  $s('shopTitle').textContent=n.title;
@@ -1540,7 +1547,8 @@ function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allie
   :rpg.pet==='skel'?Math.max(4,Math.round(player.dmg*0.7))
   :Math.max(5,Math.round(player.dmg*0.9));
  allies.push({pet:true,x:player.x,y:player.y,dmg:dmg,life:1e9,cd:0,spr:rpg.pet}); }
-$s('shopBtn').addEventListener('click',function(){ openShop2(curShopNear||'maren'); });
+// Stalls are opened from the prompt above the stall (usePortalPrompt, kind 'vendor') -- there is
+// deliberately no HUD button to bind here any more.
 $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none';});
 $s('aucClose').addEventListener('click',()=>{ if(typeof closeAuction==='function') closeAuction(); });
 
@@ -1548,7 +1556,8 @@ $s('aucClose').addEventListener('click',()=>{ if(typeof closeAuction==='function
 
 function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display=(s===id)?'flex':'none';
  $s('menuBtn').style.display='none'; $s('potBtn').style.display='none';
- $s('shopBtn').style.display='none'; $s('shopScr').style.display='none';
+ $s('shopScr').style.display='none';
+ if($s('aucScr'))$s('aucScr').style.display='none';
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
  $s('mapScr').style.display='none';
@@ -1561,7 +1570,11 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  if($s('skillScr'))$s('skillScr').style.display='none';
  if($s('statsBtn'))$s('statsBtn').style.display='none';
  if($s('statsScr'))$s('statsScr').style.display='none';
- if($s('sheetScr'))$s('sheetScr').style.display='none'; shopNear=false;}
+ if($s('sheetScr'))$s('sheetScr').style.display='none';
+ // Hiding the HUD also hides the stall button, but proximity only re-evaluates when the NEAREST
+ // NPC CHANGES -- so forgetting who we stood at is what makes the button come back on RESUME.
+ // Without this, opening the menu at a stall and resuming loses that stall until you walk away.
+ shopNear=false; curShopNear=null;}
 function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display='none';}
 function refreshUserList(){
  const box=$s('userList'); box.innerHTML='';

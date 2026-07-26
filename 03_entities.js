@@ -784,12 +784,16 @@ function enterDungeon(ring){
  msg(gb.dn, gb.dsub || (gb.n+' dreams of '+(gb.home||'a world now lost')));
 }
 
+// Maren keeps her id (and so her stall art) but not her old trade: potions refill themselves now,
+// so a provisioner with nothing to provision was the free slot. She calls the house rotation --
+// `auction:true` is what routes her stall button to openAuction() instead of the shop panel.
 const SHOPNPCS=[
  {id:'bram', name:'Bram', role:'WEAPONS', title:"BRAM'S WEAPONWORKS", awn:'#b5482f', x:9.5*TILE,  y:10.8*TILE},
  {id:'sella',name:'Sella',role:'ARMOR',   title:"SELLA'S ARMORY",     awn:'#e07a2e', x:9.5*TILE,  y:18.3*TILE},
- {id:'maren',name:'Maren',role:'POTIONS', title:"MAREN'S PROVISIONS", awn:'#4f9a3f', x:32.5*TILE, y:10.8*TILE},
+ {id:'maren',name:'Maren',role:'AUCTIONEER', title:'THE AUCTION HOUSE', awn:'#e8b34b', auction:true, x:32.5*TILE, y:10.8*TILE},
  {id:'odo',  name:'Odo',  role:'PETS',    title:"ODO'S MENAGERIE",    awn:'#7ab8d4', x:32.5*TILE, y:18.3*TILE},
 ];
+function shopNpc(id){ for(const n of SHOPNPCS) if(n.id===id) return n; return null; }
 let curShopNear=null;
 // ---- unified difficulty curve ----
 // EVERY enemy stat derives from these two so the whole game rescales in unison.

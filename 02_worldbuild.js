@@ -51,8 +51,11 @@ for(const key in rooms){
     if(c==='c'||c==='s'||c==='B'){ r.spawns.push({t:c,x,y}); r.grid[y][x]='.'; }
     if(c==='P'){ r.px=x; r.py=y; r.grid[y][x]=r.town?'f':'.'; }
     if(c==='T'){ r.portals.push({x:(x+.5)*TILE,y:(y+.5)*TILE,to:'0,0',label:'HEARTH',col:'#c07ad4'}); r.grid[y][x]=r.big?'d':'.'; }
-    if(c==='l') r.glows.push({t:'l',x:(x+.5)*TILE,y:(y+.5)*TILE,r:130});
-    if(c==='H') r.glows.push({t:'H',x:(x+.5)*TILE,y:(y+.5)*TILE,r:240});
+    // Firelight REACHES far and burns LOW (user, 2026-07-26). These radii are the outer pool in
+    // 09_sprites; the alphas that go with them were dropped to match, so a brazier now lights a
+    // whole corner of the plaza softly instead of scorching a bright disc around its own feet.
+    if(c==='l') r.glows.push({t:'l',x:(x+.5)*TILE,y:(y+.5)*TILE,r:230});
+    if(c==='H') r.glows.push({t:'H',x:(x+.5)*TILE,y:(y+.5)*TILE,r:420});
   }
   // guarantee open ground around portals
   if(r.big) for(const p of r.portals){

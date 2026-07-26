@@ -845,6 +845,13 @@ function update(dt){
     // Sanctuary stations: incubator (open eggs) + fusion altar (evolve)
     if(curRoom.petRoom && curRoom.petStations) for(const st of curRoom.petStations){ const d=Math.hypot(st.x-player.x,st.y-player.y);
       if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'petstation',x:st.x,y:st.y-24,st:st,ctx:st.kind==='incubator'?'Open the Incubator':'Use the Fusion Altar'}; } }
+    // HEARTH STALLS (user, 2026-07-26): a vendor is opened AT THE STALL, not from a HUD button.
+    // Same 85px range the old button used, and it competes on distance with every other prompt,
+    // so standing between a portal and a stall offers the nearer one instead of both at once.
+    // Anchored above the hanging sign (y-118), which the stall art and sign already occupy.
+    if(curRoom.town) for(const np of SHOPNPCS){ const d=Math.hypot(np.x-player.x,np.y-player.y);
+      if(d<85 && d<_pbest){ _pbest=d; portalPrompt={kind:'vendor',x:np.x,y:np.y-118,np:np,
+        ctx:np.name, label:np.auction?'AUCTION':'SHOP'}; } }
   }
   // dungeon: objective progress + orb pickup + dream motes
   if(curRoom.dungeon){
@@ -859,7 +866,9 @@ function update(dt){
   // arena wave director
   if(curRoom.arena && arenaActive && enemies.length===0){
     arenaCd-=dt; if(arenaCd<=0){ arenaCd=2.0; arenaSpawnWave(); } }
-  // vendor proximity
+  // Vendor proximity. The HUD button is gone -- the prompt above the stall opens the panel now --
+  // so all this still tracks is WHICH stall you are at, which is what closes a panel you have
+  // walked away from.
   if(curRoom.town){
     let nn=null,nd=1e9;
     for(const np of SHOPNPCS){ const d=Math.hypot(np.x-player.x,np.y-player.y);
@@ -867,13 +876,14 @@ function update(dt){
     const near=nd<85?nn:null;
     if((near?near.id:null)!==curShopNear){
       curShopNear=near?near.id:null; shopNear=!!near;
-      const b=document.getElementById('shopBtn');
-      b.style.display=near?'flex':'none';
-      if(near) b.textContent='🏪 '+near.name.toUpperCase();
-      if(!near) document.getElementById('shopScr').style.display='none'; }
+      // Changing stall closes whichever panel the last one owned -- the auction shuts with the
+      // shop. Closing on a CHANGE, not only on leaving, stops one vendor's panel being read at
+      // another's counter.
+      document.getElementById('shopScr').style.display='none';
+      const a=document.getElementById('aucScr'); if(a) a.style.display='none'; }
   } else if(shopNear){ shopNear=false; curShopNear=null;
-    document.getElementById('shopBtn').style.display='none';
-    document.getElementById('shopScr').style.display='none'; }
+    document.getElementById('shopScr').style.display='none';
+    const a=document.getElementById('aucScr'); if(a) a.style.display='none'; }
   // loot bags: despawn + HYBRID pickup. Public sacks auto-collect on walk-over; soulbound sacks
   // are left for the INTERACT prompt, which opens the bag UI. Decided by BAND, not rarity.
   if(typeof netReapBound==='function') netReapBound(dt);

@@ -54,7 +54,12 @@
    {tx:6,  ty:20, to:'GUILD',     label:'GUILD HALL', col:'#7ab8d4'},
    {tx:35, ty:20, to:'ARENA',     label:'ARENA',      col:'#e2604c'},
   ],
-  decor:[{t:'fountain',x:21.5,y:12}],
+  // Pool tiles are x19-23, y10-13, so its centre is (21.5, 12) -- and the sprite IS drawn centred
+  // on this anchor. It still read as sitting low because the ART is not centred inside its own
+  // frame: measured, the basin band occupies rows 54-112 of 125, so its middle is 21px (0.49 tile)
+  // below the frame's middle while the thin spire fills the top. Anchoring half a tile high puts
+  // the BASIN -- the part the eye reads as "the fountain" -- on the square's true centre.
+  decor:[{t:'fountain',x:21.5,y:11.5}],
   stalls:[ {id:'bram', x:9.5,y:10.8}, {id:'sella',x:9.5,y:18.3}, {id:'maren',x:32.5,y:10.8}, {id:'odo',x:32.5,y:18.3} ],
  };
 

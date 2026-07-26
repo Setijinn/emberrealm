@@ -48,10 +48,9 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #devBtn2{display:none;align-items:center;justify-content:center;
  width:42px;height:34px;background:rgba(23,20,29,.85);border:1px solid #7a4a1e;border-radius:8px;font-size:17px;}
 
-#potBtn,#shopBtn{display:none;align-items:center;justify-content:center;
+#potBtn{display:none;align-items:center;justify-content:center;
  min-width:58px;height:40px;padding:0 12px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;
  color:#d8d2c8;font-family:inherit;font-size:16px;white-space:nowrap;}
-#shopBtn{border-color:#7a4a1e;color:#ffc94d;}
 
 /* ---------- permadeath (Lv20+) ---------- */
 #hcCard{background:#17141d;border:2px solid #7a2f24;border-radius:12px;padding:14px 18px;
@@ -385,7 +384,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .shopnote{font-size:11px;color:#8a8494;text-align:center;padding:5px 8px;font-style:italic;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#potBtn,#shopBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{
+#menuBtn,#potBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
@@ -445,7 +444,7 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #hudTop>*,#hudBot>*{pointer-events:auto;}
 #menuBtn{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(18px*var(--uis));}
 #devBtn2{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(17px*var(--uis));}
-#potBtn,#shopBtn{min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
+#potBtn{min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
 #invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #loadBtn,#skillBtn,#petBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #statsBtn{min-width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(7px*var(--uis));}
