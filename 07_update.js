@@ -351,6 +351,24 @@ function update(dt){
   else if(gy>curRoom.h){ const k=curRoom.rx+','+(curRoom.ry+1); if(rooms[k]) enterRoom(k, player.x, TILE*0.9); }
   else if(gy<0){ const k=curRoom.rx+','+(curRoom.ry-1); if(rooms[k]){ const t=rooms[k]; enterRoom(k, player.x, (t.h-0.9)*TILE); } }
 
+  // Track each enemy's velocity so the auto-aim can lead its target (06_combat.js fire()).
+  // Measured from the position delta rather than from the AI's intent, because that is the one
+  // signal that exists on BOTH paths: the host moves enemies itself, a co-op client only ever
+  // sees them interpolated out of snapshots and has no AI to ask.
+  // Runs before fire() so the shot leaving this frame uses this frame's reading.
+  for(const e of enemies){
+    if(e._px!==undefined && dt>0){
+      const dx=e.x-e._px, dy=e.y-e._py;
+      // a room change, a boss reset or a snapshot correction is a jump, not a sprint — a lead
+      // computed off one would throw the shot at nothing
+      if(Math.hypot(dx,dy) > Math.max(60,(e.spd||160)*dt*4)){ e.tvx=0; e.tvy=0; }
+      else { const k=Math.min(1,dt*9);            // EMA: strafing AI flips direction constantly
+        e.tvx=(e.tvx||0)+((dx/dt)-(e.tvx||0))*k;
+        e.tvy=(e.tvy||0)+((dy/dt)-(e.tvy||0))*k; }
+    }
+    e._px=e.x; e._py=e.y;
+  }
+
   fire(dt);
 
   // enemies

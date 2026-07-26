@@ -95,6 +95,28 @@ function los(x1,y1,x2,y2){
     if(solid(x1+(x2-x1)*t, y1+(y2-y1)*t)) return false; }
   return true;
 }
+// Where to aim to hit a MOVING target: solve |P + V t| = s t for the first t>0, where P is the
+// offset to the enemy, V its velocity (07_update.js tracks it) and s the projectile speed.
+// Expanding gives (V·V - s²)t² + 2(P·V)t + P·P = 0.
+// Returns the point to shoot at, or the enemy itself when leading is impossible or pointless:
+//   - a target faster than the shot, running away, has no intercept at all (both roots negative)
+//   - a lead longer than the projectile lives is a shot that expires in empty ground
+//   - a lead through a wall is worse than a direct shot that at least clips the corner
+function aimPoint(e,spd,life){
+  const vx=e.tvx||0, vy=e.tvy||0;
+  const px=e.x-player.x, py=e.y-player.y;
+  if(!vx && !vy) return e;
+  const a=vx*vx+vy*vy-spd*spd, b=2*(px*vx+py*vy), c=px*px+py*py;
+  let t;
+  if(Math.abs(a)<1e-4){ if(Math.abs(b)<1e-6) return e; t=-c/b; }   // target moving at shot speed
+  else { const disc=b*b-4*a*c; if(disc<0) return e;
+    const r=Math.sqrt(disc), t1=(-b-r)/(2*a), t2=(-b+r)/(2*a);
+    t=Math.min(t1<1e-4?Infinity:t1, t2<1e-4?Infinity:t2); }
+  if(!isFinite(t) || t<=0 || t>(life||1)) return e;
+  const ax=e.x+vx*t, ay=e.y+vy*t;
+  if(!los(player.x,player.y,ax,ay)) return e;
+  return {x:ax,y:ay};
+}
 function fire(dt){
   player.fireT-=dt;
   if(player.fireT>0) return;
@@ -112,11 +134,14 @@ function fire(dt){
     let ref={x:player.x,y:player.y};
     if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof mouseWorld==='function') ref=mouseWorld();
     // auto-aim range cap: only engage targets the weapon can actually reach (+15% grace)
-    const wRange=((wt.spd||520)*(player.projSpd||1))*(wt.life||1)*1.15;
+    const _psp=(wt.spd||520)*(player.projSpd||1);
+    const wRange=_psp*(wt.life||1)*1.15;
     let best=null, bd=1e9;
     for(const e of enemies){ const d=Math.hypot(e.x-ref.x,e.y-ref.y);
       if(d<bd && Math.hypot(e.x-player.x,e.y-player.y)<=wRange && los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
-    if(best) ang=Math.atan2(best.y-player.y,best.x-player.x);
+    // lead the target: aim where it WILL be when the shot arrives, not where it is now
+    if(best){ const p=aimPoint(best,_psp,wt.life||1);
+      ang=Math.atan2(p.y-player.y,p.x-player.x); }
   }
   if(ang===null) return;
   let _rate=player.fireRate/(player.bRofT>0?(player.bRofM||1.5):1);
