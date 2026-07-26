@@ -26,11 +26,17 @@ function scrollName(st){ return 'Scroll of '+(SCROLL_TITLE[st]||st); }
 
 // Permanent bonus GRANTED per scroll invested (same for every class — class identity
 // lives in the CAP, i.e. how many scrolls a class can sink into a stat). Tune here.
-const TRAIN_STEP={ atk:5, def:3, hp:34, mp:9, vit:3, wis:5, dex:2, spd:2, luck:2, fort:2 };
+// Sized against what a stat is NATURALLY worth at Lv50, not in the abstract. def, wis and luck
+// have small natural pools, so a step tuned by feel was letting scrolls more than double them
+// (a Knight could add +112% DEF and +81% LUCK) — permanent training should polish a finished
+// character, not build a second one on top. (user, 2026-07-26)
+const TRAIN_STEP={ atk:5, def:2, hp:34, mp:6, vit:2, wis:3, dex:2, spd:2, luck:1, fort:0 };
 
 // Baseline scroll CAP at affinity 1.0, and the flat caps for the two utility stats
 // (SPD would break movement / FORTUNE is loot — kept class-independent + modest).
-const TRAIN_BASE=12;
+// halved from 12: this is the scroll ceiling at affinity 1.0, and every per-class cap derives
+// from it, so it is the one dial that moves the whole permanent-progression budget at once
+const TRAIN_BASE=6;
 // fort:0 — Fortune cannot be trained at all, so the row shows as maxed at zero and no scroll,
 // "invest all", or prestige reset can ever put a point into it
 const FLAT_CAP={ spd:8, fort:0 };
