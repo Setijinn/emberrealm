@@ -45,11 +45,15 @@
  <div class="setCard">
   <div class="setRow"><span>UI size</span><input type="range" id="setUi" min="60" max="170" step="5" value="100"><b id="setUiV">100%</b></div>
   <div class="setRow"><span>Camera distance</span><input type="range" id="setZoom" min="80" max="130" step="5" value="100"><b id="setZoomV">100%</b></div>
-  <div class="setRow tog" id="setAim"><span>Manual aim (desktop)</span><b>OFF</b></div>
+  <!-- data-only marks a row that does nothing on the other input: manual aim is a mouse feature,
+       fullscreen-on-touch and vibration are touch features. _setPaint greys the ones that do not
+       apply to how you are playing right now rather than hiding them, so nobody wonders where a
+       setting went when they pick up a controller-less tablet. -->
+  <div class="setRow tog" id="setAim" data-only="pc"><span>Manual aim</span><b>OFF</b></div>
   <div class="setRow tog" id="setDmg"><span>Damage numbers</span><b>ON</b></div>
-  <div class="setRow tog" id="setVib"><span>Vibration</span><b>ON</b></div>
+  <div class="setRow tog" id="setVib" data-only="touch"><span>Vibration</span><b>ON</b></div>
   <div class="setRow tog" id="setFps"><span>FPS counter</span><b>OFF</b></div>
-  <div class="setRow tog" id="setFs"><span>Fullscreen on touch</span><b>ON</b></div>
+  <div class="setRow tog" id="setFs" data-only="touch"><span>Fullscreen on touch</span><b>ON</b></div>
   <!-- cycles OFF / 5% / 10% / 15%. The warning under it is not decoration: a potion is a heal,
        not a guard, and anyone who leaves this on and stops watching their bar will die anyway. -->
   <div class="setRow tog" id="setPot"><span>Auto potion at</span><b>OFF</b></div>

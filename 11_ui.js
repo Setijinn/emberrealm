@@ -1887,6 +1887,17 @@ function _setPaint(){
  $s('setZoom').value=Math.round((OPTS.zoom||1)*100); $s('setZoomV').textContent=Math.round((OPTS.zoom||1)*100)+'%';
  const tg=(id,on)=>{ const b=$s(id).querySelector('b'); b.textContent=on?'ON':'OFF'; b.classList.toggle('off',!on); };
  tg('setAim',!!OPTS.aim); tg('setDmg',OPTS.dmgTxt!==false); tg('setVib',OPTS.vib!==false); tg('setFps',!!OPTS.fps); tg('setFs',OPTS.fs!==false);
+ // Grey out what this input cannot do. A row marked data-only="pc" is meaningless on a touch
+ // screen (there is no cursor to aim at), and data-only="touch" is meaningless on a desktop (no
+ // vibration motor, no fullscreen-on-tap). They stay visible but say why they are inert, and their
+ // click handlers refuse, so the stored value cannot drift away from what you can actually see.
+ const _mode=(typeof inputMode!=='undefined')?inputMode:'pc';
+ document.querySelectorAll('#setScr .setRow[data-only]').forEach(r=>{
+   const only=r.getAttribute('data-only'), off=(only!==_mode);
+   r.classList.toggle('na',off);
+   const lbl=r.querySelector('span'), base=lbl.getAttribute('data-label')||lbl.textContent;
+   lbl.setAttribute('data-label',base);
+   lbl.textContent=off?(base+(only==='pc'?' (mouse only)':' (touch only)')):base; });
  // auto potion reads as a percentage rather than ON/OFF, and its warning brightens when it is armed
  const ap=autoPotPct(), pb=$s('setPot').querySelector('b');
  pb.textContent=ap?(ap+'% HP'):'OFF'; pb.classList.toggle('off',!ap);
@@ -1906,11 +1917,16 @@ $s('setBack').addEventListener('click',openMenu);
 $s('setReset').addEventListener('click',()=>{ OPTS=Object.assign({},OPT_DEF); saveOpts(); _setPaint(); });
 $s('setUi').addEventListener('input',e=>{ OPTS.ui=(+e.target.value)/100; saveOpts(); $s('setUiV').textContent=e.target.value+'%'; });
 $s('setZoom').addEventListener('input',e=>{ OPTS.zoom=(+e.target.value)/100; saveOpts(); $s('setZoomV').textContent=e.target.value+'%'; });
-$s('setAim').addEventListener('click',()=>{ OPTS.aim=!OPTS.aim; saveOpts(); _setPaint(); });
-$s('setDmg').addEventListener('click',()=>{ OPTS.dmgTxt=(OPTS.dmgTxt===false); saveOpts(); _setPaint(); });
-$s('setVib').addEventListener('click',()=>{ OPTS.vib=(OPTS.vib===false); saveOpts(); _setPaint(); });
-$s('setFps').addEventListener('click',()=>{ OPTS.fps=!OPTS.fps; saveOpts(); _setPaint(); });
-$s('setFs').addEventListener('click',()=>{ OPTS.fs=(OPTS.fs===false); saveOpts(); _setPaint(); });
+// a row that does not apply to this input refuses the tap rather than storing a value the player
+// cannot see the effect of
+function _setTog(id,fn){ $s(id).addEventListener('click',()=>{
+  if($s(id).classList.contains('na')){ navigator.vibrate&&navigator.vibrate(15); return; }
+  fn(); saveOpts(); _setPaint(); }); }
+_setTog('setAim',()=>{ OPTS.aim=!OPTS.aim; });
+_setTog('setDmg',()=>{ OPTS.dmgTxt=(OPTS.dmgTxt===false); });
+_setTog('setVib',()=>{ OPTS.vib=(OPTS.vib===false); });
+_setTog('setFps',()=>{ OPTS.fps=!OPTS.fps; });
+_setTog('setFs',()=>{ OPTS.fs=(OPTS.fs===false); });
 $s('setPot').addEventListener('click',autoPotCycle);
 $s('loginBtn').addEventListener('click',doLogin);
 $s('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
