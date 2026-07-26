@@ -180,13 +180,52 @@ function petSprite(p){ return p==='wolf'?sprWolf:p==='skel'?sprSkel:sprWisp; }
 // Draw an item's icon into a 2d context box (cw x ch), centered. Prefers the real
 // PixelLab tier-band art (fractional fit); falls back to the procedural sprite (pixel
 // floor-scale). Used by equipment slots, the satchel grid, and shop rows.
-function drawItemIcon(g,it,cw,ch){ if(!it) return; g.imageSmoothingEnabled=false;
+function drawItemIcon(g,it,cw,ch,noTier){ if(!it) return; g.imageSmoothingEnabled=false;
  const real=(typeof itemArtImg==='function')?itemArtImg(it):null;
  if(real){ const sc=Math.min((cw-4)/real.naturalWidth,(ch-4)/real.naturalHeight);
    const w=real.naturalWidth*sc, h=real.naturalHeight*sc;
-   g.drawImage(real,Math.round((cw-w)/2),Math.round((ch-h)/2),Math.round(w),Math.round(h)); return; }
- const sp=itemSprite(it); if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cw-4)/sp.width,(ch-4)/sp.height)));
+   g.drawImage(real,Math.round((cw-w)/2),Math.round((ch-h)/2),Math.round(w),Math.round(h)); }
+ else { const sp=itemSprite(it); if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cw-4)/sp.width,(ch-4)/sp.height)));
    g.drawImage(sp,Math.round((cw-sp.width*sc)/2),Math.round((ch-sp.height*sc)/2),sp.width*sc,sp.height*sc); } }
+ if(!noTier) drawItemTier(g,it,cw,ch); }
+// Tier is the only power axis now, so it has to be readable wherever an item is shown -- satchel,
+// equipment doll, sack panel, compare, shop. Stamped INTO the icon rather than added as a badge
+// beside it, so every one of those places gets it from one call and nothing can be shown without it.
+// The corner is CHOSEN, not fixed: the sprites are wildly different shapes (a bow fills a diagonal,
+// a ring sits dead centre, plate fills the middle), so the label goes wherever the art actually
+// left a gap. Falls back to the least-covered corner when the icon fills its whole box.
+const _TIER_CORNERS=[[1,1],[0,1],[1,0],[0,0]];   // BR, BL, TR, TL — preference order on a tie
+function drawItemTier(g,it,cw,ch){
+  if(!it || it.t===undefined || it.t===null) return;
+  if(it.k==='pot'||it.k==='coin'||it.k==='scroll') return;      // these have no tier ladder
+  const label='T'+((it.t|0)+1);
+  const fs=Math.max(8,Math.round(Math.min(cw,ch)*0.26));
+  g.save();
+  g.font='bold '+fs+'px "Pixelify Sans",monospace';
+  g.textBaseline='top'; g.textAlign='left';
+  const tw=Math.ceil(g.measureText(label).width), bw=tw+2, bh=fs+1;
+  let best=null, bestInk=Infinity;
+  let px=null;
+  try{ px=g.getImageData(0,0,cw,ch).data; }catch(e){ px=null; }   // tainted canvas: just use BR
+  if(px){
+    for(const c of _TIER_CORNERS){
+      const x=Math.round(c[0]*(cw-bw)), y=Math.round(c[1]*(ch-bh));
+      let ink=0;
+      for(let yy=y;yy<y+bh;yy++){ const row=yy*cw;
+        for(let xx=x;xx<x+bw;xx++) if(px[(row+xx)*4+3]>18) ink++; }
+      if(ink<bestInk){ bestInk=ink; best={x:x,y:y}; }
+    }
+  }
+  if(!best) best={x:cw-bw,y:ch-bh};
+  // if even the emptiest corner is busy, lay a soft plate so the number stays legible
+  if(bestInk>bw*bh*0.30){ g.fillStyle='rgba(8,6,12,0.72)';
+    g.fillRect(best.x-1,best.y-1,bw+2,bh+1); }
+  const col=(typeof tierCol==='function')?tierCol(it.t|0):'#e9dfce';
+  g.lineWidth=3; g.lineJoin='round'; g.strokeStyle='rgba(0,0,0,0.92)';
+  g.strokeText(label,best.x+1,best.y);
+  g.fillStyle=col; g.fillText(label,best.x+1,best.y);
+  g.restore();
+}
 function itemSprite(it){ if(!it) return null;
  if(it.k==='pot') return sprPotion;
  if(it.k==='wpn') return wpnSpr(it.wt,it.t);
@@ -553,7 +592,9 @@ function drawLootBag(lb,pn){
     ctx.restore();
   } else { blit(sprBag,lb.x,lb.y+bob,2.0,false); }
   ctx.fillStyle=col; ctx.fillRect(lb.x-3,lb.y-2+bob,6,6);      // rarity's remaining visual job
-  if(band>=1||its.length>1){ ctx.font='bold 10px "Pixelify Sans",monospace'; ctx.textAlign='center';
+  // tier is readable on the ground too, not just once it is in a slot — a public sack used to say
+  // nothing at all, so you had to walk over it to find out what you were picking up
+  if(top>=0){ ctx.font='bold 10px "Pixelify Sans",monospace'; ctx.textAlign='center';
     const ly=lb.y-20+bob;
     let lab=(top>=0?('T'+(top+1)):'');
     if(its.length>1) lab+=' ·'+its.length;

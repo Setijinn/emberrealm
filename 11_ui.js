@@ -917,8 +917,10 @@ function paintEqSlots(ch){ const cls=ch.cls, mt=CARMOR[cls]||'plate', wt=CWEAP[c
    const it=items[el.getAttribute('data-slot')];
    const cv=el.querySelector('.eqCv'), g=cv.getContext('2d'); g.imageSmoothingEnabled=false; g.clearRect(0,0,cv.width,cv.height);
    const tb=el.querySelector('.eqTb');
+   // the tier is stamped into the icon itself now, so the corner badge is only for the ★ that
+   // marks a legendary — printing 'T9' twice on the same 52px slot just fought with the art
    if(it){ drawItemIcon(g,it,cv.width,cv.height);
-     tb.textContent=it.leg?'★':('T'+(it.t+1)); tb.style.color=it.leg?'#ff9c50':tierCol(it.t); el.classList.add('filled');
+     tb.textContent=it.leg?'★':''; tb.style.color='#ff9c50'; el.classList.add('filled');
    } else { tb.textContent=''; el.classList.remove('filled'); } });
 }
 // opaque-pixel bounding box of an image (cached by src) — used to crop away
@@ -996,9 +998,11 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
   const cc=cvs.getContext('2d'); cc.imageSmoothingEnabled=false;
   drawItemIcon(cc,it,44,38);
   d.appendChild(cvs);
-  const badge=document.createElement('span'); badge.className='tbadge';
-  badge.textContent=it.k==='pot'?'✦':'T'+(it.t+1); badge.style.color=itemRarCol(it);
-  d.appendChild(badge);
+  // gear carries its tier stamped into the icon; only the tier-less kinds still need a glyph here
+  if(it.k==='pot'||it.k==='scroll'||it.t===undefined){
+    const badge=document.createElement('span'); badge.className='tbadge';
+    badge.textContent='✦'; badge.style.color=itemRarCol(it);
+    d.appendChild(badge); }
   d.onclick=()=>{invSelIdx=i;paintInv();};
   g.appendChild(d); });
  const it=ch.inv[invSelIdx];
