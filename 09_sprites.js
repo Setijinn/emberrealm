@@ -520,15 +520,21 @@ function drawLootBag(lb,pn){
     ctx.save(); ctx.imageSmoothingEnabled=false; ctx.shadowColor=col; ctx.shadowBlur=6*pulse;
     blit(sp,lb.x,lb.y-2+bob,1.7,false); ctx.restore();
     return; }
-  const isPot=lb.item&&lb.item.k==='pot';
-  const rar=isPot?0:((lb.item&&lb.item.rar)||0);
+  // The SACK is chosen by the bag's tier band; rarity only tints the border square and the glow.
+  // (All sacks — the chest is retired: progression reads through material and ornament, not shape.)
+  const its=(typeof bagItems==='function')?bagItems(lb):(lb.item?[lb.item]:[]);
+  const isPot=its.length===1&&its[0].k==='pot';
+  const rar=isPot?0:((typeof bagTopRar==='function')?bagTopRar(lb):((lb.item&&lb.item.rar)||0));
+  const band=(typeof bagBand==='function')?bagBand(lb):0;
+  const top=(typeof bagTopTier==='function')?bagTopTier(lb):-1;
   const col=isPot?'#7dc47a':(RAR_COL[rar]||'#cfc8bd');
   const t=performance.now()/1000, pulse=0.5+Math.sin(t*2.4+lb.x*0.05)*0.5;
-  if(rar>=1||isPot){ const gr=14+rar*7;
+  const glow=Math.max(rar,band*2);               // a bound sack always announces itself
+  if(glow>=1||isPot){ const gr=14+glow*6;
     const g=ctx.createRadialGradient(lb.x,lb.y+6,1,lb.x,lb.y+6,gr);
-    g.addColorStop(0,col+(rar>=3?'aa':'66')); g.addColorStop(1,col+'00');
+    g.addColorStop(0,col+(glow>=3?'aa':'66')); g.addColorStop(1,col+'00');
     ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(lb.x,lb.y+6,gr,gr*0.5,0,0,6.29); ctx.fill(); }
-  if(rar>=2){ const bh=40+rar*22, bw=6+rar*1.5, a=(0.10+rar*0.05)*(0.6+pulse*0.4);
+  if(band>=1){ const bh=44+band*24, bw=7+band*2, a=(0.14+band*0.06)*(0.6+pulse*0.4);
     const bg=ctx.createLinearGradient(0,lb.y-bh,0,lb.y+4);
     const ah=Math.round(a*180).toString(16).padStart(2,'0');
     bg.addColorStop(0,col+'00'); bg.addColorStop(0.65,col+ah); bg.addColorStop(1,col+'00');
@@ -536,20 +542,24 @@ function drawLootBag(lb,pn){
     ctx.moveTo(lb.x-bw*0.35,lb.y-bh); ctx.lineTo(lb.x+bw*0.35,lb.y-bh);
     ctx.lineTo(lb.x+bw,lb.y+2); ctx.lineTo(lb.x-bw,lb.y+2); ctx.closePath(); ctx.fill(); }
   shadow(lb.x,lb.y+8,10);
-  const useChest=rar>=3;
-  const img=useChest?(typeof _lootChest!=='undefined'?_lootChest:null):(typeof _lootSack!=='undefined'?_lootSack:null);
-  const bob=rar>=2?Math.sin(t*2.2+lb.x*0.03)*1.5:0;
-  if(img&&img.complete&&img.naturalWidth){ const sc=(useChest?26:22)/img.naturalWidth;
+  const bn=(typeof LOOT_BANDS!=='undefined')?LOOT_BANDS[band]:null;
+  let img=(bn&&typeof window[bn.spr]!=='undefined')?window[bn.spr]:null;
+  if(!img||!img.naturalWidth) img=(typeof _lootSack!=='undefined')?_lootSack:null;   // until the art lands
+  const bob=band>=1?Math.sin(t*2.2+lb.x*0.03)*1.5:0;
+  if(img&&img.complete&&img.naturalWidth){ const sc=(22+band*3)/img.naturalWidth;
     ctx.save(); ctx.imageSmoothingEnabled=false;
-    if(rar>=4){ ctx.shadowColor=col; ctx.shadowBlur=10*pulse; }
+    if(band>=2||rar>=4){ ctx.shadowColor=col; ctx.shadowBlur=10*pulse; }
     ctx.drawImage(img,Math.round(lb.x-img.naturalWidth*sc/2),Math.round(lb.y-img.naturalHeight*sc/2+bob),img.naturalWidth*sc,img.naturalHeight*sc);
     ctx.restore();
   } else { blit(sprBag,lb.x,lb.y+bob,2.0,false); }
-  if(!useChest){ ctx.fillStyle=col; ctx.fillRect(lb.x-3,lb.y-2+bob,6,6); }
-  if(rar>=2){ ctx.font='bold 10px "Pixelify Sans",monospace'; ctx.textAlign='center';
+  ctx.fillStyle=col; ctx.fillRect(lb.x-3,lb.y-2+bob,6,6);      // rarity's remaining visual job
+  if(band>=1||its.length>1){ ctx.font='bold 10px "Pixelify Sans",monospace'; ctx.textAlign='center';
     const ly=lb.y-20+bob;
-    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillText(RAR_NAMES[rar],lb.x+1,ly+1);
-    ctx.fillStyle=col; ctx.fillText(RAR_NAMES[rar],lb.x,ly); ctx.textAlign='left'; }
+    let lab=(top>=0?('T'+(top+1)):'');
+    if(its.length>1) lab+=' ·'+its.length;
+    if(bn&&bn.label) lab+=' '+bn.label;
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillText(lab,lb.x+1,ly+1);
+    ctx.fillStyle=col; ctx.fillText(lab,lb.x,ly); ctx.textAlign='left'; }
 }
 // Big reusable INTERACT button (screen space) — anchored above the interactable, clamped on-screen.
 function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt) return null;
@@ -1181,7 +1191,10 @@ function render(){
     ctx.fillStyle=gp.home?'#d8ffd8':'#e8d8ff'; ctx.fillRect(gp.x-3,gp.y-3,6,6);
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#e8d8ff';
     ctx.fillText(gp.home?'EXIT':(GBOSS[gp.ring]?GBOSS[gp.ring].dn:'DUNGEON'),gp.x,gp.y-24); ctx.textAlign='left'; }
-  for(const lb of loots) drawLootBag(lb,pn);
+  // someone else's soulbound sack is not mine to see. `lb.own` is only ever set when networked,
+  // so solo pays one undefined property read per bag.
+  for(const lb of loots){ if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;
+    drawLootBag(lb,pn); }
   if(typeof drawEggDrops==='function') drawEggDrops();
   if(typeof drawPet==='function') drawPet();                   // active companion pet
   if(typeof drawPetRoom==='function') drawPetRoom();           // sanctuary decor + wandering pets

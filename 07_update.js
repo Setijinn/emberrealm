@@ -818,9 +818,14 @@ function update(dt){
       if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'ground',x:gp.x,y:gp.y,gp:gp,ctx:gp.home?'The Vale':'The Dungeon'}; } }
     if(curRoom.pillars) for(const pl of curRoom.pillars){ const d=Math.hypot(pl.x-player.x,pl.y-player.y);
       if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl.band)?pl.name:'Attune '+pl.name}; } }
-    for(const lb of loots){ const rar=(lb.item&&lb.item.rar)||0; if(rar<2||lb.item.k==='pot') continue;
+    // soulbound sacks are the ones worth a button press; public sacks auto-collect on walk-over.
+    // Someone else's bound sack is invisible to me and must never offer a prompt either.
+    for(const lb of loots){ if(bagAuto(lb)) continue;
+      if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;
       const d=Math.hypot(lb.x-player.x,lb.y-player.y);
-      if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'loot',x:lb.x,y:lb.y,bag:lb,ctx:(RAR_NAMES[rar]||'')}; } }
+      const n=bagItems(lb).length, tt=bagTopTier(lb);
+      if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'loot',x:lb.x,y:lb.y,bag:lb,
+        ctx:'T'+(tt+1)+(n>1?(' ·'+n+' items'):'')}; } }
     if(curRoom.npc){ const np=curRoom.npc, d=Math.hypot(np.x-player.x,np.y-player.y);
       if(d<52 && d<_pbest){ _pbest=d; portalPrompt={kind:'npc',x:np.x,y:np.y,np:np,ctx:np.name}; } }
     if(curRoom.switches) for(const sw of curRoom.switches){ if(sw.on) continue;
@@ -863,34 +868,19 @@ function update(dt){
   } else if(shopNear){ shopNear=false; curShopNear=null;
     document.getElementById('shopBtn').style.display='none';
     document.getElementById('shopScr').style.display='none'; }
-  // loot bags: despawn + HYBRID pickup. Commons/uncommons/potions auto-collect on
-  // walk-over; rare+ (rar>=2) are left on the ground for the INTERACT prompt (below).
+  // loot bags: despawn + HYBRID pickup. Public sacks auto-collect on walk-over; soulbound sacks
+  // are left for the INTERACT prompt, which opens the bag UI. Decided by BAND, not rarity.
+  if(typeof netReapBound==='function') netReapBound(dt);
   for(let i=loots.length-1;i>=0;i--){ const lb=loots[i];
     // A `remote` bag is a shadow of one the host owns; the only cull for it lives inside
     // netApplyWorld. If this machine stops being a client (disconnect, host migration) that cull
     // never runs again and the shadow sits in the world forever, unclaimable.
     if(lb.remote && (typeof netIsClient!=='function' || !netIsClient())){ loots.splice(i,1); continue; }
     lb.life-=dt; if(lb.life<=0){loots.splice(i,1);continue;}
-    const rar=(lb.item&&lb.item.rar)||0;
-    if(rar>=2 && lb.item.k!=='pot') continue;                 // rare+ -> press INTERACT
-    if(Math.hypot(lb.x-player.x,lb.y-player.y)<42){
-      // A bag is one object shared by the room. On a client, ask the host for it and let the
-      // grant come back -- otherwise both players walk over the same drop and both keep it.
-      if(lb.remote){ if(!lb._asked){ lb._asked=1; if(typeof netRequestPickup==='function') netRequestPickup(lb); } continue; }
-      const ch=curChar(); if(!ch||!rpg) continue; if(!ch.inv)ch.inv=[];
-      if(lb.item.k==='coin'){ addCoin(); recalcStats();
-        texts.push({x:lb.x,y:lb.y-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); }
-      else if(lb.item.k==='pot'){ rpg.pots++; hudRPG();
-        texts.push({x:lb.x,y:lb.y-14,txt:'+Tonic',col:'#7dc47a',life:1}); }
-      else if(lb.item.k==='scroll'){ const st=lb.item.st;
-        if(typeof grantScroll==='function') grantScroll(rpg,st,1);
-        const col=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].col:'#e6c76a';
-        texts.push({x:lb.x,y:lb.y-14,txt:'📜 '+((typeof scrollName==='function')?scrollName(st):'Scroll'),col:col,life:1.5}); }
-      else if(ch.inv.length<20){ ch.inv.push(lb.item);
-        texts.push({x:lb.x,y:lb.y-14,txt:itemName(lb.item),col:itemRarCol(lb.item),life:1.3}); }
-      else { continue; }
-      loots.splice(i,1); saveRPG();
-    } }
+    if(!bagAuto(lb)) continue;                                   // soulbound -> press INTERACT
+    if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;   // not mine
+    if(Math.hypot(lb.x-player.x,lb.y-player.y)<42) claimBag(lb);
+  }
   // ability upkeep (mana regen handled at top; abilities cast from the right-side button)
   lastShotT+=dt;
   if(player.bDmgT>0)player.bDmgT-=dt; if(player.bRofT>0)player.bRofT-=dt; if(player.bSpdT>0)player.bSpdT-=dt;

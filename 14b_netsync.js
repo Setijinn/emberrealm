@@ -33,6 +33,27 @@ function netIsClient(){ return netOn() && !coop.host; }
 // Solo play and the host both say yes, so single-player behaviour is completely unchanged.
 function netSimulates(){ return !netIsClient(); }
 
+// ONE id space for ownership tags, presence keys and grant addressing. The host is always 'H'
+// (forced at both host entry points in 14_coop); a client uses its full peer id, which is exactly
+// what the host sees as conn.peer. Offline returns 'S', which nothing ever compares against.
+function netSelfId(){ return (typeof coop==='undefined'||!coop)?'S':(coop.id||'S'); }
+// True for public bags, my own bags, and EVERY bag in solo play — `own` is only ever set when
+// networked, so the short-circuit at the call sites means solo pays one undefined read.
+function netOwnsLoot(b){ return !b || !b.own || b.own===netSelfId(); }
+// Everyone entitled to their own independent soulbound roll for a kill at (x,y): [{id,fort}].
+// Solo short-circuits on the first boolean and never touches coop.peers.
+const LOOT_ELIG_R=520;      // "near the kill" — much tighter than the 1100 group-scaling radius
+const LOOT_ELIG_AGE=2500;   // same freshness bar bossArenaHasPlayer uses
+function netLootRoster(x,y){
+  const me={id:netSelfId(), fort:(typeof player!=='undefined'&&player.fortune)||0};
+  if(!netOn()) return [me];
+  const out=(typeof player!=='undefined'&&player.hp>0)?[me]:[];
+  if(typeof coopNearPeers==='function')
+    for(const p of coopNearPeers(x,y,LOOT_ELIG_R,LOOT_ELIG_AGE)){
+      if((p.hp||0)<=0) continue;          // a corpse two rooms into a death timer earns nothing
+      out.push({id:p.id, fort:p.fo||0}); }
+  return out; }
+
 function netId(e){ if(e && !e.nid) e.nid=_netNid++; return e?e.nid:0; }
 function _netSend(m){ if(typeof coop==='undefined'||!coop.conns) return;
   for(const c of coop.conns){ if(c.open){ try{ c.send(m); }catch(err){} } } }
@@ -68,10 +89,42 @@ function netBroadcast(){
   const sh=[];
   for(const s of eShots) sh.push([Math.round(s.x),Math.round(s.y),Math.round(s.vx),Math.round(s.vy),
                                   Math.round(s.r||6),Math.round(s.bd||8)]);
-  const lt=[];
+  // LOOT. Contents never cross the wire — only the 'G' grant carries a real item. What the client
+  // needs is enough to DRAW the sack: which band (sprite), best rarity (border), how many pieces.
+  // Soulbound rows are filtered per CONNECTION rather than tagged and filtered client-side, so
+  // another player's T12 never reaches the wire at all and no client bug can reveal or request it.
+  const ltPub=[], ltOwn={}, me=netSelfId();
   for(const b of loots){ if(!b.lid) b.lid=_netNid++;
-    lt.push([b.lid, Math.round(b.x), Math.round(b.y), b.rar||0]); }
-  _netSend({t:'W', rm:(curRoom.key||'?'), seq:++_netSeq, ents:ents, sh:sh, lt:lt});
+    const row=[b.lid, Math.round(b.x), Math.round(b.y), netPackBag(b)];
+    if(!b.own) ltPub.push(row);
+    else if(b.own!==me) (ltOwn[b.own]=ltOwn[b.own]||[]).push(row);
+    // my own bound sacks are never broadcast: I render them straight out of `loots`
+  }
+  const m={t:'W', rm:(curRoom.key||'?'), seq:++_netSeq, ents:ents, sh:sh, lt:ltPub};
+  // one object, `lt` swapped between sends — BinaryPack encodes synchronously inside c.send()
+  for(const c of coop.conns){ if(!c.open) continue;
+    const mine=ltOwn[c.peer];
+    m.lt = mine ? ltPub.concat(mine) : ltPub;
+    try{ c.send(m); }catch(err){} }
+}
+// bag -> one int: rarity(3) | band(2) | count(3) | topTier(4) | kind of the headline piece(3)
+const NKIND=['wpn','arm','helm','ring','pot','coin','scroll'];
+function netPackBag(b){
+  const its=(typeof bagItems==='function')?bagItems(b):(b.item?[b.item]:[]);
+  const head=its[0]||{};
+  const k=Math.max(0,NKIND.indexOf(head.k||'wpn'));
+  const t=Math.max(0,Math.min(15,(typeof bagTopTier==='function')?bagTopTier(b):(head.t|0)));
+  const r=Math.max(0,Math.min(7,(typeof bagTopRar==='function')?bagTopRar(b):(b.rar|0)));
+  const bd=Math.max(0,Math.min(3,(typeof bagBand==='function')?bagBand(b):0));
+  const n=Math.max(0,Math.min(7,its.length));
+  return r | (bd<<3) | (n<<5) | (t<<8) | (k<<12);
+}
+// The client rebuilds a DISPLAY-ONLY bag. `ghost` marks every item here as unawardable: only the
+// host's grant carries real contents, and nothing must ever be able to put one of these in a bag.
+function netUnpackBag(f){
+  const r=f&7, bd=(f>>3)&3, n=(f>>5)&7, t=(f>>8)&15, k=NKIND[(f>>12)&7]||'wpn';
+  const items=[]; for(let i=0;i<Math.max(1,n);i++) items.push({k:(i?'arm':k), t:t, rar:i?0:r, ghost:true});
+  return {items:items, rar:r, band:bd, top:t};
 }
 
 // ---- client: adopt the host's world ----
@@ -111,7 +164,13 @@ function netApplyWorld(m){
   const lseen={};
   for(const b of m.lt){ lseen[b[0]]=1;
     let g=null; for(const x of loots){ if(x.lid===b[0]){ g=x; break; } }
-    if(!g) loots.push({lid:b[0],x:b[1],y:b[2],rar:b[3],item:{k:'pot'},life:120,remote:true}); }
+    if(!g){ const u=netUnpackBag(b[3]);
+      // life is effectively infinite here: the host owns despawn and the lseen cull below is what
+      // removes it. A shorter local life expired bags the host still had, which then reappeared on
+      // the next snapshot — a visible flicker on exactly the long-lived rare bags you care about.
+      loots.push({lid:b[0],x:b[1],y:b[2],items:u.items,item:u.items[0],
+                  rar:u.rar,band:u.band,life:1e9,remote:true}); }
+    else { g.x=b[1]; g.y=b[2]; } }
   for(let i=loots.length-1;i>=0;i--){ if(loots[i].remote && !lseen[loots[i].lid]) loots.splice(i,1); }
 }
 
@@ -178,10 +237,29 @@ function netHostTakeHit(m){
 function netRequestPickup(b){ if(netIsClient()&&b&&b.lid) _netSend({t:'P', lid:b.lid}); }
 function netHostPickup(m,fromId){
   if(!netIsHost()) return;
-  for(let i=0;i<loots.length;i++){ if(loots[i].lid===m.lid){
-    const b=loots[i]; loots.splice(i,1);
-    _netSend({t:'G', lid:m.lid, to:fromId, item:b.item});   // granted
-    return; } }
+  for(let i=0;i<loots.length;i++){ const b=loots[i];
+    if(b.lid!==m.lid) continue;
+    if(b.own && b.own!==fromId) return;      // bound to someone else — deny (the wire already hid it)
+    loots.splice(i,1);
+    _netSend({t:'G', lid:m.lid, to:fromId, items:(typeof bagItems==='function')?bagItems(b):[b.item]});
+    return; }
+  // already taken: answer anyway so the loser clears its in-flight latch instead of retrying
+  _netSend({t:'G', lid:m.lid, to:fromId, items:null});
+}
+// Host-only: retire soulbound sacks whose owner is gone, so they stop eating a snapshot row and a
+// slot in the world forever. Grace periods, not instant despawn — a player who dies, respawns or
+// hitches for two seconds must not lose a T12 for it.
+function netReapBound(dt){
+  if(!netIsHost()) return;                                     // solo + clients: one boolean, out
+  const now=performance.now(), rk=(curRoom&&curRoom.key)||'?', me=netSelfId();
+  for(let i=loots.length-1;i>=0;i--){ const b=loots[i];
+    if(!b.own || b.own===me) continue;
+    const p=coop.peers[b.own];
+    // a reconnect gets a brand new peer id, so a disconnected owner can never come back for it
+    if(!p || now-(p.ts||0)>4000){ b._orph=(b._orph||0)+dt; if(b._orph>10) loots.splice(i,1); continue; }
+    b._orph=0;
+    if(p.rm!==rk){ b._away=(b._away||0)+dt; if(b._away>30) loots.splice(i,1); }
+    else b._away=0; }
 }
 // Route an inbound message. 14_coop.js calls this for anything that is not a presence packet.
 function netOnMessage(d, fromId){
@@ -191,7 +269,12 @@ function netOnMessage(d, fromId){
   if(d.t==='A'){ netHostApplyStatus(d); return true; }
   if(d.t==='P'){ netHostPickup(d, fromId); return true; }
   if(d.t==='G'){
-    if(typeof coop!=='undefined' && d.to===coop.id && typeof takeLoot==='function') takeLoot(d.item);
+    if(d.to!==netSelfId()) return true;
+    // drop the local ghost NOW rather than waiting up to 83ms for the next snapshot's cull, or the
+    // bag lingers under your feet and re-arms the prompt you just answered
+    for(let i=loots.length-1;i>=0;i--) if(loots[i].lid===d.lid) loots.splice(i,1);
+    const list=d.items||(d.item?[d.item]:null);
+    if(list && typeof takeLoot==='function') for(const it of list) takeLoot(it);
     return true; }
   return false;
 }

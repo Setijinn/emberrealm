@@ -21,9 +21,15 @@ const EMBER_SC = 0.85;
 const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return i; })() : null;
 // Reusable interact-button plate (PixelLab) â€” used by the portal/pillar USE prompt.
 const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/btn_interact.png'; return i; })() : null;
-// Loot containers (PixelLab): drab sack for low rarity, ornate chest for high rarity.
-const _lootSack  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';  return i; })() : null;
-const _lootChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_chest.png'; return i; })() : null;
+// Loot sacks (PixelLab), one per TIER BAND — never rarity, and never a chest: progression reads
+// through material and ornament while the silhouette stays a sack. LOOT_BANDS names these by
+// string, so adding the band above T12 later is one row plus one file.
+//   _lootSack     public   T1-T8   plain burlap
+//   _lootSackT9   bound    T9-T10  richer cloth, banded trim
+//   _lootSackT11  bound    T11-T12 embroidered, clasped, ember at the seams
+const _lootSack    = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';     return i; })() : null;
+const _lootSackT9  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t9.png';  return i; })() : null;
+const _lootSackT11 = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t11.png'; return i; })() : null;
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',

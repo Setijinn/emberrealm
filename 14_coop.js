@@ -94,6 +94,9 @@ setInterval(function(){
     x:Math.round(player.x), y:Math.round(player.y), aim:+(player.aim||0).toFixed(2),
     hp:Math.round(100*Math.max(0,player.hp)/(player.maxhp||1)),
     mv:(stick.move.id!==null || (typeof keyMove==='function'&&keyMove()))?1:0,
+    // fo: my Fortune. The HOST rolls everyone's soulbound loot, so without this only the host's
+    // Fortune would ever count -- your coins and Prosperous rolls would do nothing in co-op.
+    fo:Math.round(player.fortune||0),
     atk:player.atkT>0?1:0, rm:curRoom.key||'?'};
   if(coop.host) m.id='H';
   for(const c of coop.conns){ if(c.open){ try{c.send(m);}catch(e){} } }
@@ -120,13 +123,17 @@ function drawCoopPeers(pn){
 // how many heroes (incl. me) are live on my connection
 function coopCount(){ const now=performance.now();
   return 1+Object.keys(coop.peers).filter(id=>now-(coop.peers[id].ts||0)<3000).length; }
-// how many heroes (incl. me) are near a point in MY room — drives enemy group scaling
-function coopNearCount(x,y){ if(!coop.on) return 1;
-  const now=performance.now(); let n=1;
+// PEERS (not me) near a point in MY room, still sending. One scan, two consumers: enemy group
+// scaling wants the count, soulbound loot wants the actual list so it can roll for each of them.
+function coopNearPeers(x,y,rad,maxAge){
+  const out=[]; if(!coop.on) return out;
+  const now=performance.now(), rk=(curRoom&&curRoom.key)||'?', R=rad||1100, A=maxAge||3000;
   for(const id in coop.peers){ const p=coop.peers[id];
-    if(now-(p.ts||0)<3000 && p.rm===((curRoom&&curRoom.key)||'?')
-       && Math.hypot((p.x||0)-x,(p.y||0)-y)<1100) n++; }
-  return n; }
+    if(!p || p.rm!==rk || now-(p.ts||0)>A) continue;
+    if(Math.hypot((p.x||0)-x,(p.y||0)-y)<R) out.push(p); }
+  return out; }
+// how many heroes (incl. me) are near a point in MY room — drives enemy group scaling
+function coopNearCount(x,y){ return coop.on?(1+coopNearPeers(x,y,1100,3000).length):1; }
 // ---- panel ----
 function openCoop(){ const ov=document.getElementById('coopScr'); if(!ov) return;
   ov.style.display='flex'; _coopPanel(); }

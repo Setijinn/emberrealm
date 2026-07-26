@@ -63,13 +63,11 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   else if(p.kind==='pillar'){ const pl=p.pl;
     if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
     openFastTravel(); }
-  else if(p.kind==='loot'){ const lb=p.bag, idx=loots.indexOf(lb);
-    if(idx>=0){ const ch=curChar();
-      if(ch&&rpg){ if(!ch.inv)ch.inv=[];
-        if(ch.inv.length<20){ ch.inv.push(lb.item);
-          texts.push({x:lb.x,y:lb.y-16,txt:itemName(lb.item),col:itemRarCol(lb.item),life:1.6});
-          loots.splice(idx,1); saveRPG(); }
-        else texts.push({x:player.x,y:player.y-30,txt:'satchel full',col:'#c04a3d',life:1.1}); } } }
+  // A soulbound sack opens rather than vanishing into the satchel: it can hold several pieces and
+  // you should get to see them against what you are wearing before deciding. On a client the
+  // panel asks the host first and opens on the grant — it must never award locally.
+  else if(p.kind==='loot'){ if(typeof openBagPanel==='function') openBagPanel(p.bag);
+    else claimBag(p.bag); }
   navigator.vibrate&&navigator.vibrate(30);
 }
 function travelTo(pl){ closeFastTravel(); const g=rooms['G']; const sp=safeSpot(g,pl.x,pl.y);
@@ -216,6 +214,64 @@ function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
 function tierCol(t){ return t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
 
 // ============================================================
+// LOOT TIERS BY AREA (user, 2026-07-26)
+// ------------------------------------------------------------
+// Tier is the only power axis, so tier is what the world gates. Where you farm decides what you
+// can get; the level of the thing you killed no longer does. Keyed by CLUMP index 0-12, which is
+// what zoneAt() returns and is stable per world position.
+//
+//   pub  weighted tiers for the PUBLIC channel, capped at T8 -- any player in the area may take it
+//   sb   weighted tiers for the SOULBOUND channel, T9+, rolled per player and lootable only by them
+//   sbP  soulbound chance on a trash kill (elites x3; bosses roll one guaranteed, see rollLoot)
+//
+// Weights are [tierIndex(0-based), weight]. Bands overlap by one tier at each seam so the ladder
+// never has a hard wall, and the low zones deliberately stay generous -- gear should not be scarce
+// at the start, only at the top.
+const ZONE_TIERS=[
+ /* 0  The Landing Sands  Lv1-8   */ {pub:[[0,65],[1,35]],            sb:null,                      sbP:0},
+ /* 1  Gullwind Shore     Lv8-14  */ {pub:[[1,60],[2,40]],            sb:null,                      sbP:0},
+ /* 2  Sawgrass Flats     Lv14-20 */ {pub:[[2,60],[3,40]],            sb:null,                      sbP:0},
+ /* 3  The Verdant Belt   Lv20-26 */ {pub:[[3,55],[4,45]],            sb:null,                      sbP:0},
+ /* 4  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0},
+ /* 5  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015},
+ /* 6  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030},
+ /* 7  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,55],[10,40],[11,5]],   sbP:0.0045},
+ /* 8  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
+ /* 9  Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
+ /* 10 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
+ /* 11 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
+ /* 12 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
+];
+const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0};   // ocean / bridge / anything unmapped
+const PUB_TMAX=7;          // public gear caps at T8 (0-based 7). Everything above is soulbound.
+const TIER_OVERFLOW=0.05;  // a small tail one tier above the row's max, so the chase never dies
+
+// Which area's table applies to a kill. In a dungeon there is no overworld band under the tile
+// (rings is null), so the drop inherits the boss's OVERWORLD clump -- the dream pays out in the
+// currency of the homeland it remembers, which is the rule the tiles and mob names already follow.
+function zoneTierRow(x,y){
+  let z=-1;
+  if(typeof curRoom!=='undefined'&&curRoom){
+    if(curRoom.rings && typeof zoneAt==='function') z=zoneAt(x/TILE,y/TILE);
+    else if(typeof curRoom.ring==='number'&&typeof BOSS_ZONE!=='undefined') z=BOSS_ZONE[curRoom.ring];
+  }
+  return ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
+}
+function pickWeighted(rows,fort){
+  if(!rows||!rows.length) return 0;
+  let tot=0; for(const r of rows) tot+=r[1];
+  let q=Math.random()*tot;
+  let t=rows[rows.length-1][0];
+  for(const r of rows){ q-=r[1]; if(q<0){ t=r[0]; break; } }
+  // the overflow tail: a rare step above the row's ceiling. Fortune widens it.
+  if(Math.random() < TIER_OVERFLOW*(1+(fort||0)*0.02)){
+    let mx=0; for(const r of rows) if(r[0]>mx) mx=r[0];
+    if(t===mx) t=mx+1;
+  }
+  return Math.max(0,Math.min(MAXT-1,t));
+}
+
+// ============================================================
 //  10-STAT SYSTEM
 //  atk def hp mp vit wis dex spd luck fort
 //  luck -> crit chance + hit   ·   fort -> loot bonus
@@ -337,15 +393,64 @@ function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
  // worth follows tier, plus a modest premium per rolled affix — rarity is no longer raw power,
  // but more rolled stats is still more item, and a Mythical should not sell for a Common's price
  return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*(1+(it.rar||0)*0.12))); }
-function mkDrop(t){ t=Math.max(0,Math.min(MAXT-1,t)); const r=Math.random(); let it;
- if(r<0.5){ const keys=Object.keys(WTYPE).filter(k=>k!=='fists');
-  it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
- else { const mats=['plate','leather','robe'];
-  if(r<0.7) it={k:'arm',mt:mats[Math.floor(Math.random()*3)],t:t};
-  else if(r<0.85) it={k:'helm',mt:mats[Math.floor(Math.random()*3)],t:t};
-  else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t}; }
- return rollAffixes(it,(typeof player!=='undefined'&&player.fortune)||0); }
-function bagAt(e,item){ const rar=(item&&item.rar)||0;
+// One item of a GIVEN kind at a given tier. The kind is chosen by the bag slot, not here.
+function mkItem(k,t,fort){ t=Math.max(0,Math.min(MAXT-1,t)); let it;
+ if(k==='wpn'){ const keys=Object.keys(WTYPE).filter(x=>x!=='fists');
+   it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
+ else if(k==='arm'||k==='helm'){ const mats=['plate','leather','robe'];
+   it={k:k,mt:mats[Math.floor(Math.random()*3)],t:t}; }
+ else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t};
+ return rollAffixes(it, (fort!==undefined)?fort:((typeof player!=='undefined'&&player.fortune)||0)); }
+// legacy single-item drop, still used by the boss branches in 07_update
+function mkDrop(t,fort){ const r=Math.random();
+ const k = r<0.5?'wpn' : r<0.7?'arm' : r<0.85?'helm' : 'ring';
+ return mkItem(k,t,fort); }
+
+// ------------------------------------------------------------
+// BAG SLOTS (user, 2026-07-26)
+// A bag is a fixed set of TYPED slots, each rolled independently. Composition is controlled here
+// rather than by one weighted pick, so "armour comes up twice as often as weapons" is expressed as
+// two armour slots instead of a magic number — and a bag can occasionally pay out two or three
+// pieces at once, which is what makes opening one feel like an event.
+// The per-slot odds are deliberately low: across a whole layout they average about one item, so
+// the scarcity of the drop tables is preserved while individual bags get a spread.
+const BAG_SLOTS={
+ // ~0.95 items/bag, and 34% of rolls come up completely empty -> no bag drops at all
+ pub:[ {k:'wpn',p:0.28}, {k:'arm',p:0.22}, {k:'arm',p:0.12}, {k:'helm',p:0.18}, {k:'ring',p:0.15} ],
+ // soulbound bags are already rare enough to reach, so they are never empty (see the guarantee in
+ // rollBagSlots); the extra slots are the chance of a second or third piece on top.
+ bound:[ {k:'wpn',p:0.30}, {k:'arm',p:0.24}, {k:'helm',p:0.18}, {k:'ring',p:0.16} ],
+};
+function rollBagSlots(layout,tier,fort,guarantee){
+ const items=[], fm=1+(fort||0)*0.004;
+ for(const s of layout) if(Math.random()<s.p*fm) items.push(mkItem(s.k,tier,fort));
+ if(!items.length && guarantee){ const s=layout[Math.floor(Math.random()*layout.length)];
+   items.push(mkItem(s.k,tier,fort)); }
+ return items; }
+// ------------------------------------------------------------
+// BAG BANDS — the sack you see is decided by the best TIER inside it, never by rarity.
+// Data-driven so the planned tier above T12 is one row here plus one sprite: no logic change.
+const LOOT_BANDS=[
+ {min:0,  spr:'_lootSack',    bound:false, life:60,  label:''},        // public   T1-T8
+ {min:8,  spr:'_lootSackT9',  bound:true,  life:240, label:'BOUND'},   // soulbound T9-T10
+ {min:10, spr:'_lootSackT11', bound:true,  life:300, label:'BOUND'},   // soulbound T11-T12
+];
+function bagItems(lb){ return (lb&&lb.items)||(lb&&lb.item?[lb.item]:[]); }
+function bagTopTier(lb){ let t=-1; for(const it of bagItems(lb)) if(it&&it.t!==undefined&&it.t>t) t=it.t; return t; }
+function bagTopRar(lb){ let r=0; for(const it of bagItems(lb)) if(it&&(it.rar||0)>r) r=it.rar; return r; }
+function bandOfTier(t){ if(t===undefined||t<0) return 0;
+ let b=0; for(let i=0;i<LOOT_BANDS.length;i++) if(t>=LOOT_BANDS[i].min) b=i; return b; }
+function bagBand(lb){ return (lb&&lb.band!==undefined)?lb.band:bandOfTier(bagTopTier(lb)); }
+function bagBound(lb){ return !!LOOT_BANDS[bagBand(lb)].bound; }
+// walk-over vs INTERACT: public sacks auto-collect, soulbound sacks are worth pressing a button for.
+// Decided by BAND, not by ownership, so solo and host behave identically.
+function bagAuto(lb){ const its=bagItems(lb); if(!its.length) return true;
+ if(its.length===1 && (its[0].k==='pot'||its[0].k==='coin'||its[0].k==='scroll')) return true;
+ return !bagBound(lb); }
+
+function bagAt(e,items){
+ const list=Array.isArray(items)?items:(items?[items]:[]);
+ const rar=list.reduce((m,it)=>Math.max(m,(it&&it.rar)||0),0);
  let bx=e.x+(Math.random()*22-11), by=e.y+(Math.random()*22-11);
  // A clump of trees leaves pockets the player can never reach: each trunk only blocks a small
  // circle, but several together enclose the gap between them. Loot scattered into one of those is
@@ -355,7 +460,46 @@ function bagAt(e,item){ const rar=(item&&item.rar)||0;
    const p=nearestStandable(bx,by,11,4);
    if(p){ bx=p.x; by=p.y; } else { bx=e.x; by=e.y; }
  }
- return {x:bx,y:by,item:item,rar:rar,life:rar>=2?150:60}; }
+ let top=-1; for(const it of list) if(it&&it.t!==undefined&&it.t>top) top=it.t;
+ const band=bandOfTier(top);
+ // `item` is kept as the headline piece so older readers and the co-op grant path keep working;
+ // `items` is the truth. Life comes from the band: a soulbound sack must outlast the fight.
+ return {x:bx,y:by,items:list,item:list[0]||null,rar:rar,band:band,life:LOOT_BANDS[band].life}; }
+// Award ONE item. Returns false if it could not be taken (satchel full), so the caller can leave
+// the rest of the bag on the ground rather than silently eating it.
+function awardItem(it,x,y){
+  const ch=(typeof curChar==='function')?curChar():null; if(!ch||!rpg||!it) return false;
+  if(!ch.inv) ch.inv=[];
+  const px=(x===undefined)?player.x:x, py=(y===undefined)?player.y:y;
+  if(it.k==='coin'){ if(typeof addCoin==='function') addCoin(); if(typeof recalcStats==='function') recalcStats();
+    texts.push({x:px,y:py-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); return true; }
+  if(it.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG();
+    texts.push({x:px,y:py-14,txt:'+Tonic',col:'#7dc47a',life:1}); return true; }
+  if(it.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,it.st,1);
+    const col=(typeof STAT_META!=='undefined'&&STAT_META[it.st])?STAT_META[it.st].col:'#e6c76a';
+    texts.push({x:px,y:py-14,txt:'📜 '+((typeof scrollName==='function')?scrollName(it.st):'Scroll'),col:col,life:1.5});
+    return true; }
+  if(ch.inv.length>=20){ texts.push({x:player.x,y:player.y-30,txt:'satchel full',col:'#c04a3d',life:1.1}); return false; }
+  ch.inv.push(it); texts.push({x:px,y:py-14,txt:itemName(it),col:itemRarCol(it),life:1.3}); return true;
+}
+// THE one way a bag leaves the ground. Both the walk-over and the INTERACT prompt come through
+// here. On a client it never touches the inventory: it asks the host and waits for the 'G' grant,
+// which is the only thing in the game allowed to award a real item over the network.
+function claimBag(lb){
+  if(!lb) return false;
+  if(lb.remote){
+    // reliable:false transport — a lost 'P' or 'G' must not brick the bag, so the request re-arms
+    if(lb._asked && performance.now()-(lb._askT||0)<1200) return false;
+    lb._asked=1; lb._askT=performance.now();
+    if(typeof netRequestPickup==='function') netRequestPickup(lb);
+    return false; }
+  const i=loots.indexOf(lb); if(i<0) return false;
+  const its=bagItems(lb), left=[];
+  for(const it of its) if(!awardItem(it,lb.x,lb.y)) left.push(it);
+  if(left.length===its.length) return false;          // took nothing (satchel full) — leave it be
+  if(left.length){ lb.items=left; lb.item=left[0]; return false; }   // partial: keep the remainder
+  loots.splice(i,1); saveRPG(); return true;
+}
 // Award an item directly, with no bag on the ground. Used when the co-op host grants a contested
 // pickup to a specific player: only the winner's client runs this, so the drop lands once.
 function takeLoot(item){
@@ -370,25 +514,55 @@ function takeLoot(item){
     texts.push({x:player.x,y:player.y-30,txt:(typeof itemName==='function')?itemName(item):'loot',
       col:(typeof itemRarCol==='function')?itemRarCol(item):'#e6c76a',life:1.3});
 }
-function rollLoot(e){
- const lv=e.lv||1;
- const F=(typeof player!=='undefined'&&player.fortune)||0;
- const fmul=1+F*0.012;                 // fortune: more drops
- const tb=Math.max(0,Math.min(11,Math.round(lv/4.2)));   // Lv50 -> tier ~12 (MAXT); was lv/12.5 for Lv150
- let tier=Math.max(0,Math.min(11,tb+Math.floor(Math.random()*3)-1));
- if(Math.random()<F*0.004) tier=Math.min(11,tier+1);  // fortune: better tier
+// ------------------------------------------------------------
+// Two independent channels. PUBLIC is one roll for the kill, shared by everyone in the area.
+// SOULBOUND is rolled separately for each eligible player and belongs only to them.
+// Both run host-side only (07_update gates rollLoot on netSimulates).
+const PUB_GEAR={c:0.025, s:0.06, N:0.025};   // gear-bag chance by enemy type; bosses are handled below
+const PUB_POT ={c:0.10,  s:0.14, N:0.10};
+function rollPublicLoot(e,row,F){
+ const fmul=1+F*0.012;
+ const tier=Math.min(PUB_TMAX,pickWeighted(row.pub,F));    // public gear never exceeds T8
  const r=Math.random();
+ if(e.type==='B'){
+   const items=rollBagSlots(BAG_SLOTS.pub,tier,F,true);     // a boss always pays out publicly
+   loots.push(bagAt(e,items));
+   if(Math.random()<0.4) loots.push(bagAt(e,{k:'pot'}));
+   return; }
+ const gp=(PUB_GEAR[e.type]||0)*fmul, pp=(PUB_POT[e.type]||0)*fmul;
+ if(r<gp){ const items=rollBagSlots(BAG_SLOTS.pub,tier,F,false);
+   if(items.length) loots.push(bagAt(e,items)); }     // every slot missed -> no bag at all
+ else if(r<gp+pp) loots.push(bagAt(e,{k:'pot'}));
+}
+// One recipient's private roll. `who` is {id,fort}; id is undefined in solo, and bagAt's owner tag
+// is only applied when actually networked, so solo bags never carry the field.
+function rollSoulbound(e,row,who){
+ if(!row.sb) return;                                    // this area has no soulbound band
+ const F=who.fort||0;
+ let p;
+ if(e.type==='B') p=1;                                  // bosses are the reliable T9+ path
+ else if(e.type==='s') p=row.sbP*3;
+ else p=row.sbP;
+ const n=(e.type==='B')?((typeof curRoom!=='undefined'&&curRoom&&curRoom.dungeon)?2:1):1;
+ for(let q=0;q<n;q++){
+   if(Math.random()>=p) continue;
+   const tier=pickWeighted(row.sb,F);
+   const items=rollBagSlots(BAG_SLOTS.bound,tier,F,true);   // never empty
+   const b=bagAt(e,items);
+   if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
+   loots.push(b); }
+}
+function rollLoot(e){
+ const row=zoneTierRow(e.x,e.y);
+ const F=(typeof player!=='undefined'&&player.fortune)||0;
  // rare Fortune Coin (bronze) — its own roll, can drop alongside gear
  if(Math.random() < (e.type==='B'?0.85:0.04)) loots.push(bagAt(e,{k:'coin'}));
  if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) loots.push(bagAt(e,sc)); }  // max-stat scrolls
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
- if(e.type==='B'){ loots.push(bagAt(e,mkDrop(Math.min(11,tb+1))));
-   if(typeof spawnEggDrop==='function') spawnEggDrop(e);  // pet egg drops as a loose EGG on the ground (not a bag)
-   if(Math.random()<0.4) loots.push(bagAt(e,{k:'pot'})); return; }
- if(e.type==='s'){ if(r<0.10*fmul) loots.push(bagAt(e,mkDrop(tier)));
-   else if(r<0.18*fmul) loots.push(bagAt(e,{k:'pot'})); return; }
- if(r<0.06*fmul) loots.push(bagAt(e,mkDrop(tier)));
- else if(r<0.12*fmul) loots.push(bagAt(e,{k:'pot'}));
+ if(e.type==='B' && typeof spawnEggDrop==='function') spawnEggDrop(e);   // loose EGG, not a bag
+ rollPublicLoot(e,row,F);
+ const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
+ for(const who of roster) rollSoulbound(e,row,who);
 }
 const ABIL={
  ranger:{res:'Focus',col:'#7dc47a',rule:'hit',d:'Volley: 12-arrow fan'},
