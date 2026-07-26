@@ -655,7 +655,8 @@ function awardItem(it,x,y){
   // must never occupy one of the 20 bag slots or be sellable
   if(it.k==='leg'){ const L=legById(it.id); if(!L) return true;
     if(!rpg.legends) rpg.legends=[];
-    if(rpg.legends.indexOf(it.id)<0) rpg.legends.push(it.id);
+    if(rpg.legends.indexOf(it.id)<0){ rpg.legends.push(it.id);
+      if(typeof runNote==='function') runNote('relics'); }
     if(typeof msg==='function') msg('★ '+L.n,'a relic of '+((GBOSS[BOSS_RELIC.indexOf(it.id)]||{}).dn||'the deep'));
     texts.push({x:px,y:py-14,txt:'★ '+L.n,col:'#ff9c50',life:2.2});
     return true; }
@@ -1251,6 +1252,68 @@ function hudRPG(){ if(!rpg)return;
 // Up to Lv20 the hearth calls you home on death. From Lv20 the run is your life: dying
 // retires the hero to the Hall of the Fallen and you start over with someone new.
 const HC_LEVEL=20;
+// ============================================================
+// GLORY (user, 2026-07-26)
+// ------------------------------------------------------------
+// Glory is the ACCOUNT's currency, not the character's, and it is only ever paid out when a
+// character dies for good. That is the whole loop: a run is worth what it accomplished, and you
+// only collect by losing the hero who did it. It buys cosmetics and it is what the auction trades
+// in -- never power, so no amount of banked glory makes a new character stronger than a fresh one.
+//
+// Scored from what the run actually DID rather than from level alone, so a cautious Lv50 who never
+// left the safe ring is worth less than a Lv35 who cleared dungeons and pushed into the fog.
+const GLORY={
+  mob:      0.35,   // per ordinary kill — the floor, deliberately small
+  elite:    1.6,
+  boss:     55,     // a world boss is an event
+  dungeon:  240,    // clearing a dungeon is the single biggest thing a run can do
+  fogTile:  0.9,    // per percent of the world uncovered — rewards exploring, not camping
+  level:    14,     // per level reached
+  relic:    400,    // pulling a relic out of the world at all
+  deepest:  6,      // per level of the deepest zone entered — credit for how far you pushed
+};
+function newRunStats(){ return {mobs:0,elites:0,bosses:0,dungeons:0,relics:0,deepest:0,fog:0}; }
+function runStats(){ const ch=(typeof curChar==='function')?curChar():null;
+  if(!ch) return null; if(!ch.run) ch.run=newRunStats(); return ch.run; }
+function runNote(k,n){ const s=runStats(); if(s) s[k]=(s[k]||0)+(n===undefined?1:n); }
+function runDeepest(lv){ const s=runStats(); if(s&&lv>s.deepest) s.deepest=lv|0; }
+// percentage of the world this character has uncovered, read straight off the fog mask
+function fogPct(){
+  try{ if(typeof _fogCv==='undefined'||!_fogCv) return 0;
+    const g=_fogCtx||_fogCv.getContext('2d');
+    const d=g.getImageData(0,0,_fogCv.width,_fogCv.height).data;
+    let clear=0, n=0;
+    for(let i=3;i<d.length;i+=16*4){ n++; if(d[i]<130) clear++; }   // sample every 16th pixel
+    return n?(clear/n*100):0;
+  }catch(e){ return 0; }
+}
+function gloryFor(s,lvl){
+  if(!s) return 0;
+  return Math.round(
+      (s.mobs||0)*GLORY.mob + (s.elites||0)*GLORY.elite + (s.bosses||0)*GLORY.boss
+    + (s.dungeons||0)*GLORY.dungeon + (s.fog||0)*GLORY.fogTile + ((lvl||1)-1)*GLORY.level
+    + (s.relics||0)*GLORY.relic + (s.deepest||0)*GLORY.deepest);
+}
+// a readable breakdown for the death screen — you should be able to see what earned what
+function gloryRows(s,lvl){
+  if(!s) return [];
+  const r=[];
+  const add=(l,n,v)=>{ const g=Math.round(n*v); if(g>0) r.push({l:l,n:n,g:g}); };
+  add('Levels gained',(lvl||1)-1,GLORY.level);
+  add('Foes felled',s.mobs||0,GLORY.mob);
+  add('Elites felled',s.elites||0,GLORY.elite);
+  add('Bosses felled',s.bosses||0,GLORY.boss);
+  add('Dungeons cleared',s.dungeons||0,GLORY.dungeon);
+  add('Relics taken',s.relics||0,GLORY.relic);
+  // fog is a percentage, so it needs its own row rather than a count x rate
+  const fg=Math.round((s.fog||0)*GLORY.fogTile);
+  if(fg>0) r.push({l:'World uncovered',n:Math.round(s.fog||0)+'%',g:fg});
+  add('Deepest ground',s.deepest||0,GLORY.deepest);
+  return r;
+}
+function accountGlory(){ const u=users[curUser]; return (u&&u.glory)||0; }
+function bankGlory(n){ const u=users[curUser]; if(!u||n<=0) return 0;
+  u.glory=(u.glory||0)+n; LS.set('er-users',users); return u.glory; }
 function isHardcore(r){ return !!(r&&(r.lvl||1)>=HC_LEVEL); }
 function isDead(ch){ return !!(ch&&ch.dead); }
 // The permadeath notice now fires ONCE, when you first CROSS THE BRIDGE onto the main island
@@ -1276,7 +1339,14 @@ function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
 // A Lv20+ hero has fallen for good: record the tombstone, end the run, show the eulogy.
 function permaDeath(){ const ch=curChar(); if(!ch) return;
  const zone=(typeof regionAtPx==='function'&&curRoom)?(regionAtPx(player.x,player.y)||{}).n:null;
- ch.dead={ lvl:rpg.lvl, kills:player.kills||0, gold:rpg.gold||0,
+ // the run's last act: read how much of the world it uncovered, score it, and pay the ACCOUNT.
+ // This is the only time glory is ever awarded -- you collect by losing the hero who earned it.
+ const st=runStats()||newRunStats();
+ if(typeof fogPct==='function') st.fog=Math.max(st.fog||0,fogPct());
+ const earned=gloryFor(st,rpg.lvl);
+ const total=bankGlory(earned);
+ ch.dead={ lvl:rpg.lvl, kills:player.kills||0, glory:earned,
+   run:Object.assign({},st),
    zone: zone || (curRoom?curRoom.name:'the realm'), at: Date.now() };
  recordBest(player.kills); saveRPG(); LS.set('er-users',users);
  runLive=false; runChar=null; inGame=false;
@@ -1284,9 +1354,17 @@ function permaDeath(){ const ch=curChar(); if(!ch) return;
  player.spiritT=0; player.deadeye=0; player.thornT=0; if(typeof clearPlayerStatuses==='function') clearPlayerStatuses();
  const cc=CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))];
  $s('deathWho').textContent=ch.name+' the '+(cc?cc.n:ch.cls);
+ // the ledger matters more than the epitaph: you should be able to read exactly what this run
+ // was worth, and what it added to the account
+ let rows='';
+ for(const r of gloryRows(st,ch.dead.lvl))
+   rows+='<div class="gRow"><span>'+r.l+'</span><em>'+r.n+'</em><b>+'+r.g+'</b></div>';
  $s('deathCard').innerHTML=
    '<div>fell in <b class="dstat">'+ch.dead.zone+'</b></div>'
   +'<div>at <b class="dstat">Level '+ch.dead.lvl+'</b> · <b class="dstat">'+ch.dead.kills+'</b> kills this run</div>'
+  +'<div id="gloryBox"><div id="gloryHd">GLORY EARNED</div>'+rows
+  +'<div class="gRow gTot"><span>banked to your account</span><em></em><b>'+earned+'</b></div>'
+  +'<div class="mnote" style="margin-top:6px;">account total — <b style="color:#ffc94d">'+total+' glory</b></div></div>'
   +'<div class="mnote" style="margin-top:10px;">Their name is kept in the Hall of the Fallen.</div>';
  // show() tears down the whole in-game UI — HUD buttons and any overlay left open
  // (inventory, skills, map, shop...) — so nothing survives the run

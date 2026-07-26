@@ -701,6 +701,10 @@ function update(dt){
       texts.push({x:de.x,y:de.y-8,txt:'+'+rx+'xp',col:'#7ab8d4',life:1.1});
       texts.push({x:de.x,y:de.y+10,txt:'+'+rg2+'g',col:'#ffc94d',life:1.1});
       gainXP(rx,rg2); chargeRes('kill');
+      // what this run accomplished — banked as glory when the character finally dies
+      if(typeof runNote==='function'){
+        runNote(de.type==='B'?'bosses':de.type==='s'?'elites':'mobs');
+        if(typeof runDeepest==='function') runDeepest(de.lv||1); }
       // A client does not roll its own drops: the host rolls once and the bag is shared, or
       // everyone generates their own private copy of the same kill's loot. This guard used to sit
       // ONLY on the trash branch below, so both BOSS branches minted duplicate bags on every
@@ -716,6 +720,7 @@ function update(dt){
           for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2)));
           loots.push(bagAt(de,{k:'pot'})); }
         groundPortals.push({x:de.x+TILE,y:de.y,ring:-1,life:600,home:true});
+        if(typeof runNote==='function') runNote('dungeons');   // the biggest thing a run can do
         msg('THE CONSCIOUSNESS SHATTERS','its mind falls quiet — step through to return'); }
       else if(_sim) rollLoot(de);
     } } }
