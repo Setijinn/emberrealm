@@ -788,23 +788,40 @@ function update(dt){
     // the stream ring — activating them all buried a new hero under a 20-30 enemy swarm. Cap the
     // number of ROAMING foes (c/s) active near you at once, scaled by the local zone level so a
     // Lv1 starter stays sparse (~5) and only the Lv50 grind zones get busy (~15). Bosses/nodes exempt.
-    const _lLv = (typeof grvLvAt==='function' && curRoom.rings) ? grvLvAt(player.x/TILE,player.y/TILE)
-               : (curRoom.band||10);
-    const roamCap = curRoom.big ? Math.max(3, Math.min(8, 3 + Math.floor(_lLv/9))) : 1e9;
-    let roamN=0; for(const e of enemies) if(e.type==='c'||e.type==='s') roamN++;
+    // THE HOST FILLS THE GROUND AROUND EVERY HERO IT SIMULATES, not just its own. Measuring from
+    // `player` alone meant a co-op client walked an empty world -- clients never activate spawn
+    // points, so if the host was not standing beside them, nothing existed. Solo returns just the
+    // local hero, so single-player is untouched.
+    const _anchors=(typeof netSimAnchors==='function')?netSimAnchors():[{x:player.x,y:player.y}];
+    // nearest hero, and WHICH one: the cap is per hero, or the first player in spawn-array order
+    // spends the whole budget and everyone else still stands in an empty field.
+    const _nearIdx=(x,y)=>{ let b=1e9,bi=0;
+      for(let i=0;i<_anchors.length;i++){ const d=Math.hypot(_anchors[i].x-x,_anchors[i].y-y); if(d<b){b=d;bi=i;} }
+      return {d:b,i:bi}; };
+    const _near=(x,y)=>_nearIdx(x,y).d;
+    // each hero's cap follows the zone THEY are standing in, so a Lv1 starter stays sparse while a
+    // Lv50 rim gets busy -- even when both are being fed by the same host
+    const _caps=_anchors.map(a=>{ if(!curRoom.big) return 1e9;
+      const lv=(typeof grvLvAt==='function' && curRoom.rings)?grvLvAt(a.x/TILE,a.y/TILE):(curRoom.band||10);
+      return Math.max(3, Math.min(8, 3+Math.floor(lv/9))); });
+    const _roamN=_anchors.map(()=>0);
+    for(const e of enemies){ if(e.type!=='c'&&e.type!=='s') continue;
+      const n=_nearIdx(e.x,e.y); if(n.d<1100) _roamN[n.i]++; }
     for(const sp of curRoom.spawns){
       if(enemies.some(e=>e.sref===sp)) continue;
       const roamer = (sp.t==='c'||sp.t==='s');
-      if(roamer && roamN>=roamCap) continue;                 // swarm cap reached — leave the rest dormant
       const sx=(sp.x+.5)*TILE, sy=(sp.y+.5)*TILE;
-      const d=Math.hypot(sx-player.x,sy-player.y);
+      const n=_nearIdx(sx,sy), d=n.d;
+      if(roamer && _roamN[n.i]>=_caps[n.i]) continue;         // that hero's swarm cap is full
       let spawned=false;
       if(sp.dead){ if(sp.dead<=rn && d>500 && (!curRoom.big||d<800)){ sp.dead=0; enemies.push(makeEnemy(sp)); spawned=true; } }
       else if(curRoom.big && d>240 && d<800){ enemies.push(makeEnemy(sp)); spawned=true; }
-      if(spawned && roamer) roamN++;
+      if(spawned && roamer) _roamN[n.i]++;
     }
+    // cull against the NEAREST hero too, or the host immediately deletes what it just spawned for
+    // someone standing on the other side of the map
     if(curRoom.big){ for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i];
-      if(e.sref && !e.boss && Math.hypot(e.x-player.x,e.y-player.y)>1100) enemies.splice(i,1); } }
+      if(e.sref && !e.boss && _near(e.x,e.y)>1100) enemies.splice(i,1); } }
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
       if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv+(rg.lv2?'–'+rg.lv2:'')); } }
     // permadeath notice fires the instant you first cross the bridge onto the main island

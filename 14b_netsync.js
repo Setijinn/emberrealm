@@ -32,6 +32,31 @@ function netIsClient(){ return netOn() && !coop.host; }
 // The one predicate the rest of the game asks: "should I be simulating the shared world?"
 // Solo play and the host both say yes, so single-player behaviour is completely unchanged.
 function netSimulates(){ return !netIsClient(); }
+// EVERY HERO THE HOST IS SIMULATING FOR, in the host's own room. The world spawner used to measure
+// only from `player`, which meant the host populated the ground around ITSELF and nobody else: a
+// client standing anywhere on a 1160x720-tile map saw an empty world, because clients never
+// activate spawn points themselves (that is what keeps the two sides from disagreeing). Returns
+// the local hero alone in solo play, so single-player behaviour is untouched.
+function netSimAnchors(){
+  const out=[{x:player.x, y:player.y}];
+  if(typeof coop==='undefined' || !coop || !coop.on || !coop.host || !coop.peers) return out;
+  const rk=(typeof curRoom!=='undefined'&&curRoom&&curRoom.key)||'?', me=netSelfId();
+  const now=performance.now();
+  for(const k in coop.peers){ const p=coop.peers[k];
+    if(!p || k===me) continue;
+    if(typeof p.x!=='number' || typeof p.y!=='number') continue;
+    if((p.rm||'?')!==rk) continue;                 // somewhere else entirely; not our ground to fill
+    if(now-(p.ts||0)>4000) continue;               // stale presence: treat them as gone
+    out.push({x:p.x, y:p.y}); }
+  return out;
+}
+// distance to the NEAREST simulated hero — the spawn ring and the despawn cull both want this
+// rather than the distance to the host, or the host deletes what it just spawned for someone else
+function netNearestSim(x,y,anchors){
+  const a=anchors||netSimAnchors(); let best=1e9;
+  for(const p of a){ const d=Math.hypot(p.x-x,p.y-y); if(d<best) best=d; }
+  return best;
+}
 
 // ONE id space for ownership tags, presence keys and grant addressing. The host is always 'H'
 // (forced at both host entry points in 14_coop); a client uses its full peer id, which is exactly
