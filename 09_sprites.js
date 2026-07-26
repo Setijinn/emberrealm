@@ -574,7 +574,11 @@ function drawLootBag(lb,pn){
   const rar=isPot?0:((typeof bagTopRar==='function')?bagTopRar(lb):((lb.item&&lb.item.rar)||0));
   const band=(typeof bagBand==='function')?bagBand(lb):0;
   const top=(typeof bagTopTier==='function')?bagTopTier(lb):-1;
-  const col=isPot?'#7dc47a':(RAR_COL[rar]||'#cfc8bd');
+  // a relic sack glows the relic violet, not Mythical red -- rarity is meaningless on a relic and
+  // the colour has to be the same one its name, its R and its banner use
+  const _isRel=its.some(x=>x&&x.relic);
+  const col=_isRel?(typeof RELIC_COL!=='undefined'?RELIC_COL:'#a06bff')
+    :(isPot?'#7dc47a':(RAR_COL[rar]||'#cfc8bd'));
   const t=performance.now()/1000, pulse=0.5+Math.sin(t*2.4+lb.x*0.05)*0.5;
   const glow=Math.max(rar,band*2);               // a bound sack always announces itself
   if(glow>=1||isPot){ const gr=14+glow*6;

@@ -30,6 +30,8 @@ const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image();
 const _lootSack    = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';     return i; })() : null;
 const _lootSackT9  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t9.png';  return i; })() : null;
 const _lootSackT11 = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t11.png'; return i; })() : null;
+//   _lootSackRelic bound    T13     violet and gold, gems in the seams, light coming out of it
+const _lootSackRelic = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_relic.png'; return i; })() : null;
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',

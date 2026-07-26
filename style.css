@@ -219,7 +219,33 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .relChip.on span{color:#ffc94d;}
 /* a relic's flavour line and its trait, shown above the stat deltas wherever it is compared */
 .relTrait{font-size:11px;color:#9a94a0;font-style:italic;margin-bottom:3px;}
-.relTrait.on{color:#ffe08a;font-style:normal;}
+.relTrait.on{color:var(--relic);font-style:normal;}
+.relSet{font-size:11px;color:var(--relic);margin-top:3px;opacity:.92;}
+.relSet b{color:var(--relic);}
+
+/* ---------- INSANE DROP banner (relics only) ----------
+   Full-width, centre screen, and deliberately loud: a relic is a fraction of a percent off a boss
+   in the deepest six dungeons, so it gets a moment of its own. Pointer-events off so it can never
+   eat a tap during the fight it interrupts. */
+#dropBanner{position:fixed;left:0;right:0;top:20%;z-index:60;display:none;pointer-events:none;
+ justify-content:center;text-align:center;}
+#dropBanner.on{display:flex;animation:dbIn 3.6s ease-out forwards;}
+#dropBannerIn{padding:14px 34px;background:linear-gradient(180deg,rgba(26,14,38,.95),rgba(12,7,18,.95));
+ border:2px solid var(--relic);border-radius:14px;
+ box-shadow:0 0 0 1px #120c1a, 0 0 34px rgba(160,107,255,.55), inset 0 0 22px rgba(160,107,255,.20);}
+.dbHd{font-family:'Pixelify Sans',monospace;font-size:calc(30px*var(--uis));letter-spacing:.10em;
+ color:var(--relic);text-shadow:0 0 12px rgba(160,107,255,.9),0 3px 0 #1b0f2a;animation:dbPulse .5s ease-in-out infinite alternate;}
+.dbName{font-family:'Pixelify Sans',monospace;font-size:calc(19px*var(--uis));color:#efe4ff;margin-top:6px;}
+.dbSub{font-size:calc(12px*var(--uis));color:var(--relic);margin-top:3px;letter-spacing:.04em;opacity:.9;}
+@keyframes dbIn{
+  0%{opacity:0;transform:scale(.72);}
+  8%{opacity:1;transform:scale(1.06);}
+  14%{transform:scale(1);}
+  82%{opacity:1;transform:scale(1);}
+  100%{opacity:0;transform:scale(1.04);}
+}
+@keyframes dbPulse{from{text-shadow:0 0 10px rgba(160,107,255,.7),0 3px 0 #1b0f2a;}
+  to{text-shadow:0 0 22px rgba(200,165,255,1),0 3px 0 #1b0f2a;}}
 
 /* PC mode: gather the thumb-scattered HUD buttons into one tidy top-right row
    (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
@@ -470,7 +496,8 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    corner insets together; canvas-drawn UI reads the same factor as UIS in JS.
    touch: #hudTop = top-right row, #hudBot = bottom-right row.
    pcmode: #hudBot goes position:static and folds into #hudTop as ONE top-right row. */
-:root{--uis:1;}
+/* --relic must match RELIC_COL in 11_ui.js — one violet for every relic-facing thing */
+:root{--uis:1;--relic:#a06bff;}
 #hudTop{position:fixed;top:calc(8px*var(--uis));right:calc(10px*var(--uis));z-index:15;
  display:flex;align-items:center;gap:calc(6px*var(--uis));pointer-events:none;}
 #hudBot{position:fixed;bottom:calc(14px*var(--uis));right:calc(12px*var(--uis));z-index:15;

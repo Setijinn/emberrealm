@@ -112,7 +112,12 @@ function bagDeltaHtml(it,ch){
   let head='';
   if(it.relic){ const R=relicDef(it.relic);
     head='<div class="relTrait">'+(R?R.d:'')+'</div>';
-    if(R&&R.trait) head+='<div class="relTrait on">✦ '+R.trait.n+' — '+R.trait.d+'</div>'; }
+    if(R&&R.trait) head+='<div class="relTrait on">✦ '+R.trait.n+' — '+R.trait.d+'</div>';
+    // which set it belongs to, and how close you are -- the first thing you want to know about a
+    // piece you just found is whether it finishes something
+    const S=(R&&typeof relicSet==='function')?relicSet(R.set):null;
+    if(S){ const worn=(typeof setWornCount==='function')?setWornCount(S.id):0;
+      head+='<div class="relSet">'+S.n+' <b>'+worn+'/4</b> — ✦ '+S.bonus.n+': '+S.bonus.d+'</div>'; } }
   const cur=equippedItemFor(it.k,ch);
   const a=itemStats(it,ch.cls), b=cur?itemStats(cur,ch.cls):newStats();
   let out='', any=false;
@@ -166,7 +171,7 @@ function paintBagPanel(){
   const relic=its.some(x=>x&&(x.k==='leg'||x.relic));
   $s('bagTitle').textContent=relic?'A RELIC':((bn&&bn.bound)?'SOULBOUND SACK':'SACK');
   $s('bagSub').innerHTML=(relic
-      ? '<span style="color:#ff9c50">kept by its dungeon — there is only one</span>'
+      ? '<span style="color:'+RELIC_COL+'">kept by its dungeon — there is only one</span>'
       : '<span style="color:'+tierCol(top)+'">T'+(top+1)+' '+(TIER_NAMES[top]||'')+'</span>')
     +' · '+its.length+' piece'+(its.length===1?'':'s')
     +((bn&&bn.bound)?' · <span style="color:#ff9c50">bound to you</span>':' · anyone may take this');
@@ -365,67 +370,24 @@ const LEGENDS=[
 // A relic IS a tiered item, exactly like everything else you wear: same object shape, same slot,
 // same equip path, same satchel, same compare, same icon. What makes it a relic is that it sits
 // one band ABOVE the ladder (RELIC_T), so its tier base already beats the best T12 that can ever
-// drop — and that it carries fixed EXCLUSIVE affixes at values no roll can reach. Ordinary gear
-// rolls its affixes at random out of AFFIX_PREFIX; a relic's are written here and never vary.
+// drop, and that it carries fixed EXCLUSIVE affixes at values no roll can reach.
 //
-// Some of them also carry a TRAIT — a real combat rule, not a number. Those reuse the flags the
-// ascension capstones already set on `player`, so every one of them is behaviour the engine has
-// always enforced rather than a new special case bolted onto the damage path.
-//
-// One per dungeon, and nothing rolls or sells one: the only way to hold a relic is to take it off
-// the boss whose dungeon kept it.
-const RELICS=[
- {id:'r_heartwood', slot:'wpn', n:'Heartwood Bough',        d:'the root that would not burn',
-  aff:[{s:'atk',v:58},{s:'vit',v:26}],
-  trait:{n:'Quickening', d:'every kill returns 4% of your health', flag:'killHeal', v:0.04}},
- {id:'r_fogbound',  slot:'arm', n:'Fogbound Mantle',        d:'never quite where you looked',
-  aff:[{s:'spd',v:54},{s:'dex',v:26},{s:'def',v:22}], trait:null},
- {id:'r_warren',    slot:'arm', n:'Warren Carapace',        d:'grown, not forged — and grown thick',
-  aff:[{s:'def',v:38},{s:'hp',v:150},{s:'spd',v:-14}],
-  trait:{n:'Barbed', d:'attackers take 12% of what they deal', flag:'thorns', v:0.12}},
- {id:'r_vault',     slot:'wpn', n:'Stonefist Maul',         d:'it does not need a second swing',
-  aff:[{s:'atk',v:70},{s:'spd',v:-10}],
-  trait:{n:'Concussive', d:'every hit shakes the ground for 35% splash', flag:'splash', v:0.35}},
- {id:'r_roost',     slot:'wpn', n:'Windward Talon',         d:'taken off something that never landed',
-  aff:[{s:'atk',v:44},{s:'dex',v:30},{s:'spd',v:24}],
-  trait:{n:'Galebound', d:'you strike 30% faster while moving', flag:'moveRof', v:0.30}},
- {id:'r_barrows',   slot:'wpn', n:'Scorchmaw',              d:'still hot from the barrows',
-  aff:[{s:'atk',v:56},{s:'luck',v:22}],
-  trait:{n:'Everburning', d:'everything you hit catches fire', flag:'burnHit', v:0.5}},
- {id:'r_crypt',     slot:'arm', n:'Cinder Crypt Shroud',    d:'ash woven while it was still warm',
-  aff:[{s:'def',v:26},{s:'hp',v:110},{s:'spd',v:40}], trait:null},
- {id:'r_keep',      slot:'wpn', n:'Ashen Keepblade',        d:'keen with old grief',
-  aff:[{s:'atk',v:62},{s:'luck',v:24}],
-  trait:{n:'Mercy', d:'+45% damage to anything nearly dead', flag:'execute', v:0.45}},
- {id:'r_sanctum',   slot:'arm', n:'Core Sanctum Plate',     d:'the last wall, and it held',
-  aff:[{s:'def',v:44},{s:'hp',v:180},{s:'spd',v:-18}],
-  trait:{n:'Bulwark', d:'everything near you moves slower', flag:'slowAura', v:1}},
- {id:'r_saltworks', slot:'wpn', n:'Salt-Eaten Harpoon',     d:'pitted by a sea nobody knows',
-  aff:[{s:'atk',v:40},{s:'dex',v:28},{s:'fort',v:16}],
-  trait:{n:'Trailing Line', d:'hits carry to a second foe for 40%', flag:'chainHit', v:0.40}},
- {id:'r_lamp',      slot:'arm', n:"Lightkeeper's Coat",     d:'someone kept the light on for years',
-  aff:[{s:'spd',v:60},{s:'dex',v:24},{s:'luck',v:28}], trait:null},
- {id:'r_chapel',    slot:'arm', n:'Marrow Chapel Vestment', d:'the last vestment of a small faith',
-  aff:[{s:'wis',v:34},{s:'mp',v:120},{s:'def',v:20}], trait:null},
-];
-function relicDef(id){ for(const R of RELICS) if(R.id===id) return R; return null; }
-function isRelic(it){ return !!(it&&it.relic); }
-function relicOf(it){ return it&&it.relic?relicDef(it.relic):null; }
-// A relic drops SHAPED FOR THE HERO WHO FOUND IT: it takes their class's weapon type or armour
-// material, so it passes the ordinary canEquip check and fights like the weapon they trained on.
-// A relic's identity is its name, its affixes and its trait — not its silhouette.
+// WHAT they are -- the twelve four-piece sets, their bonuses, and the drop gate -- lives in
+// 17e_relics.js. This file keeps only the machinery that turns one into an item you can wear.
+// A relic is SHAPED FOR THE HERO WHO FINDS IT: weapons take their class's weapon type, armour and
+// helms their material, so a piece passes the ordinary canEquip check and fights like the gear they
+// trained on. Rings carry the stat their set chose. Identity is the name, the affixes and the
+// trait -- never the silhouette.
 function mkRelicItem(id,cls){
   const R=relicDef(id); if(!R) return null;
   const it={ k:R.slot, t:RELIC_T, relic:R.id, rar:5, aff:R.aff.map(a=>({s:a.s,v:a.v})) };
-  if(R.slot==='wpn') it.wt=CWEAP[cls]||'sword'; else it.mt=CARMOR[cls]||'plate';
+  if(R.slot==='wpn') it.wt=CWEAP[cls]||'sword';
+  else if(R.slot==='ring') it.st=R.st||'luck';
+  else it.mt=CARMOR[cls]||'plate';                    // arm + helm both read the class material
   return it;
 }
-// boss id -> the relic its dungeon keeps. Parallel to GBOSS, so a new boss is one more row.
-const BOSS_RELIC=['r_heartwood','r_fogbound','r_warren','r_vault','r_roost','r_barrows',
-                  'r_crypt','r_keep','r_sanctum','r_saltworks','r_lamp','r_chapel'];
-const RELIC_P_WORLD=0.015;   // overworld boss: a very minimal chance, by design
-const RELIC_P_DUNGEON=0.12;  // its dungeon form is the real source
-function relicFor(ring){ return (ring>=0&&ring<BOSS_RELIC.length)?BOSS_RELIC[ring]:null; }
+// the dungeon a relic belongs to, through its set
+function relicRing(id){ const R=relicDef(id); const S=R?relicSet(R.set):null; return S?S.ring:-1; }
 // `rpg.relics` is the RECORD of which relics this hero has ever taken. It is not where the item
 // lives -- the item lives in the satchel or on your body like any other -- but a record is what
 // stops a boss dropping you a second copy, and what the death screen scores.
@@ -434,7 +396,7 @@ function ownsRelic(id){
   if(rpg.relics && rpg.relics.indexOf(id)>=0) return true;
   const ch=(typeof curChar==='function')?curChar():null;
   if(ch&&ch.inv) for(const it of ch.inv) if(it&&it.relic===id) return true;
-  for(const sl of ['wpn','arm']){ const e=(rpg.eqAff||{})[sl]; if(e&&e.rel===id) return true; }
+  for(const sl of ['wpn','arm','helm','ring']){ const e=(rpg.eqAff||{})[sl]; if(e&&e.rel===id) return true; }
   return false;
 }
 function noteRelicTaken(id){ if(!rpg) return;
@@ -455,7 +417,12 @@ function weaponAt(cls,t){ t=Math.max(0,Math.min(MAXT-1,t)); const wt=classWT(cls
  return {n:TIER_NAMES[t]+' '+wt.n, add:Math.round(t*t*1.35+t*2),
   cost:t===0?0:Math.round(30*Math.pow(1.9,t)), tier:t+1}; }
 function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
-function tierCol(t){ return t>=12?'#ffe08a':t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
+// THE RELIC COLOUR. One violet for everything a relic touches -- its name, the R on its icon, the
+// glow on its sack, the banner, the set line, the floating text. It is deliberately bluer and more
+// saturated than the T9-T10 violet (#c07ad4) and than the diamond violet (#e0a6ff), so those three
+// never read as the same thing. `--relic` in style.css is this same value; change both together.
+const RELIC_COL='#a06bff';
+function tierCol(t){ return t>=12?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
 
 // ============================================================
 // LOOT TIERS BY AREA (user, 2026-07-26)
@@ -731,6 +698,12 @@ const LOOT_BANDS=[
  {min:0,  spr:'_lootSack',    bound:false, life:60,  label:''},        // public   T1-T8
  {min:8,  spr:'_lootSackT9',  bound:true,  life:240, label:'BOUND'},   // soulbound T9-T10
  {min:10, spr:'_lootSackT11', bound:true,  life:300, label:'BOUND'},   // soulbound T11-T12
+ // The relic band. STILL A SACK -- the chest is retired and every drop in this game reads through
+ // material and ornament, never through shape -- but the richest one there is: violet and gold
+ // thread, gems in the seams, light coming out of it. Ten minutes on the ground, because the one
+ // thing that must never happen is a relic rotting while you are still fighting what dropped it.
+ // `min:12` is RELIC_T, so bandOfTier finds it on its own and nothing else can reach this band.
+ {min:12, spr:'_lootSackRelic', bound:true, life:600, label:'RELIC'},
 ];
 function bagItems(lb){ return (lb&&lb.items)||(lb&&lb.item?[lb.item]:[]); }
 function bagTopTier(lb){ let t=-1; for(const it of bagItems(lb)) if(it&&it.t!==undefined&&it.t>t) t=it.t; return t; }
@@ -778,7 +751,8 @@ function awardItem(it,x,y){
     const conv=mkRelicItem(it.id,ch.cls); if(conv) it=conv; else return true; }
   if(it.relic){ const R=relicDef(it.relic);
     noteRelicTaken(it.relic);
-    if(typeof msg==='function') msg('★ '+R.n,'a relic of '+((GBOSS[BOSS_RELIC.indexOf(it.relic)]||{}).dn||'the deep'));
+    const _S=(typeof relicSet==='function')?relicSet(R.set):null;
+  if(typeof msg==='function') msg('★ '+R.n, _S?('a piece of '+_S.n):'a relic');
     texts.push({x:px,y:py-14,txt:'★ '+R.n,col:tierCol(RELIC_T),life:2.2});
     /* falls through: a relic goes into the satchel like any other item */ }
   if(it.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,it.st,1);
@@ -868,25 +842,34 @@ function rollRelic(e,who){
  if(e.type!=='B') return;
  const ring=(e.ring!==undefined&&e.ring>=0)?e.ring
    :((typeof curRoom!=='undefined'&&curRoom&&typeof curRoom.bossRing==='number')?curRoom.bossRing:-1);
- const id=relicFor(ring); if(!id) return;
  const inDun=!!(typeof curRoom!=='undefined'&&curRoom&&curRoom.dungeon);
- // Only the LOCAL player's collection is knowable here, so skip the roll if they already hold it.
- // A peer's is not visible to the host; their duplicate is filtered when the grant is awarded.
- // Test against netSelfId() rather than "no id" — solo still gets an id ('S'), so a falsy check
- // never fired and the guard silently did nothing.
- const mine=(typeof netSelfId!=='function')||!who.id||who.id===netSelfId();
- if(mine && ownsRelic(id)) return;
- const p=(inDun?RELIC_P_DUNGEON:RELIC_P_WORLD)*(1+(who.fort||0)*0.004);
+ // DUNGEONS ONLY, AND ONLY DEEP ONES (user, 2026-07-26). An overworld boss never drops a relic now,
+ // and neither does any dungeon below the Lv40 band -- relicChanceFor returns 0 for both.
+ if(!inDun) return;
+ const p0=(typeof relicChanceFor==='function')?relicChanceFor(ring):0;
+ if(p0<=0) return;
+ // this dungeon hosts two sets; you can be given any piece of either that you do not already hold
+ const pool=(typeof relicsForRing==='function')?relicsForRing(ring):[];
+ const mineHere=(typeof netSelfId!=='function')||!who.id||who.id===netSelfId();
+ const want=pool.filter(R=>!(mineHere&&ownsRelic(R.id)));
+ if(!want.length) return;
+ // Only the LOCAL player's collection is knowable here, which is why `want` was filtered against it
+ // above; a peer's duplicate is caught when the grant is awarded instead.
+ const id=want[Math.floor(Math.random()*want.length)].id;
+ const p=p0*(1+(who.fort||0)*0.004);
  if(Math.random()>=p) return;
  // shaped for whoever it is rolled for -- in co-op `who` is the peer, so fall back to the local
  // hero's class only when there is no better answer. A relic is a real item from here on.
  const _cls=(who&&who.cls)||((typeof curChar==='function'&&curChar())?curChar().cls:'knight');
  const _it=mkRelicItem(id,_cls); if(!_it) return;
  const b=bagAt(e,[_it]);
- b.band=LOOT_BANDS.length-1; b.life=LOOT_BANDS[b.band].life;   // always the top sack
+ b.band=LOOT_BANDS.length-1; b.life=LOOT_BANDS[b.band].life;   // the reliquary band, ten minutes
  b.relic=1;
  if(who.id && typeof netOn==='function' && netOn()) b.own=who.id;
  loots.push(b);
+ // AND SAY SO. A relic is 0.25%-1% off a boss most players will never see the inside of; it must
+ // not scroll past in the same 12px text a potion gets. Only for the player it was rolled for.
+ if(mineHere && typeof insaneDrop==='function') insaneDrop(_it);
 }
 function rollLoot(e){
  const row=zoneTierRow(e.x,e.y);
@@ -1390,9 +1373,14 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  // it is enforced by combat paths that already exist rather than by a special case. Applied AFTER
  // the tree assignment above (which overwrites) and additively, so a relic stacks with a capstone
  // that happens to share its flag instead of one silently erasing the other.
- for(const _sl of ['wpn','arm']){ const _e=(rpg.eqAff||{})[_sl];
+ for(const _sl of ['wpn','arm','helm','ring']){ const _e=(rpg.eqAff||{})[_sl];
    const _R=(_e&&_e.rel)?relicDef(_e.rel):null;
    if(_R&&_R.trait) player[_R.trait.flag]=(player[_R.trait.flag]||0)+_R.trait.v; }
+ // SET BONUS: four pieces of one set, and you get a rule none of the four carries alone. Same
+ // additive flag treatment, so a set bonus stacks with a piece trait and with a capstone.
+ player._relicSet=null;
+ if(typeof activeRelicSet==='function'){ const _S=activeRelicSet();
+   if(_S&&_S.bonus){ player[_S.bonus.flag]=(player[_S.bonus.flag]||0)+_S.bonus.v; player._relicSet=_S.id; } }
  if(player.shield===undefined) player.shield=0;
  // projectile colour reflects the STATUS your shots inflict (user, 2026-07-24): a burn build
  // fires orange, poison green, frost blue... read off the on-hit flags, highest-signal first
