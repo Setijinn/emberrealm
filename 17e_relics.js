@@ -235,11 +235,17 @@ function insaneDrop(it){
   const S=relicSet(R.set);
   const nm=document.getElementById('dbName'), sb=document.getElementById('dbSub');
   if(nm) nm.textContent='★ '+R.n;
-  if(sb) sb.textContent=S?(S.n+' — '+(R.slot==='wpn'?'weapon':R.slot==='arm'?'armour':R.slot)+' piece'):'';
+  if(sb) sb.textContent=S?(S.n+' · '+(R.slot==='wpn'?'weapon':R.slot==='arm'?'armour':R.slot)+' piece · '
+    +setWornCount(R.set)+'/4'):'';
+  // the relic's own sprite, at the size it deserves -- drawn through the same icon path the
+  // satchel uses, so whatever art it has (or falls back to) is what you see here
+  const cv=document.getElementById('dbIcon');
+  if(cv && typeof drawItemIcon==='function'){ const g=cv.getContext('2d');
+    g.clearRect(0,0,cv.width,cv.height); drawItemIcon(g,it,cv.width,cv.height,true); }
   el.classList.remove('on'); void el.offsetWidth;      // restart the animation from the top
   el.classList.add('on');
   if(_dropBanT) clearTimeout(_dropBanT);
-  _dropBanT=setTimeout(()=>el.classList.remove('on'),3600);
+  _dropBanT=setTimeout(()=>el.classList.remove('on'),4000);
   if(navigator.vibrate) navigator.vibrate([60,50,60,50,140]);
   if(typeof msg==='function') msg('★ '+R.n, S?('a piece of '+S.n):'a relic');
 }

@@ -227,25 +227,64 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    Full-width, centre screen, and deliberately loud: a relic is a fraction of a percent off a boss
    in the deepest six dungeons, so it gets a moment of its own. Pointer-events off so it can never
    eat a tap during the fight it interrupts. */
-#dropBanner{position:fixed;left:0;right:0;top:16%;z-index:60;display:none;pointer-events:none;
- justify-content:center;text-align:center;}
-#dropBanner.on{display:flex;animation:dbIn 3.6s ease-out forwards;}
-#dropBannerIn{width:min(94vw,860px);padding:clamp(18px,3.4vw,34px) clamp(20px,5vw,60px);
- background:linear-gradient(180deg,rgba(26,14,38,.95),rgba(12,7,18,.95));
- border:3px solid var(--relic);border-radius:18px;
- box-shadow:0 0 0 2px #120c1a, 0 0 70px rgba(160,107,255,.65), inset 0 0 40px rgba(160,107,255,.22);}
+#dropBanner{position:fixed;left:0;right:0;top:14%;z-index:60;display:none;pointer-events:none;
+ justify-content:center;align-items:center;text-align:center;}
+#dropBanner.on{display:flex;animation:dbIn 4s ease-out forwards;}
+/* light spilling out from behind the plate: spokes that turn slowly, faded to nothing at the rim
+   so they never end in a hard circle */
+#dropRays{position:absolute;width:min(150vw,1500px);height:min(150vw,1500px);pointer-events:none;
+ background:conic-gradient(from 0deg, rgba(160,107,255,.34) 0deg 6deg, rgba(0,0,0,0) 6deg 30deg);
+ -webkit-mask-image:radial-gradient(closest-side,#000 12%,rgba(0,0,0,.55) 42%,transparent 72%);
+ mask-image:radial-gradient(closest-side,#000 12%,rgba(0,0,0,.55) 42%,transparent 72%);
+ animation:dbSpin 24s linear infinite;}
+#dropBannerIn{position:relative;overflow:hidden;width:min(94vw,880px);
+ padding:clamp(18px,3.2vw,32px) clamp(22px,4.4vw,54px);
+ background:
+   radial-gradient(120% 90% at 50% 0%, rgba(160,107,255,.22), rgba(0,0,0,0) 60%),
+   linear-gradient(180deg,rgba(32,17,48,.96),rgba(11,6,17,.97));
+ border:3px solid var(--relic);border-radius:20px;
+ box-shadow:0 0 0 2px #120c1a, 0 0 90px rgba(160,107,255,.7), inset 0 0 46px rgba(160,107,255,.20),
+   inset 0 0 0 1px rgba(200,165,255,.35);}
+/* ornate corner studs, the pixel-art way: rotated squares that catch the light */
+.dbCorner{position:absolute;width:11px;height:11px;background:var(--relic);transform:rotate(45deg);
+ box-shadow:0 0 12px rgba(160,107,255,.95);animation:dbStud 1.6s ease-in-out infinite alternate;}
+.dbCorner.tl{left:10px;top:10px;} .dbCorner.tr{right:10px;top:10px;}
+.dbCorner.bl{left:10px;bottom:10px;} .dbCorner.br{right:10px;bottom:10px;}
+.dbCorner.tr{animation-delay:.2s;} .dbCorner.bl{animation-delay:.4s;} .dbCorner.br{animation-delay:.6s;}
+/* one bright sweep across the plate as it lands */
+.dbShine{position:absolute;top:0;bottom:0;width:38%;left:-45%;pointer-events:none;
+ background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(228,212,255,.34) 50%,rgba(255,255,255,0) 100%);
+ animation:dbSweep 1.5s cubic-bezier(.22,.7,.3,1) .18s 1 forwards;}
+.dbRow{display:flex;align-items:center;justify-content:center;gap:clamp(14px,2.6vw,30px);}
+/* the relic itself, shown at the size it deserves. Opting out of the fullscreen canvas rule. */
+#dbIcon{position:relative;inset:auto;flex:0 0 auto;
+ width:clamp(64px,9vw,104px);height:clamp(64px,9vw,104px);image-rendering:pixelated;
+ filter:drop-shadow(0 0 18px rgba(160,107,255,.9));animation:dbBob 1.9s ease-in-out infinite alternate;}
+.dbText{text-align:left;min-width:0;}
 /* deliberately enormous — this fires a fraction of a percent of the time and should stop the room */
-.dbHd{font-family:'Pixelify Sans',monospace;font-size:clamp(34px,7.4vw,86px);line-height:1.02;
- letter-spacing:.08em;color:var(--relic);
- text-shadow:0 0 26px rgba(160,107,255,.95),0 5px 0 #1b0f2a;animation:dbPulse .5s ease-in-out infinite alternate;}
-.dbName{font-family:'Pixelify Sans',monospace;font-size:clamp(20px,3.4vw,40px);color:#efe4ff;margin-top:12px;}
-.dbSub{font-size:clamp(12px,1.5vw,18px);color:var(--relic);margin-top:8px;letter-spacing:.06em;opacity:.92;}
+.dbHd{font-family:'Pixelify Sans',monospace;font-size:clamp(30px,6.2vw,74px);line-height:1.02;
+ letter-spacing:.08em;
+ background:linear-gradient(180deg,#efe4ff 0%,var(--relic) 55%,#6f3fd0 100%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(0 0 26px rgba(160,107,255,.95)) drop-shadow(0 4px 0 #1b0f2a);
+ animation:dbPulse .5s ease-in-out infinite alternate;}
+.dbName{font-family:'Pixelify Sans',monospace;font-size:clamp(19px,3vw,36px);color:#efe4ff;margin-top:10px;
+ text-shadow:0 0 16px rgba(160,107,255,.6);}
+.dbSub{font-size:clamp(11px,1.4vw,17px);color:var(--relic);margin-top:7px;letter-spacing:.08em;
+ text-transform:uppercase;opacity:.9;}
+@keyframes dbSpin{to{transform:rotate(360deg);}}
+@keyframes dbStud{from{opacity:.45;} to{opacity:1;}}
+@keyframes dbSweep{from{left:-45%;} to{left:115%;}}
+@keyframes dbBob{from{transform:translateY(-3px) scale(1);} to{transform:translateY(3px) scale(1.04);}}
+/* lands hard, overshoots, settles, holds, lifts away */
 @keyframes dbIn{
-  0%{opacity:0;transform:scale(.72);}
-  8%{opacity:1;transform:scale(1.06);}
-  14%{transform:scale(1);}
-  82%{opacity:1;transform:scale(1);}
-  100%{opacity:0;transform:scale(1.04);}
+  0%{opacity:0;transform:scale(.55) translateY(26px);}
+  7%{opacity:1;transform:scale(1.12) translateY(0);}
+  12%{transform:scale(.97);}
+  17%{transform:scale(1.02);}
+  22%{transform:scale(1);}
+  84%{opacity:1;transform:scale(1);}
+  100%{opacity:0;transform:scale(1.06) translateY(-18px);}
 }
 @keyframes dbPulse{from{text-shadow:0 0 18px rgba(160,107,255,.75),0 5px 0 #1b0f2a;}
   to{text-shadow:0 0 42px rgba(200,165,255,1),0 5px 0 #1b0f2a;}}

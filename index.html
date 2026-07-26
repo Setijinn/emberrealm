@@ -215,11 +215,23 @@
 </div></div></div>
 <!-- INSANE DROP: the relic banner. Lives outside every panel because it must be able to fire in
      the middle of a boss fight without a screen being open. -->
-<div id="dropBanner"><div id="dropBannerIn">
- <div class="dbHd">INSANE DROP!</div>
- <div class="dbName" id="dbName"></div>
- <div class="dbSub" id="dbSub"></div>
-</div></div>
+<div id="dropBanner">
+ <div id="dropRays"></div>
+ <div id="dropBannerIn">
+  <i class="dbCorner tl"></i><i class="dbCorner tr"></i><i class="dbCorner bl"></i><i class="dbCorner br"></i>
+  <div class="dbRow">
+   <!-- the relic's own sprite. MUST opt out of the fullscreen canvas rule or it stacks invisibly
+        at the card's origin at full viewport size (see the note on canvas in style.css). -->
+   <canvas id="dbIcon" width="96" height="96"></canvas>
+   <div class="dbText">
+    <div class="dbHd">INSANE DROP!</div>
+    <div class="dbName" id="dbName"></div>
+    <div class="dbSub" id="dbSub"></div>
+   </div>
+  </div>
+  <span class="dbShine"></span>
+ </div>
+</div>
 <button id="abBtn">—</button>
 <div class="scr" id="invScr" style="background:rgba(9,7,12,.9);"><div id="invCard"><button class="tabX" id="invX" aria-label="Close">✕</button><div id="invInner">
  <div id="invTitle">EQUIPMENT</div>
