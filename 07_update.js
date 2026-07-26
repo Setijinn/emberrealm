@@ -701,19 +701,23 @@ function update(dt){
       texts.push({x:de.x,y:de.y-8,txt:'+'+rx+'xp',col:'#7ab8d4',life:1.1});
       texts.push({x:de.x,y:de.y+10,txt:'+'+rg2+'g',col:'#ffc94d',life:1.1});
       gainXP(rx,rg2); chargeRes('kill');
+      // A client does not roll its own drops: the host rolls once and the bag is shared, or
+      // everyone generates their own private copy of the same kill's loot. This guard used to sit
+      // ONLY on the trash branch below, so both BOSS branches minted duplicate bags on every
+      // machine -- and those bags carry no `remote` flag, so the snapshot cull never removed them.
+      // The portal, the message and the XP stay per-machine: those are correctly local.
+      const _sim=(typeof netSimulates!=='function' || netSimulates());
       if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null; ringBossCd[de.ring]=32+Math.random()*20;
         groundPortals.push({x:de.x,y:de.y,ring:de.ring,life:45});
-        for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/4.2)+1))));
+        if(_sim) for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/4.2)+1))));
         msg('A PORTAL TEARS OPEN',GBOSS[de.ring].dn+' awaits'); }
       else if(curRoom.dungeon && de.boss){
-        const rt2=Math.min(11,Math.round((curRoom.lv||10)/4.2)+2);
-        for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2)));
-        loots.push(bagAt(de,{k:'pot'}));
+        if(_sim){ const rt2=Math.min(11,Math.round((curRoom.lv||10)/4.2)+2);
+          for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2)));
+          loots.push(bagAt(de,{k:'pot'})); }
         groundPortals.push({x:de.x+TILE,y:de.y,ring:-1,life:600,home:true});
         msg('THE CONSCIOUSNESS SHATTERS','its mind falls quiet — step through to return'); }
-      else if(typeof netSimulates!=='function' || netSimulates()) rollLoot(de);
-      // a client does not roll its own drops: the host rolls once and the bag is shared, or
-      // everyone would generate their own private copy of the same kill's loot
+      else if(_sim) rollLoot(de);
     } } }
   // enemy shots. A client's copies come from the host and are dead-reckoned in netInterp, so it
   // must not advance or expire them here -- but it still has to test them against ITSELF, because
@@ -862,6 +866,10 @@ function update(dt){
   // loot bags: despawn + HYBRID pickup. Commons/uncommons/potions auto-collect on
   // walk-over; rare+ (rar>=2) are left on the ground for the INTERACT prompt (below).
   for(let i=loots.length-1;i>=0;i--){ const lb=loots[i];
+    // A `remote` bag is a shadow of one the host owns; the only cull for it lives inside
+    // netApplyWorld. If this machine stops being a client (disconnect, host migration) that cull
+    // never runs again and the shadow sits in the world forever, unclaimable.
+    if(lb.remote && (typeof netIsClient!=='function' || !netIsClient())){ loots.splice(i,1); continue; }
     lb.life-=dt; if(lb.life<=0){loots.splice(i,1);continue;}
     const rar=(lb.item&&lb.item.rar)||0;
     if(rar>=2 && lb.item.k!=='pot') continue;                 // rare+ -> press INTERACT

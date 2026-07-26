@@ -27,7 +27,11 @@ function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) ret
     if(e.type==='unavailable-id'){ // someone else is the server -> join them
       try{p.destroy();}catch(err){}
       const g=new Peer();
-      g.on('open',id=>{ coop.peer=g; coop.id=id.slice(0,6); coop.pub=true; coop.code='SERVER';
+      // FULL peer id, never a prefix. _coopWire hands netOnMessage the raw conn.peer, so the
+      // host addresses its loot grants with the full id ({t:'G',to:...}); a 6-char coop.id could
+      // never match it and every client pickup silently destroyed the item instead of awarding it.
+      // Presence keys (coop.peers[d.id]) and ownership tags ride the same id, so it must be one space.
+      g.on('open',id=>{ coop.peer=g; coop.id=id; coop.pub=true; coop.code='SERVER';
         const c=g.connect(COOP_PUB_ID,{reliable:false}); _coopWire(c);
         setTimeout(()=>{ coop._trying=false; if(!coop.on){ try{g.destroy();}catch(err2){} coop.peer=null; } },7000); });
       g.on('error',()=>{ coop._trying=false; });
@@ -52,7 +56,7 @@ function coopJoin(code){ if(typeof Peer==='undefined'){ _coopMsg('co-op needs in
   if(!code) return; _coopReset(false); coop.auto=false;
   coop.code=code.toUpperCase(); coop.host=false;
   coop.peer=new Peer();
-  coop.peer.on('open',id=>{ coop.id=id.slice(0,6);
+  coop.peer.on('open',id=>{ coop.id=id;    // full id — see the note in _pubAttempt
     const c=coop.peer.connect(_coopPid(coop.code),{reliable:false}); _coopWire(c);
     setTimeout(()=>{ if(!coop.on) _coopMsg('could not reach room '+coop.code); },6000); });
   coop.peer.on('error',e=>{ coop.err=''+e.type; _coopMsg('co-op error: '+e.type); });
