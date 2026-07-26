@@ -159,7 +159,11 @@ function fire(dt){
   if(de3){ dm*=3; pr=99; }
   if(crit&&player.critPierce) pr=99;                 // Sharpshooter: crits pierce everything
   const psp=(wt.spd||520)*(player.projSpd||1);          // DEX -> projectile speed
-  const n=Math.min(7,(wt.shots||1)+((player.shots||1)-1));
+  // Projectile count comes from the WEAPON and nothing else (user, 2026-07-26). It used to add the
+  // class's own `shots` on top, which meant the same weapon fired a different number of bolts in
+  // different hands and no weapon's rate could be balanced against its output — a Shaman's staff
+  // threw three. Class identity lives in rate and damage now; the weapon decides how many.
+  const n=Math.min(7,wt.shots||1);
   // projectile forge key: every (class, weapon type, tier, rarity) combo has its own look
   const _cls=(typeof curChar==='function'&&curChar())?curChar().cls:'x';
   const _rar=(typeof eqRar==='function')?(eqRar('wpn')||0):0;

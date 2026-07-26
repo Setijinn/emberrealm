@@ -108,23 +108,58 @@ const CLASSES=[
  {id:'warlock',n:'Warlock',ic:'💀',d:'Every wound he deals feeds him.',hp:95,spd:170,dmg:16,fr:0.26,ls:0.12},
  {id:'frost',n:'Frostweaver',ic:'❄️',d:'Her bolts freeze the blood.',hp:100,spd:170,dmg:13,fr:0.26,slow:true},
  {id:'storm',n:'Stormcaller',ic:'⚡',d:'Lightning stops for no one.',hp:95,spd:180,dmg:12,fr:0.26,pierce:2},
- {id:'hunter',n:'Hunter',ic:'🐺',d:'Two arrows, one breath.',hp:105,spd:195,dmg:8,fr:0.24,shots:2,spread:0.10},
+ // Hunter and Shaman used to add projectiles from the class. Projectile count is the weapon's
+ // alone now, so the output they lost comes back as rate — a Hunter looses arrows faster than
+ // anyone rather than two at a time, and the Shaman's spirits pass THROUGH a rank (the staff
+ // pierces) rather than fanning across one.
+ {id:'hunter',n:'Hunter',ic:'🐺',d:'Looses faster than the eye follows.',hp:105,spd:195,dmg:8,fr:0.135},
  {id:'monk',n:'Monk',ic:'🥋',d:'Speed is its own armor.',hp:105,spd:215,dmg:9,fr:0.20},
  {id:'paladin',n:'Paladin',ic:'✨',d:'Faith holds the line.',hp:165,spd:155,dmg:12,fr:0.28,regen:2},
  {id:'necro',n:'Necromancer',ic:'🧟',d:'Death pays him tribute.',hp:90,spd:165,dmg:17,fr:0.28,ls:0.15},
  {id:'bard',n:'Bard',ic:'🎻',d:'Fights in tempo.',hp:100,spd:200,dmg:10,fr:0.22},
- {id:'shaman',n:'Shaman',ic:'🌀',d:'The spirits scatter wide.',hp:110,spd:175,dmg:6,fr:0.24,shots:3,spread:0.22},
+ {id:'shaman',n:'Shaman',ic:'🌀',d:'The spirits pass through.',hp:110,spd:175,dmg:6,fr:0.19},
  {id:'dragoon',n:'Dragoon',ic:'🐉',d:'Ember-blooded lancer.',hp:145,spd:175,dmg:16,fr:0.28},
 ];
 const $s=id=>document.getElementById(id);
+// ---- WEAPONS ----
+// rof is the shot INTERVAL multiplier (higher = slower), and it is not hand-picked: every weapon's
+// rate is derived from what it actually puts out, so damage, projectile count and rate stay tied
+// together (user, 2026-07-26).
+//
+//   rof = K / index
+//
+// K is the weapon's measured single-target output per unit time at rof 1, relative to a bow. It is
+// MEASURED, not computed from shots x dm, because a spread wastes projectiles: the sword throws
+// three bolts but at 0.35 spread only about one lands on a 15px target, so its K is 1.00 and not
+// 3.00. index is the single-target DPS the weapon is meant to have relative to a bow, and it is
+// where the design intent lives — short reach and no pierce earn a higher index; long reach and
+// pierce pay for themselves with a lower one.
+//
+//   weapon   reach  K     index   rof     why that index
+//   fists     94    0.78  1.30    0.60    shortest reach in the game, must stand in the fight
+//   sword    106    1.00  1.20    0.83    melee reach, and the spread cleaves a group
+//   dagger   157    1.36  1.25    1.09    short reach, fastest hands
+//   bow      768    1.00  1.00    1.00    the baseline everything else is quoted against
+//   xbow     988    1.59  0.95    1.67    longest reach, heaviest single hit, pierces one
+//   staff    432    1.03  0.85    1.21    pierces everything
+//   wand     840    1.00  0.80    1.25    pierces everything AND reaches nearly as far as a bow
+//
+// Note `shots` here stacks with the CLASS's own shots (06_combat: wt.shots + player.shots - 1), so
+// a Shaman's staff fires three bolts rather than one. That is why the piercing weapons carry the
+// two lowest indices — on a multi-shot class every bolt pierces, and the two multiply.
 const WTYPE={
- sword:{n:'Sword',shots:3,spread:0.35,spd:380,life:0.28,size:6,dm:1.0,rof:1.0},
- dagger:{n:'Dagger',shots:2,spread:0.12,spd:560,life:0.28,size:4,dm:0.7,rof:0.7},
+ sword:{n:'Sword',shots:3,spread:0.35,spd:380,life:0.28,size:6,dm:1.0,rof:0.83},
+ dagger:{n:'Dagger',shots:2,spread:0.12,spd:560,life:0.28,size:4,dm:0.7,rof:1.09},
  bow:{n:'Bow',shots:1,spd:640,life:1.2,size:5,dm:1.0,rof:1.0},
- xbow:{n:'Crossbow',shots:1,spd:760,life:1.3,size:6,dm:1.6,rof:1.7,pierce:1},
- staff:{n:'Staff',shots:2,par:11,spd:480,life:0.9,size:6,dm:1.0,rof:1.0},
- wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:1.0,rof:0.85},
- fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.85,rof:0.66},
+ xbow:{n:'Crossbow',shots:1,spd:760,life:1.3,size:6,dm:1.6,rof:1.67,pierce:1},
+ // Staff and wand bore THROUGH a rank of enemies (user, 2026-07-26) — a bolt of force does not
+ // stop in the first body. pierce:99 is "everything", full damage to every body, no decay.
+ // The staff drops its second parallel bolt as part of the price: at 11px apart both landed in the
+ // same 15px target, so it was doubling single-target damage while adding almost nothing to reach.
+ // One piercing bolt is the cleaner weapon.
+ staff:{n:'Staff',shots:1,spd:480,life:0.9,size:6,dm:1.0,rof:1.21,pierce:99},
+ wand:{n:'Wand',shots:1,spd:600,life:1.4,size:4,dm:1.0,rof:1.25,pierce:99},
+ fists:{n:'Fists',shots:1,spd:520,life:0.18,size:5,dm:0.85,rof:0.60},
 };
 // Melee -> sword; rogue/assassin -> dagger; ranger/hunter/bard -> bow (swap to xbow, see WSWAP); monk -> fists.
 const CWEAP={rogue:'dagger',assassin:'dagger',monk:'fists',ranger:'bow',hunter:'bow',bard:'bow',
@@ -756,7 +791,9 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  player.critMult=1.5+st.luck*0.004;
  player.fortune=st.fort;                              // FORTUNE -> loot
  if(typeof petBonusFortune==='function') player.fortune+=petBonusFortune();   // active pet's Fortune kit
- player.shots=c.shots||1; player.pierce=c.pierce||0;
+ // player.shots is display/legacy only — fire() counts projectiles from the weapon alone, so
+ // nothing here or in the skill trees can change how many bolts leave the bow
+ player.shots=(player.wt&&player.wt.shots)||1; player.pierce=c.pierce||0;
  player.ls=c.ls||0; player.slowShot=!!c.slow;
  player.resDef=ABIL[ch.cls]||ABIL.knight;
  // ---- skill-tree percentage bonuses + combat flags
@@ -1053,7 +1090,10 @@ function openClassPick(){
  const box=$s('classList'); box.innerHTML='';
  CLASSES.forEach((c,i)=>{ const d=document.createElement('div'); d.className='ccard mini';
   let tags=' · '+classWT(c.id).n;
-  if(c.shots>1) tags+=' · ×'+c.shots+' shots'; if(c.pierce) tags+=' · pierce';
+  // shot count is the weapon's, so the tag reads it from there rather than from the class
+  const _cw=classWT(c.id);
+  if(_cw.shots>1) tags+=' · ×'+_cw.shots+' shots';
+  if(c.pierce||_cw.pierce) tags+=(_cw.pierce>=99?' · pierces all':' · pierce');
   if(c.ls) tags+=' · lifesteal'; if(c.regen>1) tags+=' · regen'; if(c.slow) tags+=' · chill';
   d.innerHTML='<canvas class="cicCv" width="56" height="56"></canvas><div class="cn">'+c.n+'</div>'
    +'<div class="cd">'+c.d+'<br><span style="color:#ffd07a">'+((typeof APOOL!=='undefined'&&APOOL[c.id])?APOOL[c.id][0].name+' — '+APOOL[c.id][0].desc:'')+'</span></div>'
