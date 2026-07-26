@@ -57,9 +57,13 @@ function bossReset(e){
 }
 function bossArenaHasPlayer(A){
   if(player.x>A.x0&&player.x<A.x1&&player.y>A.y0&&player.y<A.y1) return true;
-  const ps=(typeof coopPeers!=='undefined'&&coopPeers)?coopPeers:null;
-  if(ps) for(const k in ps){ const p=ps[k];
-    if(p&&p.x>A.x0&&p.x<A.x1&&p.y>A.y0&&p.y<A.y1) return true; }
+  // peers live on coop.peers (there is no global `coopPeers`), and each entry carries the room it
+  // is in plus a timestamp -- a stale or different-room peer must not hold the arena open
+  const ps=(typeof coop!=='undefined'&&coop&&coop.on)?coop.peers:null;
+  if(ps){ const now=performance.now(), rk=(curRoom&&curRoom.key)||'?';
+    for(const k in ps){ const p=ps[k];
+      if(!p||p.rm!==rk||now-p.ts>2500) continue;
+      if(p.x>A.x0&&p.x<A.x1&&p.y>A.y0&&p.y<A.y1) return true; } }
   return false;
 }
 // ---- Awakened-dungeon objective engine ----
@@ -346,6 +350,14 @@ function update(dt){
   fire(dt);
 
   // enemies
+  // On a co-op CLIENT the shared world belongs to the host: enemies, bosses and their projectiles
+  // arrive as snapshots and are interpolated, so running the AI here as well would fight the
+  // incoming state and desync immediately. Solo play and the host take the normal path.
+  if(typeof netIsClient==='function' && netIsClient()){
+    if(typeof netInterp==='function') netInterp(dt);
+    if(typeof netHazards==='function') netHazards(dt);   // pools / bloom hit US too
+    for(const e of enemies){ if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt; }
+  } else
   for(const e of enemies){
     if(e.slowT>0)e.slowT-=dt; if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt;
     if(e.stunT>0)e.stunT-=dt;
@@ -455,6 +467,10 @@ function update(dt){
       // execute/shatter/curse scaling, lifesteal, damage text and the on-hit perk triggers
       // all live in dealDamage now — shot-only extras (fork/chain/splash/critBolt) stay here.
       const dmg=dealDamage(e,(s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1),{crit:s.crit});
+      // On a client the host owns this enemy's health. dealDamage already applied the hit locally
+      // so the flash and the number land on the same frame you fired -- that is the prediction.
+      // Reporting it lets the host resolve the real value, which arrives in the next snapshot.
+      if(typeof netReportHit==='function') netReportHit(e,dmg,s.crit);
       s.lastHit=e; chargeRes('hit');
       if(s.slow) applyStatus(e,'chill',1,0);
       // ---- on-hit capstones (all through the unified status system) ----
@@ -524,12 +540,17 @@ function update(dt){
         loots.push(bagAt(de,{k:'pot'}));
         groundPortals.push({x:de.x+TILE,y:de.y,ring:-1,life:600,home:true});
         msg('THE CONSCIOUSNESS SHATTERS','its mind falls quiet — step through to return'); }
-      else rollLoot(de);
+      else if(typeof netSimulates!=='function' || netSimulates()) rollLoot(de);
+      // a client does not roll its own drops: the host rolls once and the bag is shared, or
+      // everyone would generate their own private copy of the same kill's loot
     } } }
-  // enemy shots
+  // enemy shots. A client's copies come from the host and are dead-reckoned in netInterp, so it
+  // must not advance or expire them here -- but it still has to test them against ITSELF, because
+  // each player takes their own damage locally.
+  const _netCl=(typeof netIsClient==='function'&&netIsClient());
   for(let i=eShots.length-1;i>=0;i--){ const s=eShots[i];
-    s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
-    if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; }
+    if(!_netCl){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
+      if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; } }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
       damagePlayer((s.bd||8)*(1-(player.dr||0))); player.inv=Math.max(player.inv,0.35); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
   }
@@ -539,6 +560,8 @@ function update(dt){
     if(p.drag){ const f=Math.max(0,1-p.drag*dt); p.vx*=f; p.vy*=f; }
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; if(p.life<=0) particles.splice(i,1); }
   ambientParts(dt);
+  // host: push the shared world to everyone (rate-limited to NET_HZ inside)
+  if(typeof netBroadcast==='function') netBroadcast();
   if(typeof updateEggDrops==='function') updateEggDrops(dt);   // pet eggs on the ground: walk-over to collect
   if(typeof updatePet==='function') updatePet(dt);             // active pet: follow + auto-cast its utility kit
   if(typeof updatePetRoom==='function') updatePetRoom(dt);     // sanctuary: pets wander
@@ -555,7 +578,8 @@ function update(dt){
   // per-ring mini-boss spawner (grove only) — one unique boss per ring at a time
   // keyed on the TERRITORY's boss, not the theme band — and -1 (ocean, bridge, the reserved
   // Molten Heart) must never touch ringBossCd, which players cross constantly.
-  if(curRoom.rings){ const cb=zoneBossAt(player.x/TILE,player.y/TILE);
+  if(curRoom.rings && (typeof netSimulates!=='function' || netSimulates())){
+    const cb=zoneBossAt(player.x/TILE,player.y/TILE);
     if(cb>=0){ ringBossCd[cb]=(ringBossCd[cb]||0)-dt;
       if(ringBossCd[cb]<=0){ ringBossCd[cb]=14+Math.random()*12;
         if(!ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } } }
@@ -572,7 +596,9 @@ function update(dt){
     gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; } }
   // spawns: streaming activation + 60s respawns (only once you leave the area)
   respawnT-=dt;
-  if(respawnT<=0 && !curRoom.dungeon){ respawnT=0.5; const rn=Date.now();
+  // clients never activate spawn points -- every enemy they see is one the host spawned
+  if(respawnT<=0 && !curRoom.dungeon && (typeof netSimulates!=='function' || netSimulates())){
+    respawnT=0.5; const rn=Date.now();
     // CONCURRENCY CAP: the overworld bakes ~700 spawn points and a typical spot has 20-35 inside
     // the stream ring — activating them all buried a new hero under a 20-30 enemy swarm. Cap the
     // number of ROAMING foes (c/s) active near you at once, scaled by the local zone level so a
@@ -665,6 +691,9 @@ function update(dt){
     const rar=(lb.item&&lb.item.rar)||0;
     if(rar>=2 && lb.item.k!=='pot') continue;                 // rare+ -> press INTERACT
     if(Math.hypot(lb.x-player.x,lb.y-player.y)<42){
+      // A bag is one object shared by the room. On a client, ask the host for it and let the
+      // grant come back -- otherwise both players walk over the same drop and both keep it.
+      if(lb.remote){ if(!lb._asked){ lb._asked=1; if(typeof netRequestPickup==='function') netRequestPickup(lb); } continue; }
       const ch=curChar(); if(!ch||!rpg) continue; if(!ch.inv)ch.inv=[];
       if(lb.item.k==='coin'){ addCoin(); recalcStats();
         texts.push({x:lb.x,y:lb.y-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); }

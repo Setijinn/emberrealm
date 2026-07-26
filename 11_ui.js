@@ -320,6 +320,20 @@ function bagAt(e,item){ const rar=(item&&item.rar)||0;
    if(p){ bx=p.x; by=p.y; } else { bx=e.x; by=e.y; }
  }
  return {x:bx,y:by,item:item,rar:rar,life:rar>=2?150:60}; }
+// Award an item directly, with no bag on the ground. Used when the co-op host grants a contested
+// pickup to a specific player: only the winner's client runs this, so the drop lands once.
+function takeLoot(item){
+  const ch=(typeof curChar==='function')?curChar():null;
+  if(!item||!ch||!rpg) return;
+  if(!ch.inv) ch.inv=[];
+  if(item.k==='coin'){ if(typeof addCoin==='function') addCoin(); if(typeof recalcStats==='function') recalcStats(); }
+  else if(item.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG(); }
+  else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
+  else if(ch.inv.length<20) ch.inv.push(item);
+  if(typeof texts!=='undefined'&&typeof player!=='undefined')
+    texts.push({x:player.x,y:player.y-30,txt:(typeof itemName==='function')?itemName(item):'loot',
+      col:(typeof itemRarCol==='function')?itemRarCol(item):'#e6c76a',life:1.3});
+}
 function rollLoot(e){
  const lv=e.lv||1;
  const F=(typeof player!=='undefined'&&player.fortune)||0;

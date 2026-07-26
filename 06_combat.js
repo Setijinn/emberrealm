@@ -23,6 +23,9 @@ function bossImmune(e){ if(!e) return false;
  if(e.bloom) return true;                   // SURVIVAL: thornrot bloom, reach the safe ground
  return false; }
 function applyStatus(e,id,dur,val){ if(!e||e.hp<=0||e.node) return;   // objective nodes immune
+  // in co-op the host owns this enemy's health, so a status applied here must be mirrored there
+  // or its damage-over-time would tick against a bar the host never marks as burning
+  if(typeof netReportStatus==='function') netReportStatus(e,id,dur,val);
  if(bossImmune(e)) return;                                            // and untouchable bosses
  if(!e.st) e.st={};
  const s=e.st[id];

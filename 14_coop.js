@@ -64,7 +64,13 @@ function _coopWire(c){
     if(!coop.pub) _coopMsg(coop.host?'a hero joined your room':'joined room '+coop.code);
     else if(!coop.host) _coopMsg('connected to the EMBER SERVER');
     _coopPanel(); });
-  c.on('data',d=>{ if(!d||d.t!=='s'||!d.id) return;
+  c.on('data',d=>{ if(!d) return;
+    // world-sync traffic (snapshots, hit reports, loot arbitration) is handled by 14b_netsync.
+    // The host relays presence between clients but NOT snapshots -- it is the only source of those.
+    if(d.t!=='s'){
+      if(typeof netOnMessage==='function' && netOnMessage(d, c.peer)) return;
+      return; }
+    if(!d.id) return;
     d.ts=performance.now(); coop.peers[d.id]=d;
     if(coop.host){ for(const o of coop.conns){ if(o!==c && o.open){ try{o.send(d);}catch(e){} } } } });
   const drop=()=>{ coop.conns=coop.conns.filter(x=>x!==c);
