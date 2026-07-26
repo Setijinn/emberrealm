@@ -1575,10 +1575,31 @@ function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
 const POT_CAP=5, POT_REFILL=48;    // one potion every 48s, up to five held
 function tickPotions(dt){
   if(!rpg||!inGame) return;
+  autoPotTick(dt);
   if((rpg.pots||0)>=POT_CAP){ rpg._potT=0; return; }
   rpg._potT=(rpg._potT||0)+dt;
   if(rpg._potT>=POT_REFILL){ rpg._potT-=POT_REFILL; rpg.pots=(rpg.pots||0)+1;
     if(typeof hudRPG==='function') hudRPG(); saveRPG(); }
+}
+// AUTO POTION (user, 2026-07-26). Drinks one tonic when you fall to the mark you set.
+//
+// WHAT IT IS NOT: a safety net. It fires no faster than once a second, it cannot drink what you do
+// not have, and a hit that takes you from above the mark straight to zero never gets a chance to
+// run at all -- there is no frame in between. It is a convenience for the long fights where you
+// would have tapped the flask anyway, and the settings screen says so in as many words.
+const AUTOPOT_CD=1.0;              // seconds between automatic drinks
+let _autoPotT=0;
+function autoPotTick(dt){
+  const pct=(typeof autoPotPct==='function')?autoPotPct():0;
+  if(_autoPotT>0) _autoPotT-=dt;
+  if(!pct || !rpg || (rpg.pots||0)<=0) return;
+  if(typeof player==='undefined' || !player.maxhp || player.hp<=0) return;   // dead men drink nothing
+  if(_autoPotT>0) return;
+  if(player.hp > player.maxhp*(pct/100)) return;
+  const before=player.hp;
+  usePotion();
+  if(player.hp>before){ _autoPotT=AUTOPOT_CD;
+    texts.push({x:player.x,y:player.y-36,txt:'AUTO',col:'#7dc47a',life:0.9}); }
 }
 $s('potBtn').addEventListener('click',usePotion);
 // The four purchasable LEGENDARIES (not relics -- relics are ordinary T13 items now and equip from
@@ -1845,7 +1866,10 @@ function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
  users[curUser].best=k; LS.set('er-users',users); } }
 // ---------- device settings (UI scale, camera, feedback toggles, manual aim) ----------
 // Stored per DEVICE in er-opts (not per user) — display comfort follows the screen.
-const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false};
+// autoPot is the HP PERCENTAGE it drinks at; 0 is off. The steps are the only legal values, so a
+// hand-edited save cannot ask for "drink at 95%".
+const AUTOPOT_STEPS=[0,5,10,15];
+const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false,autoPot:0};
 let OPTS=Object.assign({},OPT_DEF,LS.get('er-opts',{}));
 function saveOpts(){ LS.set('er-opts',OPTS); applyOpts(); }
 function applyOpts(){
@@ -1863,7 +1887,19 @@ function _setPaint(){
  $s('setZoom').value=Math.round((OPTS.zoom||1)*100); $s('setZoomV').textContent=Math.round((OPTS.zoom||1)*100)+'%';
  const tg=(id,on)=>{ const b=$s(id).querySelector('b'); b.textContent=on?'ON':'OFF'; b.classList.toggle('off',!on); };
  tg('setAim',!!OPTS.aim); tg('setDmg',OPTS.dmgTxt!==false); tg('setVib',OPTS.vib!==false); tg('setFps',!!OPTS.fps); tg('setFs',OPTS.fs!==false);
+ // auto potion reads as a percentage rather than ON/OFF, and its warning brightens when it is armed
+ const ap=autoPotPct(), pb=$s('setPot').querySelector('b');
+ pb.textContent=ap?(ap+'% HP'):'OFF'; pb.classList.toggle('off',!ap);
+ $s('setPot').querySelector('span').textContent=ap?'Auto potion at':'Auto potion';
+ $s('setPotNote').classList.toggle('on',!!ap);
 }
+// the stored value is only ever one of the steps, whatever a hand-edited save says
+function autoPotPct(){ const v=OPTS.autoPot|0; return AUTOPOT_STEPS.indexOf(v)>0?v:0; }
+function autoPotCycle(){ const i=Math.max(0,AUTOPOT_STEPS.indexOf(autoPotPct()));
+  OPTS.autoPot=AUTOPOT_STEPS[(i+1)%AUTOPOT_STEPS.length]; saveOpts(); _setPaint();
+  if(typeof msg==='function'){ const p=autoPotPct();
+    if(p) msg('AUTO POTION · '+p+'%','it will not keep you alive — watch your bar');
+    else msg('AUTO POTION OFF','tonics are yours to spend'); } }
 function openSettings(){ _setPaint(); show('setScr'); }
 $s('setBtn').addEventListener('click',openSettings);
 $s('setBack').addEventListener('click',openMenu);
@@ -1875,6 +1911,7 @@ $s('setDmg').addEventListener('click',()=>{ OPTS.dmgTxt=(OPTS.dmgTxt===false); s
 $s('setVib').addEventListener('click',()=>{ OPTS.vib=(OPTS.vib===false); saveOpts(); _setPaint(); });
 $s('setFps').addEventListener('click',()=>{ OPTS.fps=!OPTS.fps; saveOpts(); _setPaint(); });
 $s('setFs').addEventListener('click',()=>{ OPTS.fs=(OPTS.fs===false); saveOpts(); _setPaint(); });
+$s('setPot').addEventListener('click',autoPotCycle);
 $s('loginBtn').addEventListener('click',doLogin);
 $s('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $s('playBtn').addEventListener('click',play);

@@ -50,6 +50,12 @@
   <div class="setRow tog" id="setVib"><span>Vibration</span><b>ON</b></div>
   <div class="setRow tog" id="setFps"><span>FPS counter</span><b>OFF</b></div>
   <div class="setRow tog" id="setFs"><span>Fullscreen on touch</span><b>ON</b></div>
+  <!-- cycles OFF / 5% / 10% / 15%. The warning under it is not decoration: a potion is a heal,
+       not a guard, and anyone who leaves this on and stops watching their bar will die anyway. -->
+  <div class="setRow tog" id="setPot"><span>Auto potion at</span><b>OFF</b></div>
+  <div class="setNote" id="setPotNote">Auto potion is <b>not</b> responsible for keeping your hero alive.
+   It drinks when you drop below the mark — it cannot outheal a boss, it does nothing at zero
+   tonics, and a hit that takes you from above the mark to dead never triggers it. Watch your bar.</div>
  </div>
  <div class="mnote">saved on this device · applies to every hero</div>
  <button class="mbtn dev" id="setReset">Reset to defaults</button>
