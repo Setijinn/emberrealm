@@ -69,14 +69,17 @@ function netOwnsLoot(b){ return !b || !b.own || b.own===netSelfId(); }
 // Solo short-circuits on the first boolean and never touches coop.peers.
 const LOOT_ELIG_R=520;      // "near the kill" — much tighter than the 1100 group-scaling radius
 const LOOT_ELIG_AGE=2500;   // same freshness bar bossArenaHasPlayer uses
+// `cls` rides along so a bound sack is biased toward the class of the player it BELONGS to (see
+// WPN_BIAS in 11_ui) rather than the host's — presence already carries it, so this costs nothing.
 function netLootRoster(x,y){
-  const me={id:netSelfId(), fort:(typeof player!=='undefined'&&player.fortune)||0};
+  const _mc=(typeof curChar==='function'&&curChar())?curChar().cls:null;
+  const me={id:netSelfId(), fort:(typeof player!=='undefined'&&player.fortune)||0, cls:_mc};
   if(!netOn()) return [me];
   const out=(typeof player!=='undefined'&&player.hp>0)?[me]:[];
   if(typeof coopNearPeers==='function')
     for(const p of coopNearPeers(x,y,LOOT_ELIG_R,LOOT_ELIG_AGE)){
       if((p.hp||0)<=0) continue;          // a corpse two rooms into a death timer earns nothing
-      out.push({id:p.id, fort:p.fo||0}); }
+      out.push({id:p.id, fort:p.fo||0, cls:p.cls||null}); }
   return out; }
 
 function netId(e){ if(e && !e.nid) e.nid=_netNid++; return e?e.nid:0; }

@@ -661,12 +661,24 @@ function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
  // worth follows tier, plus a modest premium per rolled affix — rarity is no longer raw power,
  // but more rolled stats is still more item, and a Mythical should not sell for a Common's price
  return it.k==='pot'?8:Math.max(6,Math.round(tierCost(it.t)*0.4*(1+(it.rar||0)*0.12))); }
+// A SMALL NUDGE TOWARD YOUR OWN WEAPON (user, 2026-07-26). Seven weapon types drawn uniformly means
+// a weapon you can actually use lands 1 roll in 7, which reads as "weapons never drop for me". This
+// forces a small slice of weapon rolls to the RECIPIENT's class and leaves the rest uniform, so
+// your own type comes up about 1 in 4 instead of 1 in 7 — noticeably kinder, and every other type
+// is still common enough to be worth reading. Deliberately not a big number: finding a weapon for
+// someone else is part of what makes a shared world feel like one.
+const WPN_BIAS=0.15;         // own type ≈ 0.15 + 0.85/7 = 27%, against 14.3% uniform
 // One item of a GIVEN kind at a given tier. The kind is chosen by the bag slot, not here.
-function mkItem(k,t,fort){ t=Math.max(0,Math.min(MAXT-1,t)); let it;
+// `cls` is who the item is being rolled FOR, and is optional: a shared sack in co-op passes none,
+// because loot everybody can pick up must not quietly favour one person's class.
+function mkItem(k,t,fort,cls){ t=Math.max(0,Math.min(MAXT-1,t)); let it;
  // data-driven rather than name-matched: a retired type carries `legacy` and drops out of every
  // generator at once, which is what lets the monk's gauntlet appear here like any other weapon
  if(k==='wpn'){ const keys=Object.keys(WTYPE).filter(x=>!WTYPE[x].legacy);
-   it={k:'wpn',wt:keys[Math.floor(Math.random()*keys.length)],t:t}; }
+   const own=cls&&CWEAP[cls];
+   const wt=(own && !WTYPE[own].legacy && Math.random()<WPN_BIAS)
+     ? own : keys[Math.floor(Math.random()*keys.length)];
+   it={k:'wpn',wt:wt,t:t}; }
  else if(k==='arm'||k==='helm'){ const mats=['plate','leather','robe'];
    it={k:k,mt:mats[Math.floor(Math.random()*3)],t:t}; }
  else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t};
@@ -691,11 +703,11 @@ const BAG_SLOTS={
  // rollBagSlots); the extra slots are the chance of a second or third piece on top.
  bound:[ {k:'wpn',p:0.30}, {k:'arm',p:0.24}, {k:'helm',p:0.18}, {k:'ring',p:0.16} ],
 };
-function rollBagSlots(layout,tier,fort,guarantee){
+function rollBagSlots(layout,tier,fort,guarantee,cls){
  const items=[], fm=1+(fort||0)*0.004;
- for(const s of layout) if(Math.random()<s.p*fm) items.push(mkItem(s.k,tier,fort));
+ for(const s of layout) if(Math.random()<s.p*fm) items.push(mkItem(s.k,tier,fort,cls));
  if(!items.length && guarantee){ const s=layout[Math.floor(Math.random()*layout.length)];
-   items.push(mkItem(s.k,tier,fort)); }
+   items.push(mkItem(s.k,tier,fort,cls)); }
  return items; }
 // ------------------------------------------------------------
 // BAG BANDS — the sack you see is decided by the best TIER inside it, never by rarity.
@@ -825,7 +837,9 @@ const PUB_POT ={c:0.10,  s:0.14, N:0.10};
 // sack: gear, the tonic, the coin, the scroll. It used to push a separate bag per item, so a
 // dungeon boss carpeted the floor with five or six sacks that each held one thing, and a "bag"
 // stopped meaning anything. `extra` is what rollLoot already rolled outside the gear table.
-function rollPublicLoot(e,row,F,extra){
+// `cls` biases the weapon rolls toward that class (see WPN_BIAS). rollLoot passes it only when you
+// are ALONE -- a sack anyone can walk over must not favour one player's class in company.
+function rollPublicLoot(e,row,F,extra,cls){
  const fmul=1+F*0.012;
  const tier=Math.min(PUB_TMAX,pickWeighted(row.pub,F));    // public gear never exceeds T8
  const r=Math.random();
@@ -833,12 +847,12 @@ function rollPublicLoot(e,row,F,extra){
  if(e.type==='B'){
    // a boss rolls the public table TWICE into the one sack. Same number of sacks, a sack worth
    // opening: one slot roll averages 1.3 pieces, which is how a "bag" ended up meaning "an item".
-   for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true)) items.push(it);  // a boss always pays out
-   for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false)) items.push(it);
+   for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);  // a boss always pays out
+   for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
    if(Math.random()<0.4) items.push({k:'pot'});
  } else {
    const gp=(PUB_GEAR[e.type]||0)*fmul, pp=(PUB_POT[e.type]||0)*fmul;
-   if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false)) items.push(it);
+   if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
    else if(r<gp+pp) items.push({k:'pot'});
  }
  if(items.length) loots.push(bagAt(e,items));            // everything missed -> no sack at all
@@ -859,7 +873,7 @@ function rollSoulboundItems(e,row,who){
  for(let q=0;q<n;q++){
    if(Math.random()>=p) continue;
    const tier=pickWeighted(row.sb,F);
-   for(const it of rollBagSlots(BAG_SLOTS.bound,tier,F,true)) items.push(it); }   // never empty
+   for(const it of rollBagSlots(BAG_SLOTS.bound,tier,F,true,who&&who.cls)) items.push(it); }   // never empty
  return items;
 }
 function rollSoulbound(e,row,who){
@@ -937,15 +951,17 @@ function rollLoot(e){
  // guarantee for tidiness. So: alone, one sack; in company, one shared sack plus your own.
  const alone = roster.length<=1 &&
    (!roster[0] || !roster[0].id || (typeof netSelfId!=='function') || roster[0].id===netSelfId());
+ const myCls=(typeof curChar==='function'&&curChar())?curChar().cls:null;
  if(alone){
    const who=roster[0]||{id:null,fort:F};
+   if(!who.cls) who.cls=myCls;
    for(const it of rollSoulboundItems(e,row,who)) extra.push(it);
    const rel=(typeof rollRelicItem==='function')?rollRelicItem(e,who):null;
    if(rel) extra.push(rel);
-   rollPublicLoot(e,row,F,extra);
+   rollPublicLoot(e,row,F,extra,myCls);      // alone: the shared sack is yours, so bias it
    return;
  }
- rollPublicLoot(e,row,F,extra);
+ rollPublicLoot(e,row,F,extra);              // in company: no class bias on loot anyone can take
  for(const who of roster){ rollSoulbound(e,row,who); rollRelic(e,who); }
 }
 const ABIL={

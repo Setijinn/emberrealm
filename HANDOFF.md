@@ -1,7 +1,7 @@
 # EmberRealm — session handoff
 
 Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v334`** (`sw.js`, bump every release).
+Current service-worker version: **`emberrealm-v336`** (`sw.js`, bump every release).
 
 **How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
 `ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
@@ -171,9 +171,15 @@ while every other class climbed to a T12 worth +218 ATK. `WSPR` had no `fists` e
   `08c_embersprites.js`; `WSPR.gauntlet` covers the procedural fallback.
 - **The gauntlet plays by the same rules as every other weapon** — including drawing in the hand in
   the fallback path. The old `wtype!=='fists'` exception is gone.
-- Cost, accepted knowingly: the weapon pool went 6 → 7 types, so every *other* class's chance of a
-  usable weapon drop falls 16.7% → 14.3%. Biasing `mkItem` toward the roller's own `CWEAP` would
-  fix that (a knight currently sees ~83% unusable weapons) and is a separate design call.
+- **A small bias toward your own weapon** (`WPN_BIAS=0.15` in `11_ui.js`): that slice of weapon
+  rolls is forced to the RECIPIENT's class and the rest stay uniform, so your own type lands ~27%
+  instead of 14.3% (measured 26.93% ± 0.85% over 2,729 weapons). Deliberately small — finding a
+  weapon for someone else is part of what makes a shared world feel like one.
+  - `mkItem(k,t,fort,cls)` / `rollBagSlots(...,cls)` take the recipient; **omitting `cls` means no
+    bias**, which is the co-op shared sack: loot anyone can walk over must not favour one class.
+  - A **bound** sack is biased to the class of the player it belongs to, not the host's —
+    `netLootRoster` now carries `cls` (presence already had it). Verified: shared sack 14.2%,
+    my bound 25%, a Pyromancer peer's bound sack 25.2% **staff**.
 
 ## Do this next
 
