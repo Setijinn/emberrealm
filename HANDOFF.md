@@ -1,7 +1,7 @@
 # EmberRealm — session handoff
 
 Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v308`** (`sw.js`, bump every release).
+Current service-worker version: **`emberrealm-v313`** (`sw.js`, bump every release).
 
 **How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
 `ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
@@ -93,14 +93,35 @@ HTTP cache, not the SW — hence the fresh-port rule below, which is real and co
 - **Retired**: Sella's T2/T3 armour + helms and Odo's three bought pets — both were glory buying
   power, and the pets were a second follower system running beside the egg/Sanctuary one.
 
+## Relics are T13 items (done 2026-07-26)
+
+The band above the ladder exists now, and the twelve dungeon relics are what live on it.
+
+- `TIER_NAMES` has a 13th entry, **Riftforged**; `RELIC_T` (12) is its index.
+- **`MAXT` stays 12 — do not raise it.** It is the top *rollable* tier and every random draw clamps
+  to `MAXT-1`, which is the only thing keeping a T13 out of drop tables, auction shelves and shops.
+  `_nTiers()` in `08c_embersprites.js` reads `MAXT` for the same reason: counting the 13th name
+  would re-map every existing tier onto the wrong sprite.
+- A relic is an **ordinary item** (`{k, wt|mt, t:RELIC_T, relic:id, aff:[...]}`) — same equip path,
+  satchel, compare and icon as anything else. Its id rides in `rpg.eqAff[slot].rel`.
+- Each carries **fixed exclusive affixes** no roll can reach; **seven also carry a trait**, which
+  reuses the `player` flag its matching ascension capstone already sets (`burnHit`, `splash`,
+  `moveRof`, `execute`, `killHeal`, `thorns`, `slowAura`) — no new combat special cases.
+- A relic drops **shaped for its finder** (their class's `wt`/`mt`), so `canEquip` just works.
+- Twelve sprites, one per relic, themed to its boss: `assets/items/relic_<id>.png`. The icon stamps
+  **R** where ordinary items stamp their tier.
+- `rpg.relics` is the record (duplicate rule + death-screen scoring); `migrateRelics()` carries old
+  `wpnL`/`armL` saves across. The four purchasable legendaries are **not** relics and are unchanged.
+
 ## Do this next
 
 1. **Fusion for the blacksmith.** Still the open design work: invent the items fusion consumes
    (materials / catalysts / duplicate gear) and where they drop. Nothing is built.
-2. **Art for the two changed stalls.** Sella still shows an armour rack and Odo a menagerie; they now
-   sell cosmetics and bounties. PixelLab MCP is available (`assets/hearth/stall_*.png`).
-3. **`Sell` in the satchel is a lie** — with gold gone it deletes the item and pays nothing, i.e. it
-   is a second Discard button. Remove it or make it mean something.
+2. **Bram still sells power for glory.** T1–T3 weapons and two legendaries, priced in glory, which
+   the economy forbids everywhere else. Left alone because the blacksmith is reserved — decide what
+   he should be when fusion lands.
+3. **The bounty board has no fog objective.** `fogPct()` samples the *current character's* mask, so
+   it is not an incremental daily counter. Would need a real per-day tile counter to add one.
 
 ### Then, older outstanding items
 - **1–20 zone progression.** The user's long-standing complaint that "the spawn is weird with how
@@ -109,10 +130,10 @@ HTTP cache, not the SW — hence the fresh-port rule below, which is real and co
 - **Per-class stat caps.** `spd` is hard-flattened to 8 for every class by a `FLAT_CAP` override
   that bypasses the affinity maths; `vit`/`luck` come out near-identical so they carry no identity.
   `def`/`wis` already work correctly (Knight DEF cap 11 vs caster 6).
-- **The tier above T12.** Architecture reserved: one `LOOT_BANDS` row, one sprite, one `TIER_NAMES`
-  entry, no protocol change. Name candidates: Riftforged, Sunderborn, Cindercrown, Emberheart.
-- **Verify how `sw.js` picks up new script files.** `17b_auction.js` was added and the cache
-  manifest does not enumerate scripts — confirm before a release rather than assuming.
+- ~~**The tier above T12.**~~ Built: it is **T13 Riftforged**, and the twelve relics are what sit on
+  it. See the relic section above.
+- ~~**Verify how `sw.js` picks up new script files.**~~ Answered at the top: it does not enumerate
+  them; `.js` is network-first, so a new numbered file is live once `index.html` lists it.
 
 ---
 
