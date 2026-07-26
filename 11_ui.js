@@ -426,11 +426,12 @@ function weaponAt(cls,t){ t=Math.max(0,Math.min(MAXT-1,t)); const wt=classWT(cls
  return {n:TIER_NAMES[t]+' '+wt.n, add:Math.round(t*t*1.35+t*2),
   cost:t===0?0:Math.round(30*Math.pow(1.9,t)), tier:t+1}; }
 function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
-// THE RELIC COLOUR. One violet for everything a relic touches -- its name, the R on its icon, the
-// glow on its sack, the banner, the set line, the floating text. It is deliberately bluer and more
-// saturated than the T9-T10 violet (#c07ad4) and than the diamond violet (#e0a6ff), so those three
-// never read as the same thing. `--relic` in style.css is this same value; change both together.
-const RELIC_COL='#a06bff';
+// THE RELIC COLOUR. One gold for everything a relic touches -- its name, the R on its icon, the
+// glow on its sack, the banner, the set line, the floating text. Gold sits at the top of this
+// game's ladder and nothing else uses it at full brightness, so a relic reads as the best thing on
+// the ground at a glance. It is yellower than the T12 orange (#ff9c50) so the two never blur.
+// `--relic` in style.css is this same value; change both together.
+const RELIC_COL='#ffd24a';
 function tierCol(t){ return t>=12?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
 
 // ============================================================
@@ -552,7 +553,10 @@ function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
 // out-stat a Common T9, so the two axes fought each other and the tier ladder stopped meaning
 // anything. TIER is now the only power axis and the only progression axis.
 const RAR_NAMES=['','Uncommon','Rare','Epic','Legendary','Mythical'];
-const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#c07ad4','#ff9c50','#ff4d5e'];
+// Epic takes the vivid violet the relics used to wear (it was a muted #c07ad4), which gives the
+// rarity ladder a clean grey -> green -> blue -> VIOLET -> orange -> red run and leaves gold to
+// mean relic and nothing else.
+const RAR_COL=['#cfc8bd','#7dc47a','#7ab8d4','#a06bff','#ff9c50','#ff4d5e'];
 function scaleStats(s,m){ for(const k of STATS) s[k]*=m; return s; }
 const AFFIX_PREFIX={ atk:'Vicious', def:'Sturdy', hp:'Vital', mp:'Arcane',
  vit:'Hearty', wis:"Sage's", dex:'Nimble', spd:'Swift', luck:'Lucky', fort:'Prosperous' };

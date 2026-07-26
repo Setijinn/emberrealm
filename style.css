@@ -237,43 +237,43 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 /* light spilling out from behind the plate: spokes that turn slowly, faded to nothing at the rim
    so they never end in a hard circle */
 #dropRays{position:absolute;width:min(150vw,1500px);height:min(150vw,1500px);pointer-events:none;
- background:conic-gradient(from 0deg, rgba(160,107,255,.34) 0deg 6deg, rgba(0,0,0,0) 6deg 30deg);
+ background:conic-gradient(from 0deg, rgba(255,210,74,.34) 0deg 6deg, rgba(0,0,0,0) 6deg 30deg);
  -webkit-mask-image:radial-gradient(closest-side,#000 12%,rgba(0,0,0,.55) 42%,transparent 72%);
  mask-image:radial-gradient(closest-side,#000 12%,rgba(0,0,0,.55) 42%,transparent 72%);
  animation:dbSpin 24s linear infinite;}
 #dropBannerIn{position:relative;overflow:hidden;width:min(94vw,880px);
  padding:clamp(18px,3.2vw,32px) clamp(22px,4.4vw,54px);
  background:
-   radial-gradient(120% 90% at 50% 0%, rgba(160,107,255,.22), rgba(0,0,0,0) 60%),
+   radial-gradient(120% 90% at 50% 0%, rgba(255,210,74,.22), rgba(0,0,0,0) 60%),
    linear-gradient(180deg,rgba(32,17,48,.96),rgba(11,6,17,.97));
  border:3px solid var(--relic);border-radius:20px;
- box-shadow:0 0 0 2px #120c1a, 0 0 90px rgba(160,107,255,.7), inset 0 0 46px rgba(160,107,255,.20),
+ box-shadow:0 0 0 2px #1a1206, 0 0 90px rgba(255,210,74,.7), inset 0 0 46px rgba(255,210,74,.20),
    inset 0 0 0 1px rgba(200,165,255,.35);}
 /* ornate corner studs, the pixel-art way: rotated squares that catch the light */
 .dbCorner{position:absolute;width:11px;height:11px;background:var(--relic);transform:rotate(45deg);
- box-shadow:0 0 12px rgba(160,107,255,.95);animation:dbStud 1.6s ease-in-out infinite alternate;}
+ box-shadow:0 0 12px rgba(255,210,74,.95);animation:dbStud 1.6s ease-in-out infinite alternate;}
 .dbCorner.tl{left:10px;top:10px;} .dbCorner.tr{right:10px;top:10px;}
 .dbCorner.bl{left:10px;bottom:10px;} .dbCorner.br{right:10px;bottom:10px;}
 .dbCorner.tr{animation-delay:.2s;} .dbCorner.bl{animation-delay:.4s;} .dbCorner.br{animation-delay:.6s;}
 /* one bright sweep across the plate as it lands */
 .dbShine{position:absolute;top:0;bottom:0;width:38%;left:-45%;pointer-events:none;
- background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(228,212,255,.34) 50%,rgba(255,255,255,0) 100%);
+ background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,244,205,.34) 50%,rgba(255,255,255,0) 100%);
  animation:dbSweep 1.5s cubic-bezier(.22,.7,.3,1) .18s 1 forwards;}
 .dbRow{display:flex;align-items:center;justify-content:center;gap:clamp(14px,2.6vw,30px);}
 /* the relic itself, shown at the size it deserves. Opting out of the fullscreen canvas rule. */
 #dbIcon{position:relative;inset:auto;flex:0 0 auto;
  width:clamp(64px,9vw,104px);height:clamp(64px,9vw,104px);image-rendering:pixelated;
- filter:drop-shadow(0 0 18px rgba(160,107,255,.9));animation:dbBob 1.9s ease-in-out infinite alternate;}
+ filter:drop-shadow(0 0 18px rgba(255,210,74,.9));animation:dbBob 1.9s ease-in-out infinite alternate;}
 .dbText{text-align:left;min-width:0;}
 /* deliberately enormous — this fires a fraction of a percent of the time and should stop the room */
 .dbHd{font-family:'Pixelify Sans',monospace;font-size:clamp(30px,6.2vw,74px);line-height:1.02;
  letter-spacing:.08em;
- background:linear-gradient(180deg,#efe4ff 0%,var(--relic) 55%,#6f3fd0 100%);
+ background:linear-gradient(180deg,#fff6d8 0%,var(--relic) 55%,#b57a12 100%);
  -webkit-background-clip:text;background-clip:text;color:transparent;
- filter:drop-shadow(0 0 26px rgba(160,107,255,.95)) drop-shadow(0 4px 0 #1b0f2a);
+ filter:drop-shadow(0 0 26px rgba(255,210,74,.95)) drop-shadow(0 4px 0 #3a2408);
  animation:dbPulse .5s ease-in-out infinite alternate;}
-.dbName{font-family:'Pixelify Sans',monospace;font-size:clamp(19px,3vw,36px);color:#efe4ff;margin-top:10px;
- text-shadow:0 0 16px rgba(160,107,255,.6);}
+.dbName{font-family:'Pixelify Sans',monospace;font-size:clamp(19px,3vw,36px);color:#fff6d8;margin-top:10px;
+ text-shadow:0 0 16px rgba(255,210,74,.6);}
 .dbSub{font-size:clamp(11px,1.4vw,17px);color:var(--relic);margin-top:7px;letter-spacing:.08em;
  text-transform:uppercase;opacity:.9;}
 @keyframes dbSpin{to{transform:rotate(360deg);}}
@@ -290,8 +290,8 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
   84%{opacity:1;transform:scale(1);}
   100%{opacity:0;transform:scale(1.06) translateY(-18px);}
 }
-@keyframes dbPulse{from{text-shadow:0 0 18px rgba(160,107,255,.75),0 5px 0 #1b0f2a;}
-  to{text-shadow:0 0 42px rgba(200,165,255,1),0 5px 0 #1b0f2a;}}
+@keyframes dbPulse{from{text-shadow:0 0 18px rgba(255,210,74,.75),0 5px 0 #3a2408;}
+  to{text-shadow:0 0 42px rgba(255,235,160,1),0 5px 0 #3a2408;}}
 
 /* PC mode: gather the thumb-scattered HUD buttons into one tidy top-right row
    (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
@@ -576,8 +576,8 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    corner insets together; canvas-drawn UI reads the same factor as UIS in JS.
    touch: #hudTop = top-right row, #hudBot = bottom-right row.
    pcmode: #hudBot goes position:static and folds into #hudTop as ONE top-right row. */
-/* --relic must match RELIC_COL in 11_ui.js — one violet for every relic-facing thing */
-:root{--uis:1;--relic:#a06bff;}
+/* --relic must match RELIC_COL in 11_ui.js — one GOLD for every relic-facing thing */
+:root{--uis:1;--relic:#ffd24a;}
 #hudTop{position:fixed;top:calc(8px*var(--uis));right:calc(10px*var(--uis));z-index:15;
  display:flex;align-items:center;gap:calc(6px*var(--uis));pointer-events:none;}
 #hudBot{position:fixed;bottom:calc(14px*var(--uis));right:calc(12px*var(--uis));z-index:15;

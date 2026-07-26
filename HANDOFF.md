@@ -1,7 +1,7 @@
 # EmberRealm — session handoff
 
 Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v336`** (`sw.js`, bump every release).
+Current service-worker version: **`emberrealm-v339`** (`sw.js`, bump every release).
 
 **How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
 `ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
@@ -119,7 +119,8 @@ The band above the ladder exists, and forty-eight relics in twelve SETS live on 
 - Archetype spread is **5 caster / 4 agile / 3 tank** against 7 robe / 6 leather / 4 plate classes.
   Every set fits every class (pieces adapt to `wt`/`mt`); the STATS are what suit an archetype.
 - Forty-eight sprites at `assets/items/relic_<id>.png`. The icon stamps **R** where ordinary items
-  stamp their tier, and `RELIC_COL` / `--relic` (#a06bff) is the one violet for everything relic.
+  stamp their tier, and `RELIC_COL` / `--relic` (#ffd24a) is the one GOLD for everything relic — the vivid
+  violet it used to wear moved down to Epic in `RAR_COL`.
 - **INSANE DROP!** (`insaneDrop`) fires for the finder as it hits the ground, showing the piece,
   its set and your progress toward four.
 - `rpg.relics` is the record (duplicate rule + death-screen scoring); `migrateRelics()` carries old
