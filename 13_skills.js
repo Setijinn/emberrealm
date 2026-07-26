@@ -785,7 +785,8 @@ function ascendInfo(cls,rpg){ const t=treeOf(cls); if(!t||!rpg.ascension) return
   return t.ascend.find(a=>a.id===rpg.ascension)||null; }
 
 // ----- skill tree UI: a literal node-tree on canvas, nodes linked to prerequisites -----
-let _skNodeImg=(typeof window!=='undefined')?(()=>{const i=new Image();i.src='assets/ui/skill_node.png';return i;})():null;
+let _skNodeImg=(typeof window!=='undefined')?(()=>{const i=new Image();i.src='assets/ui/skill_node.png';
+  return (typeof _track==='function')?_track(i):i;})():null;
 function _skFrameReady(){ return _skNodeImg&&_skNodeImg.complete&&_skNodeImg.naturalWidth>0; }
 let _skLayout=null, _skSel=null, _skRaf=0;
 

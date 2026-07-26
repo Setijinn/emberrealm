@@ -14,6 +14,17 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- The curtain. Sits above everything until the art is decoded (10b_loading.js), so the realm is
+     never painted with half its sprites missing. Markup lives here rather than being built in JS
+     so it is on screen from the first paint, before a single script has run. -->
+<div id="bootScr">
+ <div id="bootInner">
+  <div id="bootTitle">EMBERREALM</div>
+  <div id="bootBarOuter"><i id="bootBar"></i></div>
+  <div id="bootRow"><span id="bootLbl">waking the realm</span><b id="bootPct">0%</b></div>
+  <div id="bootTip"></div>
+ </div>
+</div>
 <div id="rotate"><div class="ic">📱</div><div style="font-size:20px;">Turn your phone sideways</div>
 <div style="font-size:13px;color:#8a8494;">Emberrealm is played in landscape</div></div>
 <canvas id="cv"></canvas>
@@ -318,6 +329,8 @@
 <script src="17c_bounty.js"></script>
 <script src="17d_cosmetics.js"></script>
 <script src="17e_relics.js"></script>
+<!-- last: it waits on every image the scripts above registered while they loaded -->
+<script src="10b_loading.js"></script>
 <script src="12_devpanel.js"></script>
 
 </body>

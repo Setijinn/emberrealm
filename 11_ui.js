@@ -1735,6 +1735,9 @@ async function doLogin(){
 }
 function loginErr(t){$s('loginErr').textContent=t;}
 function openMenu(){
+ // a build that landed mid-run was held back rather than reloading you (boot.js); the menu is the
+ // safe moment to take it
+ if(typeof emberReloadIfPending==='function' && emberReloadIfPending()) return;
  $s('menuWho').textContent=curUser;
  const u=users[curUser];
  const ch=curChar();

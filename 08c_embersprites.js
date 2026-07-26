@@ -17,21 +17,30 @@
 // On-screen scale for the 92px PixelLab sprites (tune to match world scale).
 const EMBER_SC = 0.85;
 
+// ---- THE PRELOAD REGISTRY ----
+// Every image the game creates while the page is booting gets pushed here, and the loading screen
+// (10b_loading.js) waits on exactly this list. Registering at CREATION rather than walking the
+// asset objects afterwards is the point: a new sprite table added later is covered automatically,
+// with no list to forget to update. Images created LAZILY during play (ability art, relic art)
+// land here too, harmlessly -- the loader snapshots the list once and never looks again.
+const ASSET_IMGS = [];
+function _track(i){ if(i && typeof window!=='undefined') ASSET_IMGS.push(i); return i; }
+
 // HUD orb frame (PixelLab) â€” ornate hollow ring for the HP/MP globes.
-const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return i; })() : null;
+const _uiOrb = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/orb.png'; return _track(i); })() : null;
 // Reusable interact-button plate (PixelLab) â€” used by the portal/pillar USE prompt.
-const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/btn_interact.png'; return i; })() : null;
+const _btnInteract = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/btn_interact.png'; return _track(i); })() : null;
 // Loot sacks (PixelLab), one per TIER BAND — never rarity, and never a chest: progression reads
 // through material and ornament while the silhouette stays a sack. LOOT_BANDS names these by
 // string, so adding the band above T12 later is one row plus one file.
 //   _lootSack     public   T1-T8   plain burlap
 //   _lootSackT9   bound    T9-T10  richer cloth, banded trim
 //   _lootSackT11  bound    T11-T12 embroidered, clasped, ember at the seams
-const _lootSack    = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';     return i; })() : null;
-const _lootSackT9  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t9.png';  return i; })() : null;
-const _lootSackT11 = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t11.png'; return i; })() : null;
+const _lootSack    = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack.png';     return _track(i); })() : null;
+const _lootSackT9  = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t9.png';  return _track(i); })() : null;
+const _lootSackT11 = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_t11.png'; return _track(i); })() : null;
 //   _lootSackRelic bound    T13     violet and gold, gems in the seams, light coming out of it
-const _lootSackRelic = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_relic.png'; return i; })() : null;
+const _lootSackRelic = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/loot_sack_relic.png'; return _track(i); })() : null;
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',
@@ -142,7 +151,7 @@ function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
   return (im&&im.complete&&im.naturalWidth)?im:null; }
 
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
-function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
+function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return _track(i); }
 // PixelLab projectile art â€” 24 base shapes; the forge hue-shifts each into many variants
 let _miniPlus=null, _miniMinus=null;      // minimap zoom button art
 const _projArt={_list:['arrow','fireball','ice_shard','lightning','magic_orb','skull','note','leaf',
@@ -309,7 +318,7 @@ function _emberImgAt(cls, anim, dir, n){
   img.onload = ()=>{ if(--_emberPending===0) _emberBuild(); };
   img.onerror = ()=>{ if(--_emberPending===0) _emberBuild(); };
   img.src = path;
-  _emberImg[path] = img;
+  _emberImg[path] = _track(img);
   return img;
 }
 
