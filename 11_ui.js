@@ -368,7 +368,10 @@ const ZONE_TIERS=[
  /* 4  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0},
  /* 5  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015},
  /* 6  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030},
- /* 7  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,55],[10,40],[11,5]],   sbP:0.0045},
+ // Cinderwatch is the calibration point: a Lv45 hero should be able to stand in a full T12 set.
+ // At a 5% T12 weight that took a 118-boss median to complete — the right shape but one notch too
+ // slow, so T12 is worth a quarter of this zone's bound drops. The grind ring still leads it.
+ /* 7  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045},
  /* 8  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
  /* 9  Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
  /* 10 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
