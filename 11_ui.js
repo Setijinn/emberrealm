@@ -557,6 +557,44 @@ function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
+// ------------------------------------------------------------
+// NEUTRAL GLORY VALUE (user, 2026-07-26)
+// Every item has one honest number attached to it, and a listing may be set anywhere from 50%
+// below to 50% above. That band is what makes an auction possible on a peer-to-peer game: a
+// price can be haggled but it can never be absurd, so nobody can launder glory through a
+// 1-glory sale to a friend or hold a T12 hostage at a million.
+// The curve is deliberately much gentler than the old gold one (30 x 1.9^t put a T12 at ~48,000,
+// which is twelve strong runs). Here a T12 sits near a quarter of a single good run, so trading
+// is a way to fill a slot you are unlucky on, not a replacement for playing.
+const GLORY_KIND={wpn:1.0, arm:1.0, helm:0.78, ring:0.82};
+const GLORY_SPREAD=0.5;                       // a listing may sit +/- 50% of neutral
+function itemGlory(it){
+  if(!it) return 0;
+  if(it.k==='pot')    return 6;
+  if(it.k==='scroll') return 45;
+  // LOOT BOOSTERS ARE THE MOST VALUABLE THINGS IN THE GAME (user, 2026-07-26). A Fortune Coin
+  // raises every future drop for as long as it is carried, so it compounds in a way no single
+  // piece of gear can — a gear item is one slot, a coin is every slot forever. Priced far above
+  // the ladder on purpose, and scaled by the 20:1 merge ratio so the tiers stay consistent with
+  // each other. A Gold coin is a trophy worth tens of runs, not something you shop for.
+  if(it.k==='coin')   return [300,6000,120000][it.t||0]||300;
+  if(it.k==='leg')    return 2600;            // a relic is priced, even if it rarely changes hands
+  const t=(it.t|0)+1;
+  const base=12*Math.pow(t,1.85);             // T1 ~12, T6 ~330, T9 ~700, T12 ~1170
+  const km=GLORY_KIND[it.k]||1;
+  // a Prosperous roll is loot boost on a gear slot, so it carries the same premium the coins do:
+  // it keeps paying out on every drop you ever make while the piece is worn
+  let fm=1; if(it.aff) for(const a of it.aff) if(a.s==='fort') fm+=0.85;
+  // rarity is not power any more, but more rolled stats is still more item
+  return Math.max(2,Math.round(base*km*fm*(1+(it.rar||0)*0.18)));
+}
+function gloryPriceRange(it){ const b=itemGlory(it);
+  return {base:b, min:Math.max(1,Math.round(b*(1-GLORY_SPREAD))), max:Math.round(b*(1+GLORY_SPREAD))}; }
+// what a listing is allowed to ask. Anything outside the band is pulled back to its edge rather
+// than rejected, so a bad number never blocks a sale -- it just cannot be an exploit.
+function clampGloryPrice(it,p){ const r=gloryPriceRange(it);
+  const n=Math.round(p===undefined||p===null||isNaN(p)?r.base:p);
+  return Math.max(r.min,Math.min(r.max,n)); }
 function itemValue(it){ if(it.k==='coin') return [30,600,12000][it.t||0];
  if(it.k==='scroll') return 40;
  // worth follows tier, plus a modest premium per rolled affix — rarity is no longer raw power,
@@ -766,8 +804,10 @@ function rollRelic(e,who){
 function rollLoot(e){
  const row=zoneTierRow(e.x,e.y);
  const F=(typeof player!=='undefined'&&player.fortune)||0;
- // rare Fortune Coin (bronze) — its own roll, can drop alongside gear
- if(Math.random() < (e.type==='B'?0.85:0.04)) loots.push(bagAt(e,{k:'coin'}));
+ // Fortune Coin (bronze) — its own roll, can drop alongside gear. Rare on purpose: a coin boosts
+ // EVERY future drop for as long as you carry it, so it compounds where gear does not. At the old
+ // 4%/85% they were routine, which quietly made Fortune the cheapest stat in the game.
+ if(Math.random() < (e.type==='B'?0.10:0.006)) loots.push(bagAt(e,{k:'coin'}));
  if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) loots.push(bagAt(e,sc)); }  // max-stat scrolls
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
  if(e.type==='B' && typeof spawnEggDrop==='function') spawnEggDrop(e);   // loose EGG, not a bag

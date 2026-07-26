@@ -13,9 +13,15 @@
 // STATS / STAT_META / CLASSES / classBaseStats / levelStats / newStats live in 11_ui.js.
 // ===================================================================================
 
-// Each stat has its OWN targeted scroll (user: "increase a specific stat").
+// Each stat has its OWN targeted scroll (user: "increase a specific stat") — EXCEPT Fortune.
+// Loot boost is meant to be rare and expensive (Fortune Coins, Prosperous rolls), and a scroll
+// that permanently raised it undercut all of that: +2 per scroll to a cap of +20, free, forever,
+// on a stat that compounds into every future drop. Fortune is now earned by carrying something
+// valuable, never by banking a consumable. (user, 2026-07-26)
 const SCROLL_TITLE={ atk:'Might', def:'Warding', hp:'Vigor', mp:'the Font', vit:'Vitality',
-  wis:'Insight', dex:'Precision', spd:'Swiftness', luck:'Luck', fort:'Plunder' };
+  wis:'Insight', dex:'Precision', spd:'Swiftness', luck:'Luck' };
+// the stats a scroll may ever target — the single source of truth for the drop roll and the UI
+const SCROLL_STATS=STATS.filter(s=>s!=='fort');
 function scrollName(st){ return 'Scroll of '+(SCROLL_TITLE[st]||st); }
 
 // Permanent bonus GRANTED per scroll invested (same for every class — class identity
@@ -25,7 +31,9 @@ const TRAIN_STEP={ atk:5, def:3, hp:34, mp:9, vit:3, wis:5, dex:2, spd:2, luck:2
 // Baseline scroll CAP at affinity 1.0, and the flat caps for the two utility stats
 // (SPD would break movement / FORTUNE is loot — kept class-independent + modest).
 const TRAIN_BASE=12;
-const FLAT_CAP={ spd:8, fort:10 };
+// fort:0 — Fortune cannot be trained at all, so the row shows as maxed at zero and no scroll,
+// "invest all", or prestige reset can ever put a point into it
+const FLAT_CAP={ spd:8, fort:0 };
 const PRESTIGE_CAP_MUL=0.6;   // each prestige tier: +60% cap room
 
 // ---- class affinity: derive each class's per-stat cap from its OWN natural Lv50 stat
@@ -82,6 +90,7 @@ function applyScroll(rpg,st,n){ const ch=curChar(); if(!ch||!rpg) return 0; init
   return applied; }
 
 function grantScroll(rpg,st,n){ if(!rpg) return; initTrain(rpg);
+  if(st==='fort') return;      // Fortune is never scroll-trainable — see SCROLL_TITLE
   rpg.scrolls[st]=(rpg.scrolls[st]||0)+(n||1); if(typeof updateStatsBtn==='function') updateStatsBtn(); }
 
 function scrollsBanked(rpg){ if(!rpg||!rpg.scrolls) return 0; let n=0; for(const s of STATS) n+=(rpg.scrolls[s]||0); return n; }
@@ -89,9 +98,9 @@ function scrollsBanked(rpg){ if(!rpg||!rpg.scrolls) return 0; let n=0; for(const
 // pick which stat a dropped scroll feeds — favour stats this hero hasn't maxed yet so the
 // grind converges, but stay random enough to feel like a hunt.
 function rollScrollStat(){ const ch=curChar();
-  if(!ch||!rpg) return STATS[(Math.random()*STATS.length)|0];
-  const open=STATS.filter(s=>!statMaxed(ch.cls,rpg,s));
-  const pool=open.length?open:STATS;
+  if(!ch||!rpg) return SCROLL_STATS[(Math.random()*SCROLL_STATS.length)|0];
+  const open=SCROLL_STATS.filter(s=>!statMaxed(ch.cls,rpg,s));
+  const pool=open.length?open:SCROLL_STATS;
   return pool[(Math.random()*pool.length)|0]; }
 
 // drop hook, called from rollLoot(e): returns a scroll item or null. The max-stat grind is
