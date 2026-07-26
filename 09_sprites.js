@@ -1507,7 +1507,7 @@ function render(){
     ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l1,W/2+1,syT+1);
     ctx.fillStyle='#ffd07a'; ctx.fillText(l1,W/2,syT);
     ctx.font=Math.round(11*UIS)+'px "Pixelify Sans",monospace';
-    const l2=rpg.gold+'g   ·   '+(player.kills||0)+' kills';
+    const l2=(typeof accountGlory==='function'?accountGlory():0)+'✦   ·   '+(player.kills||0)+' kills';
     ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l2,W/2+1,syB+1);
     ctx.fillStyle='#d8cfb8'; ctx.fillText(l2,W/2,syB);
     ctx.textAlign='left'; }

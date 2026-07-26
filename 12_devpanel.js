@@ -45,7 +45,7 @@ function devMax(){ if(!rpg){loadRPG();} if(!rpg){return;}
  rpg.eqAff=rpg.eqAff||{};
  rpg.eqAff.wpn=devAff(MAXT-1,5); rpg.eqAff.arm=devAff(MAXT-1,5);
  rpg.eqAff.helm=devAff(MAXT-1,5); rpg.eqAff.ring=devAff(MAXT-1,5);
- rpg.gold=(rpg.gold||0)+1000000; rpg.pots=99;
+ rpg.pots=99;
  if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
  rpg.perkPts=(rpg.perkPts||0)+75;
  recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
@@ -91,7 +91,8 @@ $s('dMax').onclick=()=>{devMax();};
 $s('dLvl').onclick=()=>{ if(!rpg)return; rpg.lvl=Math.min(LV_CAP,rpg.lvl+10); rpg.xp=0;
  if(typeof grantPerkPoints==='function')grantPerkPoints(rpg);
  recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp; saveRPG(); hudRPG(); devToast('Lv '+rpg.lvl); };
-$s('dGold').onclick=()=>{ if(!rpg)return; rpg.gold+=100000; saveRPG(); hudRPG(); devToast('+100k gold'); };
+$s('dGold').onclick=()=>{ const u=users[curUser]; if(!u)return; u.glory=(u.glory||0)+100000;
+   LS.set('er-users',users); hudRPG(); devToast('+100k glory'); };
 $s('dPots').onclick=()=>{ if(!rpg)return; rpg.pots=Math.min(99,(rpg.pots||0)+25); saveRPG(); hudRPG(); devToast('+25 potions'); };
 $s('dPerk').onclick=()=>{ if(!rpg)return; rpg.perkPts=(rpg.perkPts||0)+20; saveRPG(); devToast('+20 perk pts'); };
 $s('dRefill').onclick=()=>{ if(!player)return; player.hp=player.maxhp; player.mp=player.maxmp; devToast('HP/MP refilled'); };

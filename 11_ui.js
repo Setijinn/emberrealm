@@ -1173,7 +1173,7 @@ $s('invEquip').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  msg(nm,'equipped'); });
 $s('invSell').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it) return;
- rpg.gold+=itemValue(it); ch.inv.splice(invSelIdx,1); invSelIdx=-1;
+ ch.inv.splice(invSelIdx,1); invSelIdx=-1;
  saveRPG(); hudRPG(); paintInv(); });
 $s('invDrop').addEventListener('click',()=>{ const ch=curChar(); if(!ch)return;
  const it=ch.inv[invSelIdx]; if(!it) return;
@@ -1286,7 +1286,7 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
 function saveRPG(){ if(curUser&&users[curUser]&&rpg){ LS.set('er-users',users); } }
 function hudRPG(){ if(!rpg)return;
  $s('lvlTxt').textContent='Lv '+rpg.lvl;
- $s('goldTxt').textContent=rpg.gold+'g';
+ $s('goldTxt').textContent=(typeof accountGlory==='function'?accountGlory():0)+'\u2726';
  $s('potBtn').textContent='🧪 '+rpg.pots; }
 // ===== PERMADEATH =====
 // Up to Lv20 the hearth calls you home on death. From Lv20 the run is your life: dying
@@ -1352,9 +1352,20 @@ function gloryRows(s,lvl){
   return r;
 }
 function accountGlory(){ const u=users[curUser]; return (u&&u.glory)||0; }
+// Spend from the ACCOUNT. Glory is earned only by dying, so this is the one purse in the game
+// that outlives a character — and the only way it ever goes down.
+function spendGlory(n){ const u=users[curUser];
+  if(!u||n<=0||(u.glory||0)<n) return false;
+  u.glory-=n; LS.set('er-users',users); if(typeof hudRPG==='function') hudRPG(); return true; }
 function bankGlory(n){ const u=users[curUser]; if(!u||n<=0) return 0;
   u.glory=(u.glory||0)+n; LS.set('er-users',users); return u.glory; }
-function isHardcore(r){ return !!(r&&(r.lvl||1)>=HC_LEVEL); }
+// PERMADEATH IS THE BRIDGE, NOT A LEVEL (user, 2026-07-26). It used to trigger at HC_LEVEL, which
+// meant a hero could become permanent while still standing on the safe starter island. Crossing
+// onto the main island is the commitment now: geography you chose to cross, not a number that
+// happened to you. `hc` is stamped on the character the first time they cross, so a hero who has
+// been out there stays permanent even if they retreat to the starter side afterwards.
+function isHardcore(r){ return !!(r&&r.hc); }
+function markHardcore(){ if(rpg&&!rpg.hc){ rpg.hc=1; saveRPG(); } }
 function isDead(ch){ return !!(ch&&ch.dead); }
 // The permadeath notice now fires ONCE, when you first CROSS THE BRIDGE onto the main island
 // — the point of no return. No teleport (you're crossing on purpose); just the modal + a grace
@@ -1363,14 +1374,14 @@ function isDead(ch){ return !!(ch&&ch.dead); }
 function hcCheck(){ const ch=curChar(); if(!ch||!rpg||!inGame) return false;
  if(rpg.hcSeen) return false;
  if(typeof onMainIsland!=='function' || !onMainIsland(player.x,player.y)) return false;
- rpg.hcSeen=1; saveRPG();
+ rpg.hcSeen=1; markHardcore();       // the crossing itself is what makes this hero permanent
  player.inv=Math.max(player.inv||0,2.5);
  for(const id of ['invScr','skillScr','mapScr','loadScr','shopScr','coopScr'])
    if($s(id)) $s(id).style.display='none';
  $s('hcScr').style.display='flex';
  navigator.vibrate&&navigator.vibrate([40,60,40]);
  return true; }
-function gainXP(x,g){ if(!rpg)return; rpg.xp+=x; rpg.gold+=g;
+function gainXP(x,g){ if(!rpg)return; rpg.xp+=x;   // g is ignored: kills pay xp, never currency
  while(rpg.lvl<LV_CAP && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;
@@ -1424,7 +1435,7 @@ function openFallen(){ const u=users[curUser]; if(!u) return; migrate(u);
    +'<canvas class="cicCv" width="64" height="64"></canvas>'
    +'<div class="cn">'+ch.name+'</div>'
    +'<div class="cd">'+c.n+' · fell at Lv '+ch.dead.lvl+'<br>'+ch.dead.zone+'</div>'
-   +'<div class="cs">'+ch.dead.kills+' kills · '+ch.dead.gold+'g</div>'
+   +'<div class="cs">'+ch.dead.kills+' kills · '+(ch.dead.glory||0)+'✦</div>'
    +'<div class="mnote" style="margin-top:4px;">'+when.toLocaleDateString()+'</div>'
    +'<div class="cdel">✕</div>';
   paintClassIcon(d.querySelector('.cicCv'), ch.cls);
@@ -1439,6 +1450,18 @@ function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
  texts.push({x:player.x,y:player.y-22,txt:'+'+heal,col:'#7dc47a',life:1}); }
 
 
+// POTIONS REFILL THEMSELVES (user, 2026-07-26). They were bought with gold, and gold is gone --
+// glory is earned only by dying, so it must never be the thing standing between you and a heal.
+// A slow trickle back to a small cap: enough that you are never stranded, never so much that
+// stacking them replaces playing carefully. Drops still top you up faster than the trickle does.
+const POT_CAP=5, POT_REFILL=48;    // one potion every 48s, up to five held
+function tickPotions(dt){
+  if(!rpg||!inGame) return;
+  if((rpg.pots||0)>=POT_CAP){ rpg._potT=0; return; }
+  rpg._potT=(rpg._potT||0)+dt;
+  if(rpg._potT>=POT_REFILL){ rpg._potT-=POT_REFILL; rpg.pots=(rpg.pots||0)+1;
+    if(typeof hudRPG==='function') hudRPG(); saveRPG(); }
+}
 $s('potBtn').addEventListener('click',usePotion);
 function legendRows(slot,out){ for(const L of LEGENDS){ if(L.slot!==slot) continue;
  const owned=rpg.legends&&rpg.legends.indexOf(L.id)>=0;
@@ -1485,11 +1508,11 @@ function openShop2(id){ const n=SHOPNPCS.filter(function(x){return x.id===id;})[
  $s('shopScr').style.display='flex'; paintShop2(n.id); }
 function paintShop2(id){ if(!rpg) return;
  const np=SHOPNPCS.filter(x=>x.id===id)[0];
- $s('shopGold').innerHTML='<span class="purse">🪙 '+rpg.gold+' gold</span>';
+ $s('shopGold').innerHTML='<span class="purse">✦ '+accountGlory()+' glory</span>';
  const box=$s('shopRows'); box.innerHTML='';
  for(const it of shopRowsFor(id)){
   if(it.note){ const d=document.createElement('div'); d.className='shopnote'; d.textContent=it.note; box.appendChild(d); continue; }
-  const afford=!(it.c>0&&rpg.gold<it.c);
+  const afford=!(it.c>0&&accountGlory()<it.c);
   const card=document.createElement('div'); card.className='shopcard'+(afford?'':' broke')+(it.legend?' legend':'');
   const ico=document.createElement('div'); ico.className='shopico';
   if(it.ic||it.pet){ const cv=document.createElement('canvas'); cv.width=42; cv.height=36; cv.className='isprite';
@@ -1506,8 +1529,7 @@ function paintShop2(id){ if(!rpg) return;
   const pr=document.createElement('div'); pr.className='shopprice'+(it.c>0?'':' free');
   pr.textContent = it.c>0 ? it.c+'g' : (it.c===0?'✓':'');
   card.appendChild(pr);
-  card.onclick=function(){ if(it.c>0&&rpg.gold<it.c){ navigator.vibrate&&navigator.vibrate(20); return; }
-   if(it.c>0) rpg.gold-=it.c;
+  card.onclick=function(){ if(it.c>0&&!spendGlory(it.c)){ navigator.vibrate&&navigator.vibrate(20); return; }
    if(it.f) it.f(); recalcStats(); saveRPG(); hudRPG(); paintShop2(id);
    navigator.vibrate&&navigator.vibrate(15); };
   box.appendChild(card); }
@@ -1571,10 +1593,10 @@ function openMenu(){
  const ch=curChar();
  const cc=ch?CLASSES[Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls))]:null;
  $s('menuChar').textContent= ch&&cc ? cc.ic+' '+ch.name+' the '+cc.n : 'No character yet';
- const ur=(ch&&ch.rpg)||{lvl:1,gold:0};
+ const ur=(ch&&ch.rpg)||{lvl:1};
  $s('menuBest').textContent=isDead(ch)
    ? '💀 fell at Lv '+ch.dead.lvl+' in '+ch.dead.zone+' — choose another hero'
-   : ('Lv '+ur.lvl+' · '+ur.gold+'g · best '+(u.best||0)+' kills'
+   : ('Lv '+ur.lvl+' · best '+(u.best||0)+' kills'
       +(isHardcore(ur)?'  ·  ☠ PERMADEATH':''));
  // Hall of the Fallen appears once you have actually lost someone
  const anyDead=(u.chars||[]).some(isDead);
@@ -1590,7 +1612,7 @@ function openMenu(){
 function resumeRun(){ if(!runLive||curChar()!==runChar){ play(); return; }
  hideAll(); showGameHud(); inGame=true; hudRPG(); }
 function migrate(u){ if(!u.chars){ u.chars=[]; u.cur=0;
-  if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||{lvl:1,xp:0,gold:0,wpn:0,pots:1}}); }
+  if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||{lvl:1,xp:0,wpn:0,pots:1}}); }
   delete u.char; delete u.rpg; LS.set('er-users',users); }
  if(u.cur===undefined||u.cur>=u.chars.length) u.cur=0; }
 function curChar(){ const u=users[curUser]; if(!u) return null; migrate(u); return u.chars[u.cur]||null; }
@@ -1604,8 +1626,8 @@ function openChar(){
   d.innerHTML=(gone?'<div class="cskull">💀</div>':'')
    +'<canvas class="cicCv" width="64" height="64"></canvas><div class="cn">'+ch.name+'</div>'
    +'<div class="cd">'+c.n+' · '+(gone?('fell at Lv '+ch.dead.lvl+'<br>'+ch.dead.zone):('Lv '+ch.rpg.lvl))+'</div>'
-   +'<div class="cs">'+(gone?(ch.dead.kills+' kills · '+ch.dead.gold+'g')
-        :(ch.rpg.gold+'g · T'+((ch.rpg.wpn||0)+1)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n))+'</div>'
+   +'<div class="cs">'+(gone?(ch.dead.kills+' kills · '+(ch.dead.glory||0)+'✦')
+        :('T'+((ch.rpg.wpn||0)+1)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n))+'</div>'
    +'<div class="cdel">✕</div>';
   paintClassIcon(d.querySelector('.cicCv'), ch.cls);
   d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')){
@@ -1633,7 +1655,7 @@ function openClassPick(){
   paintClassIcon(d.querySelector('.cicCv'), c.id);
   d.onclick=()=>{ const nm=($s('charName').value.trim()||('Hero'+Math.floor(Math.random()*900+100))).slice(0,14);
    const u=users[curUser];
-   u.chars.push({name:nm, cls:c.id, rpg:{lvl:1,xp:0,gold:0,wpn:0,pots:1}});
+   u.chars.push({name:nm, cls:c.id, rpg:{lvl:1,xp:0,wpn:0,pots:1}});
    u.cur=u.chars.length-1; LS.set('er-users',users); $s('charName').value=''; openMenu(); };
   box.appendChild(d); });
  show('classScr');
