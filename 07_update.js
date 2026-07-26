@@ -330,6 +330,10 @@ function update(dt){
   if(player.mp<player.maxmp) player.mp=Math.min(player.maxmp,player.mp+(player.mpregen||2)*dt); // WIS -> mana
   // ascension auras + shield upkeep
   if(player._bnCd>0) player._bnCd-=dt;
+  if(player.thornT>0){ player.thornT-=dt;                                  // ult reflect window
+    if(typeof emitP==='function'&&Math.random()<5*dt){ const a=Math.random()*6.283;
+      emitP(player.x+Math.cos(a)*22,player.y+Math.sin(a)*18,
+        {vx:Math.cos(a)*40,vy:Math.sin(a)*40,life:0.5,col:'#c9d2da',sz:2.5,glow:true}); } }
   if((player.shield||0)>0) player.shield=Math.max(0,player.shield-player.maxhp*0.02*dt);
   if(player.auraHeal){ player.hp=Math.min(player.maxhp,player.hp+player.auraHeal*dt);
     if(typeof emitP==='function'&&Math.random()<3*dt)
@@ -370,7 +374,8 @@ function update(dt){
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
       if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e)*(1-(player.dr||0)));
         player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
-        if(player.thorns>0){ const rf=Math.round(hit*player.thorns*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
+        const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
+        if(_th>0){ const rf=Math.round(hit*_th*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
     }
     if(e.type==='s'){
       const ai=enemyAI(e,dx,dy,dd,dt);
@@ -453,12 +458,18 @@ function update(dt){
   // player shots
   for(let i=pShots.length-1;i>=0;i--){ const s=pShots[i];
     s.px=s.x; s.py=s.y;
-    // Falconer capstone: shots seek out foes (gentle steering)
-    if(player.homing&&!s.forked){ let bn=null,bd2=1e9;
+    // Falconer capstone: shots seek out foes (gentle steering).
+    // Tested on !nohome, NOT on !forked: 'forked' marks shots that must not fork or chain AGAIN
+    // (that would recurse), and ult/perk volleys set it for exactly that reason. Steering cannot
+    // recurse, so excluding them there silently cost Falcon Barrage the one thing its name claims.
+    if(player.homing&&!s.nohome){ let bn=null,bd2=1e9;
       for(const e of enemies){ const d2=Math.hypot(e.x-s.x,e.y-s.y); if(d2<420&&d2<bd2){bd2=d2;bn=e;} }
       if(bn){ const want=Math.atan2(bn.y-s.y,bn.x-s.x), cur=Math.atan2(s.vy,s.vx);
         let diff=want-cur; while(diff>Math.PI)diff-=6.283; while(diff<-Math.PI)diff+=6.283;
-        const na=cur+Math.max(-3.2*dt,Math.min(3.2*dt,diff)), sp2=Math.hypot(s.vx,s.vy);
+        // 5.5 rad/s, not 3.2: a shot launched away from the target could not complete the turn
+        // inside its own lifetime, so "shots seek out foes" only ever nudged the ones already
+        // pointed roughly right. A falcon wheels — this is the rate that lets it come back.
+        const na=cur+Math.max(-5.5*dt,Math.min(5.5*dt,diff)), sp2=Math.hypot(s.vx,s.vy);
         s.vx=Math.cos(na)*sp2; s.vy=Math.sin(na)*sp2; } }
     s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
     s.age=(s.age||0)+dt;                       // drives the tumble on spinning projectiles
@@ -730,6 +741,7 @@ function update(dt){
       if(d>50){ al.x+=(player.x-al.x)/d*150*dt; al.y+=(player.y-al.y)/d*150*dt; } }
   }
   for(let i=zones.length-1;i>=0;i--){ const z=zones[i]; z.life-=dt; z.tick-=dt;
+    if(z.follow){ z.x=player.x; z.y=player.y; }        // a corona is worn, not stood in
     if(z.tick<=0){ z.tick=0.5;
       if(z.healOnly){ if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) healPlayer(9*(z.ap||1)); }
       else {
@@ -760,7 +772,7 @@ function update(dt){
     if(_perma){ permaDeath(); return; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
-    res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0;
+    res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0;
     const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE); spawnPet(); }
   document.getElementById('hpTxt').textContent='HP '+Math.ceil(player.hp);
 }

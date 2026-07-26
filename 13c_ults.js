@@ -39,10 +39,22 @@ const U={
     if(typeof abilFx==='function') abilFx('nova',player.x,player.y,col);
     if(typeof emitP==='function') for(let i=0;i<34;i++){ const a=(i/34)*6.283;
       emitP(player.x,player.y,{vx:Math.cos(a)*260,vy:Math.sin(a)*260,life:0.7,col:col,sz:3.5,glow:true}); } },
-  // lingering ground that ticks for a while
-  rain:(r,col,dur,fire,poison)=>(c)=>{ zones.push({x:player.x,y:player.y,r:r,life:dur||ULT_T.rainDur,tick:0,
-      ap:c.AP,dmg:Math.max(1,Math.round(c.dmg*ULT_T.rainDps*c.AP)),col:col,fire:!!fire,poison:!!poison});
+  // lingering ground that ticks for a while. follow=true pins it to the player, which is the
+  // difference between standing in a fire and BEING on fire — the forms whose capstone is
+  // burning armour must not be able to walk out of their own ultimate.
+  rain:(r,col,dur,fire,poison,follow)=>(c)=>{ zones.push({x:player.x,y:player.y,r:r,life:dur||ULT_T.rainDur,tick:0,
+      ap:c.AP,dmg:Math.max(1,Math.round(c.dmg*ULT_T.rainDps*c.AP)),col:col,fire:!!fire,poison:!!poison,follow:!!follow});
     fx.push({t:'ring',x:player.x,y:player.y,r:r,life:0.5,col:col}); },
+  // consecrated ground: the healOnly zone the High Priest capstone already uses (18 hp/s * AP)
+  hallow:(r,dur,col,follow)=>(c)=>{ zones.push({x:player.x,y:player.y,r:r,life:dur||6,tick:0,
+      ap:c.AP,healOnly:true,col:col||'#8fd48c',follow:!!follow});
+    fx.push({t:'ring',x:player.x,y:player.y,r:r,life:0.5,col:col||'#8fd48c'}); },
+  // return blows for a while — the ult form of the thorns capstone. add is on TOP of player.thorns
+  reflect:(add,dur)=>(c)=>{ player.thornB=add||1.2; player.thornT=Math.max(player.thornT||0,dur||6);
+    if(typeof abilFx==='function') abilFx('buff',player.x,player.y,'#c9d2da'); },
+  // charge the next N normal shots to triple damage and full pierce (06_combat.js reads deadeye)
+  deadeye:(n)=>(c)=>{ player.deadeye=Math.max(player.deadeye||0,n||6);
+    if(typeof abilFx==='function') abilFx('buff',player.x,player.y,'#e8b34b'); },
   // a spray of independent projectiles (never player.shots — design rule 6).
   // volleyScale: a radial spray only intersects a given target with ~2 of its N shots, so
   // per-projectile damage must be far higher than a nova's to be worth the same press.
@@ -88,15 +100,23 @@ function _ult(id,name,icon,desc,cast,cd){ return {id:id,name:name,icon:icon,desc
 // ---- the 51. Each is keyed by ascension id and echoes that form's capstone. ----
 const ULTS={
  // KNIGHT — Templar heals through an aura, Warlord cleaves, Sentinel holds the line
- templar:_ult('templar','Sanctuary','⛪','Hallowed ground: a great ward, 60% healed, and the wicked burned back',
-   U.combo(U.ward(0.55,2.5),U.heal(0.6),U.rain(150,'#ffe9b0',7),U.nova(4.5,170,'#ffe9b0')),65),
+ // Templar's capstone is a HEALING aura, so its ground heals; a damage puddle here was
+ // Inquisitor's ultimate wearing a Templar name
+ templar:_ult('templar','Sanctuary','⛪','Hallowed ground: a great ward, 8s of healing earth, and the wicked burned back',
+   U.combo(U.ward(0.55,2.5),U.heal(0.45),U.hallow(155,8,'#ffe9b0'),U.nova(4.5,170,'#ffe9b0')),65),
  warlord:_ult('warlord','Warcry of Ruin','📣','You roar — doubled damage for 8s and every foe cowed',
    U.combo(U.empower('bDmg',2.0,8,'#c0392b'),U.brand(240,'weak',6,0,'#c0392b'),U.nova(3.5,190,'#c0392b')),60),
- sentinel:_ult('sentinel','Hold the Line','🛡️','Immovable: 5s untouchable, a half-health ward, all blows returned',
-   U.combo(U.ward(0.6,ULT_T.invuln),U.empower('bDmg',1.5,8,'#5a7a9c'),U.nova(3.0,150,'#5a7a9c',{id:'stun',dur:1})),60),
+ // "all blows returned" is the thorns capstone — it needed to actually reflect, not hand the
+ // most defensive ascension in the game a damage buff
+ sentinel:_ult('sentinel','Hold the Line','🛡️','Immovable: 5s untouchable, a half-health ward, and 8s of every blow returned',
+   U.combo(U.ward(0.6,ULT_T.invuln),U.reflect(1.4,8),U.nova(3.0,150,'#5a7a9c',{id:'stun',dur:1})),60),
  // RANGER — Sharpshooter pierces, Windranger dashes, Tempest forks
- sharpshooter:_ult('sharpshooter','Perfect Shot','🎯','One breath, one volley — 18 piercing arrows that cross everything',
-   U.combo(U.volley(18,1.05,'#e8b34b',1.6,99),U.empower('bDmg',1.6,6,'#e8b34b')),55),
+ // Was an 18-way radial spray: mechanically Arrow Storm with a precision name, and U.volley
+ // sets crit:false, so the crit ascension's ultimate could not crit. It is a marksman's ult now —
+ // deadeye (3x damage, full pierce, already wired in 06_combat and previously ungranted by
+ // anything) plus a struck line through the nearest. No bDmg buff: it would multiply the 3x.
+ sharpshooter:_ult('sharpshooter','Perfect Shot','🎯','One breath: your next 5 shots triple and pierce all, and the nearest are struck through',
+   U.combo(U.deadeye(5),U.chain(7,4.0,'#e8b34b')),55),
  windranger:_ult('windranger','Cyclone','🌪️','You become the storm: untouchable 4s, blades on every wind',
    U.combo(U.ward(0.3,4),U.volley(16,0.7,'#6aae7a',0.9,2),U.rain(150,'#6aae7a',5),U.empower('bSpd',1.6,6,'#6aae7a')),55),
  tempest_r:_ult('tempest_r','Arrow Storm','🏹','The sky goes dark — a 7s rain of splintering shafts',
@@ -106,8 +126,10 @@ const ULTS={
    U.combo(U.nova(5.0,200,'#ff7a3d',{id:'burn',dur:6,valPct:0.35}),U.rain(200,'#ff7a3d',7,true)),58),
  emberlord:_ult('emberlord','Meteor','☄️','You call down a mountain of fire',
    U.combo(U.nova(9.5,230,'#e07a2e',{id:'burn',dur:5,valPct:0.25}),U.volley(12,0.7,'#e07a2e',0.8,1)),60),
- cinderguard:_ult('cinderguard','Living Pyre','♨️','You burn as armour: half-health ward and a 7s corona',
-   U.combo(U.ward(0.55,2),U.rain(140,'#c0504a',7,true),U.empower('bDmg',1.5,8,'#c0504a')),60),
+ // "burn as armour" — the corona follows you now (it was a puddle you could walk out of) and
+ // the thorns capstone reflects, instead of a damage buff on the tank ascension
+ cinderguard:_ult('cinderguard','Living Pyre','♨️','You burn as armour: a half-health ward, a corona that moves with you, blows returned',
+   U.combo(U.ward(0.55,2),U.rain(140,'#c0504a',7,true,false,true),U.reflect(1.5,8)),60),
  // ROGUE — Deathblade crits into cooldowns, Nightblade vanishes, Reaper feeds on kills
  deathblade:_ult('deathblade','Death Blossom','🌹','A whirl of steel — 20 blades and every cooldown reset',
    U.combo(U.volley(20,0.75,'#c0304a',0.7,1),U.nova(4.0,150,'#c0304a'),
@@ -142,8 +164,10 @@ const ULTS={
    U.combo(U.nova(6.0,210,'#8a5ac0'),U.heal(0.7),U.ward(0.4,0)),58),
  doomcaller:_ult('doomcaller','Doom','💀','A death sentence: everything near takes 60% more damage for 8s',
    U.combo(U.brand(240,'curse',8,0.6,'#8a5ac0'),U.nova(4.5,200,'#8a5ac0'),U.empower('bDmg',1.5,8,'#8a5ac0')),58),
- dreadlord:_ult('dreadlord','Dread Legion','🦇','The dark answers — six horrors rise for 22s',
-   U.combo(U.summon(6,0.6,22,'skel'),U.brand(220,'weak',8,0,'#8a5ac0')),60),
+ // Dreadlord is the SOULWARD ascension — thorns 0.4, def, hp — so a pure summon ult was the
+ // Lich's ultimate on a warding statline. It still commands, but the legion now guards.
+ dreadlord:_ult('dreadlord','Dread Legion','🦇','The dark answers — five horrors rise for 22s, and their malice turns blows back',
+   U.combo(U.summon(5,0.6,22,'skel'),U.ward(0.45,0),U.reflect(1.2,8),U.brand(220,'weak',8,0,'#8a5ac0')),60),
  // FROSTWEAVER — Cryomancer shatters, Frostwarden freezes the field, Icebreaker breaks it
  cryomancer:_ult('cryomancer','Absolute Winter','❄️','The world stops: everything frozen 2.5s, then shattered',
    U.combo(U.brand(230,'freeze',2.5,0,'#9ad4ef'),U.nova(6.5,230,'#9ad4ef'),U.rain(180,'#9ad4ef',6)),58),
@@ -161,8 +185,14 @@ const ULTS={
  // HUNTER — Packlord doubles the pack, Falconer homes, Pathwarden walks the wild
  packlord:_ult('packlord','The Great Hunt','🐺','The whole pack comes: eight beasts for 22s',
    U.combo(U.summon(8,0.5,22,'wolf'),U.empower('bDmg',1.4,10,'#6aae7a')),60),
+ // "never misses" is true as of the 07_update homing fix — ult shots were excluded from the
+ // Falconer capstone's steering, which made this a plain radial spray like everyone else's
  falconer:_ult('falconer','Falcon Barrage','🦅','A storm of wings that never misses',
-   U.combo(U.volley(20,0.75,'#5a9cc0',1.4,2),U.summon(2,0.5,18,'wisp'),U.empower('bRof',1.6,8,'#5a9cc0')),55),
+   // 0.24/arrow, not 0.75: volleyScale assumes ~2 of N shots graze a given target. These seek,
+   // so 8-9 of 20 land — measured 21x player damage against the 9x nova budget before this trim.
+   // Lands at ~13x on ONE target and ~33x on a crowd: the set's best single-target ult, which is
+   // what a homing capstone should buy, and its weakest crowd clear, because they all chase one.
+   U.combo(U.volley(20,0.24,'#5a9cc0',2.2,2),U.summon(2,0.5,18,'wisp'),U.empower('bRof',1.6,8,'#5a9cc0')),55),
  pathwarden:_ult('pathwarden','Wild Growth','🌿','The land itself rises against them for 8s',
    U.combo(U.rain(210,'#6aae7a',8,false,true),U.brand(210,'chill',8,0,'#6aae7a'),U.heal(0.5)),58),
  // MONK — Grandmaster staggers, Windwalker dashes, Ascendant transcends
@@ -175,10 +205,12 @@ const ULTS={
  // PALADIN — Crusader explodes, Guardian wards, High Priest consecrates
  crusader:_ult('crusader','Divine Charge','⚔️','You ride them down — a blast that leaves nothing standing',
    U.combo(U.nova(8.5,220,'#e8b34b',{id:'stun',dur:1.2}),U.empower('bDmg',1.7,8,'#e8b34b')),58),
- guardian:_ult('guardian','Aegis of Dawn','🌅','An unbreakable ward for 5s and healing for all you protect',
-   U.combo(U.ward(0.9,ULT_T.invuln),U.heal(0.6),U.brand(200,'weak',7,0,'#7d8a99')),65),
- highpriest:_ult('highpriest','Sanctified Ground','⛪','Holy earth for 8s: you mend, they burn',
-   U.combo(U.rain(190,'#d4b96a',8,true),U.heal(0.6),U.ward(0.4,0),U.nova(3.5,180,'#d4b96a')),62),
+ // was "healing for all you protect" with no ally heal anywhere — it holds ground now, and says so
+ guardian:_ult('guardian','Aegis of Dawn','🌅','An unbreakable ward for 5s, and the ground you hold mends for 8s',
+   U.combo(U.ward(0.9,ULT_T.invuln),U.hallow(190,8,'#ffe9b0'),U.brand(200,'weak',7,0,'#7d8a99')),65),
+ // groundHeal is the High Priest capstone, so the consecration has to be ground, not one instant tick
+ highpriest:_ult('highpriest','Sanctified Ground','⛪','Holy earth for 8s: you mend where you stand, they burn',
+   U.combo(U.rain(190,'#d4b96a',8,true),U.hallow(150,8,'#ffe9b0'),U.ward(0.4,0),U.nova(3.5,180,'#d4b96a')),62),
  // NECROMANCER — Lich raises doubled, Bonelord explodes, Plaguebringer rots
  lich:_ult('lich','Army of the Dead','💀','The graves open — ten servants for 22s',
    U.combo(U.summon(10,0.45,22,'skel'),U.brand(210,'curse',8,0.3,'#8a5ac0')),62),
@@ -188,7 +220,7 @@ const ULTS={
    U.combo(U.brand(240,'poison',9,0,'#6aae7a',0.45),U.brand(240,'weak',9,0,'#6aae7a'),U.rain(200,'#6aae7a',9,false,true)),58),
  // BARD — Maestro finishes, Skald hastens allies, Loremaster echoes
  maestro:_ult('maestro','Grand Finale','🎼','The last chord: everything on the field feels it',
-   U.combo(U.nova(8.0,240,'#c07ad4',{id:'stun',dur:1}),U.empower('bRof',1.8,8,'#c07ad4')),58),
+   U.combo(U.nova(8.0,320,'#c07ad4',{id:'stun',dur:1}),U.empower('bRof',1.8,8,'#c07ad4')),58),   // r320: "the field"
  skald:_ult('skald','War Song','🥁','A marching song: doubled damage and speed for 9s',
    U.combo(U.empower('bDmg',1.9,9,'#c07ad4'),U.empower('bSpd',1.5,9,'#c07ad4'),U.summon(3,0.5,18,'wisp')),58),
  loremaster:_ult('loremaster','Encore','📜','Every note repeats — 8s of doubled fire and a ringing blast',
@@ -205,8 +237,9 @@ const ULTS={
    U.combo(U.volley(16,0.85,'#e07a2e',1.5,99),U.empower('bDmg',2.0,8,'#e07a2e')),55),
  skylord:_ult('skylord','Skyfall','☄️','You come down like a falling star',
    U.combo(U.nova(9.5,230,'#e07a2e',{id:'stun',dur:1.4}),U.ward(0.35,2)),58),
- dragonlord:_ult('dragonlord',"Dragon's Breath",'🔥','A river of fire that burns for 8s',
-   U.combo(U.nova(6.0,210,'#e07a2e',{id:'burn',dur:7,valPct:0.4}),U.rain(200,'#e07a2e',8,true),U.empower('bDmg',1.5,8,'#e07a2e')),58),
+ // dragonscale is the thorns/def ascension — the breath keeps the damage, the scale reflects
+ dragonlord:_ult('dragonlord',"Dragon's Breath",'🔥','A river of fire that burns for 8s, and scale that turns their blows back',
+   U.combo(U.nova(6.0,210,'#e07a2e',{id:'burn',dur:7,valPct:0.4}),U.rain(200,'#e07a2e',8,true),U.reflect(1.4,8)),58),
 };
 
 // ---- runtime ----
