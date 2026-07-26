@@ -1520,6 +1520,7 @@ function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allie
  allies.push({pet:true,x:player.x,y:player.y,dmg:dmg,life:1e9,cd:0,spr:rpg.pet}); }
 $s('shopBtn').addEventListener('click',function(){ openShop2(curShopNear||'maren'); });
 $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none';});
+$s('aucClose').addEventListener('click',()=>{ if(typeof closeAuction==='function') closeAuction(); });
 
 
 
