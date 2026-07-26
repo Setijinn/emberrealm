@@ -603,13 +603,26 @@ function drawLootBag(lb,pn){
   let img=(bn&&typeof lootSackImg==='function')?lootSackImg(bn.spr):null;
   if(!img||!img.naturalWidth) img=(typeof _lootSack!=='undefined')?_lootSack:null;   // until the art lands
   const bob=band>=1?Math.sin(t*2.2+lb.x*0.03)*1.5:0;
-  if(img&&img.complete&&img.naturalWidth){ const sc=(22+band*3)/img.naturalWidth;
+  if(img&&img.complete&&img.naturalWidth){
+    // Size the SACK, not its canvas. Scaling by naturalWidth counts transparent padding as sack, so
+    // art with a margin renders small: the relic sack is 45x55 of paint inside a 64x64 file, and it
+    // came out narrower than the T11 band below it — the rarest drop in the game looked the least
+    // important. Measuring the opaque box makes every band size by what you can actually see, and
+    // any future sack immune to however its author framed the file.
+    const bb=(typeof _imgBBox==='function')?_imgBBox(img)
+      :{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
+    const sc=(22+band*3)/bb.w, dw=bb.w*sc, dh=bb.h*sc;
     ctx.save(); ctx.imageSmoothingEnabled=false;
     if(band>=2||rar>=4){ ctx.shadowColor=col; ctx.shadowBlur=10*pulse; }
-    ctx.drawImage(img,Math.round(lb.x-img.naturalWidth*sc/2),Math.round(lb.y-img.naturalHeight*sc/2+bob),img.naturalWidth*sc,img.naturalHeight*sc);
+    ctx.drawImage(img, bb.x,bb.y,bb.w,bb.h,
+      Math.round(lb.x-dw/2), Math.round(lb.y-dh/2+bob), dw, dh);
     ctx.restore();
   } else { blit(sprBag,lb.x,lb.y+bob,2.0,false); }
-  ctx.fillStyle=col; ctx.fillRect(lb.x-3,lb.y-2+bob,6,6);      // rarity's remaining visual job
+  // (No rarity block. A 6x6 square of the rarity colour used to be painted dead centre on every
+  //  sack -- from back when a sack was one generic sprite and that block was the only thing
+  //  carrying rarity. Every sack has its own art now, and the glow beneath it, the beam above it
+  //  and the label all already use that same colour, so it was redundant three times over and sat
+  //  on top of the artwork it was competing with.)
   // tier is readable on the ground too, not just once it is in a slot — a public sack used to say
   // nothing at all, so you had to walk over it to find out what you were picking up
   if(top>=0){ ctx.font='bold 10px "Pixelify Sans",monospace'; ctx.textAlign='center';

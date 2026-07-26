@@ -65,3 +65,26 @@ function checkSize(){ if((cv.clientWidth||_vpW())!==W||(cv.clientHeight||_vpH())
 // first few seconds (independent of the loop) so a rotate-while-loading always heals the black
 // band once the landscape metrics settle. Uses checkSize (no needless canvas clears).
 (function _bootHeal(n){ checkSize(); if(n<50) setTimeout(()=>_bootHeal(n+1),100); })(0);
+
+// ---------- build id ----------
+// A playtester has to be able to say which build they are on, and sw.js's CACHE is the only
+// version string that exists anywhere. Do NOT duplicate it into a constant here: HANDOFF
+// already makes bumping CACHE a per-commit ritual, and a second thing to bump WILL drift —
+// a version tag that lies is worse than no tag at all. So read it back out of the Cache
+// Storage API, which the page can see from window scope on any secure context (the live
+// site, and localhost for dev). That makes sw.js the single source of truth.
+// No service worker yet (fresh local port, very first load) leaves it 'dev' — the honest
+// answer, since on those the code came straight off the wire.
+let BUILD='dev';
+function paintBuildTag(){ for(const el of document.querySelectorAll('.bTag')) el.textContent='build '+BUILD; }
+function _readBuild(){
+  if(!self.caches) return;                       // insecure context — no Cache Storage at all
+  caches.keys().then(ks=>{
+    // Between a new SW's install and its activate BOTH caches exist, so take the highest.
+    const vs=ks.filter(n=>n.startsWith('emberrealm-v')).map(n=>parseInt(n.slice(12),10))
+               .filter(n=>!isNaN(n)).sort((a,b)=>b-a);
+    if(vs.length) BUILD='v'+vs[0];
+    paintBuildTag();
+  }).catch(()=>{});
+}
+paintBuildTag(); _readBuild();
