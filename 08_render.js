@@ -156,6 +156,53 @@ function propFooting(tx,ty,x,y,kind){
   }
   ctx.restore();
 }
+// Per-band accent used by the ground detail pass: [patch colour, speck colour].
+// The patch is a second material drifting through the main one (dirt through grass, wet sand
+// through dry, ash through scorched rock); the speck is the fine litter that sells the surface.
+const TERR_ACCENT={
+  0:['rgba(150,126,84,',   'rgba(96,80,52,'],     // Landing Sands   - darker damp sand
+  1:['rgba(120,124,120,',  'rgba(70,74,74,'],     // Gullwind Shore  - shingle
+  2:['rgba(120,124,58,',   'rgba(74,80,40,'],     // Sawgrass Flats  - dry grass
+  3:['rgba(74,110,50,',    'rgba(46,72,34,'],     // Verdant Belt    - lush clumps
+  4:['rgba(56,84,44,',     'rgba(38,58,30,'],     // Wolfwood
+  5:['rgba(44,64,40,',     'rgba(28,44,26,'],     // Deep Timber     - deep shade
+  6:['rgba(116,112,104,',  'rgba(72,70,66,'],     // Stonebrow Rise  - scree
+  7:['rgba(96,84,78,',     'rgba(58,50,46,'],     // Cinderwatch     - ash drift
+  8:['rgba(112,52,26,',    'rgba(60,26,14,']      // The Ashfall     - ember crust
+};
+// Open ground was one flat grain: the atlases are deliberately uniform so tiles never repeat, but
+// uniform is also featureless. This adds the missing scales back WITHOUT reintroducing a pattern,
+// because every value here comes from world-position noise and so flows across tile borders:
+//   - broad drifts of light and shade, tens of tiles across, that give the ground shape
+//   - a second material bleeding through in soft patches
+//   - litter whose DENSITY is itself noise, so it clumps like real ground instead of sprinkling
+//     evenly the way a per-tile random would
+function terrainDetail(x,y,tx,ty,bd){
+  const A=TERR_ACCENT[bd]||TERR_ACCENT[3];
+  // 1. broad relief. TWO octaves at unrelated scales and offsets: a single vnoise is bilinear on
+  // its own lattice, so on open ground its cells read as faint axis-aligned rectangles. Summing a
+  // second, finer octave breaks that alignment and the result reads as organic ground.
+  const n1=vnoise(x+11,y+7,17.0)*0.62 + vnoise(x+143,y+61,7.3)*0.38;
+  if(n1>0.56){ ctx.fillStyle='rgba(255,246,220,'+((n1-0.56)*0.38).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+  else if(n1<0.44){ ctx.fillStyle='rgba(0,0,0,'+((0.44-n1)*0.46).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+  // 2. second material in soft-edged patches, likewise two octaves so the blobs are not lattice-shaped
+  const n2=vnoise(x+91,y+53,6.6)*0.65 + vnoise(x+29,y+181,2.9)*0.35;
+  if(n2>0.58){ ctx.fillStyle=A[0]+((n2-0.58)*1.65).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+  // 3. clustered litter: noise sets how much falls here, the tile hash sets where
+  const dn=vnoise(x+31,y+77,3.6);
+  if(dn>0.50){
+    const hh=hmix(x*7+5,y*11+3), n=1+((dn-0.50)*7)|0;
+    ctx.fillStyle=A[1]+'0.55)';
+    for(let i=0;i<n&&i<4;i++){
+      const ox=((hh>>(i*6))%(TILE-6))+3, oy=((hh>>(i*6+3))%(TILE-6))+3;
+      const w=1+((hh>>(i*4))&1);
+      ctx.fillRect(tx+ox,ty+oy,w,1);
+    }
+  }
+  // 4. faint worn tracks: ridged noise reads as trodden ground rather than blobs
+  const r=Math.abs(vnoise(x+7,y+131,9.0)-0.5);
+  if(r<0.045){ ctx.fillStyle='rgba(0,0,0,'+((0.045-r)*1.7).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+}
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
@@ -570,6 +617,7 @@ function drawTileG(x,y){
         else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
       }
       if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
+      terrainDetail(x,y,tx,ty,bd);      // multi-scale relief, patches and litter (continuous, never tiles)
       // CORRUPTION: the infection bleeding out from the portal. A violet/black stain rising
       // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
       if(typeof corruptAt==='function'){ const cor=corruptAt(x,y);

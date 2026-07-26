@@ -1466,6 +1466,7 @@ function render(){
       ctx.save(); ctx.translate(dx,dy); ctx.rotate(Math.PI/4); ctx.fillRect(-4,-4,8,8); ctx.restore(); }
     ctx.textAlign='left';
   }
+  if(typeof drawMinimap==='function') drawMinimap();           // always-on corner map (replaces the map button)
   if(typeof drawBossQuote==='function') drawBossQuote();       // a slain boss's dying words of truth
   // dungeon objective banner (screen space): the first unfinished chamber's task
   if(curRoom.dungeon && curRoom.objs && !(typeof bossBar!=='undefined'&&bossBar)){

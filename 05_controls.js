@@ -14,6 +14,9 @@ addEventListener('pointerdown',e=>{
   _setMode(e.pointerType==='touch'?'touch':'pc');
   if(!inGame || (inputMode==='touch' && W<=H)) return;
   if(e.target && e.target!==cv) return;      // taps on HUD buttons handle themselves
+  // minimap zoom buttons sit in the top-left corner and must not also fire a shot
+  if(typeof miniHit==='function'){ const mh=miniHit(e.clientX,e.clientY);
+    if(mh){ if(mh==='in') miniZoomIn(); else miniZoomOut(); return; } }
   // the floating USE prompt (portal/pillar) takes top precedence
   if(typeof hitPortalPrompt==='function' && hitPortalPrompt(e.clientX,e.clientY)){
     if(typeof usePortalPrompt==='function') usePortalPrompt(); return; }
@@ -66,14 +69,19 @@ addEventListener('keydown',e=>{
     if(typeof armSlot==='function') armSlot(+k-1);
     const mw=mouseWorld(); if(typeof doAbility==='function') doAbility(mw.x,mw.y);
   }
-  else if(k==='4'||k==='r'){ if(typeof castUlt==='function') castUlt(); }    // ascension ultimate
+  // R was the ultimate; it is the Hearth recall now (user request), so the ult keeps 4 only
+  else if(k==='4'){ if(typeof castUlt==='function') castUlt(); }    // ascension ultimate
   else if(k==='e'){ if(typeof portalPrompt!=='undefined' && portalPrompt && typeof usePortalPrompt==='function') usePortalPrompt(); }
   else if(k==='q'){ const b=document.getElementById('potBtn'); if(b) b.click(); }
   else if(k==='i'||k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
   else if(k==='k'){ const b=document.getElementById('skillBtn'); if(b) b.click(); }
   else if(k==='l'){ const b=document.getElementById('loadBtn'); if(b) b.click(); }
-  else if(k==='m'){ const b=document.getElementById('mapBtn'); if(b) b.click(); }
-  else if(k==='h'){ const b=document.getElementById('hearthBtn'); if(b) b.click(); }   // recall home
+  // the map BUTTON is gone (there is a live minimap in the corner now); M still opens the big map
+  else if(k==='m'){ const sc=document.getElementById('mapScr');
+    if(sc){ if(sc.style.display==='flex'){ if(typeof closeMap==='function') closeMap(); }
+      else { sc.style.display='flex'; if(typeof drawMap==='function') drawMap();
+        if(typeof mapInt!=='undefined'&&!mapInt) mapInt=setInterval(drawMap,220); } } }
+  else if(k==='h'||k==='r'){ const b=document.getElementById('hearthBtn'); if(b) b.click(); }   // recallhome
 });
 addEventListener('keyup',e=>{ if(e.key) keys[e.key.toLowerCase()]=false; });
 // normalized WASD/arrow vector, consumed by update() when the touch stick is idle.

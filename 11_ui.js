@@ -532,8 +532,8 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
   c.fillStyle='#ffc94d'; c.fillText(rg?('you are in '+rg.n+(lv?' \u00b7 Lv '+lv:'')):'',MAP_W-MAP_PAD,fy); }
  else { c.fillStyle='#8a8494'; c.fillText('you are in '+(curRoom?curRoom.name:'')+' \u2014 take the portal home',MAP_W-MAP_PAD,fy); }
 }
-$s('mapBtn').addEventListener('click',function(){ $s('mapScr').style.display='flex';
- drawMap(); if(mapInt)clearInterval(mapInt); mapInt=setInterval(drawMap,120); });
+// The map button is gone -- a live minimap sits in the top-left corner instead. The full-screen
+// map still exists behind the M key for when you want the whole world and its zone labels.
 function closeMap(){ $s('mapScr').style.display='none';
  if(mapInt){clearInterval(mapInt);mapInt=null;} }
 $s('mapClose').addEventListener('click',closeMap);
@@ -960,7 +960,7 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  $s('shopBtn').style.display='none'; $s('shopScr').style.display='none';
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
- $s('mapBtn').style.display='none'; $s('mapScr').style.display='none';
+ $s('mapScr').style.display='none';
  if($s('hearthBtn'))$s('hearthBtn').style.display='none';
  if($s('coopBtn'))$s('coopBtn').style.display='none';
  if($s('coopScr'))$s('coopScr').style.display='none';
@@ -1089,7 +1089,7 @@ function play(){
 function showGameHud(){
  $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
  $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex';
- $s('abBtn').style.display='none'; $s('mapBtn').style.display='flex';
+ $s('abBtn').style.display='none';
  if($s('coopBtn'))$s('coopBtn').style.display='flex';
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
  if($s('skillBtn'))$s('skillBtn').style.display='flex';

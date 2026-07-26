@@ -128,6 +128,7 @@ function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
 // Terrain art (PixelLab), per zone band. Ground = each tileset's all-terrain tile at (0,96,32).
 function _img(src){ if(typeof window==='undefined') return null; const i=new Image(); i.src=src; return i; }
 // PixelLab projectile art â€” 24 base shapes; the forge hue-shifts each into many variants
+let _miniPlus=null, _miniMinus=null;      // minimap zoom button art
 const _projArt={_list:['arrow','fireball','ice_shard','lightning','magic_orb','skull','note','leaf',
  'dagger','chakram','spear','void_orb','holy_star','bone','wind_slash','crystal',
  'thorn','ember','wisp','rune','shuriken','axe','meteor','feather']};
@@ -177,6 +178,7 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
 (function(){
   if(typeof window==='undefined') return;
   for(const n of _projArt._list) _projArt[n]=_img('assets/proj/'+n+'.png');
+  _miniPlus=_img('assets/ui/mini_plus.png'); _miniMinus=_img('assets/ui/mini_minus.png');
   for(let b=0;b<=8;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
   // per-zone variant ground sheet (sampled at GROUND_UP like the base) for large-scale variety
   for(let b=0;b<=8;b++) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
