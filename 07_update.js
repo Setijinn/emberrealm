@@ -259,6 +259,14 @@ function damagePlayer(raw){ let hit=raw;
 function enemyAI(e,dx,dy,dd,dt){
   const B=(typeof EBEH!=='undefined'&&EBEH[e.beh])||{};
   let tx=player.x, ty=player.y, smul=1;
+  // per-enemy gait clock and phase. Lazily seeded from the spawn position so it survives enemies
+  // built by paths that never touch makeEnemy (summons, decoys) and so two neighbours never sway
+  // in lockstep — a row of identically-swaying hounds reads as one animation, not three animals.
+  if(e.wp===undefined){ const h=(Math.imul(e.x|0,374761393)^Math.imul(e.y|0,668265263))>>>0;
+    e.wp=(h%628)/100; e.wfj=0.85+((h>>>9)%40)/100; e.aiT=0; e.lungeCd=(h>>>17)%100/100; }
+  e.aiT=(e.aiT||0)+dt;
+  if(e.lungeCd>0) e.lungeCd-=dt;
+  if(e.lungeT>0) e.lungeT-=dt;
   // AMBUSHER: dormant (inert) until you step into range, then a short fast lunge
   if(e.beh==='ambusher'){
     if(e.dormant){
@@ -266,30 +274,120 @@ function enemyAI(e,dx,dy,dd,dt){
         if(typeof boom==='function') boom(e.x,e.y,e.col,10); }
       else return {tx:e.x,ty:e.y,smul:0,move:false};
     }
-    if(e.burstT>0){ e.burstT-=dt; smul=B.burst||1; }
+    if(e.burstT>0){ e.burstT-=dt; e.pounced=true; smul=B.burst||1; }
+    // the pounce is spent: break off, circle wide, and go back to lying in wait rather than
+    // degenerating into an ordinary chaser for the rest of its life.
+    // Gated on having actually pounced — otherwise one built outside makeEnemy (no dormant flag,
+    // no burstT) peels away on its very first frame without ever having attacked.
+    else if(B.breakoff && e.pounced){
+      e.breakT=(e.breakT===undefined)?B.breakoff:e.breakT-dt;
+      if(e.breakT>0){ tx=e.x-dx; ty=e.y-dy; smul=1.15;      // retreat straight back
+        return {tx,ty,smul,move:true,hold:true}; }
+      if(dd>(B.rehide||330)){ e.dormant=true; e.breakT=undefined; e.burstT=0;
+        return {tx:e.x,ty:e.y,smul:0,move:false}; }
+      if(e.breakT<-2.2){ e.breakT=B.breakoff; }             // still cornered: peel off again
+    }
   }
-  // SENTINEL: guards home. Once you leave its territory it disengages and patrols a small circle.
+  // SENTINEL: guards home. Once you leave its territory it disengages and PACES its post — a
+  // guard walks a beat back and forth, it does not orbit its own feet like a wind-up toy.
   if(e.beh==='sentinel'){
     const hd=Math.hypot(player.x-e.home.x,player.y-e.home.y);
     if(hd>(B.leash||360)){
-      if(Math.hypot(e.x-e.home.x,e.y-e.home.y)<40){ e.roamA+=dt*1.1;
-        tx=e.home.x+Math.cos(e.roamA)*46; ty=e.home.y+Math.sin(e.roamA)*46; smul=0.5; }
+      if(Math.hypot(e.x-e.home.x,e.y-e.home.y)<52){
+        const beat=Math.sin(e.aiT*0.55+e.wp)*(B.pace||70);
+        tx=e.home.x+Math.cos(e.roamA)*beat; ty=e.home.y+Math.sin(e.roamA)*beat; smul=0.45; }
       else { tx=e.home.x; ty=e.home.y; smul=0.85; }
+      return {tx,ty,smul,move:true,hold:true};   // hold = pursuing its OWN goal, not the player
     }
   }
-  // ROAMER: wanders the ground when you're far off, hunts when you close in
+  // ROAMER: wanders the ground when you're far off, hunts when you close in. The drift is a slow
+  // random WALK on the heading rather than a fresh direction each frame, so it ambles somewhere
+  // instead of vibrating in place, and it pauses to cast about every few seconds.
   if(e.beh==='roamer' && dd>(B.engage||540)){
-    e.roamA+=(Math.random()-0.5)*dt*3;
-    tx=e.x+Math.cos(e.roamA)*120; ty=e.y+Math.sin(e.roamA)*120; smul=B.wander||0.42;
+    e.roamA+=(Math.random()-0.5)*dt*1.4;
+    const sniff=Math.sin(e.aiT*0.42+e.wp);
+    tx=e.x+Math.cos(e.roamA)*120; ty=e.y+Math.sin(e.roamA)*120;
+    smul=(B.wander||0.42)*(sniff>0.72?0.12:1);      // head-up pause, roughly one beat in five
+    return {tx,ty,smul,move:true,hold:true};
   }
-  // PACK: blend your position with the local pack centroid so they clump and flank together,
-  // and hit a little harder in numbers
+  // PACK: hounds do not pile onto one point — they SURROUND. Each takes a slot on a ring around
+  // you, spaced by its position among the local pack, and holds it until the ring is close enough
+  // to close; then the whole pack collapses in at once. The old centroid blend pulled them all to
+  // the same spot, which stacked their bodies and let you fight a five-hound pack one hound wide.
   if(e.beh==='pack'){
-    let cx=0,cy=0,n=0;
-    for(const o of enemies){ if(o!==e && o.beh==='pack'){
-      const d2=Math.hypot(o.x-e.x,o.y-e.y); if(d2<(B.cohesion||150)){ cx+=o.x; cy+=o.y; n++; } } }
-    if(n){ cx/=n; cy/=n; tx=player.x*0.72+cx*0.28; ty=player.y*0.72+cy*0.28;
-      smul=1+(B.packBuff||0.16)*Math.min(3,n); }
+    const mates=[];
+    for(const o of enemies){ if(o.beh==='pack' && o.hp>0){
+      if(o===e || Math.hypot(o.x-e.x,o.y-e.y)<(B.cohesion||150)) mates.push(o); } }
+    const n=mates.length;
+    if(n>1){
+      mates.sort((a,b)=>(a._px||a.x)-(b._px||b.x)||a.y-b.y);   // stable order -> stable slots
+      const idx=Math.max(0,mates.indexOf(e));
+      smul=1+(B.packBuff||0.16)*Math.min(3,n-1);
+      if(dd>(B.collapse||190)){
+        // hold a slot on the ring, offset from the bearing you are approaching from
+        const base=Math.atan2(e.y-player.y,e.x-player.x);
+        const slot=base+((idx/n)-0.5)*2.2 + Math.sin(e.aiT*0.5+e.wp)*0.18;
+        const R=B.flank||150;
+        tx=player.x+Math.cos(slot)*R; ty=player.y+Math.sin(slot)*R;
+      }
+    }
+  }
+  // ---- movement signature: the shape of the approach, laid over the target point above ----
+  // A lunge is a straight committed dash from a set distance, on a cooldown: the one gait a
+  // four-legged pack predator must have, and the reason a hound reads as an animal rather than a
+  // homing missile. Corruption makes them rangier and more willing to commit.
+  const cor=e.corrupt?1.35:1;
+  let harrying=false;
+  if(B.lunge && e.type==='c' && !e.dormant){
+    const L=B.lunge;
+    if(e.lungeT>0){ // mid-dash: dead straight at where you were when it committed, full speed
+      return {tx:e.lx,ty:e.ly,smul:L.mul,move:true,lunging:true};
+    }
+    // inside the lunge band with the dash on cooldown: HARRY. Orbit at bite range and wait for
+    // the opening instead of pressing in and standing on the player as a contact-damage aura.
+    if(B.harry && dd<L.min){
+      // 0.5 rad of lead, not more: steering at a point far around the circle cuts the chord and
+      // spirals the orbit inward, which lands it back on top of the player anyway.
+      // Falls THROUGH to separation below — five hounds orbiting the same circle at the same
+      // radius in the same direction is one hound as far as the player can tell.
+      const a=Math.atan2(e.y-player.y,e.x-player.x)+(e.wp>3.14?1:-1)*0.5;
+      tx=player.x+Math.cos(a)*B.harry; ty=player.y+Math.sin(a)*B.harry; smul=1.15;
+      harrying=true;
+    }
+    if(e.lungeCd<=0 && dd>L.min && dd<L.max*cor){
+      e.lungeT=L.dur; e.lungeCd=L.dur+(L.cd/cor)*(0.8+Math.random()*0.4);
+      // aim the dash PAST the player so it carries through rather than stopping on contact
+      e.lx=player.x+(dx/dd)*70; e.ly=player.y+(dy/dd)*70;
+      e.animAtk=Math.max(e.animAtk||0,0.45);
+      // kick up dirt where it pushes off: a 2.5x dash with no tell is a cheap hit, and this is
+      // the frame the player needs to read to sidestep it
+      if(typeof emitP==='function') for(let i=0;i<5;i++){ const a=Math.atan2(-dy,-dx)+(Math.random()-0.5)*1.2;
+        emitP(e.x,e.y+6,{vx:Math.cos(a)*90,vy:Math.sin(a)*90-20,life:0.4,col:'#9a8a74',sz:2.5}); }
+      return {tx:e.lx,ty:e.ly,smul:L.mul,move:true,lunging:true};
+    }
+  }
+  // Separation. Nothing in this game gives enemies a body that other enemies collide with, so a
+  // pack closing on one point ends up standing in the same 7px and reads as one animal. Push off
+  // near neighbours: this is what turns a surrounding ring into five distinct hounds, and it keeps
+  // the harry orbits from collapsing into a single lockstep circle.
+  if(e.type==='c'){
+    let sx=0, sy=0, sn=0;
+    for(const o of enemies){ if(o===e||o.type!=='c'||o.hp<=0) continue;
+      const ox=e.x-o.x, oy=e.y-o.y, od=Math.hypot(ox,oy);
+      if(od<42 && od>0.01){ const w=(42-od)/42; sx+=ox/od*w; sy+=oy/od*w; if(++sn>7) break; } }
+    if(sn){ const al=Math.hypot(tx-e.x,ty-e.y)||1;
+      tx+=sx*al*0.55; ty+=sy*al*0.55; }
+  }
+  // Sway: swing the HEADING off the straight line, decaying to nothing inside `commit`, so the
+  // creature loafs and jinks at range and goes straight for the throat up close.
+  if(B.sway && !harrying){
+    const near=Math.max(0,Math.min(1,(dd-(B.commit||0))/220));
+    const amp=B.sway*cor*near;
+    if(amp>0.01){
+      const ax=tx-e.x, ay=ty-e.y, al=Math.hypot(ax,ay)||1;
+      const a=Math.atan2(ay,ax)+Math.sin(e.aiT*(B.swayF||2)*e.wfj+e.wp)*amp;
+      tx=e.x+Math.cos(a)*al; ty=e.y+Math.sin(a)*al;
+    }
   }
   return {tx,ty,smul,move:true};
 }
@@ -397,16 +495,35 @@ function update(dt){
     }
     if(e.type==='s'){
       const ai=enemyAI(e,dx,dy,dd,dt);
-      if(e.beh==='skirmisher'){
+      // A CULTIST IS A CASTER, and a caster plants to cast. It roots for the windup before each
+      // volley and moves only between them — which is both what the animation already claims and
+      // the thing that makes a caster readable: you learn to move when it stops.
+      // Gated on having the mana to actually cast, or an MP-starved low-level one would read
+      // fireT<=0 forever and root permanently.
+      const _ro=(EBEH.skirmisher||{}).root||0.42;
+      const rooted=(e.mp||0)>=8 && e.fireT<_ro;
+      if(rooted){ /* planted mid-cast */ }
+      else if(e.beh==='skirmisher'){
         // kite: back off when crowded, close the gap when out of range, strafe in the pocket
         const B=EBEH.skirmisher; let mvx,mvy;
         if(dd<B.kiteMin){ mvx=-dx/dd; mvy=-dy/dd; }
         else if(dd>B.kiteMax){ mvx=dx/dd; mvy=dy/dd; }
         else { mvx=-dy/dd; mvy=dx/dd; }
         moveCircle(e,mvx*e.spd*slowF(e)*dt,mvy*e.spd*slowF(e)*dt);
-      } else if(ai.move && dd>200){
+      } else if(ai.hold){
+        // returning to its post / wandering / breaking off — its own goal outranks the stand-off
         const ax=ai.tx-e.x, ay=ai.ty-e.y, al=Math.hypot(ax,ay)||1;
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt);
+      } else if(ai.move){
+        // the others hold a stand-off and SIDESTEP along it between volleys. They used to walk to
+        // 200px and then stand perfectly still for the rest of the fight, which made every
+        // non-kiting caster in the game a turret you could ignore or trivially lead.
+        const SO=230, arc=(e.wp>3.14?1:-1);
+        let mvx,mvy,ms=1;
+        if(dd>SO+45){ mvx=dx/dd; mvy=dy/dd; }
+        else if(dd<SO-45){ mvx=-dx/dd; mvy=-dy/dd; }
+        else { mvx=-dy/dd*arc; mvy=dx/dd*arc; ms=0.55; }   // shuffle around the ring
+        moveCircle(e,mvx*e.spd*ai.smul*ms*slowF(e)*dt,mvy*e.spd*ai.smul*ms*slowF(e)*dt);
       }
       if(e.maxmp){ e.mp=Math.min(e.maxmp,(e.mp||0)+e.maxmp*0.35*dt); }   // caster MP regen (~35%/s)
       e.fireT-=dt;

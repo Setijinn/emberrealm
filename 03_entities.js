@@ -836,19 +836,43 @@ function eMp(lv){ return Math.round(12 + lv*4); }
 // enemy SPAWNS (dormant? anchored? in a pack?) and ROAMS (chase / kite / guard / wander),
 // consumed by the movement code in 07_update via enemyAI(). Difficulty comes from these +
 // the DIFF stat curve, NOT from spawning more of them. Params are tunable here.
-//   hunter     relentless straight-line chase (the classic)
-//   pack       steers toward nearby pack-mates AND you -> coordinated swarms, faster in numbers
+//   hunter     relentless chase — but a LOPING one: it weaves as it closes (see below)
+//   pack       surrounds you on assigned flanking slots, then collapses in together
 //   ambusher   DORMANT until you step close, then a fast lunge burst (spawn: sits inert)
 //   sentinel   guards its spawn point; chases only within a leash, else returns and patrols; tankier
 //   roamer     wanders the ground when you're far, hunts when you're near (the map feels alive)
 //   skirmisher (shooters) KITES — backs off when you close in, holds at range and fires
+//
+// MOVEMENT SIGNATURE (user, 2026-07-26). The behaviours above are engagement RULES — when to
+// approach, when to break off — and every one of them resolved to the same thing once engaged:
+// walk the straight line to the player. So a hound, a guard and a cultist all moved identically.
+// These fields give each one a shape as well as a rule:
+//   sway     how far the heading swings off the straight line, in RADIANS, and its frequency.
+//            Radians, not pixels: a fixed lateral offset applied to a target 300px away turns the
+//            heading by only atan(off/300) and the path barely bends — measured 2-4px of actual
+//            deviation for a 34px offset. An angle serpentines the same way at every range.
+//   commit   distance (px) inside which the sway decays to nothing — the final approach is
+//            straight, because a lunge that wobbles reads as indecision rather than menace.
+//   lunge    hounds only: {min,max} band where it commits to a straight dash, its speed multiple,
+//            duration and cooldown. This is the one movement a four-legged pack predator must have.
+//   harry    radius it orbits at while its lunge is on cooldown. Without this a hound that closes
+//            simply parks on top of you and becomes a stationary damage aura; with it you get the
+//            real thing — circle, dart in, peel off, circle.
+//   flank    pack only: radius it tries to hold while surrounding, and the distance at which the
+//            ring collapses onto the kill.
 const EBEH={
-  hunter:    {},
-  pack:      {cohesion:150, packBuff:0.16},
-  ambusher:  {wake:200, burst:1.95, burstT:1.4, hpMul:0.85, touchMul:1.35},
-  sentinel:  {leash:360, hpMul:1.55, spdMul:0.9},
-  roamer:    {engage:540, wander:0.42},
-  skirmisher:{kiteMin:175, kiteMax:300, spdMul:2.4},
+  hunter:    {sway:0.55, swayF:2.1, commit:120, harry:74,
+              lunge:{min:105,max:260,mul:2.5,dur:0.34,cd:2.4}},
+  pack:      {cohesion:150, packBuff:0.16, sway:0.34, swayF:2.6, commit:90, harry:66,
+              flank:150, collapse:190, lunge:{min:95,max:240,mul:2.6,dur:0.30,cd:2.0}},
+  // breakoff must last long enough to actually clear `rehide`, and rehide must sit clear of
+  // `wake` or it re-arms inside its own trigger radius and instantly wakes again
+  ambusher:  {wake:200, burst:1.95, burstT:1.4, hpMul:0.85, touchMul:1.35,
+              breakoff:1.9, rehide:260, sway:0, commit:0},
+  sentinel:  {leash:360, hpMul:1.55, spdMul:0.9, pace:70, sway:0.16, swayF:1.2, commit:150},
+  roamer:    {engage:540, wander:0.42, sway:0.45, swayF:1.5, commit:130, harry:82,
+              lunge:{min:110,max:250,mul:2.2,dur:0.30,cd:3.0}},
+  skirmisher:{kiteMin:175, kiteMax:300, spdMul:2.4, root:0.42},
 };
 // deterministic per-spawn so a given spot keeps its character across respawns (a guarded
 // chokepoint stays guarded). Variety + danger rise with the band.
