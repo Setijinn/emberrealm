@@ -55,6 +55,10 @@ function bossReset(e){
   e.saidOpen=false; e.chat=0;
   // registry-fight state: the anchor, any self-raised ward, and whatever the fight parked on `mk`
   e.anchored=0; e.anchorInv=0; e.wardInv=0; e.mk=null; e.mechT=undefined;
+  // mechInv, bloom and hidden are TRANSIENT states of a RUNNING fight (vanished among its images,
+  // mid survival bloom, burrowed). A reset that left them set handed the boss permanent immunity
+  // with no fight running to clear it -- see the disengage guard in bossMechTick.
+  e.mechInv=0; e.bloom=0; e.hidden=false;
   e.anim=null; e.animT=0;
   if(e.mp!==undefined) e.mp=e.maxmp;
   // clear anything this boss put on the field

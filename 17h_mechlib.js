@@ -59,6 +59,12 @@ function _hurt(amount){ if(typeof damagePlayer==='function') damagePlayer(amount
 // GROUND HAZARD — the workhorse. A circle that telegraphs, goes live, then fades.
 // opts: {r, tele, live, dmg, tick, col, follow, grow, inflict}
 // ---------------------------------------------------------------------------------
+// How many hazards this fight currently owns. A fight that lays LASTING ground (scars, pools)
+// needs this: the Bog Horror stacked 26 overlapping zones under a mound that follows the player,
+// which is six times a level-matched hero's health bar per second. Long-lived floor denial must
+// cap its own count or it stops being terrain and becomes a damage engine.
+function mechHazCount(e){ return (e && e.mk && e.mk.haz) ? e.mk.haz.length : 0; }
+
 function hazAdd(e,x,y,opts){
   const M=mkState(e), P=bossPace(e), o=opts||{};
   M.haz.push({ x:x, y:y, r:o.r||TILE*1.1, r0:o.r||TILE*1.1,

@@ -90,13 +90,18 @@ function bossAnchorPhase(e){
 // A fight wanting its own rule (break the conduits, cut the knots) uses wardInv instead and never
 // touches this.
 const BOSS_ANCHOR_SNAP=10;
-const ANCHOR_WIN=9.0;    // seconds untouchable, planted, firing
-const ANCHOR_CD =7.5;    // seconds vulnerable before it may plant again
+// BOTH windows scale with bossPace().cycle. Only the cooldown used to, which meant the untouchable
+// window stayed 9s while the window you could hit it in shrank with level: an anchored Lv55 fight
+// was untouchable ~80% of the time against ~55% at Lv4. That is not a harder fight, it is a longer
+// one. Scaling both keeps the ratio fixed and makes the whole cycle FASTER at level, which is what
+// every other dial here does.
+const ANCHOR_WIN=9.0;    // seconds untouchable, planted, firing (x P.cycle)
+const ANCHOR_CD =7.5;    // seconds vulnerable before it may plant again (x P.cycle)
 function bossAnchorStep(e,dt){
   if(!bossAnchorPhase(e)){ e.anchored=0; e.anchorInv=0; e.anchorT=0; e.anchorCd=0; return false; }
   // phase change re-arms the window
-  if(e.anchorPh!==e.phase){ e.anchorPh=e.phase; e.anchorT=ANCHOR_WIN; e.anchorCd=0; }
   const P=(typeof bossPace==='function')?bossPace(e):{cycle:1};
+  if(e.anchorPh!==e.phase){ e.anchorPh=e.phase; e.anchorT=ANCHOR_WIN*P.cycle; e.anchorCd=0; }
   if(e.anchorT>0){
     e.anchorT-=dt;
     if(e.anchorT<=0){ e.anchorCd=ANCHOR_CD*P.cycle; e.anchorInv=0; e.anchored=0;
@@ -104,7 +109,7 @@ function bossAnchorStep(e,dt){
       if(typeof msg==='function') msg('IT IS EXPOSED','strike it now'); }
   } else if(e.anchorCd>0){
     e.anchorCd-=dt;
-    if(e.anchorCd<=0){ e.anchorT=ANCHOR_WIN;
+    if(e.anchorCd<=0){ e.anchorT=ANCHOR_WIN*P.cycle;
       if(typeof bossAnim==='function') bossAnim(e,'plant');
       if(typeof msg==='function') msg('IT PLANTS ITSELF',''); }
   }
@@ -244,7 +249,16 @@ function bossEngaged(e){
 function bossMechTick(e, dt){
   if(!e || e.decoy) return;
   const D=bossMechDef(e);
-  if(D){ if(D.tick) D.tick(e,dt,e.phase||0,bossEngaged(e)); return; }
+  if(D){
+    const eng=bossEngaged(e);
+    // A FIGHT THAT IS NOT RUNNING MAY NOT HOLD YOU IMMUNE. Every fight's tick opens with
+    // `if(!eng) return;`, so a fight interrupted mid-vanish -- you walked 720px away, or the boss
+    // walked back to its arena -- returned before the line that clears mechInv, and stayed
+    // untouchable for good. The Ashen Echo did exactly that: 100% immune, phase 0, forever.
+    // Disengage is the one moment the fight itself cannot handle, so it is handled here for all.
+    if(!eng && e.mechInv) e.mechInv=0;
+    if(D.tick) D.tick(e,dt,e.phase||0,eng);
+    return; }
   if(!e.mech) return;
   // Only START a mechanic once the player is ACTUALLY in this fight — i.e. has HIT this boss
   // (bossBar is set on the first hit) and is still nearby. A world boss that merely spawned near

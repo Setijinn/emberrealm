@@ -130,6 +130,16 @@ _F('dn1',{ phases:[0.70,0.40,0.15], titles:['','THE FOG THICKENS','FALSE LIGHTS'
     if(mechEvery(e,'t',3.4,dt)){ _sig(e,'fade');
       const p=_pxy(), a=Math.random()*6.283, d=TILE*(2.6+Math.random()*2.2);
       e.x=p.x+Math.cos(a)*d; e.y=p.y+Math.sin(a)*d; }
+    // THE FOG ITSELF IS THE THREAT. Every point of damage in this fight was an aimed bolt, and a
+    // player who keeps moving is never hit by one: the whole four-phase Lv48 fight measured under
+    // 4% of a hero's bar per second, the softest in the game. The fog closes now -- stay near
+    // where it last showed itself or the cold gets you -- which is the mechanic the fight is
+    // already named for rather than a new one bolted on.
+    M.close=(M.close||0)+dt;
+    if(M.close>0.7){ M.close=0;
+      const p=_pxy(), dd=Math.hypot(p.x-e.x,p.y-e.y), safe=TILE*(7.0-ph*1.2);
+      if(dd>safe){ _hurt(mechDmg(e,0.26+ph*0.05));
+        if(typeof playerStatus==='function') playerStatus('chill',2.0,0); } }
   },
   trigger(e,ph){ _sig(e,'fade'); },
   draw(e){ mechDrawCommon(e);
@@ -332,11 +342,23 @@ _F('dn4',{ phases:[0.72,0.44,0.18], anchor:[false,true,true,true],
       const tang=(1.0+ph*0.35)*46*P.speed*dt, pull=(18+ph*10)*P.speed*dt;
       moveCircle(pl, (-dy/d)*tang - (dx/d)*pull*0.15, (dx/d)*tang - (dy/d)*pull*0.15);
     }
-    if(mechEvery(e,'t',1.9,dt)){
-      const n=1+ph, p=_pxy();
-      for(let i=0;i<n;i++){ const a=Math.random()*6.283, dd=TILE*(0.6+Math.random()*2.6);
+    // STONEFALL. One rock every 1.9s, scattered up to 3.2 tiles from where you stood a second
+    // ago, was the fight's ONLY damage -- and a moving player is never in it: phases 0 and 1 of a
+    // Lv55 dungeon boss measured literally zero damage per second across ten seconds. It falls
+    // faster and tighter each phase now, and the cyclone's EYE is a real place you cannot stand.
+    if(mechEvery(e,'t',1.9-ph*0.28,dt)){
+      const n=2+ph, p=_pxy();
+      for(let i=0;i<n;i++){ const a=Math.random()*6.283, dd=TILE*(0.4+Math.random()*(2.0-ph*0.25));
         hazAdd(e,p.x+Math.cos(a)*dd,p.y+Math.sin(a)*dd,
-          {r:TILE*0.85,tele:1.0,live:0.3,dmg:0.85,col:'#a8b8c8'}); } }
+          {r:TILE*0.95,tele:1.0-ph*0.12,live:0.35,dmg:0.85,col:'#a8b8c8'}); } }
+    // the eye: the cyclone drags you in, and the middle of it is where the stone comes from
+    if(pl){ const dEye=Math.hypot(pl.x-e.x,pl.y-e.y);
+      M.eye=(M.eye||0)+dt;
+      if(dEye<TILE*1.9 && M.eye>0.6){ M.eye=0; _hurt(mechDmg(e,0.30+ph*0.06)); } }
+    // and it answers back: a spiral of feathers so the fight has pressure between rockfalls
+    if(ph>=1 && mechEvery(e,'t2',2.4-ph*0.3,dt)){ _sig(e,'wind');
+      if(typeof eFire==='function'){ const n2=5+ph*2;
+        for(let i=0;i<n2;i++) eFire(e,(i/n2)*6.283+e.ang,215*P.speed); } }
   },
   trigger(e,ph){ _sig(e,'phase'); },
   draw(e){ mechDrawCommon(e);
@@ -395,20 +417,26 @@ _F('dn5',{ phases:[0.75,0.50,0.25], anchor:[false,false,false,true],
     // of the cycle and up for a short punish window, the exact inverse of its overworld form, which
     // is up for most of the cycle and under for a moment.
     if(!last){
+      // it hunts harder every phase: shorter time under, longer surfaced, faster tunnelling
       if(M.up===undefined){ M.up=0; M.dive=DN5_UNDER*P.cycle; }
+      M.chase=0.55+ph*0.35;
       if(M.up>0){                                    // SURFACED: hittable, and it hurts to stand near
         M.up-=dt; e.hidden=false; e.mechInv=0;
-        if(mechEvery(e,'t3',0.85,dt) && typeof eFire==='function')
-          for(let i=0;i<6+ph*2;i++) eFire(e,(i/(6+ph*2))*6.283+e.ang,200*P.speed);
-        if(M.up<=0){ _sig(e,'burrow'); M.dive=DN5_UNDER*P.cycle; e.hidden=true; e.mechInv=1; }
+        if(mechEvery(e,'t3',0.85-ph*0.09,dt) && typeof eFire==='function')
+          for(let i=0;i<8+ph*3;i++) eFire(e,(i/(8+ph*3))*6.283+e.ang,200*P.speed);
+        // surfaced it also THRASHES: standing next to the thing you came to hit should cost you
+        M.thrash=(M.thrash||0)+dt;
+        if(M.thrash>0.8 && _pdist(e)<TILE*2.4){ M.thrash=0; _hurt(mechDmg(e,0.34+ph*0.07)); }
+        if(M.up<=0){ _sig(e,'burrow'); M.dive=(DN5_UNDER-ph*0.8)*P.cycle; e.hidden=true; e.mechInv=1; }
       } else {
         e.hidden=true; e.mechInv=1;
         M.dive-=dt;
         if(M.dive<=0){                               // erupts under you, telegraphed by the mound
           const p=_pxy(); e.x=p.x; e.y=p.y; M.bx=e.x; M.by=e.y;
-          M.up=DN5_UP*P.cycle; e.hidden=false; e.mechInv=0;
+          M.up=(DN5_UP+ph*0.5)*P.cycle; e.hidden=false; e.mechInv=0;
           _sig(e,'erupt');
-          hazAdd(e,e.x,e.y,{r:TILE*1.6,tele:0.0,live:0.5,dmg:1.05,col:'#ff7a3a'});
+          // telegraphed: the mound shows where it is coming up, so the eruption is dodgeable
+          hazAdd(e,e.x,e.y,{r:TILE*1.6,tele:0.45,live:0.5,dmg:0.85,col:'#ff7a3a'});
           if(typeof addShake==='function') addShake(12);
           if(typeof msg==='function') msg('IT SURFACES','hit it before it digs back down');
         }
@@ -416,19 +444,29 @@ _F('dn5',{ phases:[0.75,0.50,0.25], anchor:[false,false,false,true],
       // it tunnels beneath, opening permanent scars
       const p=_pxy();
       if(e.mechInv){
-        M.bx=(M.bx===undefined)?e.x:M.bx+((p.x-M.bx)*Math.min(1,0.55*dt));
-        M.by=(M.by===undefined)?e.y:M.by+((p.y-M.by)*Math.min(1,0.55*dt));
+        M.bx=(M.bx===undefined)?e.x:M.bx+((p.x-M.bx)*Math.min(1,(M.chase||0.55)*dt));
+        M.by=(M.by===undefined)?e.y:M.by+((p.y-M.by)*Math.min(1,(M.chase||0.55)*dt));
         e.x=M.bx; e.y=M.by;
       }
-      if(mechEvery(e,'t',1.5,dt)){
-        hazAdd(e,e.x,e.y,{r:TILE*1.0,tele:0.6,live:30,dmg:0.42,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
+      // THE SCARS ARE FLOOR DENIAL, NOT A DAMAGE ENGINE. One every 1.5s living 30 seconds, laid
+      // under a mound that FOLLOWS you, stacked to 26 overlapping zones all sitting on the player:
+      // six times a level-matched hero's entire health bar per second. They are the fight's memory
+      // of where it has been, so they last -- there are just far fewer of them at once, and the
+      // one it lays while surfaced is the punish, not the tunnel.
+      if(mechEvery(e,'t',2.8-ph*0.45,dt) && mechHazCount(e)<7+ph*2){
+        hazAdd(e,e.x,e.y,{r:TILE*1.0,tele:0.7,live:14,dmg:0.30+ph*0.06,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
     } else {
       e.hidden=false; e.mechInv=0;
       if(M.ph!==3){ M.ph=3; _sig(e,'erupt'); e.hidden=false; e.mechInv=0;
         if(typeof msg==='function') msg('IT COMES UP','');
         if(typeof addShake==='function') addShake(16); }
+      // Surfaced for good. This used to be the SAFEST phase in the fight -- burrowing stopped, so
+      // the scars stopped with it and damage fell to a fifth. It keeps scarring the floor now, it
+      // just does it from where it stands instead of from under you.
       if(mechEvery(e,'t',2.2,dt)){ _sig(e,'roar');
         if(typeof eFire==='function') for(let i=0;i<16;i++) eFire(e,(i/16)*6.283+e.ang,215*P.speed); }
+      if(mechEvery(e,'t2',2.4,dt) && mechHazCount(e)<9){ const p2=_pxy();
+        hazAdd(e,p2.x,p2.y,{r:TILE*1.2,tele:0.8,live:12,dmg:0.34,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
     }
   },
   trigger(e,ph){ _sig(e,'phase'); },
@@ -480,7 +518,12 @@ _F('dn6',{ phases:[0.70,0.42,0.16],
       const pl=(typeof player!=='undefined')?player:null;
       if(pl) M.ghosts.push({x:pl.x,y:pl.y,t:(3.2-ph*0.4)*P.tele}); }
     for(let i=M.ghosts.length-1;i>=0;i--){ const q=M.ghosts[i]; q.t-=dt;
-      if(q.t<=0){ hazAdd(e,q.x,q.y,{r:TILE*1.05,tele:0.35,live:0.3,dmg:0.55,col:'#c9a0ff'});
+      // THE TRAIL HAS TO LAST LONG ENOUGH TO BE WALKED BACK INTO. It lived 0.3s on a 3.2s delay,
+      // so the ground you had stood on was clear again before you could ever loop round to it: the
+      // fight measured 2-9% of a hero's bar per second at Lv55, one of the softest in the game,
+      // and its own title is EVERYTHING RETURNS. The echo lingers now, and lingers longer as the
+      // fight goes on, so circling -- the answer to every other fight here -- is what kills you.
+      if(q.t<=0){ hazAdd(e,q.x,q.y,{r:TILE*1.05,tele:0.35,live:1.8+ph*0.7,dmg:0.55,col:'#c9a0ff'});
         M.ghosts.splice(i,1); } }
     if(M.ghosts.length>34) M.ghosts.shift();
     if(mechEvery(e,'t',4.0,dt)){ _sig(e,'scatter'); e.mechInv=1; M.gone=0.8*P.tele; }
@@ -587,13 +630,19 @@ _F('dn8',{ phases:[0.78,0.55,0.32,0.12], anchor:[true,true,true,true,true],
     // anchor so it stays planted at the core, and never claims immunity from the anchor clock.
     e.anchorNoInv=1;
     // a ring of fire closes from the arena edge toward the boss, then resets
+    // ESCALATE THE PUNISHMENT, NOT JUST THE SPEED. A faster ring spends LESS time small, so
+    // raising only the closing speed made every later phase SAFER: 32%/s of a hero's bar in the
+    // first phase down to 9%/s in the last, with the final phase the most survivable in the fight.
+    // The ring now closes TIGHTER and burns HARDER and MORE OFTEN each phase, which is what the
+    // titles have been promising all along.
     if(M.ring2===undefined) M.ring2=TILE*9;
-    M.ring2-=dt*(16+ph*7)*P.speed;
-    if(M.ring2<TILE*1.6){ M.ring2=TILE*9; _sig(e,'roar');
+    const minR=TILE*(1.6-ph*0.22);          // it squeezes you into less ground every phase
+    M.ring2-=dt*(16+ph*4)*P.speed;
+    if(M.ring2<minR){ M.ring2=TILE*9; _sig(e,'roar');
       if(typeof addShake==='function') addShake(12); }
     const p=_pxy(), d=Math.hypot(p.x-e.x,p.y-e.y);
     M.burn=(M.burn||0)+dt;
-    if(d>M.ring2 && M.burn>0.45){ M.burn=0; _hurt(mechDmg(e,0.45));
+    if(d>M.ring2 && M.burn>(0.45-ph*0.07)){ M.burn=0; _hurt(mechDmg(e,0.45+ph*0.16));
       if(typeof playerStatus==='function') playerStatus('burn',2.5,0); }
     if(mechEvery(e,'t',1.4,dt)){
       if(typeof eFire==='function'){ const n=8+ph*2;
