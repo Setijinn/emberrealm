@@ -227,7 +227,19 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 ---------------------------------------------------------------------------
 DO THIS FIRST
 ---------------------------------------------------------------------------
-Nothing is blocked. The two-client co-op verification below is DONE.
+Nothing is blocked. The Vault (v444) and the two-client co-op verification below
+are both DONE.
+
+THE VAULT IS OPEN (v444, 17j_vault.js). The Hearth room that read "STASH - coming
+soon" is now a working stash: 60 slots, paged 20 at a time, a strongbox you walk
+up to at VAULT tile 14,10.
+  IT IS ACCOUNT-WIDE AND UNGATED, BY THE USER'S EXPLICIT DECISION. The store hangs
+  off users[curUser], not off a character. A fresh Lv1 can withdraw a dead hero's
+  T12 and wear it, because canEquip has no level gate. That was raised before it
+  was built and chosen anyway. Permadeath still ends the run and still takes
+  everything the hero was CARRYING; it no longer takes what they banked.
+  IF THAT EVER NEEDS WALKING BACK, the gate goes in vaultCanWithdraw(it,ch) and
+  nowhere else. It exists for exactly that and today always returns true.
 
 CO-OP IS VERIFIED WITH TWO REAL CLIENTS (v433). Two browser contexts, one holding
 the EMBER SERVER, a real WebRTC link over the PeerJS broker. All five checks pass:
@@ -246,6 +258,7 @@ STILL OPEN, IN NO PARTICULAR ORDER
 - Bounty board has no fog objective.
 - Lv1-20 zone progression on the starter island is thin.
 - Per-class stat caps.
+- (done v444) The Vault. Account-wide storage, ungated. See DO THIS FIRST.
 - (done v432) The arena champion has THE CHALLENGE: it commits to a direction, a
   gold wedge appears, and you must stand IN it to parry — the one fight that
   punishes dodging. A parry buys ~3s of stagger; giving ground hits the whole floor.
@@ -293,6 +306,19 @@ QA TRAPS THAT COST TIME THIS SESSION (on top of HANDOFF.md's list)
   animate_object (for things PixelLab generated) has no such problem — it takes an
   id. Frames come out of the object/image DOWNLOAD endpoint as a zip; the direct
   backblaze URLs are 403.
+- A PANEL FITTING ITS FRAME IS NOT THE SAME QUESTION AS scrollHeight<=clientHeight.
+  equip_panel.png is 448x600 drawn at background-size:100% 100%, so the frame
+  STRETCHES to its box and its usable dark field is a PERCENTAGE inset (16.5% top,
+  18% bottom, ~16% sides, measured off the art) while #shopInner pads a fixed
+  46/40/44px. Those agree at one card size only. The panel reported "fits" while
+  visibly spilling over the border art. Measure against the art's real field:
+  card.top + height*0.165 .. card.bottom - height*0.180, and check EVERY child.
+- AND CHECK IT AT PHONE SIZES. The vault passed at desktop and overflowed by 87px
+  at 320x568, because the card scales with the viewport and fixed-px chrome does
+  not. You cannot resize this browser's viewport from the tool, but you can drive
+  it directly: the card owns --vH/--vW, so set them inline, force a sync reflow
+  with `void card.offsetHeight` (NOT rAF, which is throttled to zero here) and
+  re-measure. Eight viewports takes one tool call.
 - HARNESS BUGS OUTNUMBERED REAL BUGS in this sweep. Before reporting a finding,
   check the API you called: floorFamily takes (tileChar, room) not (x,y);
   zoneTierRow is POSITIONAL so a loot test must roll inside the zone it means;
