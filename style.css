@@ -376,7 +376,10 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .bagRow{display:flex;gap:10px;align-items:center;padding:7px 9px;border-radius:9px;
  background:linear-gradient(180deg,rgba(38,29,52,.86),rgba(16,12,22,.86));
  border:1px solid #4a3a26;border-left-width:4px;}
-.bagRow.taken{opacity:.42;filter:grayscale(.7);}
+/* a taken row fades out in place before it leaves, so the list does not jump under your finger
+   between the tap and the next piece arriving where the last one was */
+.bagRow{transition:opacity .16s ease, filter .16s ease;}
+.bagRow.taken{opacity:0;filter:grayscale(1);pointer-events:none;}
 /* the global `canvas` rule is position:fixed/inset:0/100vw — it exists for the fullscreen game
    canvas, so every in-panel canvas has to opt out explicitly or it stacks at the card's origin
    at full viewport size (which is what .eqCv and .isprite already do) */
@@ -391,9 +394,18 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .bagDelta b{font-weight:700;}
 .bagUp{color:#8fd48c;} .bagDown{color:#d4796a;} .bagSame{color:#7a7484;}
 .bagWho{font-size:9px;color:#8a8494;margin-top:1px;}
+/* THE VERDICT CHIP. The panel's answer, sized to be read before the numbers under it — a filled
+   pill for the one that changes your build, an outline for the ones that do not. */
+.bagV{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:5px;
+ font:700 10px 'Pixelify Sans',monospace;letter-spacing:.06em;}
+.bagV.vUp{background:#8fd48c;color:#10210f;}
+.bagV.vSame{border:1px solid #7a7484;color:#a09aa8;}
+.bagV.vDown{border:1px solid #6d4038;color:#d4796a;}
+.bagV.vNo{border:1px solid #4a4450;color:#7a7484;}
 /* .mbtn is width:min(78vw,300px) by default, which made every action span the row */
-.bagBtns{flex:0 0 92px;display:flex;flex-direction:column;gap:4px;}
-.bagBtns .mbtn{width:100%;padding:6px 4px;font-size:11px;letter-spacing:.04em;}
+.bagBtns{flex:0 0 auto;display:flex;align-items:center;gap:5px;}
+.bagBtns .mbtn{width:auto;min-width:66px;padding:7px 8px;font-size:11px;letter-spacing:.04em;}
+.bagBtns .bagCmpBtn{min-width:0;width:32px;padding:7px 0;font-size:14px;}
 #bagActs{display:flex;gap:8px;margin:12px 0 2px;}
 #bagActs .mbtn{flex:1;}
 /* ---- glory ledger on the death screen ---- */
@@ -439,8 +451,12 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  .bagMid{flex:1 1 140px;}
  .bagNm{font-size:12px;white-space:normal;}
  .bagDelta{font-size:11px;}
+ /* one primary action per row now, so it takes the width and the compare stays a fixed square --
+    the row no longer needs to be twice as tall to fit three full-width buttons */
  .bagBtns{flex:1 1 100%;flex-direction:row;}
  .bagBtns .mbtn{flex:1;width:auto;min-height:44px;font-size:12px;}
+ .bagBtns .bagCmpBtn{flex:0 0 52px;width:52px;min-height:44px;font-size:16px;}
+ .bagV{font-size:11px;padding:2px 8px;}
  #bagActs .mbtn{min-height:46px;font-size:13px;}
 }
 /* very small / landscape-short phones: keep the list scrollable rather than clipping it */

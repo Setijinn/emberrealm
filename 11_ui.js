@@ -105,6 +105,34 @@ function openBagPanel(lb){
   if(!its.length){ claimBag(lb); return; }
   bagOpen=lb; bagCmp=-1; $s('bagScr').style.display='flex'; paintBagPanel();
 }
+// THE VERDICT (user, 2026-07-26): "decide at a glance". Reading four stat deltas per row to work
+// out whether a piece is worth stopping for is the slowest part of opening a sack, so the panel
+// makes the call and shows its reasoning underneath rather than the other way round.
+//
+// Tier is the only power axis in this game (rarity stopped being power when the loot rework
+// landed), so tier decides first and the affix noise never overturns it: a T9 in place of a T7 is
+// an upgrade whatever the rolls say. Stat totals only break ties WITHIN a tier.
+const BAG_VERDICT={
+  upgrade  :{o:0, lbl:'▲ UPGRADE',  cls:'vUp'},
+  sidegrade:{o:1, lbl:'= SIDEGRADE',cls:'vSame'},
+  worse    :{o:2, lbl:'▼ WORSE',    cls:'vDown'},
+  noclass  :{o:3, lbl:'— OTHER CLASS', cls:'vNo'},
+  other    :{o:4, lbl:'', cls:'vNo'}
+};
+function bagVerdict(it,ch){
+  if(!it||!ch) return 'other';
+  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot') return 'other';
+  if(!canEquip(it,ch)) return 'noclass';
+  const cur=equippedItemFor(it.k,ch);
+  if(!cur) return 'upgrade';                       // an empty slot is always worth filling
+  const ta=(it.t===undefined)?-1:it.t, tb=(cur.t===undefined)?-1:cur.t;
+  if(ta>tb) return 'upgrade';
+  if(ta<tb) return 'worse';
+  // same tier: fall back to the summed stat weight, which is what the deltas below already show
+  const a=itemStats(it,ch.cls), b=itemStats(cur,ch.cls);
+  let d=0; for(const k of STATS) d+=(a[k]||0)-(b[k]||0);
+  return d>0?'upgrade':(d<0?'worse':'sidegrade');
+}
 // stat delta of `it` against what is worn in its slot, as coloured chips
 function bagDeltaHtml(it,ch){
   if(it&&it.k==='leg'){ const L=legById(it.id);
@@ -113,7 +141,7 @@ function bagDeltaHtml(it,ch){
   // a relic compares like any other item -- it is one -- but its trait is the part that decides
   // whether you want it, so that goes first and the stat deltas follow underneath
   if(!it||it.k==='pot'||it.k==='coin'||it.k==='scroll') return '';
-  if(!canEquip(it,ch)) return '<span class="bagSame">not for your class</span>';
+  if(!canEquip(it,ch)) return '';   // the verdict chip already says OTHER CLASS -- do not say it twice
   let head='';
   if(it.relic){ const R=relicDef(it.relic);
     head='<div class="relTrait">'+(R?R.d:'')+'</div>';
@@ -181,33 +209,58 @@ function paintBagPanel(){
     +' · '+its.length+' piece'+(its.length===1?'':'s')
     +((bn&&bn.bound)?' · <span style="color:#ff9c50">bound to you</span>':' · anyone may take this');
   const L=$s('bagList'); L.innerHTML='';
-  its.forEach((it,i)=>{
+  // ORDER IS A VIEW, NOT THE BAG. bagTakeOne splices bagItems(lb) by index, so the sack keeps its
+  // own order and we sort a list of indices into it. Reordering the array itself would make every
+  // row's button take the wrong piece.
+  const order=its.map((it,i)=>i).sort((x,y)=>{
+    const vx=BAG_VERDICT[bagVerdict(its[x],ch)].o, vy=BAG_VERDICT[bagVerdict(its[y],ch)].o;
+    if(vx!==vy) return vx-vy;
+    const tx=(its[x].t===undefined)?-1:its[x].t, ty=(its[y].t===undefined)?-1:its[y].t;
+    if(tx!==ty) return ty-tx;                       // then the better tier
+    return (its[y].rar||0)-(its[x].rar||0);         // then the shinier roll
+  });
+  let anyUpgrade=false;
+  order.forEach(i=>{
+    const it=its[i];
+    const vk=bagVerdict(it,ch), V=BAG_VERDICT[vk];
+    if(vk==='upgrade') anyUpgrade=true;
     const row=document.createElement('div'); row.className='bagRow';
     row.style.borderLeftColor=itemRarCol(it);
     const cv=document.createElement('canvas'); cv.width=46; cv.height=46; cv.className='bagIco';
     if(typeof drawItemIcon==='function') drawItemIcon(cv.getContext('2d'),it,46,46);
     row.appendChild(cv);
     const mid=document.createElement('div'); mid.className='bagMid';
+    const dl=bagDeltaHtml(it,ch);
     mid.innerHTML='<div class="bagNm" style="color:'+itemRarCol(it)+'">'+itemName(it)+'</div>'
-      +'<div class="bagDelta">'+bagDeltaHtml(it,ch)+'</div>';
+      +(V.lbl?'<div class="bagV '+V.cls+'">'+V.lbl+'</div>':'')
+      +(dl?'<div class="bagDelta">'+dl+'</div>':'');
     row.appendChild(mid);
+    // One primary action, not three. EQUIP when wearing it is the obvious move, TAKE otherwise;
+    // the full comparison hides behind an icon rather than a third full-width button, which is
+    // what made every row twice as tall as it needed to be on a phone.
     const btns=document.createElement('div'); btns.className='bagBtns';
-    const bt=document.createElement('button'); bt.className='mbtn dev'; bt.textContent='TAKE';
-    bt.onclick=()=>bagTakeOne(i,false); btns.appendChild(bt);
-    const be=document.createElement('button'); be.className='mbtn go'; be.textContent='EQUIP';
-    be.disabled=!canEquip(it,ch);
-    if(be.disabled) be.style.opacity='.4';
-    else be.onclick=()=>bagTakeOne(i,true);
-    btns.appendChild(be);
-    const bc=document.createElement('button'); bc.className='mbtn dev'+(bagCmp===i?' on':'');
-    bc.textContent='COMPARE'; bc.onclick=()=>{ bagCmp=(bagCmp===i?-1:i); paintBagPanel(); };
+    const wear=(vk==='upgrade'&&canEquip(it,ch));
+    const bp=document.createElement('button');
+    bp.className='mbtn '+(wear?'go':'dev'); bp.textContent=wear?'EQUIP':'TAKE';
+    // fade the row out where it stands before the list re-lays itself, so the next piece does not
+    // appear under a thumb that is still on the last one. `_gone` swallows a double-tap during it.
+    bp.onclick=()=>{ if(row._gone) return; row._gone=1; row.classList.add('taken');
+      setTimeout(()=>bagTakeOne(i,wear),150); };
+    btns.appendChild(bp);
+    const bc=document.createElement('button'); bc.className='mbtn dev bagCmpBtn'+(bagCmp===i?' on':'');
+    bc.textContent='⇄'; bc.title='Compare with what you are wearing';
+    bc.disabled=(vk==='other'||vk==='noclass');
+    if(bc.disabled) bc.style.opacity='.3'; else bc.onclick=()=>{ bagCmp=(bagCmp===i?-1:i); paintBagPanel(); };
     btns.appendChild(bc);
     row.appendChild(btns);
     L.appendChild(row);
-    // COMPARE opens the full side-by-side underneath: every stat of the drop against every stat
-    // of what you are wearing, so you can judge a trade the one-line delta cannot express
+    // ⇄ opens the full side-by-side underneath: every stat of the drop against every stat of what
+    // you are wearing, so you can judge a trade the one-line delta cannot express
     if(bagCmp===i){ L.appendChild(bagCompareBlock(it,ch)); }
   });
+  // EQUIP BEST only offers itself when there is something to equip, so it never reads as a button
+  // that did nothing
+  const eb=$s('bagBest'); if(eb){ eb.style.display=anyUpgrade?'block':'none'; }
 }
 // Pull one piece out of the open bag. `wear` equips it straight away and sends the displaced
 // piece to the satchel instead; otherwise it just goes to the satchel.
@@ -227,6 +280,20 @@ function bagTakeOne(i,wear){
   its.splice(i,1); lb.items=its; lb.item=its[0]||null;
   if(!its.length){ const k=loots.indexOf(lb); if(k>=0) loots.splice(k,1); saveRPG(); closeBagPanel(); return; }
   saveRPG(); paintBagPanel();
+}
+// Wear every upgrade in the sack, then satchel whatever is left. Goes through bagTakeOne so the
+// displaced-gear and satchel-full paths stay in ONE place -- and walks the indices backwards,
+// because each call splices the array underneath us.
+function bagEquipBest(){
+  const lb=bagOpen; if(!lb) return;
+  const ch=curChar(); if(!ch||!rpg) return;
+  const its=bagItems(lb);
+  const wear=[];
+  for(let i=0;i<its.length;i++) if(bagVerdict(its[i],ch)==='upgrade'&&canEquip(its[i],ch)) wear.push(i);
+  // Highest index first. Equipping changes what is worn, so the verdicts were computed against the
+  // gear you had when you opened the sack -- that is the honest reading of "best in this sack".
+  for(let q=wear.length-1;q>=0;q--){ if(!bagOpen) return; bagTakeOne(wear[q],true); }
+  if(bagOpen) bagTakeAll();
 }
 function bagTakeAll(){
   const lb=bagOpen; if(!lb) return;
@@ -1306,6 +1373,7 @@ $s('invX').addEventListener('click',()=>{$s('invScr').style.display='none';});
 $s('bagX').addEventListener('click',closeBagPanel);
 $s('bagLeave').addEventListener('click',closeBagPanel);
 $s('bagAll').addEventListener('click',bagTakeAll);
+$s('bagBest').addEventListener('click',bagEquipBest);
 // Reconstruct the item currently WORN in a slot, rolls and all, so it can be compared against or
 // handed back to the satchel. rpg.eqAff keeps the rarity/affixes separately from the tier.
 function equippedItemFor(slot,ch){
