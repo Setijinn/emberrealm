@@ -804,10 +804,53 @@ function openSkills(){ const ch=curChar(); if(!ch||!rpg) return; xpTreeInit(rpg)
     +'</div>';
   // 'click' (not pointerdown) so dragging/panning the tree never selects a node
   const cv=document.getElementById('skillCv'); cv.addEventListener('click',_skClick);
+  _skWirePan();
   document.getElementById('skRespec').onclick=()=>{ if(confirm('Refund every spent point? (ascension is kept)')){ respec(ch.cls,rpg); recalcStats(); saveRPG(); _skSel=null; _skRefresh(); } };
   document.getElementById('skX').onclick=closeSkills;
   _skSel=null; _skBuildLayout(ch.cls); _skFitCanvas(); _skRefresh(); _skStartAnim();
   addEventListener('resize',_skFitCanvas);
+}
+// GRAB-AND-DRAG PANNING. The tree is 960x560 inside a smaller scroll box, and until now moving
+// around it depended entirely on the browser's own scrolling -- which meant a CSS touch-action
+// change elsewhere could silently take it away, and did. This drives scrollLeft/scrollTop
+// directly from pointer events, so panning works with a mouse, a finger or a stylus regardless of
+// what the browser is willing to do on its own. Native scroll still works too; this is additive.
+//
+// A drag must NOT select a node, so the click handler is suppressed once the pointer has actually
+// travelled: tapping still selects, dragging never does.
+let _skDragged=false;      // set by a pan that actually travelled; consumed by the next _skClick
+function _skWirePan(){
+  const wrap=document.querySelector('.skCanWrap'); if(!wrap||wrap._panWired) return;
+  wrap._panWired=1;
+  let down=false, moved=false, sx=0, sy=0, ol=0, ot=0, pid=null;
+  wrap.addEventListener('pointerdown',e=>{
+    down=true; moved=false; pid=e.pointerId;
+    sx=e.clientX; sy=e.clientY; ol=wrap.scrollLeft; ot=wrap.scrollTop;
+    wrap.classList.add('dragging');
+  });
+  wrap.addEventListener('pointermove',e=>{
+    if(!down||e.pointerId!==pid) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(!moved && Math.hypot(dx,dy)>5){ moved=true;
+      try{ wrap.setPointerCapture(pid); }catch(err){} }   // keep the drag if the finger leaves the box
+    if(!moved) return;
+    wrap.scrollLeft=ol-dx; wrap.scrollTop=ot-dy;
+    e.preventDefault();
+  },{passive:false});
+  const end=e=>{
+    if(!down) return;
+    down=false; wrap.classList.remove('dragging');
+    try{ wrap.releasePointerCapture(pid); }catch(err){}
+    // Swallow the click this drag would otherwise produce. A one-shot capture listener plus a
+    // setTimeout removal was a race in both directions: remove too early and the drag selects a
+    // node, too late and it eats the NEXT tap. A flag the click handler checks and clears is
+    // deterministic, and _skClick is the only consumer.
+    _skDragged=moved;
+    pid=null;
+  };
+  wrap.addEventListener('pointerup',end);
+  wrap.addEventListener('pointercancel',end);
+  wrap.addEventListener('pointerleave',e=>{ if(down&&!moved) end(e); });
 }
 // The tree stays FULL SIZE (960x560, readable nodes) inside the scrollable .skCanWrap
 // viewport; here we just aim the initial view at the trunk (bottom-centre), where a
@@ -916,7 +959,11 @@ function _skDrawAsc(g,s,pulse,chosen){ const ch=curChar(); const a=s.a, isC=chos
   g.textAlign='center'; g.textBaseline='middle'; g.font='13px serif'; g.fillStyle=isC?'#fff':(chosen?'#5a5464':a.color); g.fillText('✦',s.x,s.y+1);
   g.font='bold 10px "Pixelify Sans",monospace'; g.textBaseline='top'; g.fillStyle=isC?'#fff':(chosen?'#6a6474':a.color); g.fillText(a.name,s.x,s.y+R+3);
 }
-function _skClick(ev){ const cv=document.getElementById('skillCv'); if(!cv||!_skLayout) return; const rect=cv.getBoundingClientRect();
+function _skClick(ev){
+  // a click that ended a PAN is not a selection -- consume the flag either way so it can never
+  // linger and swallow the tap after it
+  if(_skDragged){ _skDragged=false; return; }
+  const cv=document.getElementById('skillCv'); if(!cv||!_skLayout) return; const rect=cv.getBoundingClientRect();
   const sx=(ev.clientX-rect.left)*(cv.width/rect.width), sy=(ev.clientY-rect.top)*(cv.height/rect.height);
   for(const s of _skLayout.nodes){ const R=s.a?30:26; if(Math.hypot(sx-s.x,sy-s.y)<R){ _skSel=s.n?s.n.id:s.a.id; navigator.vibrate&&navigator.vibrate(8); _skRefresh(); return; } }
 }

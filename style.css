@@ -4,7 +4,13 @@
    that must not pan at all overrides with `none` below. maximum-scale/user-scalable in the
    viewport meta do NOT do this job -- iOS Safari has ignored both since iOS 10. */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;-webkit-touch-callout:none;}
+  touch-action:manipulation;-webkit-touch-callout:none;
+  /* The double-tap MAGNIFIER (that little zoomed bubble) is a text-selection gesture, and it is
+     killed by user-select rather than by touch-action. Setting it on html/body and relying on
+     inheritance was not enough -- it is applied per element here so nothing can miss it. */
+  -webkit-user-select:none;user-select:none;}
+/* ...but real inputs must still be typeable and selectable, or you cannot fix a typo in a name */
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
 html,body{height:100%;background:#0b0a10;overflow:hidden;touch-action:none;
   -webkit-text-size-adjust:100%;text-size-adjust:100%;
   -webkit-user-select:none;user-select:none;font-family:'Pixelify Sans',monospace;}
@@ -12,8 +18,13 @@ html,body{height:100%;background:#0b0a10;overflow:hidden;touch-action:none;
    screen edge-to-edge (safe-area insets overlaid, not subtracted), so the fixed canvas can
    never stop short and leave the page background as a black band. vw/vh are the fallback for
    browsers without dvh. The drawing buffer is measured back off this box in resize(). */
-canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dvw;height:100dvh;
-  touch-action:none;}   /* the play surface owns every gesture on it: no pan, no zoom, no double-tap */
+canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dvw;height:100dvh;}
+/* touch-action:none belongs to the PLAY SURFACE, not to every canvas. Putting it on the bare
+   `canvas` selector told the browser not to pan on the skill tree's canvas either, which is what
+   the tree's scroll container needs to move around a 960x560 map -- so the tree could not be
+   panned on touch at all. Exactly the same trap as the position:fixed rule below it: a global
+   `canvas` rule leaking onto in-panel canvases. Scoped to #cv so it cannot happen a third time. */
+#cv{touch-action:none;}   /* the play surface owns every gesture on it: no pan, no zoom, no double-tap */
 #rotate{position:fixed;inset:0;background:#0b0a10;color:#d8d2c8;display:none;
   align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:99;text-align:center;padding:20px;}
 #rotate .ic{font-size:54px;animation:spin 2s ease-in-out infinite;}
@@ -119,7 +130,12 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 /* the tree renders FULL SIZE inside a pannable viewport — drag/scroll to explore, tap to select
    (small screens were shrinking the whole 960px tree until nodes were unreadable) */
 .skCanWrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;margin:6px 0;max-height:56vh;
- border:1px solid #2c2633;border-radius:12px;background:#0b090f;}
+ border:1px solid #2c2633;border-radius:12px;background:#0b090f;
+ touch-action:pan-x pan-y;                 /* explicit: this box pans, whatever is inside it */
+ overscroll-behavior:contain;              /* panning the tree must not scroll the screen behind it */
+ cursor:grab;}
+.skCanWrap.dragging{cursor:grabbing;}
+.skCanWrap #skillCv{touch-action:pan-x pan-y;}
 #skillCv{position:static;inset:auto;display:block;margin:0 auto;width:960px;height:560px;
  image-rendering:pixelated;background:#0b090f;cursor:pointer;}
 .skDetail{min-height:58px;display:flex;align-items:center;gap:12px;background:#141019;border:1px solid #2c2633;
