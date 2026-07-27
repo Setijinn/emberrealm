@@ -842,7 +842,10 @@ function update(dt){
     for(const lb of loots){ if(bagAuto(lb)) continue;
       if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;
       const d=Math.hypot(lb.x-player.x,lb.y-player.y);
-      if(d<52 && d<_lbest){ _lbest=d;
+      // 64, not the 48 the shared prompt used: a sack scatters a little where it lands, so at 48 it
+      // could sit visually under your boots and still refuse to offer. Opening it is now the ONLY
+      // way to get it, so the band has to be forgiving.
+      if(d<64 && d<_lbest){ _lbest=d;
         const n=bagItems(lb).length, tt=bagTopTier(lb);
         lootPrompt={x:lb.x,y:lb.y,bag:lb,
           ctx:'T'+(tt+1)+(n>1?(' · '+n+' pieces'):'')}; } } }

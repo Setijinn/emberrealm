@@ -7,6 +7,27 @@
 let inputMode=(typeof matchMedia==='function' && matchMedia('(pointer:fine)').matches)?'pc':'touch';
 function _setMode(m){ inputMode=m; if(document.body) document.body.classList.toggle('pcmode', m==='pc'); }
 addEventListener('DOMContentLoaded',()=>_setMode(inputMode));
+// ---------- iOS zoom lockout ----------
+// A zoom in the middle of a fight is unrecoverable: the viewport stays scaled, the thumb stick is
+// off its origin, and there is no gesture to undo it one-handed. CSS touch-action kills double-tap
+// on every element (see style.css), and these two cover what CSS cannot:
+//   * gesturestart/change/end are WebKit-only pinch events, unaffected by touch-action.
+//   * a canvas double-tap on iOS <13, which predates touch-action support.
+// The double-tap guard is scoped to the canvas ON PURPOSE. preventDefault on touchend also
+// suppresses the synthesised click, so applying it to the HUD would eat the second tap of a
+// potion-mash. Canvas input runs on pointerdown, which preventDefault here cannot touch.
+for(const g of ['gesturestart','gesturechange','gestureend'])
+  addEventListener(g,e=>e.preventDefault(),{passive:false});
+let _lastTap=0,_lastTapX=0,_lastTapY=0;
+addEventListener('touchend',e=>{
+  if(!e.target || e.target.tagName!=='CANVAS') return;
+  const t=e.changedTouches&&e.changedTouches[0]; if(!t) return;
+  const now=performance.now();
+  if(now-_lastTap<320 && Math.hypot(t.clientX-_lastTapX,t.clientY-_lastTapY)<44) e.preventDefault();
+  _lastTap=now; _lastTapX=t.clientX; _lastTapY=t.clientY;
+},{passive:false});
+addEventListener('dblclick',e=>{ if(e.target&&e.target.tagName==='CANVAS') e.preventDefault(); },{passive:false});
+
 const stick={move:{id:null,ox:0,oy:0,dx:0,dy:0}};
 const mouse={x:0,y:0};
 function mouseWorld(){ return s2w(mouse.x,mouse.y); }
