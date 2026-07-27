@@ -99,6 +99,35 @@ function netDropRemote(){
   if(typeof bossBar!=='undefined' && bossBar && bossBar.remote) bossBar=null;
   netEnts={};
 }
+// ---- HANDING THE ROOM BACK ----
+// netSimulates() is positional: a client simulates its own room right up until the host walks
+// into it. Nothing dropped the world it had already built at that moment, so the client ended up
+// fighting BOTH -- its own locally-spawned enemies AND the host's authoritative shadows of the
+// same room. Measured with two real clients: 6 remote + 6 stale locals, still there twenty
+// seconds later at full HP. This is the mirror of netDropRemote, for the opposite edge.
+//
+// Only spawn-point creatures and their shots go. Remote shadows are the host's and stay; a boss
+// the client raised locally goes with the rest, because the host owns the room now.
+function netDropLocal(){
+  if(typeof enemies!=='undefined') for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i]; if(e && !e.remote) enemies.splice(i,1); }
+  if(typeof eShots!=='undefined') for(let i=eShots.length-1;i>=0;i--){
+    const s=eShots[i]; if(s && !s.remote) eShots.splice(i,1); }
+  if(typeof bossBar!=='undefined' && bossBar && !bossBar.remote) bossBar=null;
+}
+// Edge-detect the handover once per frame. Both directions matter: taking the room back (the host
+// left) must not inherit its stale shadows either, which netDropRemote already handles.
+let _netSimPrev=null;
+function netSimEdge(){
+  if(typeof netSimulates!=='function') return;
+  const now=!!netSimulates();
+  if(_netSimPrev===null){ _netSimPrev=now; return; }
+  if(now!==_netSimPrev){
+    if(now) netDropRemote();   // I am simulating again: the host's shadows are stale
+    else    netDropLocal();    // the host has arrived: my world is stale
+    _netSimPrev=now;
+  }
+}
 // True for public bags, my own bags, and EVERY bag in solo play — `own` is only ever set when
 // networked, so the short-circuit at the call sites means solo pays one undefined read.
 function netOwnsLoot(b){ return !b || !b.own || b.own===netSelfId(); }

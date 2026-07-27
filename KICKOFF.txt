@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v431.
+Service worker is at emberrealm-v433.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -190,6 +190,11 @@ UI / WORLD
 ---------------------------------------------------------------------------
 CO-OP (v370-v375) -- done, with two things stated plainly
 ---------------------------------------------------------------------------
+- HANDING THE ROOM OVER IS AN EDGE, AND BOTH DIRECTIONS NEED CLEANING. netSimulates()
+  flipping true->false (the host walked into your room) must drop the world the
+  client already built, or you fight BOTH its locals and the host's shadows of the
+  same room: measured 6 remote + 6 stale locals, still there 20s later at full HP.
+  netSimEdge() runs once per frame; netDropLocal() is the mirror of netDropRemote().
 - netSimulates() is POSITIONAL now: a client simulates its own room unless the
   host is actually IN it. It used to be "clients never simulate", which combined
   with netApplyWorld's room filter to leave anyone paired with a distant stranger
@@ -222,11 +227,17 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 ---------------------------------------------------------------------------
 DO THIS FIRST
 ---------------------------------------------------------------------------
-VERIFY THE CO-OP WORK WITH TWO REAL CLIENTS. Open two browser contexts, let one
-claim the EMBER SERVER, and confirm: the client's own room populates when the
-host is elsewhere; boss hazards render AND hurt on the client; going solo
-mid-fight is clean. Everything else is done and measured; this is the one gap
-between "the code is right" and "the feature works".
+Nothing is blocked. The two-client co-op verification below is DONE.
+
+CO-OP IS VERIFIED WITH TWO REAL CLIENTS (v433). Two browser contexts, one holding
+the EMBER SERVER, a real WebRTC link over the PeerJS broker. All five checks pass:
+  1. host elsewhere — client's room populates itself (7 local, netSimulates true)
+  2. host walks in — handover is clean, zero stale locals
+  3. e.bd crosses the wire (158 on host AND client; clients used to eat flat bd=10)
+  4. boss hazards render AND hurt on the client (20 hazards, 699 dmg over 5 hits)
+  5. coopSolo() with 7 shadows + a boss + 143 shots live — no crash, no NaN,
+     shadows purged, room repopulated
+The test found one real bug that only two clients could find; see netDropLocal.
 
 ---------------------------------------------------------------------------
 STILL OPEN, IN NO PARTICULAR ORDER
@@ -235,8 +246,9 @@ STILL OPEN, IN NO PARTICULAR ORDER
 - Bounty board has no fog objective.
 - Lv1-20 zone progression on the starter island is thin.
 - Per-class stat caps.
-- The arena champion has no signature mechanic by choice — it is a pressure check
-  inside a wave mode. Revisit if that reads as an omission in play.
+- (done v432) The arena champion has THE CHALLENGE: it commits to a direction, a
+  gold wedge appears, and you must stand IN it to parry — the one fight that
+  punishes dodging. A parry buys ~3s of stagger; giving ground hits the whole floor.
 
 ---------------------------------------------------------------------------
 QA TRAPS THAT COST TIME THIS SESSION (on top of HANDOFF.md's list)

@@ -834,6 +834,8 @@ function update(dt){
   // ground dungeon portals from slain world bosses: tick life + despawn (USE-gated below)
   for(let i=groundPortals.length-1;i>=0;i--){ const gp=groundPortals[i];
     gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; } }
+  // whoever owns this room may have just changed -- hand it over before anything acts on it
+  if(typeof netSimEdge==='function') netSimEdge();
   // spawns: streaming activation + 60s respawns (only once you leave the area)
   respawnT-=dt;
   // clients never activate spawn points -- every enemy they see is one the host spawned
