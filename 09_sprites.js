@@ -1723,7 +1723,10 @@ function render(){
     ctx.textAlign='left';
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);
-    const aim=allyImg(al.spr);
+    // an ally's own frames win over its single static pose
+    const _aan=(typeof allyAnim==='function')?allyAnim(al.spr):null;
+    const _afr=_aan?_aan.idle[Math.floor(pn*7+al.x*0.05)%_aan.idle.length]:null;
+    const aim=(_afr&&_afr.naturalWidth)?_afr:allyImg(al.spr);
     if(aim){ const bob=Math.sin(pn*4+al.x)*(al.spr==='wisp'?2.5:1);
       // scale by the LONGER side so a tall skeleton and a wide wolf both land ~small & even
       const tsz=al.spr==='wisp'?26:al.spr==='wolf'?36:32;

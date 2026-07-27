@@ -416,7 +416,10 @@ function _petPaint(ov,u){
 function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return;
   if(curRoom&&curRoom.petRoom) return;                         // suppressed in the Sanctuary (all pets wander there)
   const p=petEnt.def;
-  const im=_petImg[p.spr], x=petEnt.x, y=petEnt.y, t=performance.now()/1000;
+  // a pet's own frames win over its single static pose; the bob below still rides on top
+  const _pan=(typeof petAnim==='function')?petAnim(p.spr):null;
+  const _pfr=_pan?_pan.idle[Math.floor(performance.now()/140)%_pan.idle.length]:null;
+  const im=(_pfr&&_pfr.naturalWidth)?_pfr:_petImg[p.spr], x=petEnt.x, y=petEnt.y, t=performance.now()/1000;
   const bob=Math.sin(t*3+x*0.05)*2;
   if(typeof shadow==='function') shadow(x,y,8);
   // rarity aura for rare+ pets

@@ -331,20 +331,34 @@ if(typeof window!=='undefined') for(const b of _artSlots) _bossImg[b]=_img('asse
 
 // Enemy frame animations (PixelLab objects). type/band -> {idle:[frames], attack:[frames]}
 function _frames(dir,name,n){ const a=[]; if(typeof window!=='undefined') for(let i=0;i<n;i++) a.push(_img(dir+'/'+name+'_'+i+'.png')); return a; }
-const _mobAnim={}, _bossAnim={}, _mobArchAnim={};
+const _mobAnim={}, _bossAnim={}, _mobArchAnim={}, _allyAnim={}, _petAnim={};
 function mobArchAnim(name){ const A=_mobArchAnim[name];
   return (A && A.idle && A.idle.length && A.idle[0].naturalWidth) ? A : null; }
+function allyAnim(name){ const A=_allyAnim[name];
+  return (A && A.idle && A.idle.length && A.idle[0].naturalWidth) ? A : null; }
+// PETS. Loaded lazily by sprite name -- there are 32 species and only the one walking beside you
+// is ever on screen, so probing all of them at boot would be 32 folders nobody looks at.
+function petAnim(spr){
+  if(!spr) return null;
+  if(_petAnim[spr]===undefined) _petAnim[spr]={idle:_frames('assets/pets/anim/'+spr,'idle',9)};
+  const A=_petAnim[spr];
+  return (A && A.idle.length && A.idle[0].complete && A.idle[0].naturalWidth) ? A : null;
+}
 if(typeof window!=='undefined'){
   const _anim=(name)=>({idle:_frames('assets/mobs/anim/'+name,'idle',7), attack:_frames('assets/mobs/anim/'+name,'attack',7)});
   _mobAnim.c=_anim('hound');
   _mobAnim.s=_anim('cultist');
-  // ARCHETYPE IDLE FRAMES (user: "give all of the mobs animations"). Nine frames each, PixelLab
-  // v3, at assets/mobs/anim/arch_<name>/idle_N.png. Attack frames are not vendored for these yet,
-  // so _enemyFrame falls back to the idle set mid-swing rather than blanking -- the same graceful
-  // degrade the class sprites use. A missing folder simply leaves the archetype on its static
-  // sprite, which is exactly where it was before this shipped.
+  // ARCHETYPE FRAMES (user: "give all of the mobs animations", then "make sure every creature in
+  // the game has animations"). Nine idle and nine attack frames each, PixelLab v3, at
+  // assets/mobs/anim/arch_<name>/{idle,attack}_N.png. _enemyFrame picks the attack set while
+  // e.animAtk is running and the idle set otherwise; a missing folder leaves the archetype on its
+  // static sprite, which is exactly where it was before any of this shipped.
   for(const k of ['crab','swarm','bird','husk','golem','plant','wisp','boar','slinger','shaman','acolyte'])
-    _mobArchAnim[k]={idle:_frames('assets/mobs/anim/arch_'+k,'idle',9), attack:[]};
+    _mobArchAnim[k]={idle:_frames('assets/mobs/anim/arch_'+k,'idle',9),
+                     attack:_frames('assets/mobs/anim/arch_'+k,'attack',9)};
+  // SUMMONED ALLIES. They fight beside you for a whole run and stood perfectly still doing it.
+  for(const k of ['wolf','skel'])
+    _allyAnim[k]={idle:_frames('assets/mobs/anim/ally_'+k,'idle',9), attack:[]};
   // every boss now has idle+attack frames; a slot without them falls back to its static sprite
   for(const b of _artSlots) _bossAnim[b]=_anim('boss_'+b);
 }
