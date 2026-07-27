@@ -507,10 +507,17 @@ function update(dt){
   fire(dt);
 
   // enemies
-  // On a co-op CLIENT the shared world belongs to the host: enemies, bosses and their projectiles
-  // arrive as snapshots and are interpolated, so running the AI here as well would fight the
-  // incoming state and desync immediately. Solo play and the host take the normal path.
-  if(typeof netIsClient==='function' && netIsClient()){
+  // When the shared world belongs to SOMEONE ELSE, enemies and their projectiles arrive as
+  // snapshots and are interpolated; running the AI here as well would fight the incoming state.
+  //
+  // The gate is netSimulates(), NOT netIsClient(). Those used to mean the same thing and no
+  // longer do: a client whose host is in a different room now fills that room itself, and asking
+  // the old question left it spawning a world of enemies that then never moved -- the AI was
+  // still switched off for the whole machine. One predicate answers "is this world mine to run",
+  // and every gate that depends on it must use that one.
+  const _shadow=(typeof netSimulates==='function') ? !netSimulates()
+              : (typeof netIsClient==='function' && netIsClient());
+  if(_shadow){
     if(typeof netInterp==='function') netInterp(dt);
     if(typeof netHazards==='function') netHazards(dt);   // pools / bloom hit US too
     for(const e of enemies){ if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt; }
@@ -760,7 +767,8 @@ function update(dt){
   // enemy shots. A client's copies come from the host and are dead-reckoned in netInterp, so it
   // must not advance or expire them here -- but it still has to test them against ITSELF, because
   // each player takes their own damage locally.
-  const _netCl=(typeof netIsClient==='function'&&netIsClient());
+  // same question, same answer: if this room is mine to run, its shots are mine to advance
+  const _netCl=_shadow;
   for(let i=eShots.length-1;i>=0;i--){ const s=eShots[i];
     if(!_netCl){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
       if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; } }
