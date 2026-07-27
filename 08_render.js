@@ -276,8 +276,11 @@ function drawTileG(x,y){
     //     tile, and grass has a visible grain direction.
     //   * tileShade over the top, which is continuous corner-sampled noise rather than a per-tile
     //     value, so its variation does not line up with the tile edges it is hiding.
-    const nz=vnoise(x,y,5.5)*0.6+vnoise(x+40,y+80,2.3)*0.4, gv=100+Math.round((nz-0.5)*48);
-    ctx.fillStyle='rgb('+Math.round(gv*0.45)+','+gv+','+Math.round(gv*0.38)+')'; ctx.fillRect(tx,ty,TILE,TILE);
+    // The base tone is matched to the TURF's measured mean (78,128,37) rather than picked by eye,
+    // so a cell whose texture has not decoded yet is the same green as its neighbours instead of a
+    // dark hole that pops when the image lands.
+    const nz=vnoise(x,y,5.5)*0.6+vnoise(x+40,y+80,2.3)*0.4, gv=128+Math.round((nz-0.5)*44);
+    ctx.fillStyle='rgb('+Math.round(gv*0.61)+','+gv+','+Math.round(gv*0.29)+')'; ctx.fillRect(tx,ty,TILE,TILE);
     const bh=hmix(x*3+1,y*7+2);
     const _ok=im=>im&&im.complete&&im.naturalWidth;
     const _g2=(typeof _roomFloor2Img!=='undefined')?_roomFloor2Img:null;
