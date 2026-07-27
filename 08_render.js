@@ -260,15 +260,45 @@ function drawTileG(x,y){
       const wn=Math.sin(performance.now()/700+x*0.9+y*1.7); if(wn>0.62){ ctx.fillStyle='rgba(235,250,252,0.14)'; ctx.fillRect(tx+6,ty+TILE/2-1,TILE-12,2); }
       const gh=hmix(x*3+((performance.now()/500)|0), y*5); if((gh&255)<16){ ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.fillRect(tx+(gh%TILE),ty+((gh>>5)%TILE),1,1); }
       return; }
-    // CLEAN PROCEDURAL LAWN — organic value-noise green (no repeating tile), sparse grass blades,
-    // faint highlights, and the occasional daisy. Looks like a natural meadow, not a stamped grid.
+    // THE MEADOW FLOOR (user: "give the grass texture in the pet sanctuary").
+    // It was value-noise green with three 1px blades per cell -- correct, cheap, and from two
+    // tiles away completely flat. It now stamps real painted turf.
+    //
+    // The base colour is still drawn FIRST and unconditionally. 15_pets.js has always asked for
+    // assets/pets/room_floor*.png and the files never existed, so _img() was 404ing and this
+    // branch silently ran its fallback forever; drawing the procedural green underneath means a
+    // missing or still-decoding texture is a green lawn rather than a hole.
+    //
+    // Anti-repetition, because one stamp repeated across 900 cells is a grid:
+    //   * TWO turf variants, the second (clover, drier) on about a third of cells
+    //   * eight orientations -- four quarter turns times a mirror. Quarter turns matter more than
+    //     mirrors here: a mirror preserves the texture's own axes, so it still reads as the same
+    //     tile, and grass has a visible grain direction.
+    //   * tileShade over the top, which is continuous corner-sampled noise rather than a per-tile
+    //     value, so its variation does not line up with the tile edges it is hiding.
     const nz=vnoise(x,y,5.5)*0.6+vnoise(x+40,y+80,2.3)*0.4, gv=100+Math.round((nz-0.5)*48);
     ctx.fillStyle='rgb('+Math.round(gv*0.45)+','+gv+','+Math.round(gv*0.38)+')'; ctx.fillRect(tx,ty,TILE,TILE);
     const bh=hmix(x*3+1,y*7+2);
-    ctx.fillStyle='rgba(26,62,26,0.5)';                      // a few darker grass blades
-    for(let i=0;i<3;i++){ if(((bh>>(i*4))&7)<4) ctx.fillRect(tx+2+((bh>>(i*3))%(TILE-4)), ty+2+((bh>>(i*3+2))%(TILE-4)), 1, 2); }
-    if(((bh>>9)&7)<2){ ctx.fillStyle='rgba(255,255,235,0.07)'; ctx.fillRect(tx+((bh>>2)%TILE), ty+((bh>>5)%TILE),1,1); }
-    if(vnoise(x+11,y+5,3.2)>0.84){ const dh=hmix(x+50,y+90), dx2=tx+7+(dh%18), dy2=ty+7+((dh>>5)%18);
+    const _ok=im=>im&&im.complete&&im.naturalWidth;
+    const _g2=(typeof _roomFloor2Img!=='undefined')?_roomFloor2Img:null;
+    const _g1=(typeof _roomFloorImg!=='undefined')?_roomFloorImg:null;
+    const turf=(((bh>>>11)%100)<34 && _ok(_g2)) ? _g2 : (_ok(_g1)?_g1:(_ok(_g2)?_g2:null));
+    if(turf){
+      ctx.imageSmoothingEnabled=false;
+      ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2);
+      ctx.rotate((((bh>>>5)&3))*1.5707963267948966);
+      if(bh&1) ctx.scale(-1,1);
+      ctx.drawImage(turf,-TILE/2-1,-TILE/2-1,TILE+2,TILE+2);   // 1px bleed: no hairline at the seam
+      ctx.restore();
+      tileShade(tx,ty,x,y,0.13,67);
+    } else {
+      ctx.fillStyle='rgba(26,62,26,0.5)';                    // fallback: the old hand-drawn blades
+      for(let i=0;i<3;i++){ if(((bh>>(i*4))&7)<4) ctx.fillRect(tx+2+((bh>>(i*3))%(TILE-4)), ty+2+((bh>>(i*3+2))%(TILE-4)), 1, 2); }
+      if(((bh>>9)&7)<2){ ctx.fillStyle='rgba(255,255,235,0.07)'; ctx.fillRect(tx+((bh>>2)%TILE), ty+((bh>>5)%TILE),1,1); }
+    }
+    // daisies stay on top of either path -- they are the thing that reads as "meadow" rather than
+    // "lawn", and they are sparser now that the turf carries its own small flowers
+    if(vnoise(x+11,y+5,3.2)>0.90){ const dh=hmix(x+50,y+90), dx2=tx+7+(dh%18), dy2=ty+7+((dh>>5)%18);
       ctx.fillStyle=(dh&1)?'rgba(246,246,228,0.9)':'rgba(232,212,84,0.85)'; ctx.fillRect(dx2,dy2,2,2);
       ctx.fillStyle='rgba(70,140,60,0.7)'; ctx.fillRect(dx2,dy2+2,2,1); }
     return; }
