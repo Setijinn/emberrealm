@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v409.
+Service worker is at emberrealm-v415.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -70,6 +70,21 @@ COMBAT / CONTENT
   so the Bog Horror could never be fought at all. It surfaces in punish windows now.
 - SWEEP TEST, run it after touching any fight: spawn all 25, drive each to 0 with
   fixed DPS, assert none reads NEVER and the longest immune streak is <= 9.0s.
+- A FIGHT THAT IS NOT RUNNING MAY NOT HOLD YOU IMMUNE. Every tick opens with
+  `if(!eng) return;`, so a fight interrupted mid-vanish returns before it can clear
+  mechInv. bossMechTick clears it on disengage; bossReset clears mechInv, bloom and
+  hidden. Any new transient immunity must be cleared in BOTH places.
+- THE ANCHOR'S IMMUNE WINDOW SCALES WITH bossPace TOO. Only the cooldown used to,
+  so the untouchable window stayed 9s while the hittable one shrank with level:
+  80% untouchable at Lv55 vs 55% at Lv4. A harder fight is FASTER, not longer.
+- PHASES MUST ESCALATE, AND ESCALATING A TIMER IS NOT ESCALATING A THREAT. dn8 sped
+  its closing ring up each phase, and a faster ring spends LESS time small, so every
+  later phase was safer (32%/s -> 9%/s). Escalate reach, cadence AND damage.
+- MEASURE A FIGHT AGAINST A MOVING PLAYER AT THE HERO'S REAL SPEED (player.spd,
+  ~240px/s). A statue over-reports any fight that targets your position by 5x; a
+  400px/s strafe under-reports every telegraph as zero. Both happened in one sweep.
+- Intercept damagePlayer to measure. Healing after the fact lets a lethal frame end
+  the test, and death exits the dungeon, which reads as "the phase does nothing".
 - Boss animation: 15 shared beats (17f_bossanim.js) plus all twelve identities
   with their OWN idle, tell, speech, death and signature moves (17g_bossprofiles).
   Procedural squash/stretch/lean, scaled about the FEET. bossAnimFrames is the
@@ -111,6 +126,12 @@ UI / WORLD
   objective banner owns that strip.
 - msg() QUEUES now (it used to clobber; two calls in a second meant only the
   second was read).
+- SPRITE SETS BUILD PER CLASS, NOT ALL AT ONCE. _emberBuild used to run exactly
+  once, when the last of ~2720 probes settled, so one slow request held back all 68
+  sets and every character drew the procedural fallback until the whole library was
+  in. Each set assembles when its own frames land. The 51 ascension sets (1851 files,
+  11MB) load LAZILY on first emberSprite request, falling through to the base class.
+  Boot probes: 2720 -> 680.
 - 8-bit floor detail on every surface (09c_floordetail.js): five stamp families,
   eight variants each, pre-rendered at boot. 1.32ms/frame for the whole pass.
 - NO FLOOR MAY PAINT A HASHED FLAT WASH ACROSS A WHOLE TILE. Five renderers each
@@ -225,6 +246,12 @@ QA TRAPS THAT COST TIME THIS SESSION (on top of HANDOFF.md's list)
 - enterRoom(key, px, py) NEEDS the coordinates. Calling it with one argument puts
   the player at NaN and solid() then throws reading grid[NaN]. Only '0,0' has
   R.px/R.py; everywhere else use safeSpot().
+- CHECK THE DIFF, AND PARSE-CHECK, AFTER EVERY SCRIPTED EDIT. A replacement whose
+  match ended in `}
+  },` but whose replacement ended in `}` silently dropped the
+  close of a tick function; 17i_bossfights.js stopped parsing and every fight fell
+  back to stale definitions. The parse check caught it in one run; the game looked
+  merely "wrong" without it.
 - HARNESS BUGS OUTNUMBERED REAL BUGS in this sweep. Before reporting a finding,
   check the API you called: floorFamily takes (tileChar, room) not (x,y);
   zoneTierRow is POSITIONAL so a loot test must roll inside the zone it means;
