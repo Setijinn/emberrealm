@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v406.
+Service worker is at emberrealm-v409.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -126,8 +126,16 @@ UI / WORLD
   the geometry for both the painter and the hit-test). Terrain is tinted per
   character on top of the zone ramp, cache at 0.62 px/tile, plus live foes,
   objective nodes, loot, portals, ground level and a north mark — all fog-gated.
-  It is OVERWORLD ONLY: curRoom.rings gates it, so the Hearth and every dungeon
-  have no minimap at all. That is a gap, not a decision.
+  EVERY INSTANCE HAS ONE: it reads curRoom, and the palette is chosen by what kind
+  of room you are in (over / town / dun / plain) because the same character means
+  different things — 'W' is a wall in the Hearth and the VOID in a dungeon. Cache
+  scale follows room size (0.62-8 px/tile). The window is clamped to the room AND
+  by aspect: the panel is square and a 274x84 dungeon is not, so you pan along a
+  long dungeon rather than shrinking it into a two-pixel band. Fog is per-instance,
+  persisted for the OVERWORLD ONLY (a dungeon is a new layout every time, so old
+  fog would uncover walls that are not there); the Hearth and service rooms never
+  fog. Every live marker is fog-gated — it was not, and in a dungeon that is a
+  wallhack over most of the map.
 - The Hearth has grass, wildflowers, and a flock: 6 hens and 4 sheep
   (03b_critters.js). They are deliberately NOT in `enemies` — one stray
   membership and every AoE would slaughter them.
