@@ -1176,11 +1176,14 @@ function drawVaultProp(kind,x,y,wOverride){
   drawObjBottom(img,x,y,w);
   // the candelabra's flames are the room's only moving light, so they get a breath of their own
   if(kind==='candelabra'){
+    // 0.82 of the sprite's height above its foot -- the same measured figure glowSrc uses for the
+    // tile-placed candelabras, so a prop one and a tile one light from the same place.
+    const fy=y-(img.naturalHeight*(w/img.naturalWidth))*0.82;
     const t=performance.now()/1000, k=0.5+0.5*Math.sin(t*3.1+x*0.05);
     ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.10+0.07*k;
-    const g=ctx.createRadialGradient(x,y-w*1.5,2,x,y-w*1.5,w*2.4);
+    const g=ctx.createRadialGradient(x,fy,2,x,fy,w*2.4);
     g.addColorStop(0,'#ffd08a'); g.addColorStop(1,'rgba(255,208,138,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y-w*1.5,w*2.4,0,6.29); ctx.fill(); ctx.restore(); }
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,fy,w*2.4,0,6.29); ctx.fill(); ctx.restore(); }
 }
 function drawBanner(x,y){
  ctx.fillStyle='#7a3f22'; ctx.fillRect(x-2,y,4,44);
@@ -1918,6 +1921,7 @@ function render(){
   if(curRoom.glows&&curRoom.glows.length){
     ctx.globalCompositeOperation='lighter';
     for(const gl of curRoom.glows){
+      const gp=glowSrc(gl);                       // the flame, not the foot of the post
       const fl=1+Math.sin(pn*7+gl.x)*0.06+Math.sin(pn*13+gl.y)*0.05;
       const rad=gl.r*fl;
       // Dim and far, not bright and near. The old core sat at 0.42 and was gone by half radius,
@@ -1927,12 +1931,12 @@ function render(){
       // Measured, not eyeballed: summing this profile over all 12 hearth glows gives 0.45 at the
       // fire (was 0.96), 0.36 at 120px (was 0.51) and 0.35 at the plaza centre (was 0.005) --
       // every near sample dimmer, every far sample brighter, which is the whole point.
-      const gr=ctx.createRadialGradient(gl.x,gl.y,4,gl.x,gl.y,rad);
+      const gr=ctx.createRadialGradient(gp.x,gp.y,4,gp.x,gp.y,rad);
       gr.addColorStop(0,'rgba(255,160,60,0.11)');
       gr.addColorStop(0.35,'rgba(240,130,50,0.072)');
       gr.addColorStop(0.72,'rgba(235,115,40,0.033)');
       gr.addColorStop(1,'rgba(235,115,40,0)');
-      ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(gl.x,gl.y,rad,0,6.29); ctx.fill();
+      ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(gp.x,gp.y,rad,0,6.29); ctx.fill();
     }
     ctx.globalCompositeOperation='source-over';
   }

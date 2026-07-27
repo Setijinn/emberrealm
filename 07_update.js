@@ -6,15 +6,19 @@ function ambientParts(dt){
   if(typeof emitP!=='function' || particles.length>340 || !curRoom) return;
   const px=player.x, py=player.y, CULL=980;
   const near=(x,y)=>Math.abs(x-px)<CULL && Math.abs(y-py)<CULL;
+  // Sparks and smoke leave from the FLAME (glowSrc), not from the tile centre. The old fixed
+  // -6/-10/-26 nudges were an attempt at the same thing with one number per type, which cannot
+  // work: the offset depends on how tall the sprite is, and a lamp post is four times a brazier.
   if(curRoom.glows) for(const gl of curRoom.glows){ if(!near(gl.x,gl.y)) continue;
+    const gp=glowSrc(gl);
     if(gl.t==='H'){
-      if(Math.random()<4.5*dt) emitP(gl.x+(Math.random()*14-7),gl.y-6,
+      if(Math.random()<4.5*dt) emitP(gp.x+(Math.random()*14-7),gp.y,
         {vx:Math.random()*16-8,vy:-30-Math.random()*45,life:0.7+Math.random()*0.5,
          col:Math.random()<0.6?'#ffb347':'#ffe08a',sz:2,drag:0.4,glow:true});
-      if(Math.random()<0.7*dt) emitP(gl.x,gl.y-10,
+      if(Math.random()<0.7*dt) emitP(gp.x,gp.y-4,
         {vx:Math.random()*10-5,vy:-18-Math.random()*14,life:1.4,col:'rgba(110,100,95,0.45)',sz:5,drag:0.8});
-    } else if(gl.t==='l' && curRoom.town){
-      if(Math.random()<1.6*dt) emitP(gl.x+(Math.random()*10-5),gl.y-26,
+    } else if(gl.t==='l'){
+      if(Math.random()<1.6*dt) emitP(gp.x+(Math.random()*8-4),gp.y,
         {vx:Math.random()*8-4,vy:-8-Math.random()*10,life:1.2,col:'#ffe9b0',sz:2,glow:true});
     } }
   if(curRoom.decor) for(const d of curRoom.decor){ if(d.t!=='fountain') continue;
@@ -807,8 +811,8 @@ function update(dt){
   if(typeof updatePetRoom==='function') updatePetRoom(dt);     // sanctuary: pets wander
   // drifting embers in warm places
   if(curRoom.glows&&curRoom.glows.length&&curRoom.town&&Math.random()<dt*16){
-    const gl=curRoom.glows[Math.floor(Math.random()*curRoom.glows.length)];
-    embers.push({x:gl.x+(Math.random()*34-17),y:gl.y,vx:(Math.random()-.5)*16,vy:-22-Math.random()*30,life:1.5+Math.random()*1.2});
+    const gl=curRoom.glows[Math.floor(Math.random()*curRoom.glows.length)], gp=glowSrc(gl);
+    embers.push({x:gp.x+(Math.random()*34-17),y:gp.y,vx:(Math.random()-.5)*16,vy:-22-Math.random()*30,life:1.5+Math.random()*1.2});
   }
   for(let i=embers.length-1;i>=0;i--){ const e=embers[i];
     e.x+=e.vx*dt+Math.sin(performance.now()/280+i)*0.35; e.y+=e.vy*dt; e.life-=dt;

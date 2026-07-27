@@ -89,6 +89,32 @@ if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall
   // photocopied eleven times.
   'vault_rack0','vault_rack1']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
+// ---------------------------------------------------------------------------------------------
+// WHERE A LIGHT ACTUALLY SHINES FROM.
+// A glow is stored at its tile CENTRE (02_worldbuild), but the thing emitting it is a tall sprite
+// drawn BASE-ANCHORED at the bottom of that tile and reaching upward -- a lamp post is about 160px
+// tall standing on a 44px tile. The stored point is therefore nowhere near the flame, and every
+// post in the game has been lighting the ground around its own feet while its head sat in the
+// dark, with the embers streaming out of its base.
+//
+// The fractions are MEASURED off the art rather than guessed: luminance-weighted centroid of the
+// brightest 12% of opaque pixels, as a fraction of the opaque bounding box measured up from the
+// foot.  lamp 0.77   candelabra 0.82   brazier 0.55  -- a brazier reads low because its fire sits
+// down in a wide bowl, which is exactly why one number for all of them would not have worked.
+const GLOW_ART={ l:{k:'lamp', w:34, frac:0.77}, H:{k:'brazier', w:40, frac:0.55} };
+function glowSrc(gl){
+  const A=GLOW_ART[gl.t]||GLOW_ART.l;
+  let k=A.k, w=A.w, frac=A.frac;
+  // the vault swaps the town lamp for a candelabra, so the geometry has to swap with it
+  if(gl.t==='l' && typeof curRoom!=='undefined' && curRoom && curRoom.key==='VAULT'){
+    k='vault_candelabra'; w=30; frac=0.82; }
+  const img=(typeof _hearth!=='undefined')?_hearth[k]:null;
+  const base=gl.y+TILE/2-1;                                   // the sprite's foot
+  const h=(img&&img.complete&&img.naturalWidth)
+    ? img.naturalHeight*(w/img.naturalWidth) : TILE;           // art not in yet: fall back to a tile
+  return { x:gl.x, y:base-h*frac };
+}
+
 // water tile (global â€” hub pool + grove lakes)
 const _waterImg=(typeof window!=='undefined')?_img('assets/tiles/water.png'):null;
 // Ocean variants — 4 seamless-compatible wave tiles (same tileset) mixed per-cell to break the
