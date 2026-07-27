@@ -150,7 +150,7 @@ function netBroadcast(){
     // ow<ring> on a client standing in a dungeon and runs the wrong fight's client logic. New bits
     // are free forward-compat -- an older peer masks them off and never notices.
     const fl=(e.wb?1:0)|(e.boss?2:0)|(e.hidden?4:0)|(e.woke?8:0)
-            |(e.awk?16:0)|(e.den?32:0)|(e.wardInv?64:0)|(e.anchorInv?128:0);
+            |(e.awk?16:0)|(e.den?32:0)|(e.wardInv?64:0)|(e.anchorInv?128:0)|(e.elite?256:0);
     ents.push([netId(e), e.type||'c', Math.round(e.x), Math.round(e.y),
                Math.round(e.hp), Math.round(e.maxhp||e.hp), Math.round(e.r||12),
                e.ring===undefined?-1:e.ring, e.lv||1, e.phase||0,
@@ -233,6 +233,9 @@ function netApplyWorld(m){
     e.hp=a[4]; e.maxhp=a[5]; e.r=a[6]; e.lv=a[8]; e.phase=a[9];
     const f=a[10]; e.wb=!!(f&1); e.boss=!!(f&2); e.hidden=!!(f&4); e.woke=!!(f&8);
     e.awk=!!(f&16); e.den=!!(f&32); e.wardInv=(f&64)?1:0; e.anchorInv=(f&128)?1:0;
+    // without this a peer's elite renders as an ordinary creature that happens to be huge:
+    // no ring, no chevrons, no gold name, and the one warning the player gets is missing
+    e.elite=(f&256)?1:0;
     if(a[16]) e.bd=a[16];
     if(a[11]) e.name=a[11];
     // statuses: rebuilt each snapshot so an expiry on the host clears here too

@@ -332,9 +332,10 @@ function drawMinimap(){
     // fog-gated like everything else: a marker on ground you have never walked is a wallhack,
     // and in a dungeon that is most of the map
     const p=P(e.x,e.y); if(!inPanel(p)||!fogSeen(G,e.x,e.y)) continue;
-    const elite=(e.type==='s');
-    ctx.fillStyle=elite?'#ff9a5a':'rgba(230,120,110,0.85)';
-    ctx.beginPath(); ctx.arc(p.x,p.y,elite?2.6:1.8,0,6.29); ctx.fill(); }
+    const elite=!!e.elite || (e.type==='s');
+    ctx.fillStyle=e.elite?'#ffd07a':elite?'#ff9a5a':'rgba(230,120,110,0.85)';
+    ctx.beginPath(); ctx.arc(p.x,p.y,e.elite?3.4:elite?2.6:1.8,0,6.29); ctx.fill();
+    if(e.elite){ ctx.strokeStyle='rgba(0,0,0,0.75)'; ctx.lineWidth=1; ctx.stroke(); } }
 
   // objective nodes stand out from the foes that guard them
   if(typeof enemies!=='undefined') for(const e of enemies){

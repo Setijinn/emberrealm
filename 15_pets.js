@@ -88,12 +88,16 @@ function eggCondForLevel(lv){ let c = lv>=40?2 : lv>=20?1 : 0;
 // It also drops from more than bosses now. Boss-only made eggs a thing you could go a whole
 // session without seeing unless you specifically farmed lairs; elites carry a small chance so pets
 // are part of ordinary play.
-const EGG_P={B:0.16, s:0.012, c:0.0, N:0.0};   // by enemy type: boss / elite / chaser / node
+const EGG_P={B:0.16, s:0.012, c:0.0, N:0.0};   // by enemy type: boss / shooter / chaser / node
+// An ELITE is the middle rung the drop table never had: a chaser elite is the only way a
+// chaser ever drops an egg, and a shooter elite is worth five ordinary ones.
+const EGG_P_ELITE=0.06;
 // Rolls an egg ITEM for this kill, or null. Called from rollLoot's `extra` list, so it lands in
 // the same sack as everything else that kill paid out.
 function eggDropFor(e){
   if(!e) return null;
-  const p=EGG_P[e.type]||0; if(p<=0 || Math.random()>=p) return null;
+  const p=e.elite?Math.max(EGG_P_ELITE,EGG_P[e.type]||0):(EGG_P[e.type]||0);
+  if(p<=0 || Math.random()>=p) return null;
   const cat=PET_CAT_KEYS[(Math.random()*PET_CAT_KEYS.length)|0];
   return {k:'egg', cond:eggCondForLevel(e.lv||1), cat:cat};
 }

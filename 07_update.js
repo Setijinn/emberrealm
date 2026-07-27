@@ -751,7 +751,8 @@ function update(dt){
         texts.push({x:de.x,y:de.y-18,txt:o.got+'/'+o.need,col:'#ffe08a',life:1.0}); }
       if(typeof fxDeath==='function') fxDeath(de.x,de.y,de.col,22); }
     const rwB={c:{xp:8,g:3},s:{xp:14,g:6},N:{xp:26,g:10},B:{xp:220,g:120}}[de.type];
-    if(rpg&&rwB){ const lm=1+(de.lv||1)*0.35, gm=1+(de.lv||1)*0.30;
+    // an elite is roughly three ordinary kills of its kind in health, so it pays like three
+    if(rpg&&rwB){ const lm=(1+(de.lv||1)*0.35)*(de.elite?3.2:1), gm=(1+(de.lv||1)*0.30)*(de.elite?3.0:1);
       const rx=Math.round(rwB.xp*lm), rg2=Math.round(rwB.g*gm);
       texts.push({x:de.x,y:de.y-8,txt:'+'+rx+'xp',col:'#7ab8d4',life:1.1});
       texts.push({x:de.x,y:de.y+10,txt:'+'+rg2+'g',col:'#ffc94d',life:1.1});

@@ -1047,11 +1047,24 @@ const MOBSPEC=[
 // that never walk the overworld above it. Which one a spawn point gets is hashed from the point
 // itself -- the same rule pickBehaviour uses, with different multipliers so species and behaviour
 // stay uncorrelated (or every Dire Wolf in the world would also be the pack one).
+// A DUNGEON HAS ITS OWN CREATURES (user, 2026-07-27: "the dungeon mobs need to be separate but
+// similar to the overworld mobs for each area"). This used to CONCATENATE -- a dungeon's pool was
+// the overworld list plus a few extras -- so most of what you met inside a boss's nightmare was
+// the same animal you had just walked past outside it. A nightmare is not the same place with more
+// things in it. It is the same place with the things in it WRONG.
+//
+// The `d` list is now the WHOLE dungeon pool for that band. It is written to rhyme with the
+// overworld roster above it, creature for creature, so the ground still reads as the same country
+// -- the Sawgrass has its lurchers and pipers in both, they are simply not the same lurchers.
+// Falls back to the overworld list if a band has no `d` entries, so a half-filled table degrades
+// to the old behaviour rather than to an empty dungeon.
 function mobPool(band,t,dun){
   const S=MOBSPEC[Math.max(0,Math.min(MOBSPEC.length-1,band|0))]; if(!S) return [];
-  let list=S[t==='s'?'s':'c']; if(!list) return [];
+  const key=(t==='s')?'s':'c';
+  if(dun&&S.d){ let ex=S.d[key];
+    if(ex){ if(!Array.isArray(ex)) ex=[ex]; if(ex.length) return ex; } }
+  let list=S[key]; if(!list) return [];
   if(!Array.isArray(list)) list=[list];
-  if(dun&&S.d){ const ex=S.d[t==='s'?'s':'c']; if(ex) list=list.concat(Array.isArray(ex)?ex:[ex]); }
   return list;
 }
 function mobSpec(band,t,sp,dun){
@@ -1163,6 +1176,12 @@ function makeEnemy(sp){
         e.hp*=1.45; e.spd*=1.14; if(e.touch) e.touch*=1.30; if(e.bd) e.bd*=1.30;
         if(e.def){ e.def=Math.round(e.def*1.3); e.dr=eDR(e.def); }
         e.pcol='#b030d0'; e.pcore='#f0c0ff'; e.col='#7a2a8a'; } }
+    // ELITE last, so it multiplies the finished creature -- species, behaviour and corruption all
+    // already applied. A corrupted elite is therefore both, which is exactly what it should be.
+    // stamp the archetype BEFORE the elite renames the species, or "Fen-Swollen Marsh Tick"
+    // misses the lookup and an elite silently reverts to the generic hound
+    e.arch=(e.spn&&MOB_ARCH[e.spn])||(e.type==='s'?'caster':'beast');
+    if(!e.node && !e.summoned && eliteRoll(sp)) makeElite(e,sp);
   }
   // NEVER spawn inside a wall — grove lairs stamp 'X' over old spawn spots, and any
   // future caller might pass a bad tile; relocate to the nearest open cell.
@@ -1175,6 +1194,759 @@ function makeEnemy(sp){
     if(e.bd) e.bd*=1+0.22*(cn-1); }
   e.hp=Math.round(e.hp); e.maxhp=e.hp;
   return e;
+}
+// ---- THE SECOND WAVE (user, 2026-07-27: "we need a lot more mobs") ----
+// Appended rather than woven into MOBSPEC above, so the original pairs stay readable as the thing
+// that defines each band and this reads as what it is: more of the same ground, not a rewrite.
+// Every band gains two more overworld chasers, one more shooter, and one more of each inside its
+// dungeon -- 45 creatures, taking the roster from 54 to 99. The rules do not change: which one a
+// spawn point gets is still hashed from the point, so a spot keeps its character across respawns.
+const MOBSPEC_MORE=[
+ // 0 THE LANDING SANDS
+ {c:[{n:'Driftwood Snapper',inf:{id:'bleed',dur:2.5}, hp:0.66,spd:0.94,tch:0.80,r:0.86, w:{ambusher:46,roamer:30,hunter:24},
+      sig:{sway:0.30,swayF:1.4,harry:0,lunge:null,breakoff:1.5,rehide:220}},
+     {n:'Sandfly Cloud',   inf:null,                  hp:0.40,spd:1.26,tch:0.50,r:0.64, w:{pack:64,roamer:24,hunter:12},
+      sig:{sway:0.94,swayF:4.8,commit:26,harry:44,flank:100,collapse:132,lunge:null}}],
+  s:[{n:'Barnacle Popper', inf:null,                  hp:1.02,spd:0.66,bd:0.75,r:1.06, rof:1.45, w:{sentinel:70,roamer:20,skirmisher:10}}],
+  d:{c:[{n:'Salt-Caked Hand',inf:{id:'chill',dur:2.8},hp:1.12,spd:0.80,tch:0.90,r:1.00, w:{ambusher:54,sentinel:30,hunter:16},
+        sig:{sway:0.24,swayF:1.0,harry:0,lunge:null,breakoff:1.7,rehide:240}}],
+     s:[{n:'Tidewrack Acolyte',inf:{id:'chill',dur:3.0},hp:1.08,spd:0.82,bd:0.95,r:1.00, rof:1.05, w:{sentinel:50,skirmisher:32,roamer:18}}]}},
+
+ // 1 GULLWIND SHORE
+ {c:[{n:'Rope-Rot Mariner',inf:{id:'poison',dur:3.5}, hp:1.10,spd:0.88,tch:1.00,r:1.02, w:{sentinel:46,hunter:30,roamer:24},
+      sig:{sway:0.26,swayF:1.1,harry:0,lunge:null,pace:76}},
+     {n:'Spindrift Wisp',  inf:{id:'chill',dur:2.4},  hp:0.52,spd:1.42,tch:0.70,r:0.74, w:{skirmisher:40,roamer:36,pack:24},
+      sig:{sway:0.88,swayF:4.0,commit:44,harry:96,lunge:null}}],
+  s:[{n:'Signal Screamer', inf:{id:'stun',dur:0.6},   hp:0.92,spd:1.16,bd:0.88,r:0.94, rof:0.78, w:{skirmisher:64,roamer:22,hunter:14}}],
+  d:{c:[{n:'Lens Grinder', inf:{id:'shock',dur:2.0},  hp:1.32,spd:0.90,tch:1.10,r:1.08, w:{sentinel:56,hunter:28,ambusher:16},
+        sig:{sway:0.20,swayF:1.0,harry:0,lunge:null,pace:84,leash:400}}],
+     s:[{n:'Fogbell Ringer',inf:{id:'weak',dur:3.5},  hp:1.16,spd:0.86,bd:1.05,r:1.02, rof:1.20, w:{sentinel:58,skirmisher:26,roamer:16}}]}},
+
+ // 2 SAWGRASS FLATS
+ {c:[{n:'Quagmire Crawler',inf:{id:'poison',dur:4.5}, hp:1.60,spd:0.62,tch:1.35,r:1.18, w:{sentinel:54,ambusher:30,hunter:16},
+      sig:{sway:0.12,swayF:0.7,harry:0,lunge:null,pace:66,leash:380}},
+     {n:'Sedge Darter',    inf:{id:'bleed',dur:3.0},  hp:0.62,spd:1.28,tch:0.85,r:0.78, w:{skirmisher:44,pack:32,roamer:24},
+      sig:{sway:0.82,swayF:4.0,commit:38,harry:62,flank:118,collapse:156,lunge:{min:80,max:200,mul:2.5,dur:0.24,cd:1.5}}}],
+  s:[{n:'Rushlight Caller',inf:{id:'curse',dur:3.5},  hp:1.06,spd:0.84,bd:1.05,r:1.00, rof:0.90, w:{skirmisher:52,sentinel:30,roamer:18}}],
+  d:{c:[{n:'Pallbearer Husk',inf:{id:'weak',dur:5.0}, hp:1.72,spd:0.64,tch:1.40,r:1.20, w:{sentinel:62,ambusher:24,hunter:14},
+        sig:{sway:0.10,swayF:0.6,harry:0,lunge:null,pace:70,leash:420}}],
+     s:[{n:'Censer Bearer',inf:{id:'poison',dur:5.0}, hp:1.24,spd:0.78,bd:1.18,r:1.06, rof:1.10, w:{sentinel:54,skirmisher:28,roamer:18}}]}},
+
+ // 3 THE VERDANT BELT
+ {c:[{n:'Sap-Drunk Elk',  inf:{id:'stun',dur:0.7},    hp:1.50,spd:1.02,tch:1.35,r:1.14, w:{hunter:60,roamer:24,sentinel:16},
+      sig:{sway:0.18,swayF:0.9,commit:180,harry:0,lunge:{min:160,max:400,mul:3.6,dur:0.48,cd:3.0}}},
+     {n:'Creeper Vine',    inf:{id:'poison',dur:4.0}, hp:1.20,spd:0.58,tch:1.15,r:1.06, w:{sentinel:66,ambusher:26,roamer:8},
+      sig:{sway:0.08,swayF:0.5,harry:0,lunge:null,pace:52,leash:300}}],
+  s:[{n:'Spore Puffer',   inf:{id:'poison',dur:5.0},  hp:1.14,spd:0.76,bd:1.05,r:1.06, rof:1.30, w:{sentinel:60,roamer:24,skirmisher:16}}],
+  d:{c:[{n:'Grafted Warden',inf:{id:'bleed',dur:4.5}, hp:1.55,spd:0.92,tch:1.25,r:1.12, w:{sentinel:50,hunter:32,ambusher:18},
+        sig:{sway:0.16,swayF:0.9,harry:0,lunge:{min:120,max:260,mul:2.4,dur:0.38,cd:2.6}}}],
+     s:[{n:'Seedcaster',   inf:{id:'poison',dur:5.5}, hp:1.10,spd:0.98,bd:1.05,r:0.98, rof:0.82, w:{skirmisher:56,roamer:26,sentinel:18}}]}},
+
+ // 4 WOLFWOOD
+ {c:[{n:'Yearling Wolf',  inf:{id:'bleed',dur:3.0},   hp:0.62,spd:1.30,tch:0.85,r:0.86, w:{pack:74,roamer:16,hunter:10},
+      sig:{sway:0.56,swayF:3.2,commit:70,harry:66,flank:140,collapse:190,lunge:{min:90,max:230,mul:2.7,dur:0.26,cd:1.6}}},
+     {n:'Bonepile Scavenger',inf:{id:'poison',dur:4.0},hp:1.42,spd:0.84,tch:1.20,r:1.12, w:{sentinel:48,ambusher:30,hunter:22},
+      sig:{sway:0.24,swayF:1.2,harry:0,lunge:null,pace:74}}],
+  s:[{n:'Howl-Keeper',    inf:{id:'weak',dur:4.5},    hp:1.18,spd:0.92,bd:1.12,r:1.04, rof:1.15, w:{sentinel:52,skirmisher:30,roamer:18}}],
+  d:{c:[{n:'Mist-Blind Pup',inf:{id:'chill',dur:3.0}, hp:0.70,spd:1.36,tch:0.90,r:0.88, w:{pack:70,ambusher:18,roamer:12},
+        sig:{sway:0.62,swayF:3.4,harry:78,flank:136,collapse:184,lunge:{min:95,max:250,mul:2.9,dur:0.26,cd:1.5}}}],
+     s:[{n:'Cairn Whistler',inf:{id:'curse',dur:5.0}, hp:1.22,spd:0.90,bd:1.18,r:1.02, rof:1.12, w:{sentinel:50,skirmisher:32,roamer:18}}]}},
+
+ // 5 DEEP TIMBER
+ {c:[{n:'Bloated Drifter',inf:{id:'poison',dur:6.0},  hp:1.95,spd:0.60,tch:1.45,r:1.26, w:{sentinel:58,ambusher:28,hunter:14},
+      sig:{sway:0.10,swayF:0.6,harry:0,lunge:null,pace:60,leash:360}},
+     {n:'Leechling',       inf:{id:'bleed',dur:5.0},  hp:0.46,spd:1.22,tch:0.70,r:0.68, w:{pack:62,ambusher:24,roamer:14},
+      sig:{sway:0.86,swayF:4.4,commit:32,harry:50,flank:106,collapse:142,lunge:null}}],
+  s:[{n:'Peat Spitter',   inf:{id:'poison',dur:5.5},  hp:1.28,spd:0.70,bd:1.20,r:1.08, rof:1.28, w:{sentinel:64,roamer:20,skirmisher:16}}],
+  d:{c:[{n:'Silt Revenant',inf:{id:'chill',dur:5.0},  hp:1.80,spd:0.82,tch:1.35,r:1.16, w:{sentinel:50,hunter:30,ambusher:20},
+        sig:{sway:0.18,swayF:1.0,harry:0,lunge:null,pace:70,leash:400}}],
+     s:[{n:'Reedpipe Mourner',inf:{id:'curse',dur:6.0},hp:1.26,spd:0.76,bd:1.24,r:1.06, rof:0.94, w:{skirmisher:46,sentinel:36,roamer:18}}]}},
+
+ // 6 STONEBROW RISE
+ {c:[{n:'Rubble Hulk',    inf:{id:'stun',dur:0.9},    hp:2.30,spd:0.66,tch:1.55,r:1.30, w:{sentinel:64,hunter:26,ambusher:10},
+      sig:{sway:0.08,swayF:0.6,harry:0,lunge:null,pace:88,leash:440}},
+     {n:'Chip Skitter',    inf:{id:'bleed',dur:3.0},  hp:0.58,spd:1.32,tch:0.80,r:0.74, w:{pack:58,roamer:26,skirmisher:16},
+      sig:{sway:0.80,swayF:4.2,commit:36,harry:58,flank:114,collapse:150,lunge:{min:80,max:200,mul:2.6,dur:0.22,cd:1.5}}}],
+  s:[{n:'Ridge Whistler', inf:{id:'weak',dur:4.0},    hp:1.12,spd:1.04,bd:1.15,r:1.00, rof:0.80, w:{skirmisher:62,roamer:22,hunter:16}}],
+  d:{c:[{n:'Gate Breaker', inf:{id:'stun',dur:1.1},   hp:2.45,spd:0.74,tch:1.60,r:1.32, w:{sentinel:56,hunter:34,ambusher:10},
+        sig:{sway:0.10,swayF:0.7,commit:160,harry:0,lunge:{min:150,max:330,mul:2.8,dur:0.46,cd:3.0}}}],
+     s:[{n:'Fault Chanter',inf:{id:'shock',dur:2.8},  hp:1.34,spd:0.82,bd:1.34,r:1.08, rof:1.00, w:{sentinel:52,skirmisher:32,roamer:16}}]}},
+
+ // 7 CINDERWATCH
+ {c:[{n:'Slagback Brute', inf:{id:'burn',dur:5.0},    hp:2.05,spd:0.82,tch:1.50,r:1.24, w:{sentinel:50,hunter:36,ambusher:14},
+      sig:{sway:0.14,swayF:0.8,commit:120,harry:0,lunge:{min:120,max:280,mul:2.4,dur:0.42,cd:2.8}}},
+     {n:'Emberfly Swarm',  inf:{id:'burn',dur:3.0},   hp:0.44,spd:1.40,tch:0.65,r:0.66, w:{pack:66,roamer:22,skirmisher:12},
+      sig:{sway:0.96,swayF:5.0,commit:24,harry:42,flank:98,collapse:130,lunge:null}}],
+  s:[{n:'Vent Howler',    inf:{id:'burn',dur:4.5},    hp:1.16,spd:1.10,bd:1.12,r:1.00, rof:0.76, w:{skirmisher:66,hunter:20,roamer:14}}],
+  d:{c:[{n:'Forge Thrall', inf:{id:'burn',dur:5.5},   hp:1.90,spd:0.88,tch:1.40,r:1.18, w:{sentinel:46,hunter:38,pack:16},
+        sig:{sway:0.20,swayF:1.1,commit:90,harry:0,lunge:{min:110,max:250,mul:2.5,dur:0.38,cd:2.4}}}],
+     s:[{n:'Bellows Adept',inf:{id:'burn',dur:6.0},   hp:1.30,spd:0.96,bd:1.32,r:1.04, rof:0.88, w:{skirmisher:54,sentinel:28,hunter:18}}]}},
+
+ // 8 THE ASHFALL
+ {c:[{n:'Clinker Colossus',inf:{id:'burn',dur:6.0},   hp:2.60,spd:0.70,tch:1.70,r:1.36, w:{sentinel:54,hunter:38,ambusher:8},
+      sig:{sway:0.08,swayF:0.6,commit:40,harry:0,lunge:null,pace:80,leash:460}},
+     {n:'Ashborn Wretch',  inf:{id:'curse',dur:5.0},  hp:0.86,spd:1.28,tch:1.00,r:0.92, w:{pack:56,hunter:26,roamer:18},
+      sig:{sway:0.52,swayF:3.0,commit:70,harry:80,flank:150,collapse:200,lunge:{min:100,max:270,mul:3.0,dur:0.28,cd:1.6}}}],
+  s:[{n:'Cinderwind Adept',inf:{id:'burn',dur:5.5},   hp:1.24,spd:1.02,bd:1.35,r:1.02, rof:0.78, w:{skirmisher:58,sentinel:24,hunter:18}}],
+  d:{c:[{n:'Sanctum Colossus',inf:{id:'burn',dur:6.5},hp:2.75,spd:0.78,tch:1.75,r:1.38, w:{sentinel:50,hunter:40,ambusher:10},
+        sig:{sway:0.08,swayF:0.6,commit:120,harry:0,lunge:{min:140,max:320,mul:2.6,dur:0.48,cd:3.2}}}],
+     s:[{n:'Rift Cantor',  inf:{id:'curse',dur:7.0},  hp:1.34,spd:0.92,bd:1.48,r:1.04, rof:0.76, w:{skirmisher:50,sentinel:32,hunter:18}}]}},
+];
+for(let _b=0;_b<MOBSPEC.length;_b++){
+  const A=MOBSPEC[_b], B=MOBSPEC_MORE[_b]; if(!A||!B) continue;
+  if(B.c) A.c=A.c.concat(B.c);
+  if(B.s) A.s=A.s.concat(B.s);
+  if(B.d){ A.d=A.d||{};
+    if(B.d.c) A.d.c=(A.d.c||[]).concat(B.d.c);
+    if(B.d.s) A.d.s=(A.d.s||[]).concat(B.d.s); }
+}
+
+// ---- THE THIRD WAVE (user, 2026-07-27: "a lot more creatures for each zone") ----
+// Eleven more per band -- four chasers and three shooters in the open, two more of each inside the
+// dungeon -- taking the roster from 99 to 198. Same rules throughout: the pool is a list, the
+// species is hashed from the spawn point, and every entry is written for the ground it stands on.
+const MOBSPEC_MORE2=[
+ // 0 THE LANDING SANDS
+ {c:[{n:'Foam Scuttler',   inf:null,                  hp:0.54,spd:1.08,tch:0.60,r:0.74, w:{pack:50,roamer:32,hunter:18},
+      sig:{sway:0.76,swayF:3.9,commit:30,harry:0,lunge:null,flank:106,collapse:142}},
+     {n:'Bleached Hermit', inf:{id:'bleed',dur:2.0},  hp:1.18,spd:0.62,tch:0.95,r:1.08, w:{sentinel:64,ambusher:24,roamer:12},
+      sig:{sway:0.14,swayF:0.8,harry:0,lunge:null,pace:58,leash:300}},
+     {n:'Gull-Picked Corpse',inf:{id:'poison',dur:3.0},hp:0.88,spd:0.86,tch:0.85,r:0.96, w:{ambusher:52,sentinel:28,hunter:20},
+      sig:{sway:0.20,swayF:1.0,harry:0,lunge:null,breakoff:1.6,rehide:230}},
+     {n:'Dune Skipper',    inf:null,                  hp:0.60,spd:1.30,tch:0.70,r:0.78, w:{roamer:48,skirmisher:30,pack:22},
+      sig:{sway:0.84,swayF:4.2,commit:40,harry:70,lunge:{min:80,max:190,mul:2.5,dur:0.22,cd:1.6}}}],
+  s:[{n:'Spume Caster',    inf:{id:'chill',dur:1.8},  hp:0.90,spd:0.86,bd:0.78,r:0.96, w:{skirmisher:48,sentinel:30,roamer:22}},
+     {n:'Reefbone Piper',  inf:{id:'weak',dur:2.5},   hp:1.06,spd:0.72,bd:0.82,r:1.02, rof:1.20, w:{sentinel:60,roamer:26,skirmisher:14}},
+     {n:'Shoal Whistler',  inf:null,                  hp:0.80,spd:1.02,bd:0.70,r:0.90, rof:0.90, w:{skirmisher:58,roamer:28,hunter:14}}],
+  d:{c:[{n:'Netted Drowned',inf:{id:'chill',dur:3.2}, hp:1.24,spd:0.76,tch:0.95,r:1.04, w:{sentinel:52,ambusher:30,hunter:18},
+        sig:{sway:0.18,swayF:0.9,harry:0,lunge:null,pace:64}},
+       {n:'Barnacle Thrall',inf:{id:'poison',dur:3.5},hp:1.36,spd:0.68,tch:1.05,r:1.10, w:{sentinel:60,ambusher:26,roamer:14},
+        sig:{sway:0.12,swayF:0.7,harry:0,lunge:null,pace:56,leash:320}}],
+     s:[{n:'Saltglass Adept',inf:{id:'chill',dur:3.4},hp:1.12,spd:0.80,bd:1.00,r:1.00, rof:1.00, w:{sentinel:54,skirmisher:30,roamer:16}},
+        {n:'Wrack Cantor', inf:{id:'curse',dur:3.0},  hp:1.04,spd:0.88,bd:0.95,r:0.98, rof:0.92, w:{skirmisher:52,sentinel:30,roamer:18}}]}},
+
+ // 1 GULLWIND SHORE
+ {c:[{n:'Tern Diver',      inf:{id:'bleed',dur:2.5},  hp:0.58,spd:1.38,tch:0.95,r:0.80, w:{ambusher:56,roamer:26,hunter:18},
+      sig:{sway:0.70,swayF:3.2,commit:66,harry:92,lunge:{min:120,max:300,mul:3.1,dur:0.30,cd:1.9},breakoff:1.6,rehide:240}},
+     {n:'Barnacle Crawler',inf:null,                  hp:1.24,spd:0.70,tch:1.05,r:1.10, w:{sentinel:58,ambusher:26,roamer:16},
+      sig:{sway:0.16,swayF:0.9,harry:0,lunge:null,pace:62}},
+     {n:'Shipwreck Rat',   inf:{id:'poison',dur:3.0}, hp:0.50,spd:1.34,tch:0.65,r:0.70, w:{pack:66,roamer:22,hunter:12},
+      sig:{sway:0.84,swayF:4.4,commit:32,harry:52,flank:108,collapse:144,lunge:null}},
+     {n:'Cliffside Ram',   inf:{id:'stun',dur:0.6},   hp:1.40,spd:1.00,tch:1.30,r:1.10, w:{hunter:62,roamer:22,sentinel:16},
+      sig:{sway:0.16,swayF:0.9,commit:170,harry:0,lunge:{min:150,max:370,mul:3.4,dur:0.44,cd:2.8}}}],
+  s:[{n:'Storm Caller',    inf:{id:'shock',dur:2.0},  hp:0.98,spd:1.06,bd:0.95,r:0.96, w:{skirmisher:56,roamer:26,sentinel:18}},
+     {n:'Wreck Crow',      inf:{id:'weak',dur:3.0},   hp:0.84,spd:1.18,bd:0.82,r:0.90, rof:0.82, w:{skirmisher:62,roamer:24,hunter:14}},
+     {n:'Rime Slinger',    inf:{id:'chill',dur:2.6},  hp:1.14,spd:0.80,bd:1.00,r:1.02, rof:1.18, w:{sentinel:58,skirmisher:26,roamer:16}}],
+  d:{c:[{n:'Keeper’s Shade',inf:{id:'curse',dur:3.5},hp:1.06,spd:1.10,tch:1.00,r:0.98, w:{ambusher:54,roamer:28,pack:18},
+        sig:{sway:0.66,swayF:3.2,harry:82,lunge:null,breakoff:1.8,rehide:260}},
+       {n:'Oil-Slick Hulk',inf:{id:'burn',dur:3.0},   hp:1.62,spd:0.72,tch:1.25,r:1.16, w:{sentinel:62,hunter:26,ambusher:12},
+        sig:{sway:0.12,swayF:0.7,harry:0,lunge:null,pace:70,leash:380}}],
+     s:[{n:'Prism Adept',  inf:{id:'shock',dur:2.6},  hp:1.10,spd:0.94,bd:1.06,r:0.98, rof:0.94, w:{skirmisher:54,sentinel:30,roamer:16}},
+        {n:'Mirror Chanter',inf:{id:'weak',dur:4.0},  hp:1.20,spd:0.84,bd:1.10,r:1.04, rof:1.14, w:{sentinel:56,skirmisher:28,roamer:16}}]}},
+
+ // 2 SAWGRASS FLATS
+ {c:[{n:'Peat Lurcher',    inf:{id:'poison',dur:4.5}, hp:1.50,spd:0.68,tch:1.28,r:1.14, w:{ambusher:50,sentinel:30,hunter:20},
+      sig:{sway:0.18,swayF:0.8,harry:0,lunge:null,breakoff:1.7,rehide:250}},
+     {n:'Rush Adder',      inf:{id:'poison',dur:6.0}, hp:0.66,spd:1.24,tch:0.90,r:0.78, w:{ambusher:58,pack:24,roamer:18},
+      sig:{sway:0.74,swayF:3.6,commit:50,harry:60,lunge:{min:90,max:220,mul:2.8,dur:0.24,cd:1.7},breakoff:1.5,rehide:220}},
+     {n:'Bog Shambler',    inf:{id:'weak',dur:4.0},   hp:1.66,spd:0.60,tch:1.32,r:1.18, w:{sentinel:62,ambusher:24,hunter:14},
+      sig:{sway:0.10,swayF:0.6,harry:0,lunge:null,pace:60,leash:360}},
+     {n:'Fen Skimmer',     inf:{id:'chill',dur:2.5},  hp:0.58,spd:1.32,tch:0.72,r:0.74, w:{skirmisher:48,pack:30,roamer:22},
+      sig:{sway:0.88,swayF:4.2,commit:34,harry:64,flank:112,collapse:150,lunge:null}}],
+  s:[{n:'Cattail Spitter', inf:{id:'poison',dur:4.0}, hp:1.04,spd:0.86,bd:1.00,r:0.98, w:{skirmisher:50,sentinel:32,roamer:18}},
+     {n:'Mudlark Caller',  inf:{id:'weak',dur:3.5},   hp:1.16,spd:0.76,bd:1.08,r:1.04, rof:1.22, w:{sentinel:62,roamer:22,skirmisher:16}},
+     {n:'Wisp-Light Piper',inf:{id:'curse',dur:4.0},  hp:0.94,spd:0.98,bd:0.92,r:0.94, rof:0.86, w:{skirmisher:60,roamer:24,sentinel:16}}],
+  d:{c:[{n:'Bell-Rot Acolyte',inf:{id:'curse',dur:4.5},hp:1.40,spd:0.78,tch:1.15,r:1.08, w:{sentinel:56,ambusher:26,hunter:18},
+        sig:{sway:0.14,swayF:0.8,harry:0,lunge:null,pace:68}},
+       {n:'Ossuary Crawler',inf:{id:'bleed',dur:4.0}, hp:1.30,spd:0.90,tch:1.10,r:1.04, w:{ambusher:48,pack:30,hunter:22},
+        sig:{sway:0.60,swayF:2.8,harry:66,lunge:{min:90,max:230,mul:2.6,dur:0.26,cd:1.9}}}],
+     s:[{n:'Requiem Cantor',inf:{id:'curse',dur:5.0}, hp:1.20,spd:0.80,bd:1.16,r:1.04, rof:1.02, w:{sentinel:52,skirmisher:32,roamer:16}},
+        {n:'Grave-Ash Adept',inf:{id:'poison',dur:5.5},hp:1.14,spd:0.86,bd:1.10,r:1.00, rof:0.94, w:{skirmisher:54,sentinel:30,roamer:16}}]}},
+
+ // 3 THE VERDANT BELT
+ {c:[{n:'Bramble Stag',    inf:{id:'bleed',dur:3.5},  hp:1.44,spd:1.06,tch:1.28,r:1.12, w:{hunter:58,roamer:26,pack:16},
+      sig:{sway:0.22,swayF:1.1,commit:160,harry:0,lunge:{min:150,max:380,mul:3.4,dur:0.46,cd:2.9}}},
+     {n:'Moss Lurker',     inf:{id:'poison',dur:4.5}, hp:1.32,spd:0.80,tch:1.18,r:1.08, w:{ambusher:60,sentinel:24,hunter:16},
+      sig:{sway:0.24,swayF:1.0,harry:0,lunge:null,breakoff:1.9,rehide:270}},
+     {n:'Thicket Whelp',   inf:{id:'bleed',dur:3.0},  hp:0.66,spd:1.26,tch:0.88,r:0.84, w:{pack:68,roamer:20,hunter:12},
+      sig:{sway:0.58,swayF:3.2,harry:70,flank:132,collapse:178,lunge:{min:90,max:230,mul:2.7,dur:0.26,cd:1.7}}},
+     {n:'Grovewretch',     inf:{id:'curse',dur:4.0},  hp:1.08,spd:0.98,tch:1.02,r:1.00, w:{hunter:44,ambusher:30,roamer:26},
+      sig:{sway:0.40,swayF:2.0,harry:60,lunge:{min:100,max:240,mul:2.4,dur:0.30,cd:2.2}}}],
+  s:[{n:'Thorn Slinger',   inf:{id:'bleed',dur:4.0},  hp:0.98,spd:1.02,bd:0.98,r:0.96, w:{skirmisher:56,roamer:26,hunter:18}},
+     {n:'Sap Priest',      inf:{id:'weak',dur:5.0},   hp:1.22,spd:0.82,bd:1.12,r:1.06, rof:1.16, w:{sentinel:58,skirmisher:26,roamer:16}},
+     {n:'Fungal Herald',   inf:{id:'poison',dur:5.5}, hp:1.10,spd:0.88,bd:1.04,r:1.02, rof:1.00, w:{sentinel:48,skirmisher:34,roamer:18}}],
+  d:{c:[{n:'Bark-Bound Thrall',inf:{id:'weak',dur:5.0},hp:1.62,spd:0.84,tch:1.28,r:1.14, w:{sentinel:56,hunter:28,ambusher:16},
+        sig:{sway:0.14,swayF:0.8,harry:0,lunge:null,pace:72,leash:400}},
+       {n:'Rootling Swarm',inf:{id:'poison',dur:4.5}, hp:0.48,spd:1.28,tch:0.68,r:0.70, w:{pack:66,roamer:22,ambusher:12},
+        sig:{sway:0.90,swayF:4.6,commit:28,harry:46,flank:102,collapse:136,lunge:null}}],
+     s:[{n:'Heartsap Chanter',inf:{id:'curse',dur:5.5},hp:1.24,spd:0.86,bd:1.16,r:1.04, rof:1.06, w:{sentinel:52,skirmisher:32,roamer:16}},
+        {n:'Bloomcaster',  inf:{id:'poison',dur:6.0}, hp:1.06,spd:1.00,bd:1.02,r:0.98, rof:0.84, w:{skirmisher:58,roamer:26,sentinel:16}}]}},
+
+ // 4 WOLFWOOD
+ {c:[{n:'Timber Alpha',    inf:{id:'bleed',dur:5.0},  hp:1.30,spd:1.14,tch:1.30,r:1.10, w:{pack:66,hunter:22,ambusher:12},
+      sig:{sway:0.40,swayF:2.4,commit:100,harry:84,flank:174,collapse:236,lunge:{min:110,max:300,mul:3.0,dur:0.34,cd:1.8}}},
+     {n:'Hollow Elk',      inf:{id:'curse',dur:4.5},  hp:1.52,spd:1.00,tch:1.32,r:1.16, w:{hunter:56,sentinel:24,roamer:20},
+      sig:{sway:0.18,swayF:0.9,commit:170,harry:0,lunge:{min:150,max:390,mul:3.5,dur:0.48,cd:3.0}}},
+     {n:'Carrion Creeper', inf:{id:'poison',dur:5.0}, hp:0.70,spd:1.20,tch:0.80,r:0.80, w:{pack:56,ambusher:28,roamer:16},
+      sig:{sway:0.78,swayF:3.8,commit:36,harry:56,flank:116,collapse:154,lunge:null}},
+     {n:'Bristle Boar',    inf:{id:'bleed',dur:4.0},  hp:1.48,spd:1.02,tch:1.34,r:1.14, w:{hunter:60,pack:22,roamer:18},
+      sig:{sway:0.18,swayF:1.0,commit:165,harry:0,lunge:{min:145,max:365,mul:3.3,dur:0.44,cd:2.7}}}],
+  s:[{n:'Moon-Eye Seer',   inf:{id:'curse',dur:5.5},  hp:1.10,spd:0.96,bd:1.14,r:1.00, w:{sentinel:44,skirmisher:34,roamer:22}},
+     {n:'Bone Flautist',   inf:{id:'weak',dur:5.0},   hp:1.16,spd:0.90,bd:1.10,r:1.02, rof:1.10, w:{sentinel:54,skirmisher:28,roamer:18}},
+     {n:'Pelt-Wrapped Adept',inf:{id:'chill',dur:4.0},hp:1.02,spd:1.08,bd:1.02,r:0.96, rof:0.84, w:{skirmisher:64,roamer:22,hunter:14}}],
+  d:{c:[{n:'Fogfang Alpha',inf:{id:'bleed',dur:5.5},  hp:1.34,spd:1.22,tch:1.28,r:1.10, w:{pack:70,ambusher:18,hunter:12},
+        sig:{sway:0.48,swayF:3.0,harry:88,flank:160,collapse:214,lunge:{min:115,max:310,mul:3.1,dur:0.30,cd:1.6}}},
+       {n:'Antlered Husk', inf:{id:'curse',dur:5.0},  hp:1.58,spd:0.88,tch:1.26,r:1.14, w:{sentinel:54,hunter:30,ambusher:16},
+        sig:{sway:0.16,swayF:0.9,harry:0,lunge:null,pace:74,leash:400}}],
+     s:[{n:'Cairnlight Seer',inf:{id:'curse',dur:6.0},hp:1.18,spd:0.94,bd:1.18,r:1.00, rof:0.92, w:{skirmisher:48,sentinel:34,roamer:18}},
+        {n:'Mist Piper',   inf:{id:'chill',dur:4.5},  hp:1.24,spd:0.86,bd:1.14,r:1.04, rof:1.16, w:{sentinel:56,skirmisher:28,roamer:16}}]}},
+
+ // 5 DEEP TIMBER
+ {c:[{n:'Fen Colossus',    inf:{id:'poison',dur:6.5}, hp:2.20,spd:0.56,tch:1.55,r:1.30, w:{sentinel:62,ambusher:24,hunter:14},
+      sig:{sway:0.08,swayF:0.5,harry:0,lunge:null,pace:56,leash:360}},
+     {n:'Drowned Stag',    inf:{id:'chill',dur:5.0},  hp:1.40,spd:0.96,tch:1.28,r:1.12, w:{hunter:54,sentinel:26,roamer:20},
+      sig:{sway:0.20,swayF:1.0,commit:160,harry:0,lunge:{min:140,max:350,mul:3.2,dur:0.44,cd:3.0}}},
+     {n:'Grub Nest',       inf:{id:'poison',dur:6.0}, hp:0.42,spd:1.18,tch:0.62,r:0.66, w:{pack:70,roamer:20,ambusher:10},
+      sig:{sway:0.92,swayF:4.8,commit:26,harry:42,flank:98,collapse:132,lunge:null}},
+     {n:'Mire Stalker',    inf:{id:'bleed',dur:5.0},  hp:1.16,spd:1.04,tch:1.16,r:1.02, w:{ambusher:62,hunter:22,pack:16},
+      sig:{sway:0.30,swayF:1.8,commit:130,harry:0,breakoff:2.0,rehide:290,lunge:null}}],
+  s:[{n:'Marsh Oracle',    inf:{id:'curse',dur:6.0},  hp:1.20,spd:0.82,bd:1.22,r:1.04, w:{sentinel:48,skirmisher:32,roamer:20}},
+     {n:'Spore Chanter',   inf:{id:'poison',dur:6.5}, hp:1.30,spd:0.72,bd:1.26,r:1.08, rof:1.24, w:{sentinel:62,roamer:22,skirmisher:16}},
+     {n:'Bog-Light Adept',  inf:{id:'chill',dur:4.5}, hp:1.08,spd:0.94,bd:1.14,r:1.00, rof:0.88, w:{skirmisher:56,sentinel:28,roamer:16}}],
+  d:{c:[{n:'Warden of Silt',inf:{id:'poison',dur:7.0},hp:1.94,spd:0.74,tch:1.44,r:1.22, w:{sentinel:60,ambusher:24,hunter:16},
+        sig:{sway:0.10,swayF:0.6,harry:0,lunge:null,pace:66,leash:410}},
+       {n:'Sunken Whelp', inf:{id:'chill',dur:5.0},   hp:0.74,spd:1.24,tch:0.85,r:0.84, w:{pack:62,ambusher:22,roamer:16},
+        sig:{sway:0.66,swayF:3.4,harry:70,flank:124,collapse:166,lunge:{min:95,max:240,mul:2.7,dur:0.26,cd:1.7}}}],
+     s:[{n:'Drowned Oracle',inf:{id:'curse',dur:7.0}, hp:1.28,spd:0.78,bd:1.28,r:1.06, rof:0.96, w:{skirmisher:46,sentinel:36,roamer:18}},
+        {n:'Rot Cantor',   inf:{id:'poison',dur:7.0}, hp:1.32,spd:0.74,bd:1.24,r:1.08, rof:1.10, w:{sentinel:58,skirmisher:26,roamer:16}}]}},
+
+ // 6 STONEBROW RISE
+ {c:[{n:'Terrace Guard',   inf:{id:'stun',dur:0.8},   hp:1.95,spd:0.78,tch:1.35,r:1.18, w:{sentinel:64,hunter:24,ambusher:12},
+      sig:{sway:0.10,swayF:0.7,harry:0,lunge:null,pace:92,leash:430}},
+     {n:'Cliff Ram',       inf:{id:'stun',dur:0.9},   hp:1.56,spd:1.04,tch:1.40,r:1.14, w:{hunter:64,roamer:22,sentinel:14},
+      sig:{sway:0.14,swayF:0.9,commit:180,harry:0,lunge:{min:160,max:400,mul:3.6,dur:0.48,cd:2.8}}},
+     {n:'Grit Swarm',      inf:{id:'bleed',dur:2.5},  hp:0.44,spd:1.34,tch:0.62,r:0.66, w:{pack:68,roamer:22,skirmisher:10},
+      sig:{sway:0.94,swayF:4.8,commit:26,harry:44,flank:100,collapse:134,lunge:null}},
+     {n:'Quarry Lurker',   inf:{id:'bleed',dur:4.0},  hp:1.22,spd:0.96,tch:1.12,r:1.04, w:{ambusher:60,hunter:24,pack:16},
+      sig:{sway:0.28,swayF:1.6,commit:120,harry:0,breakoff:1.9,rehide:270,lunge:null}}],
+  s:[{n:'Slate Flinger',   inf:{id:'stun',dur:0.7},   hp:1.20,spd:0.84,bd:1.22,r:1.02, w:{sentinel:52,skirmisher:28,roamer:20}},
+     {n:'Echo Caller',     inf:{id:'shock',dur:2.4},  hp:1.06,spd:1.00,bd:1.12,r:0.98, rof:0.86, w:{skirmisher:60,roamer:24,hunter:16}},
+     {n:'Cairn Sling',     inf:{id:'stun',dur:1.0},   hp:1.50,spd:0.62,bd:1.48,r:1.16, rof:1.38, w:{sentinel:70,roamer:18,skirmisher:12}}],
+  d:{c:[{n:'Vault Colossus',inf:{id:'stun',dur:1.2},  hp:2.55,spd:0.68,tch:1.62,r:1.34, w:{sentinel:66,hunter:26,ambusher:8},
+        sig:{sway:0.08,swayF:0.6,harry:0,lunge:null,pace:86,leash:470}},
+       {n:'Shard Skitter', inf:{id:'bleed',dur:3.5},  hp:0.56,spd:1.36,tch:0.78,r:0.72, w:{pack:60,roamer:24,skirmisher:16},
+        sig:{sway:0.82,swayF:4.4,commit:34,harry:56,flank:112,collapse:148,lunge:{min:80,max:200,mul:2.6,dur:0.22,cd:1.4}}}],
+     s:[{n:'Deep-Vault Adept',inf:{id:'shock',dur:3.0},hp:1.32,spd:0.84,bd:1.32,r:1.06, rof:0.92, w:{skirmisher:48,sentinel:34,hunter:18}},
+        {n:'Stonebell Cantor',inf:{id:'stun',dur:1.0},hp:1.40,spd:0.72,bd:1.38,r:1.10, rof:1.22, w:{sentinel:64,skirmisher:22,roamer:14}}]}},
+
+ // 7 CINDERWATCH
+ {c:[{n:'Ashjaw Hound',    inf:{id:'burn',dur:4.5},   hp:1.06,spd:1.20,tch:1.20,r:1.02, w:{pack:64,hunter:22,ambusher:14},
+      sig:{sway:0.44,swayF:2.8,harry:86,flank:156,collapse:210,lunge:{min:110,max:300,mul:3.1,dur:0.32,cd:1.7}}},
+     {n:'Cinder Ram',      inf:{id:'burn',dur:5.0},   hp:1.60,spd:1.00,tch:1.45,r:1.16, w:{hunter:62,roamer:22,sentinel:16},
+      sig:{sway:0.16,swayF:0.9,commit:175,harry:0,lunge:{min:155,max:390,mul:3.5,dur:0.46,cd:2.7}}},
+     {n:'Scoria Crawler',  inf:{id:'burn',dur:4.0},   hp:1.30,spd:0.88,tch:1.18,r:1.08, w:{sentinel:50,ambusher:30,hunter:20},
+      sig:{sway:0.20,swayF:1.0,harry:0,lunge:null,pace:70}},
+     {n:'Flarewing',       inf:{id:'burn',dur:3.5},   hp:0.72,spd:1.34,tch:1.00,r:0.88, w:{ambusher:50,roamer:28,skirmisher:22},
+      sig:{sway:0.68,swayF:3.2,commit:60,harry:94,lunge:{min:120,max:320,mul:3.2,dur:0.32,cd:1.8},breakoff:1.6,rehide:250}}],
+  s:[{n:'Magma Slinger',   inf:{id:'burn',dur:5.0},   hp:1.24,spd:0.86,bd:1.26,r:1.04, w:{sentinel:52,skirmisher:30,roamer:18}},
+     {n:'Cinder Oracle',   inf:{id:'curse',dur:5.0},  hp:1.14,spd:0.96,bd:1.18,r:1.00, rof:0.90, w:{skirmisher:56,sentinel:28,roamer:16}},
+     {n:'Vent Piper',      inf:{id:'burn',dur:5.5},   hp:1.34,spd:0.78,bd:1.32,r:1.10, rof:1.26, w:{sentinel:64,roamer:20,skirmisher:16}}],
+  d:{c:[{n:'Anvil Colossus',inf:{id:'burn',dur:6.0},  hp:2.35,spd:0.76,tch:1.58,r:1.30, w:{sentinel:56,hunter:34,ambusher:10},
+        sig:{sway:0.10,swayF:0.7,commit:130,harry:0,lunge:{min:130,max:290,mul:2.5,dur:0.44,cd:2.9}}},
+       {n:'Slagfly Swarm', inf:{id:'burn',dur:3.5},   hp:0.46,spd:1.42,tch:0.66,r:0.68, w:{pack:68,roamer:20,skirmisher:12},
+        sig:{sway:0.96,swayF:5.0,commit:24,harry:40,flank:96,collapse:128,lunge:null}}],
+     s:[{n:'Quench Adept', inf:{id:'chill',dur:3.5},  hp:1.26,spd:0.92,bd:1.28,r:1.04, rof:0.94, w:{skirmisher:52,sentinel:30,hunter:18}},
+        {n:'Forge Cantor', inf:{id:'burn',dur:6.5},   hp:1.36,spd:0.86,bd:1.36,r:1.08, rof:1.10, w:{sentinel:58,skirmisher:26,roamer:16}}]}},
+
+ // 8 THE ASHFALL
+ {c:[{n:'Rift Hound',      inf:{id:'curse',dur:5.5},  hp:1.14,spd:1.24,tch:1.22,r:1.04, w:{pack:60,hunter:26,ambusher:14},
+      sig:{sway:0.42,swayF:2.8,harry:82,flank:158,collapse:212,lunge:{min:115,max:305,mul:3.1,dur:0.30,cd:1.6}}},
+     {n:'Emberbone Giant', inf:{id:'burn',dur:6.5},   hp:2.45,spd:0.74,tch:1.65,r:1.32, w:{sentinel:52,hunter:38,ambusher:10},
+      sig:{sway:0.08,swayF:0.6,commit:60,harry:0,lunge:null,pace:78,leash:450}},
+     {n:'Cinder Moth',     inf:{id:'burn',dur:4.0},   hp:0.50,spd:1.38,tch:0.70,r:0.72, w:{pack:62,roamer:24,skirmisher:14},
+      sig:{sway:0.92,swayF:4.6,commit:28,harry:46,flank:100,collapse:134,lunge:null}},
+     {n:'Scorched Stalker',inf:{id:'bleed',dur:5.0},  hp:1.26,spd:1.08,tch:1.24,r:1.04, w:{ambusher:58,hunter:26,pack:16},
+      sig:{sway:0.28,swayF:1.7,commit:130,harry:0,breakoff:2.0,rehide:290,lunge:null}}],
+  s:[{n:'Ashfall Oracle',  inf:{id:'curse',dur:6.5},  hp:1.22,spd:0.92,bd:1.34,r:1.02, w:{skirmisher:50,sentinel:32,roamer:18}},
+     {n:'Emberglass Adept',inf:{id:'burn',dur:5.5},   hp:1.16,spd:1.00,bd:1.30,r:1.00, rof:0.82, w:{skirmisher:60,hunter:22,sentinel:18}},
+     {n:'Pyre Sling',      inf:{id:'burn',dur:6.0},   hp:1.44,spd:0.70,bd:1.50,r:1.12, rof:1.32, w:{sentinel:68,roamer:18,skirmisher:14}}],
+  d:{c:[{n:'Core Colossus',inf:{id:'burn',dur:7.0},   hp:2.85,spd:0.76,tch:1.80,r:1.40, w:{sentinel:52,hunter:38,ambusher:10},
+        sig:{sway:0.08,swayF:0.6,commit:120,harry:0,lunge:{min:140,max:330,mul:2.6,dur:0.48,cd:3.2}}},
+       {n:'Sanctum Whelp', inf:{id:'curse',dur:5.0},  hp:0.80,spd:1.32,tch:0.95,r:0.88, w:{pack:64,ambusher:20,hunter:16},
+        sig:{sway:0.56,swayF:3.2,harry:82,flank:152,collapse:202,lunge:{min:100,max:270,mul:3.0,dur:0.28,cd:1.5}}}],
+     s:[{n:'Heart-Ash Cantor',inf:{id:'curse',dur:7.5},hp:1.38,spd:0.88,bd:1.50,r:1.06, rof:0.78, w:{skirmisher:50,sentinel:32,hunter:18}},
+        {n:'Riftglass Adept',inf:{id:'shock',dur:3.4},hp:1.28,spd:0.98,bd:1.42,r:1.02, rof:0.88, w:{skirmisher:58,sentinel:26,hunter:16}}]}},
+];
+for(let _b=0;_b<MOBSPEC.length;_b++){
+  const A=MOBSPEC[_b], B=MOBSPEC_MORE2[_b]; if(!A||!B) continue;
+  if(B.c) A.c=A.c.concat(B.c);
+  if(B.s) A.s=A.s.concat(B.s);
+  if(B.d){ A.d=A.d||{};
+    if(B.d.c) A.d.c=(A.d.c||[]).concat(B.d.c);
+    if(B.d.s) A.d.s=(A.d.s||[]).concat(B.d.s); }
+}
+
+// ---- THE NIGHTMARE ROSTER (user: "separate but similar", and "not dream, nightmare") ----
+// Three more chasers and three more shooters per band, dungeon-only, bringing each band's
+// nightmare pool to seven and seven -- the same depth as the ground above it. Each one is the echo of an
+// overworld creature rather than a new idea: the Landing Sands has its crawlers and its spitters
+// in both -- down here they have too many legs, or too many mouths, and they do not stop.
+const MOBSPEC_NIGHT=[
+ // 0 THE SALTWORKS (the Landing Sands, gone wrong)
+ {c:[{n:'Flensed Crawler',inf:{id:'chill',dur:3.0},hp:0.94,spd:0.86,tch:0.90,r:0.96, w:{roamer:42,hunter:32,sentinel:26},
+      sig:{sway:0.60,swayF:3.2,commit:44,harry:0,lunge:null}},
+     {n:'Chitter-Shell',    inf:null,                 hp:0.62,spd:1.10,tch:0.70,r:0.78, w:{pack:56,roamer:28,hunter:16},
+      sig:{sway:0.78,swayF:4.0,commit:34,harry:0,lunge:null,flank:110,collapse:148}},
+     {n:'The Halfdrowned',  inf:{id:'curse',dur:4.0}, hp:1.02,spd:0.94,tch:0.92,r:0.98, w:{ambusher:50,roamer:30,sentinel:20},
+      sig:{sway:0.30,swayF:1.4,harry:0,lunge:null,breakoff:1.8,rehide:250}}],
+  s:[{n:'Drowning Voice', inf:{id:'chill',dur:3.2}, hp:1.00,spd:0.84,bd:0.92,r:0.98, w:{sentinel:52,skirmisher:30,roamer:18}},
+     {n:'Saltglass Weeper',  inf:{id:'curse',dur:3.5}, hp:0.92,spd:0.96,bd:0.88,r:0.94, rof:0.90, w:{skirmisher:56,roamer:26,sentinel:18}},
+     {n:'Hook-Lantern',inf:{id:'weak',dur:3.0},hp:1.10,spd:0.74,bd:0.96,r:1.02, rof:1.20, w:{sentinel:64,roamer:22,skirmisher:14}}]},
+
+ // 1 GULLWIND LIGHT (the Gullwind Shore, gone wrong)
+ {c:[{n:'Skinned Skua',  inf:{id:'bleed',dur:3.0}, hp:0.76,spd:1.26,tch:1.10,r:0.88, w:{ambusher:52,roamer:28,hunter:20},
+      sig:{sway:0.66,swayF:3.0,commit:66,harry:88,lunge:{min:120,max:300,mul:3.0,dur:0.32,cd:2.0},breakoff:1.7,rehide:250}},
+     {n:'The Keeper’s Hands',     inf:{id:'curse',dur:4.0}, hp:1.16,spd:0.92,tch:1.00,r:1.02, w:{sentinel:48,ambusher:30,roamer:22},
+      sig:{sway:0.26,swayF:1.2,harry:0,lunge:null,pace:74}},
+     {n:'Rope of Necks',    inf:{id:'weak',dur:4.0},  hp:1.30,spd:0.66,tch:1.08,r:1.10, w:{sentinel:66,ambusher:22,roamer:12},
+      sig:{sway:0.10,swayF:0.6,harry:0,lunge:null,pace:56,leash:320}}],
+  s:[{n:'Beacon That Screams',inf:{id:'shock',dur:2.4},hp:1.12,spd:0.90,bd:1.02,r:1.00, w:{sentinel:54,skirmisher:30,roamer:16}},
+     {n:'Fogbell Toller',    inf:{id:'weak',dur:3.8},  hp:1.06,spd:0.94,bd:0.98,r:0.98, rof:1.10, w:{sentinel:50,skirmisher:32,roamer:18}},
+     {n:'Gull With No Eyes',inf:{id:'bleed',dur:3.5}, hp:0.86,spd:1.20,bd:0.90,r:0.92, rof:0.80, w:{skirmisher:62,roamer:24,hunter:14}}]},
+
+ // 2 MARROW CHAPEL (the Sawgrass Flats, gone wrong)
+ {c:[{n:'Split Lurcher',inf:{id:'poison',dur:5.0},hp:1.52,spd:0.70,tch:1.26,r:1.14, w:{ambusher:46,sentinel:32,hunter:22},
+      sig:{sway:0.20,swayF:0.9,harry:0,lunge:null,breakoff:1.7,rehide:250}},
+     {n:'Choir of Open Mouths',    inf:{id:'curse',dur:5.0}, hp:1.34,spd:0.80,tch:1.10,r:1.06, w:{sentinel:56,ambusher:26,hunter:18},
+      sig:{sway:0.14,swayF:0.8,harry:0,lunge:null,pace:66}},
+     {n:'The Kneeling',inf:{id:'weak',dur:5.5},hp:0.60,spd:1.18,tch:0.74,r:0.74, w:{pack:64,ambusher:22,roamer:14},
+      sig:{sway:0.80,swayF:4.0,commit:32,harry:50,flank:108,collapse:144,lunge:null}}],
+  s:[{n:'Bell of Teeth', inf:{id:'stun',dur:0.8},  hp:1.26,spd:0.74,bd:1.16,r:1.06, rof:1.24, w:{sentinel:64,roamer:20,skirmisher:16}},
+     {n:'Marrow Weeper',     inf:{id:'curse',dur:5.0}, hp:1.14,spd:0.86,bd:1.10,r:1.00, rof:0.96, w:{skirmisher:50,sentinel:32,roamer:18}},
+     {n:'Censer of Flies',  inf:{id:'poison',dur:6.0},hp:1.20,spd:0.78,bd:1.12,r:1.04, rof:1.08, w:{sentinel:56,skirmisher:28,roamer:16}}]},
+
+ // 3 THE HEARTWOOD HOLLOW (the Verdant Belt, gone wrong)
+ {c:[{n:'Starving Hound', inf:{id:'bleed',dur:4.0}, hp:1.06,spd:1.10,tch:1.08,r:1.00, w:{pack:52,hunter:28,ambusher:20},
+      sig:{sway:0.52,swayF:2.6,harry:72,lunge:{min:100,max:250,mul:2.6,dur:0.30,cd:2.0}}},
+     {n:'Sapling of Fingers',    inf:{id:'poison',dur:5.0},hp:0.72,spd:1.14,tch:0.82,r:0.82, w:{pack:58,roamer:26,ambusher:16},
+      sig:{sway:0.70,swayF:3.4,commit:38,harry:58,flank:114,collapse:152,lunge:null}},
+     {n:'Warden Flayed',  inf:{id:'weak',dur:5.0},  hp:1.70,spd:0.80,tch:1.30,r:1.16, w:{sentinel:60,hunter:26,ambusher:14},
+      sig:{sway:0.12,swayF:0.7,harry:0,lunge:null,pace:70,leash:400}}],
+  s:[{n:'The Grove That Watches',inf:{id:'weak',dur:5.5},  hp:1.18,spd:0.90,bd:1.10,r:1.02, w:{sentinel:50,skirmisher:32,roamer:18}},
+     {n:'Bramble Weeper',    inf:{id:'poison',dur:5.5},hp:1.08,spd:0.96,bd:1.04,r:0.98, rof:0.88, w:{skirmisher:56,roamer:26,sentinel:18}},
+     {n:'Seed of Mouths',inf:{id:'curse',dur:5.0}, hp:1.24,spd:0.82,bd:1.14,r:1.06, rof:1.14, w:{sentinel:58,skirmisher:26,roamer:16}}]},
+
+ // 4 THE FOGBOUND GLADE (Wolfwood, gone wrong)
+ {c:[{n:'Two-Headed Wolf',  inf:{id:'bleed',dur:4.5}, hp:1.02,spd:1.22,tch:1.16,r:1.02, w:{pack:68,ambusher:20,hunter:12},
+      sig:{sway:0.48,swayF:2.8,harry:84,flank:158,collapse:212,lunge:{min:110,max:300,mul:3.0,dur:0.30,cd:1.7}}},
+     {n:'Stag of Nails',inf:{id:'curse',dur:5.0},hp:1.56,spd:0.98,tch:1.32,r:1.16, w:{hunter:56,sentinel:26,roamer:18},
+      sig:{sway:0.18,swayF:0.9,commit:170,harry:0,lunge:{min:150,max:380,mul:3.4,dur:0.46,cd:3.0}}},
+     {n:'The Empty Pelt',inf:{id:'chill',dur:4.0},hp:0.68,spd:1.32,tch:0.84,r:0.84, w:{pack:60,roamer:24,ambusher:16},
+      sig:{sway:0.74,swayF:3.6,commit:34,harry:62,flank:118,collapse:156,lunge:null}}],
+  s:[{n:'Howl With No Throat', inf:{id:'weak',dur:5.0},  hp:1.14,spd:0.94,bd:1.12,r:1.00, w:{sentinel:48,skirmisher:34,roamer:18}},
+     {n:'Antler Weeper',     inf:{id:'curse',dur:6.0}, hp:1.20,spd:0.90,bd:1.16,r:1.02, rof:0.92, w:{skirmisher:50,sentinel:32,roamer:18}},
+     {n:'Whistling Wound',inf:{id:'chill',dur:4.5},hp:1.26,spd:0.82,bd:1.14,r:1.06, rof:1.18, w:{sentinel:58,skirmisher:26,roamer:16}}]},
+
+ // 5 THE SUNKEN WARREN (Deep Timber, gone wrong)
+ {c:[{n:'Bloated Lurker',inf:{id:'poison',dur:6.0},hp:1.44,spd:0.88,tch:1.32,r:1.10, w:{ambusher:58,sentinel:24,hunter:18},
+      sig:{sway:0.62,swayF:1.6,commit:140,breakoff:2.0,rehide:270,harry:0}},
+     {n:'Colossus of Bones',  inf:{id:'poison',dur:7.0},hp:2.10,spd:0.62,tch:1.50,r:1.28, w:{sentinel:62,ambusher:24,hunter:14},
+      sig:{sway:0.08,swayF:0.5,harry:0,lunge:null,pace:58,leash:370}},
+     {n:'Silt Brood',    inf:{id:'poison',dur:6.0},hp:0.44,spd:1.24,tch:0.64,r:0.68, w:{pack:68,roamer:20,ambusher:12},
+      sig:{sway:0.90,swayF:4.6,commit:26,harry:44,flank:100,collapse:134,lunge:null}}],
+  s:[{n:'Voice Under Water',inf:{id:'chill',dur:5.5}, hp:1.22,spd:0.80,bd:1.20,r:1.04, w:{sentinel:52,skirmisher:30,roamer:18}},
+     {n:'Fen Weeper',        inf:{id:'curse',dur:6.5}, hp:1.16,spd:0.86,bd:1.18,r:1.02, rof:0.94, w:{skirmisher:52,sentinel:32,roamer:16}},
+     {n:'Pipe of Drowned Air',inf:{id:'poison',dur:6.5},hp:1.30,spd:0.72,bd:1.24,r:1.08, rof:1.22, w:{sentinel:62,roamer:22,skirmisher:16}}]},
+
+ // 6 THE SHATTERED VAULT (Stonebrow Rise, gone wrong)
+ {c:[{n:'Warden Unmade',inf:{id:'stun',dur:0.9},  hp:2.00,spd:0.76,tch:1.38,r:1.20, w:{sentinel:64,hunter:24,ambusher:12},
+      sig:{sway:0.10,swayF:0.7,harry:0,lunge:null,pace:90,leash:440}},
+     {n:'The Doorless',  inf:{id:'stun',dur:1.0},  hp:2.25,spd:0.70,tch:1.50,r:1.28, w:{sentinel:70,hunter:22,ambusher:8},
+      sig:{sway:0.08,swayF:0.6,harry:0,lunge:null,pace:84,leash:460}},
+     {n:'Dust of Masons',   inf:{id:'bleed',dur:3.0}, hp:0.50,spd:1.30,tch:0.70,r:0.70, w:{pack:64,roamer:24,skirmisher:12},
+      sig:{sway:0.86,swayF:4.4,commit:30,harry:48,flank:104,collapse:138,lunge:null}}],
+  s:[{n:'The Quarry That Chews',inf:{id:'stun',dur:0.9}, hp:1.42,spd:0.68,bd:1.42,r:1.12, rof:1.32, w:{sentinel:68,roamer:18,skirmisher:14}},
+     {n:'Slate Weeper',      inf:{id:'shock',dur:2.8}, hp:1.24,spd:0.88,bd:1.26,r:1.04, rof:0.94, w:{skirmisher:50,sentinel:32,hunter:18}},
+     {n:'Keystone Screamer',  inf:{id:'weak',dur:4.5},  hp:1.34,spd:0.78,bd:1.30,r:1.08, rof:1.10, w:{sentinel:60,skirmisher:24,roamer:16}}]},
+
+ // 7 THE ASHEN KEEP (Cinderwatch, gone wrong)
+ {c:[{n:'Skinless Leaper',inf:{id:'burn',dur:4.5},  hp:0.92,spd:1.16,tch:1.24,r:0.98, w:{hunter:40,ambusher:28,pack:20,roamer:12},
+      sig:{sway:0.48,swayF:2.8,commit:88,harry:94,lunge:{min:120,max:330,mul:3.2,dur:0.38,cd:1.8}}},
+     {n:'Cinder-Welded Guard',   inf:{id:'burn',dur:5.5},  hp:1.86,spd:0.90,tch:1.42,r:1.18, w:{sentinel:50,hunter:34,pack:12,ambusher:4},
+      sig:{sway:0.20,swayF:1.1,commit:80,harry:0,lunge:{min:110,max:240,mul:2.3,dur:0.38,cd:2.5}}},
+     {n:'Ash Brood',inf:{id:'burn',dur:3.5},hp:0.46,spd:1.40,tch:0.68,r:0.68, w:{pack:66,roamer:22,skirmisher:12},
+      sig:{sway:0.94,swayF:4.8,commit:26,harry:42,flank:98,collapse:130,lunge:null}}],
+  s:[{n:'The Pyre That Speaks', inf:{id:'burn',dur:6.0},  hp:1.28,spd:0.92,bd:1.30,r:1.04, w:{sentinel:52,skirmisher:30,hunter:18}},
+     {n:'Bellows Weeper',    inf:{id:'burn',dur:5.5},  hp:1.18,spd:1.00,bd:1.24,r:1.00, rof:0.86, w:{skirmisher:58,hunter:22,sentinel:20}},
+     {n:'Chanter of Ash',   inf:{id:'curse',dur:5.5}, hp:1.24,spd:0.88,bd:1.26,r:1.04, rof:1.06, w:{sentinel:54,skirmisher:28,roamer:18}}]},
+
+ // 8 THE CORE SANCTUM (The Ashfall, gone wrong)
+ {c:[{n:'Revenant Unending',inf:{id:'burn',dur:5.5},hp:1.74,spd:0.94,tch:1.36,r:1.12, w:{hunter:52,sentinel:26,pack:14,roamer:8},
+      sig:{sway:0.22,swayF:1.1,commit:60,harry:0,lunge:{min:110,max:230,mul:2.0,dur:0.40,cd:3.0}}},
+     {n:'The Devout',       inf:{id:'curse',dur:6.0}, hp:1.20,spd:1.16,tch:1.16,r:1.02, w:{pack:56,hunter:26,ambusher:18},
+      sig:{sway:0.50,swayF:2.8,harry:78,flank:150,collapse:202,lunge:{min:100,max:270,mul:2.9,dur:0.28,cd:1.6}}},
+     {n:'Last Colossus',    inf:{id:'burn',dur:7.0},  hp:2.90,spd:0.72,tch:1.82,r:1.42, w:{sentinel:52,hunter:40,ambusher:8},
+      sig:{sway:0.08,swayF:0.6,commit:110,harry:0,lunge:{min:140,max:320,mul:2.5,dur:0.50,cd:3.4}}}],
+  s:[{n:'The Rift That Opens', inf:{id:'curse',dur:7.0}, hp:1.36,spd:0.90,bd:1.46,r:1.04, w:{skirmisher:50,sentinel:32,hunter:18}},
+     {n:'Herald Flayed',     inf:{id:'burn',dur:6.5},  hp:1.42,spd:0.86,bd:1.48,r:1.08, rof:0.82, w:{skirmisher:48,sentinel:34,hunter:18}},
+     {n:'Cantor of the End',inf:{id:'curse',dur:7.5}, hp:1.30,spd:0.94,bd:1.40,r:1.02, rof:0.88, w:{skirmisher:54,sentinel:28,hunter:18}}]},
+];
+for(let _b=0;_b<MOBSPEC.length;_b++){
+  const A=MOBSPEC[_b], B=MOBSPEC_NIGHT[_b]; if(!A||!B) continue;
+  A.d=A.d||{};
+  if(B.c) A.d.c=(A.d.c||[]).concat(B.c);
+  if(B.s) A.d.s=(A.d.s||[]).concat(B.s);
+}
+
+// ---- ELITES (user, 2026-07-27: "elites among the mobs that spawn more uncommonly") ----
+// An elite is not a separate creature. It is one of the band's OWN species that grew: same
+// silhouette, same behaviour, same ground -- bigger, tougher, and named for what it became. That
+// is the point. A new monster teaches you a new thing; an elite tests what the ordinary one
+// already taught you, which is why it has to be recognisably the same animal.
+//
+// UNCOMMON, AND DETERMINISTIC. Rolled from the spawn point, not from Math.random, so a spot keeps
+// its elite across respawns exactly the way it keeps its species -- the outcrop with the Elder
+// Stone Warden on it is a place you learn, not a slot machine. Bosses, nodes and summons never
+// qualify: a boss is already the thing an elite is a smaller version of.
+const ELITE_P = 0.075;                 // about one roaming spawn in thirteen
+const ELITE_TITLES=[
+  ['Tide-Gorged','Barnacled','Shell-Crowned'],        // 0 Landing Sands
+  ['Storm-Fed','Wreck-Born','Gale-Torn'],             // 1 Gullwind Shore
+  ['Fen-Swollen','Reed-Crowned','Mire-Fat'],          // 2 Sawgrass Flats
+  ['Root-Knotted','Thorn-Crowned','Sap-Gorged'],      // 3 Verdant Belt
+  ['Pack-Father','Scar-Muzzled','Old-Blooded'],       // 4 Wolfwood
+  ['Rot-Swollen','Grave-Fat','Bog-Crowned'],          // 5 Deep Timber
+  ['Granite-Cased','Quarry-Born','Stone-Crowned'],    // 6 Stonebrow Rise
+  ['Slag-Cased','Ember-Crowned','Vent-Fed'],          // 7 Cinderwatch
+  ['Rift-Touched','Ash-Crowned','Cinder-Fat'],        // 8 The Ashfall
+];
+// Every multiplier here is on top of the species and the behaviour, so an elite Rubble Hulk is
+// still a wall and an elite Sandfly Cloud is still a cloud -- just one you cannot ignore.
+const ELITE_HP=2.9, ELITE_TCH=1.45, ELITE_BD=1.45, ELITE_R=1.24, ELITE_SPD=1.05, ELITE_DEF=1.35;
+function eliteRoll(sp){
+  if(!sp) return false;
+  // its own hash constants: sharing them with the species or behaviour picker would correlate
+  // "is elite" with "is a wolf", and every elite in the world would be the same creature.
+  const h=(Math.imul(sp.x|0,2654435761)+Math.imul(sp.y|0,1597334677))>>>0;
+  return (((h^(h>>>16))>>>0)%1000) < Math.round(ELITE_P*1000);
+}
+function eliteTitle(band,sp){
+  const T=ELITE_TITLES[Math.max(0,Math.min(ELITE_TITLES.length-1,band|0))]||ELITE_TITLES[0];
+  const h=(Math.imul(sp?sp.x|0:1,374761393)+Math.imul(sp?sp.y|0:1,2246822519))>>>0;
+  return T[((h^(h>>>11))>>>0)%T.length];
+}
+function makeElite(e,sp){
+  e.elite=1;
+  e.hp*=ELITE_HP; e.spd*=ELITE_SPD;
+  if(e.touch) e.touch*=ELITE_TCH;
+  if(e.bd) e.bd*=ELITE_BD;
+  e.r=Math.round(e.r*ELITE_R);
+  if(e.def){ e.def=Math.round(e.def*ELITE_DEF); if(typeof eDR==='function') e.dr=eDR(e.def); }
+  // the name carries it, because the health bar is the last place you want to learn this
+  if(e.spn) e.spn=eliteTitle(e.band,sp)+' '+e.spn;
+  return e;
+}
+// ---- ARCHETYPES (user, 2026-07-27: "make sure all the mobs and elites also have sprites") ----
+// 99 species were sharing TWO sprites -- one hound for every chaser in the game and one cultist
+// for every shooter -- tinted by band. A crab, a swarm of flies, a stone golem and a walking briar
+// were all the same dog.
+//
+// Ninety-nine bespoke sets is the wrong answer: at the 44px these render at, most of that detail
+// is noise, and it is hours of generation for silhouettes nobody can tell apart. What actually
+// reads at this size is the SHAPE. So the roster maps onto ten archetypes, each with its own
+// sprite, still tinted per band -- ninety distinct looks, and a crab now looks like a crab.
+// Anything not listed falls back to its type's archetype, so a new species without an entry
+// degrades to exactly today's behaviour rather than to a blank.
+const MOB_ARCH={
+  // the nightmare roster
+  'Chitter-Shell':'crab',
+  'Dust of Masons':'crab',
+  'Flensed Crawler':'crab',
+  'Silt Brood':'crab',
+  'Split Lurcher':'crab',
+  'Bloated Lurker':'husk',
+  'Choir of Open Mouths':'husk',
+  'Cinder-Welded Guard':'husk',
+  'Revenant Unending':'husk',
+  'The Devout':'husk',
+  'The Halfdrowned':'husk',
+  'The Keeper’s Hands':'husk',
+  'Warden Flayed':'husk',
+  'Antler Weeper':'wisp',
+  'Beacon That Screams':'wisp',
+  'Bell of Teeth':'wisp',
+  'Bellows Weeper':'wisp',
+  'Bramble Weeper':'wisp',
+  'Drowning Voice':'wisp',
+  'Fen Weeper':'wisp',
+  'Fogbell Toller':'wisp',
+  'Herald Flayed':'wisp',
+  'Howl With No Throat':'wisp',
+  'Marrow Weeper':'wisp',
+  'Saltglass Weeper':'wisp',
+  'Slate Weeper':'wisp',
+  'The Empty Pelt':'wisp',
+  'The Grove That Watches':'wisp',
+  'The Pyre That Speaks':'wisp',
+  'The Quarry That Chews':'wisp',
+  'The Rift That Opens':'wisp',
+  'Voice Under Water':'wisp',
+  'Gull With No Eyes':'bird',
+  'Skinned Skua':'bird',
+  'Skinless Leaper':'boar',
+  'Stag of Nails':'boar',
+  'Starving Hound':'boar',
+  'Two-Headed Wolf':'boar',
+  'Colossus of Bones':'golem',
+  'Last Colossus':'golem',
+  'The Doorless':'golem',
+  'Warden Unmade':'golem',
+  'Rope of Necks':'plant',
+  'Sapling of Fingers':'plant',
+  'Seed of Mouths':'plant',
+  'Ash Brood':'swarm',
+  'The Kneeling':'swarm',
+  'Censer of Flies':'slinger',
+  'Hook-Lantern':'slinger',
+  'Pipe of Drowned Air':'slinger',
+  'Whistling Wound':'slinger',
+  'Cantor of the End':'acolyte',
+  'Chanter of Ash':'acolyte',
+  'Keystone Screamer':'acolyte',
+  // shooter silhouettes
+  'Barnacle Popper':'slinger',
+  'Bog Piper':'slinger',
+  'Cairn Sling':'slinger',
+  'Cattail Spitter':'slinger',
+  'Censer Bearer':'slinger',
+  'Kelp Lobber':'slinger',
+  'Magma Slinger':'slinger',
+  'Mudlark Caller':'slinger',
+  'Peat Spitter':'slinger',
+  'Pyre Sling':'slinger',
+  'Quarry Sling':'slinger',
+  'Reefbone Piper':'slinger',
+  'Rime Slinger':'slinger',
+  'Sawgrass Spitter':'slinger',
+  'Scree Slinger':'slinger',
+  'Slate Flinger':'slinger',
+  'Spume Caster':'slinger',
+  'Thorn Slinger':'slinger',
+  'Tide Spitter':'slinger',
+  'Vent Piper':'slinger',
+  'Antler Oracle':'shaman',
+  'Ashvent Shaman':'shaman',
+  'Barkhide Shaman':'shaman',
+  'Bloomcaster':'shaman',
+  'Bone Flautist':'shaman',
+  'Core Cultist':'shaman',
+  'Echo Caller':'shaman',
+  'Ember Cultist':'shaman',
+  'Fen Whisperer':'shaman',
+  'Fungal Herald':'shaman',
+  'Grove Cultist':'shaman',
+  'Gull Piper':'shaman',
+  'Howl-Keeper':'shaman',
+  'Mire Cultist':'shaman',
+  'Moon-Eye Seer':'shaman',
+  'Pelt-Wrapped Adept':'shaman',
+  'Ridge Whistler':'shaman',
+  'Root Speaker':'shaman',
+  'Sap Priest':'shaman',
+  'Seedcaster':'shaman',
+  'Shoal Whistler':'shaman',
+  'Signal Screamer':'shaman',
+  'Spore Puffer':'shaman',
+  'Storm Caller':'shaman',
+  'Vent Howler':'shaman',
+  'Wolfwood Seer':'shaman',
+  'Wreck Scavenger':'shaman',
+  'Ashfall Oracle':'acolyte',
+  'Beacon Keeper':'acolyte',
+  'Bellows Adept':'acolyte',
+  'Bog-Light Adept':'acolyte',
+  'Brine Warden':'acolyte',
+  'Cairn Whistler':'acolyte',
+  'Cairnlight Seer':'acolyte',
+  'Cinder Oracle':'acolyte',
+  'Cinderwind Adept':'acolyte',
+  'Deep-Vault Adept':'acolyte',
+  'Drowned Chorus':'acolyte',
+  'Drowned Oracle':'acolyte',
+  'Emberglass Adept':'acolyte',
+  'Fault Chanter':'acolyte',
+  'Fogbell Ringer':'acolyte',
+  'Forge Cantor':'acolyte',
+  'Grave-Ash Adept':'acolyte',
+  'Heart-Ash Cantor':'acolyte',
+  'Heartsap Chanter':'acolyte',
+  'Marrow Cantor':'acolyte',
+  'Marsh Oracle':'acolyte',
+  'Mirror Chanter':'acolyte',
+  'Mist Piper':'acolyte',
+  'Molten Herald':'acolyte',
+  'Prism Adept':'acolyte',
+  'Pyre Chanter':'acolyte',
+  'Quench Adept':'acolyte',
+  'Reedpipe Mourner':'acolyte',
+  'Requiem Cantor':'acolyte',
+  'Rift Cantor':'acolyte',
+  'Rift Chanter':'acolyte',
+  'Riftglass Adept':'acolyte',
+  'Rot Cantor':'acolyte',
+  'Rushlight Caller':'acolyte',
+  'Saltglass Adept':'acolyte',
+  'Shatterstone Adept':'acolyte',
+  'Spore Chanter':'acolyte',
+  'Stonebell Cantor':'acolyte',
+  'Tidewrack Acolyte':'acolyte',
+  'Wisp-Light Piper':'acolyte',
+  'Wrack Cantor':'acolyte',
+  // third wave
+  'Barnacle Crawler':'crab',
+  'Bleached Hermit':'crab',
+  'Dune Skipper':'crab',
+  'Fen Skimmer':'crab',
+  'Foam Scuttler':'crab',
+  'Ossuary Crawler':'crab',
+  'Peat Lurcher':'crab',
+  'Quarry Lurker':'crab',
+  'Scoria Crawler':'crab',
+  'Shard Skitter':'crab',
+  'Carrion Creeper':'swarm',
+  'Cinder Moth':'swarm',
+  'Grit Swarm':'swarm',
+  'Grub Nest':'swarm',
+  'Rootling Swarm':'swarm',
+  'Rush Adder':'swarm',
+  'Shipwreck Rat':'swarm',
+  'Slagfly Swarm':'swarm',
+  'Flarewing':'bird',
+  'Shoal Whistler':'bird',
+  'Tern Diver':'bird',
+  'Wreck Crow':'bird',
+  'Antlered Husk':'husk',
+  'Bark-Bound Thrall':'husk',
+  'Barnacle Thrall':'husk',
+  'Bell-Rot Acolyte':'husk',
+  'Bog Shambler':'husk',
+  'Grovewretch':'husk',
+  'Gull-Picked Corpse':'husk',
+  'Mire Stalker':'husk',
+  'Netted Drowned':'husk',
+  'Scorched Stalker':'husk',
+  'Anvil Colossus':'golem',
+  'Core Colossus':'golem',
+  'Emberbone Giant':'golem',
+  'Fen Colossus':'golem',
+  'Oil-Slick Hulk':'golem',
+  'Terrace Guard':'golem',
+  'Vault Colossus':'golem',
+  'Warden of Silt':'golem',
+  'Bloomcaster':'plant',
+  'Cattail Spitter':'plant',
+  'Fungal Herald':'plant',
+  'Heartsap Chanter':'plant',
+  'Moss Lurker':'plant',
+  'Sap Priest':'plant',
+  'Spore Chanter':'plant',
+  'Thorn Slinger':'plant',
+  'Ashfall Oracle':'wisp',
+  'Cairnlight Seer':'wisp',
+  'Cinder Oracle':'wisp',
+  'Drowned Oracle':'wisp',
+  'Echo Caller':'wisp',
+  'Heart-Ash Cantor':'wisp',
+  'Keeper’s Shade':'wisp',
+  'Marsh Oracle':'wisp',
+  'Mirror Chanter':'wisp',
+  'Mist Piper':'wisp',
+  'Moon-Eye Seer':'wisp',
+  'Requiem Cantor':'wisp',
+  'Rot Cantor':'wisp',
+  'Wisp-Light Piper':'wisp',
+  'Wrack Cantor':'wisp',
+  'Ashjaw Hound':'boar',
+  'Bramble Stag':'boar',
+  'Bristle Boar':'boar',
+  'Cinder Ram':'boar',
+  'Cliff Ram':'boar',
+  'Cliffside Ram':'boar',
+  'Drowned Stag':'boar',
+  'Fogfang Alpha':'boar',
+  'Hollow Elk':'boar',
+  'Rift Hound':'boar',
+  'Sanctum Whelp':'boar',
+  'Sunken Whelp':'boar',
+  'Thicket Whelp':'boar',
+  'Timber Alpha':'boar',
+  'Ash Revenant':'husk',
+  'Ashborn Wretch':'husk',
+  'Barnacle Popper':'crab',
+  'Bloated Drifter':'husk',
+  'Bonepile Scavenger':'husk',
+  'Bramble Weaver':'plant',
+  'Cairn Whistler':'wisp',
+  'Chapel Husk':'husk',
+  'Chip Skitter':'crab',
+  'Cinder Husk':'husk',
+  'Cliff Skua':'bird',
+  'Clinker Colossus':'golem',
+  'Creeper Vine':'plant',
+  'Driftwood Snapper':'crab',
+  'Drowned Chorus':'wisp',
+  'Drowned Deckhand':'husk',
+  'Emberfly Swarm':'swarm',
+  'Fen Whisperer':'wisp',
+  'Forge Thrall':'boar',
+  'Gale Hopper':'swarm',
+  'Gate Breaker':'golem',
+  'Grafted Warden':'plant',
+  'Gull Piper':'bird',
+  'Keep Cinderguard':'boar',
+  'Lamp-Drowned':'husk',
+  'Leechling':'swarm',
+  'Lens Grinder':'golem',
+  'Marrow Cantor':'wisp',
+  'Marsh Tick':'crab',
+  'Pallbearer Husk':'husk',
+  'Quagmire Crawler':'crab',
+  'Reed Lurcher':'plant',
+  'Reedpipe Mourner':'wisp',
+  'Rift Cantor':'wisp',
+  'Root Speaker':'plant',
+  'Rope-Rot Mariner':'husk',
+  'Rotfly Swarm':'swarm',
+  'Rubble Hulk':'golem',
+  'Rushlight Caller':'wisp',
+  'Salt-Caked Hand':'husk',
+  'Sanctum Colossus':'golem',
+  'Sand Crawler':'crab',
+  'Sandfly Cloud':'swarm',
+  'Sap-Drunk Elk':'boar',
+  'Sawgrass Spitter':'plant',
+  'Scarp Crawler':'crab',
+  'Sedge Darter':'swarm',
+  'Seedcaster':'plant',
+  'Shell Skitter':'crab',
+  'Signal Screamer':'bird',
+  'Silt Revenant':'husk',
+  'Slagback Brute':'golem',
+  'Spindrift Wisp':'wisp',
+  'Spore Puffer':'plant',
+  'Stone Warden':'golem',
+  'Thornback Boar':'boar',
+  'Timber Lurker':'plant',
+  'Vault Sentinel':'golem',
+  'Wolfwood Stalker':'boar',
+  'Wreck Scavenger':'bird',
+};
+// An ELITE keeps its species' shape -- it is the same animal, grown; only the crown is new. That
+// is why e.arch is stamped at spawn BEFORE the elite prefix renames the species: looking it up
+// afterwards by name would miss on every elite in the game.
+function mobArch(e){
+  if(!e) return null;
+  return e.arch || (e.spn&&MOB_ARCH[e.spn]) || (e.type==='s' ? 'caster' : 'beast');
 }
 function slowF(e){return e.slowT>0?0.55:1;}
 function safeSpot(r,px,py){

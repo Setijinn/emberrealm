@@ -558,6 +558,17 @@ function zoneTierRow(x,y){
   }
   return ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
 }
+// The row one zone deeper than the ground you are standing on. Clamped at the last row, so an
+// elite in the final zone simply rolls that zone's row rather than falling off the end of the table.
+function zoneTierRowUp(x,y){
+  let z=-1;
+  if(typeof curRoom!=='undefined'&&curRoom){
+    if(curRoom.rings && typeof zoneAt==='function') z=zoneAt(x/TILE,y/TILE);
+    else if(typeof curRoom.ring==='number'&&typeof BOSS_ZONE!=='undefined') z=BOSS_ZONE[curRoom.ring];
+  }
+  if(z<0) return ZONE_TIERS_FALLBACK;
+  return ZONE_TIERS[Math.min(ZONE_TIERS.length-1,z+1)]||ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
+}
 function pickWeighted(rows,fort){
   if(!rows||!rows.length) return 0;
   let tot=0; for(const r of rows) tot+=r[1];
@@ -1060,7 +1071,11 @@ function rollRelic(e,who){
  loots.push(b);
 }
 function rollLoot(e){
- const row=zoneTierRow(e.x,e.y);
+ // AN ELITE PAYS FROM THE NEXT ZONE UP. It is the only way the tier you are chasing ever appears
+ // one band early, which is what makes killing a hard thing in a soft zone worth doing -- and it
+ // keeps the rule intact: still exactly ONE sack, it is just a better one.
+ const row=(e && e.elite && typeof zoneTierRowUp==='function') ? zoneTierRowUp(e.x,e.y)
+                                                              : zoneTierRow(e.x,e.y);
  const F=(typeof player!=='undefined'&&player.fortune)||0;
  // Fortune Coin (bronze) — its own roll, can drop alongside gear. Rare on purpose: a coin boosts
  // EVERY future drop for as long as you carry it, so it compounds where gear does not. At the old

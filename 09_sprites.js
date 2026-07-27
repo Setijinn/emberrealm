@@ -468,16 +468,73 @@ function drawEnemySprite(e,pn){
    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(e.x,e.y,e.r*0.34*pu,0,6.29); ctx.fill();
    return; }
  const bd=enemyBand(e);
- if(e.type==='c'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.c:null,e,pn);
+ // WHICH SILHOUETTE. The species' archetype wins; only a creature with no archetype falls through
+ // to the animated hound/cultist, which is what every one of the 99 used to get. The animation
+ // frames still belong to those two, so an archetype trades a 7-frame idle for a shape that is
+ // actually the right animal -- at 44px on screen that is the better trade, and the bob below
+ // keeps it alive.
+ // THE NIGHTMARE PASS (user: "give them more of a nightmare feel", correcting "dream").
+ // A dungeon is the boss's nightmare and its creatures should not read as the daylight ones with a
+ // filter on. Three things, all cheap: the body is DARKENED rather than lightened, a violet-black
+ // bleed sits under it so it never quite meets the floor, and it SHUDDERS -- a per-creature jitter
+ // that never settles, instead of the calm sine bob everything else in the game breathes on.
+ const _night=!!(curRoom&&curRoom.dungeon)&&(e.type==='c'||e.type==='s');
+ const _shud=_night?(Math.sin(pn*17.3+e.x*0.07)*0.9+Math.sin(pn*29.7+e.y*0.11)*0.6):0;
+ if(_night){
+   ctx.save();
+   const gg=ctx.createRadialGradient(e.x,e.y+e.r*0.35,e.r*0.2,e.x,e.y+e.r*0.35,e.r*1.7);
+   gg.addColorStop(0,'rgba(46,10,58,0.55)'); gg.addColorStop(1,'rgba(46,10,58,0)');
+   ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(e.x,e.y+e.r*0.35,e.r*1.7,0,6.29); ctx.fill();
+   ctx.restore();
+ }
+ const _arch=(typeof mobArch==='function')?mobArch(e):null;
+ const _ai=(_arch&&_arch!=='beast'&&_arch!=='caster'&&typeof mobArchImg==='function')?mobArchImg(_arch):null;
+ // THE CROWN. Sized off the creature's own radius so it fits an elite Sandfly and an elite
+ // Colossus alike. Declared here and CALLED inside each branch on purpose: written as a bare
+ // `if(e.elite)` between the branches it silently broke the if/else-if/else chain, and every
+ // non-elite fell through into the boss-drawing else. Ten archetypes all rendered as boss art.
+ const _crown=()=>{
+   if(!e.elite || typeof _eliteCrown==='undefined' || !_eliteCrown || !_eliteCrown.naturalWidth) return;
+   // ABOVE THE WHOLE NAMEPLATE. The sprite pass runs BEFORE the health-bar and label pass, so a
+   // crown drawn anywhere near the head is painted over a frame later and is invisible in play --
+   // which it was, twice. The band above the label is the only strip nothing else owns. The
+   // elite's label is lifted to 31px (vs 19) to leave exactly this gap.
+   const cw=Math.max(15,Math.round(e.r*1.15)), ch=Math.round(cw*(_eliteCrown.naturalHeight/_eliteCrown.naturalWidth));
+   const bob=Math.sin(pn*2.4+e.x*0.03)*1.2;
+   ctx.save(); ctx.imageSmoothingEnabled=false; ctx.globalAlpha=0.96;
+   ctx.drawImage(_eliteCrown, Math.round(e.x-cw/2), Math.round(e.y-e.r-36-ch+bob), cw, ch);
+   ctx.restore();
+ };
+ // eyes go on LAST -- drawn before the body they sit behind an opaque sprite and are invisible
+ const _eyes=()=>{
+   if(!_night) return;
+   const ex=e.x+_shud, ey=e.y+_shud*0.6-e.r*0.20, sp2=Math.max(2.4,e.r*0.18);
+   ctx.save(); ctx.globalCompositeOperation='lighter';
+   ctx.globalAlpha=0.60+0.34*Math.sin(pn*3.1+e.x*0.05);
+   ctx.fillStyle='#ff3a2a';
+   ctx.beginPath(); ctx.arc(ex-sp2,ey,sp2*0.44,0,6.29); ctx.arc(ex+sp2,ey,sp2*0.44,0,6.29); ctx.fill();
+   ctx.restore();
+ };
+ if(_night) ctx.save();
+ if(_night) ctx.filter='brightness(0.62) saturate(0.75) contrast(1.15)';
+ if(e.type==='c'){
+   if(_ai){ const t=tintedMob(_ai,bd); blit(t,e.x+_shud,e.y+_shud*0.6+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
+   else { const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.c:null,e,pn);
    if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
    else { const im=(typeof _mobHound!=='undefined')?_mobHound:null;
      if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
      else blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip); } }
- else if(e.type==='s'){ const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.s:null,e,pn);
+   if(_night){ ctx.filter='none'; ctx.restore(); }
+   _eyes(); _crown(); }
+ else if(e.type==='s'){
+   if(_ai){ const t=tintedMob(_ai,bd); blit(t,e.x+_shud,e.y+_shud*0.6+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
+   else { const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.s:null,e,pn);
    if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
    else { const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
      if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
+   if(_night){ ctx.filter='none'; ctx.restore(); }
+   _eyes(); _crown(); }
  else { // awakened dungeon bosses use their spectral sprite when it exists
    const _ba=(typeof bossArt==='function')?bossArt(e.ring):e.ring;   // art slot, NOT the boss id
    // THE ANIMATION POSE (17f_bossanim). Squash/stretch/lean/rise around the sprite's own centre,
@@ -534,10 +591,23 @@ const MOBNAME={
  s:['Grove Cultist','Fog Cultist','Mire Cultist','Vault Cultist','Wind Cultist','Ember Cultist','Ashbound Cultist','Flame Cultist','Core Cultist',
     'Salt Cultist','Lamp Cultist','Reed Cultist'],
 };
-const MOBTINT=['rgba(96,168,72,0.30)','rgba(120,190,160,0.30)','rgba(128,148,64,0.30)',
- 'rgba(148,150,160,0.30)','rgba(186,196,206,0.30)',null,'rgba(150,138,132,0.30)',
- 'rgba(255,116,44,0.28)','rgba(255,176,64,0.28)',
- 'rgba(74,144,168,0.30)','rgba(143,174,106,0.30)','rgba(126,164,74,0.30)'];
+// THE TINT IS WHAT MAKES A CREATURE BELONG TO ITS GROUND (user, 2026-07-27: "make sure they're
+// fitting of the biomes they're going to roam"), and it had drifted out of alignment with the
+// bands: index 0 is the LANDING SANDS, an open beach, and it was tinting things forest green;
+// index 3 is THE VERDANT BELT, the first real forest, and it was tinting them cold blue-grey.
+// Each entry now matches the ground named beside it, so the same crab reads as a pale sand crab
+// on the beach and a peat-stained one in the marsh.
+const MOBTINT=[
+ 'rgba(214,188,138,0.30)',   // 0 Landing Sands   - pale wet sand
+ 'rgba(138,168,186,0.30)',   // 1 Gullwind Shore  - cold sea-grey
+ 'rgba(126,146,66,0.30)',    // 2 Sawgrass Flats  - olive marsh
+ 'rgba(74,134,62,0.32)',     // 3 The Verdant Belt- deep leaf green
+ 'rgba(88,100,70,0.32)',     // 4 Wolfwood        - dark moss
+ 'rgba(104,94,54,0.30)',     // 5 Deep Timber     - rot and standing water
+ 'rgba(150,146,140,0.30)',   // 6 Stonebrow Rise  - bare stone
+ 'rgba(255,116,44,0.28)',    // 7 Cinderwatch     - ember
+ 'rgba(198,118,92,0.30)',    // 8 The Ashfall     - scorched ash
+ 'rgba(74,144,168,0.30)','rgba(143,174,106,0.30)','rgba(126,164,74,0.30)'];   // starter-island slots
 function enemyBand(e){
  if(curRoom&&curRoom.rings) return grvBandXY(e.x/TILE,e.y/TILE);
  // In a dungeon curRoom.ring is a BOSS ID, which would run off the end of the 9-entry
@@ -1617,7 +1687,37 @@ function render(){
         ctx.strokeStyle='rgba(0,0,0,0.9)'; ctx.lineWidth=3.5; ctx.lineJoin='round';
         ctx.strokeText(s,lx,ly);
         ctx.fillStyle='#ffd07a'; ctx.fillText(s,lx,ly); }); }
-    else if(e.type!=='N') upright(e.x,e.y-e.r-19,(lx,ly)=>ctx.fillText(mobLabel(e)+(e.lv?' · Lv'+e.lv:''),lx,ly));
+    else if(e.type!=='N'){
+      // AN ELITE MUST BE READABLE BEFORE IT REACHES YOU, not after it has taken half your bar.
+      // Three tiers of signal, cheapest first: a standing ring on the ground, a pair of chevrons
+      // flanking the name, and the name itself in gold. The ring is on the FLOOR rather than a
+      // glow on the sprite so it reads at a glance in a crowd and never hides the creature.
+      if(e.elite){
+        const pul=0.62+0.38*Math.sin(performance.now()/520+e.x*0.01);
+        ctx.save();
+        ctx.strokeStyle='rgba(255,196,90,'+(0.30+0.30*pul).toFixed(2)+')'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.ellipse(e.x,e.y+e.r*0.42,e.r*1.15,e.r*0.52,0,0,6.29); ctx.stroke();
+        ctx.strokeStyle='rgba(255,232,170,'+(0.14+0.16*pul).toFixed(2)+')'; ctx.lineWidth=5;
+        ctx.beginPath(); ctx.ellipse(e.x,e.y+e.r*0.42,e.r*1.15,e.r*0.52,0,0,6.29); ctx.stroke();
+        ctx.restore();
+      }
+      // an elite's label rides higher, leaving the gap its crown occupies
+      upright(e.x,e.y-e.r-(e.elite?31:19),(lx,ly)=>{
+        const s2=mobLabel(e)+(e.lv?' \u00b7 Lv'+e.lv:'');
+        if(e.elite){
+          const w2=ctx.measureText(s2).width;
+          ctx.save();
+          ctx.strokeStyle='rgba(0,0,0,0.9)'; ctx.lineWidth=3.5; ctx.lineJoin='round';
+          ctx.strokeText(s2,lx,ly);
+          ctx.fillStyle='#ffd07a'; ctx.fillText(s2,lx,ly);
+          ctx.fillStyle='rgba(255,208,122,0.9)';
+          ctx.beginPath(); ctx.moveTo(lx-w2/2-6,ly-4); ctx.lineTo(lx-w2/2-11,ly-8);
+          ctx.lineTo(lx-w2/2-11,ly-1); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(lx+w2/2+6,ly-4); ctx.lineTo(lx+w2/2+11,ly-8);
+          ctx.lineTo(lx+w2/2+11,ly-1); ctx.closePath(); ctx.fill();
+          ctx.restore();
+        } else ctx.fillText(s2,lx,ly); });
+    }
     ctx.textAlign='left';
   }
   for(const al of allies){ shadow(al.x,al.y+8,10);

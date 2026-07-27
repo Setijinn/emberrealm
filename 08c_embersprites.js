@@ -299,6 +299,28 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
 // Enemy sprites (PixelLab). Mobs (hound=c, cultist=s) + per-band boss images.
 const _mobHound = _img('assets/mobs/hound.png');
 const _mobCultist = _img('assets/mobs/cultist.png');
+// ARCHETYPE ART. Ninety-nine species shared these two sprites -- one hound for every chaser in the
+// game, one cultist for every shooter. These give the roster ten silhouettes instead of two; the
+// band tint then makes it ninety looks. `beast` and `caster` deliberately alias the originals so
+// nothing that already worked changes.
+const _mobArchImg = (typeof window!=='undefined') ? {
+  beast:_mobHound, caster:_mobCultist,
+  crab :_img('assets/mobs/arch_crab.png'),
+  swarm:_img('assets/mobs/arch_swarm.png'),
+  bird :_img('assets/mobs/arch_bird.png'),
+  husk :_img('assets/mobs/arch_husk.png'),
+  golem:_img('assets/mobs/arch_golem.png'),
+  plant:_img('assets/mobs/arch_plant.png'),
+  wisp :_img('assets/mobs/arch_wisp.png'),
+  boar :_img('assets/mobs/arch_boar.png'),
+  // the shooters were 51 species deep in one hooded cultist. Three more silhouettes split that
+  // into a thrower, a fur-and-antler shaman and a faceless robed acolyte.
+  slinger:_img('assets/mobs/arch_slinger.png'),
+  shaman :_img('assets/mobs/arch_shaman.png'),
+  acolyte:_img('assets/mobs/arch_acolyte.png') } : {};
+function mobArchImg(name){ const i=_mobArchImg[name]; return (i&&i.naturalWidth)?i:null; }
+// the elite's crown, worn above the head
+const _eliteCrown = (typeof window!=='undefined') ? _img('assets/ui/elite_crown.png') : null;
 // Summoned allies / pets (wolf, skeleton, wisp) — real PixelLab art, procedural fallback.
 const _allyImg = (typeof window!=='undefined') ? {
   wolf:_img('assets/mobs/ally_wolf.png'),
