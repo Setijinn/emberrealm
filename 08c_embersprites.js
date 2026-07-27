@@ -357,7 +357,7 @@ if(typeof window!=='undefined'){
     _mobArchAnim[k]={idle:_frames('assets/mobs/anim/arch_'+k,'idle',9),
                      attack:_frames('assets/mobs/anim/arch_'+k,'attack',9)};
   // SUMMONED ALLIES. They fight beside you for a whole run and stood perfectly still doing it.
-  for(const k of ['wolf','skel'])
+  for(const k of ['wolf','skel','wisp'])
     _allyAnim[k]={idle:_frames('assets/mobs/anim/ally_'+k,'idle',9), attack:[]};
   // every boss now has idle+attack frames; a slot without them falls back to its static sprite
   for(const b of _artSlots) _bossAnim[b]=_anim('boss_'+b);
