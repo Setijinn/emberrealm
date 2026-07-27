@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v369.
+Service worker is at emberrealm-v375.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -104,22 +104,40 @@ UI / WORLD
   readouts. Spawn lists carry the creature's real sprite.
 
 ---------------------------------------------------------------------------
+CO-OP (v370-v375) -- done, with two things stated plainly
+---------------------------------------------------------------------------
+- netSimulates() is POSITIONAL now: a client simulates its own room unless the
+  host is actually IN it. It used to be "clients never simulate", which combined
+  with netApplyWorld's room filter to leave anyone paired with a distant stranger
+  in a permanently empty world -- the normal case on the public server, since it
+  pairs you with whoever holds the id. Measured: 8 enemies where it was 0.
+- netDropRemote() purges remote shadows on every co-op reset (GO SOLO, lost
+  relay, reconnect). A remote entity has none of the fields the AI needs.
+- An epoch guard stops a superseded PeerJS attempt writing into a fresh coop
+  object -- it could resurrect co-op after GO SOLO or null a newer peer.
+- e.bd and e.awk/e.den now cross the wire. Client hazard damage was pinned to a
+  `10` fallback at EVERY level, and bossMechKey read ow<ring> inside a dungeon.
+- The 25 fights ride the PRIMITIVE layer at row 15 (hazards, safe ground, beams,
+  marks, wards, pillars, fog); row 16 is e.bd. 24 of 25 send something -- the Ash
+  Wraith's overworld form is all real projectiles, which already synced.
+
+TWO THINGS I DID NOT PROVE, so do not assume them:
+1. The "crashes when I go offline" report is UNCONFIRMED. Disabling the shadow
+   purge did not reproduce a throw, so that hypothesis is unproven. The purge is
+   independently correct and stays. The error banner is diagnostic now -- every
+   DISTINCT error with its first stack frame and a repeat count, instead of only
+   the first one ever. Next time it happens, read the red banner.
+2. All of the above was verified by driving both sides inside ONE tab. That
+   tests the code paths and NOT the transport.
+
+---------------------------------------------------------------------------
 DO THIS FIRST
 ---------------------------------------------------------------------------
-CO-OP SERIALIZATION FOR THE 25 BOSS MECHANICS. This is a known, stated gap, not a
-discovery. Enemy AI is host-only (07_update.js, netIsClient guard), so on a co-op
-client none of the new hazards render or apply. Nothing desyncs and nothing
-crashes — a client simply does not see them — but every fight is
-single-player-correct only until this lands.
-
-The old pools/bloom path shows the shape: serialize in netBroadcast
-(14b_netsync.js), deserialize in netApplyWorld, apply client-side in netHazards.
-The snapshot row is a FIXED 15-slot array carrying only `phase` and 4 bit-packed
-flags of boss state, so new phase-visible state needs new slots or clients see
-nothing. Everything a fight puts on the field lives on e.mk, which is one object
-per boss — that is deliberate, and it is the one place to look.
-
-Do it zone by zone, not all twelve at once, and verify with two clients.
+VERIFY THE CO-OP WORK WITH TWO REAL CLIENTS. Open two browser contexts, let one
+claim the EMBER SERVER, and confirm: the client's own room populates when the
+host is elsewhere; boss hazards render AND hurt on the client; going solo
+mid-fight is clean. Everything else is done and measured; this is the one gap
+between "the code is right" and "the feature works".
 
 ---------------------------------------------------------------------------
 STILL OPEN, IN NO PARTICULAR ORDER
