@@ -1964,6 +1964,7 @@ $s('wrdClose').addEventListener('click',()=>{ if(typeof closeWardrobe==='functio
 
 function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display=(s===id)?'flex':'none';
  $s('menuBtn').style.display='none'; $s('flasks').style.display='none';
+ if($s('tgtBtn')) $s('tgtBtn').style.display='none';
  closeVendorPanels();
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
@@ -2106,6 +2107,7 @@ function play(){
 function showGameHud(){
  $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
  $s('flasks').style.display='flex'; $s('invBtn').style.display='flex';
+ if(typeof paintTargetBtn==='function'){ paintTargetBtn(); updateTargetBtnVisibility(); }
  $s('abBtn').style.display='none';
  if($s('coopBtn'))$s('coopBtn').style.display='flex';
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
@@ -2147,7 +2149,7 @@ function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
 const AUTOPOT_STEPS=[0,5,10,15];
 // Mana sits higher than HP on purpose: at 5% mana you have already missed the cast you wanted.
 const AUTOMANA_STEPS=[0,10,20,30];
-const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false,autoPot:0,autoMana:0};
+const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false,autoPot:0,autoMana:0,tgt:'near'};
 let OPTS=Object.assign({},OPT_DEF,LS.get('er-opts',{}));
 function saveOpts(){ LS.set('er-opts',OPTS); applyOpts(); }
 function applyOpts(){

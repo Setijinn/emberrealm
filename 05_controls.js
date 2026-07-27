@@ -1,7 +1,7 @@
 // ---------- controls ----------
 // TOUCH: left half = move stick, right half = cast the armed ability at the tap.
 // PC (auto-detected): WASD/arrows move, click casts at the cursor, 1/2/3 cast slots,
-// E interact, F take loot, Q tonic, G mana flask, I equipment, K skills, L abilities, M map, Esc closes menus,
+// E interact, F take loot, Q tonic, G mana flask, I targeting mode, B satchel, K skills, L abilities, M map, Esc closes menus,
 // Z/C rotate the camera view (hold, smooth), X snaps the view back to north.
 // inputMode follows the LAST input used, so hybrid devices switch seamlessly.
 let inputMode=(typeof matchMedia==='function' && matchMedia('(pointer:fine)').matches)?'pc':'touch';
@@ -103,7 +103,10 @@ addEventListener('keydown',e=>{
   // two flasks, two keys -- Q heals, G restores mana. Separate stocks, separate decisions.
   else if(k==='q'){ const b=document.getElementById('potBtn'); if(b) b.click(); }
   else if(k==='g'){ const b=document.getElementById('mpotBtn'); if(b) b.click(); }
-  else if(k==='i'||k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
+  // I is TARGETING MODE now (user). The satchel keeps B, which it already answered to -- so
+  // nothing lost a binding, one just stopped having two.
+  else if(k==='i'){ if(typeof cycleTargetMode==='function') cycleTargetMode(); }
+  else if(k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
   else if(k==='k'){ const b=document.getElementById('skillBtn'); if(b) b.click(); }
   else if(k==='l'){ const b=document.getElementById('loadBtn'); if(b) b.click(); }
   // the map BUTTON is gone (there is a live minimap in the corner now); M still opens the big map

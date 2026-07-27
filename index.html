@@ -136,6 +136,9 @@
   <!-- no shop button: a stall is opened from the prompt above the stall itself (07_update
        vendor detection -> portalPrompt kind 'vendor'), so the HUD does not carry one -->
   <button id="invBtn">🎒</button>
+  <!-- targeting mode: TOUCH only (PC uses the I key). Cycles NEAREST / TOUGHEST / FINISHER /
+       BOSS FIRST and shows the mode it is currently ON. -->
+  <button id="tgtBtn"></button>
   <!-- One flask SECTION, two halves: the tonic and the mana flask are separate stocks on separate
        refill clocks, so they are separate counters. Tinted to match the orb each one refills. -->
   <div id="flasks">
@@ -330,6 +333,7 @@
 <script src="03b_critters.js"></script>
 <script src="04_collision.js"></script>
 <script src="05_controls.js"></script>
+<script src="05b_targeting.js"></script>
 <script src="06_combat.js"></script>
 <script src="07_update.js"></script>
 <script src="08_render.js"></script>
