@@ -69,20 +69,21 @@ function _slice9(im,x,y,w,h,s,ds){
   if(ch>0){ ctx.drawImage(im,0,s,s,mh, x,y+d,d,ch);         ctx.drawImage(im,iw-s,s,s,mh, x+w-d,y+d,d,ch); }
   if(cw>0&&ch>0) ctx.drawImage(im,s,s,mw,mh, x+d,y+d,cw,ch);
 }
-// Boss dialogue floats ABOVE THE SPEAKER'S HEAD in a framed plaque that sizes itself to the text
-// (user). It tracks the boss while it lives and holds its last position afterwards, so dying words
-// stay put over the corpse. Falls back to the old centred caption if the art hasn't loaded.
+// BOSS DIALOGUE IS A SUBTITLE BAR (user, 2026-07-26). It used to float above the speaker's head,
+// which meant the thing you were meant to read moved while you were dodging it -- and a boss that
+// charges across the arena drags its own words out from under your eyes. It sits in one fixed
+// place now, low and centred like film subtitles: your eyes stay on the fight, and the text is
+// always where you last saw it. The speaker's NAME goes above the line, because a plaque that no
+// longer points at anyone has to say who is talking.
 function drawBossQuote(){
   if(!bossQuote) return;
   const q=bossQuote, el=performance.now()-q.born;
   if(el>q.dur){ bossQuote=null; return; }
   const a=Math.min(1, el/500)*Math.min(1,(q.dur-el)/900);           // fade in / out
-  if(q.who && typeof enemies!=='undefined' && enemies.indexOf(q.who)>=0){ q.x=q.who.x; q.y=q.who.y; q.r=q.who.r; }
   const fs=Math.max(13, Math.round(17*(typeof UIS!=='undefined'?UIS:1)));
   ctx.save(); ctx.globalAlpha=a; ctx.textAlign='center';
   ctx.font='italic '+fs+'px "Pixelify Sans",serif';
-  const anchored=!!q.who;
-  const maxw=anchored?Math.min(W*0.56,460):Math.min(W*0.82,760);
+  const maxw=Math.min(W*0.72,680);
   const words=q.line.split(' '); let lines=[],cur='';
   for(const w of words){ const test=cur?cur+' '+w:w;
     if(ctx.measureText(test).width>maxw){ if(cur)lines.push(cur); cur=w; } else cur=test; }
@@ -100,21 +101,27 @@ function drawBossQuote(){
   // instead of the box being mostly border with a sentence lost in the middle of it.
   const ins=framed?Math.max(10,Math.round(QUOTE_INSET*0.52*(fs/17))):6;
   const padX=ins+Math.round(fs*0.16), padY=ins-Math.round(fs*0.10);
-  const bw=Math.max(ins*2+8, Math.ceil(tw)+padX*2), bh=Math.max(ins*2+6, lines.length*lh+padY*2);
-  let cxq, top;
-  if(anchored){
-    // sit above the head, then clamp on-screen so it never slides off at the edges
-    const sx=q.x-(typeof camX!=='undefined'?camX:0), sy=q.y-(typeof camY!=='undefined'?camY:0);
-    cxq=Math.max(bw/2+8, Math.min(W-bw/2-8, sx));
-    top=Math.max(8, sy-(q.r||24)-18-bh);
-  } else { cxq=W/2; top=H*0.70-padY-lh*0.8; }
+  // the speaker's name rides inside the plaque, above the line, so reserve a row for it
+  const who=(q.who&&q.who.name)?String(q.who.name).toUpperCase():'';
+  const nfs=Math.max(9,Math.round(fs*0.62)), nh=who?Math.round(nfs*1.5):0;
+  const bw=Math.max(ins*2+8, Math.ceil(tw)+padX*2), bh=Math.max(ins*2+6, lines.length*lh+nh+padY*2);
+  // FIXED position: centred, resting just above the orb cluster. Anchored to the HUD rather than
+  // to the world, so it never moves no matter what the speaker does.
+  const om=(typeof hudOrbMetrics==='function')?hudOrbMetrics():{top:H*0.78};
+  const us=(typeof UIS!=='undefined')?UIS:1;
+  const cxq=W/2, top=Math.max(8, om.top-Math.round(12*us)-bh);
   if(framed){
     ctx.imageSmoothingEnabled=false;
     _slice9(im, Math.round(cxq-bw/2), Math.round(top), bw, bh, QUOTE_INSET, ins);
   } else {                                                          // frame not loaded: plain slab
     ctx.fillStyle='rgba(12,9,16,0.82)'; ctx.fillRect(cxq-bw/2,top,bw,bh);
     ctx.strokeStyle='rgba(150,120,190,0.55)'; ctx.lineWidth=2; ctx.strokeRect(cxq-bw/2,top,bw,bh); }
-  for(let i=0;i<lines.length;i++){ const yy=top+padY+lh*(i+0.78);
+  if(who){ ctx.font='bold '+nfs+'px "Pixelify Sans",monospace';
+    const ny=top+padY+nfs;
+    ctx.fillStyle='rgba(0,0,0,.72)'; ctx.fillText(who,cxq+1,ny+1);
+    ctx.fillStyle=(q.who&&q.who.col)||'#ff9c50'; ctx.fillText(who,cxq,ny);
+    ctx.font='italic '+fs+'px "Pixelify Sans",serif'; }
+  for(let i=0;i<lines.length;i++){ const yy=top+padY+nh+lh*(i+0.78);
     ctx.fillStyle='rgba(0,0,0,.72)'; ctx.fillText(lines[i],cxq+1,yy+1);
     ctx.fillStyle='#e4d6f5'; ctx.fillText(lines[i],cxq,yy); }
   ctx.restore(); ctx.textAlign='left';

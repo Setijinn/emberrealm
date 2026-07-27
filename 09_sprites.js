@@ -525,6 +525,98 @@ function tintedMob(im,bd){ const tint=(bd>=0)?MOBTINT[bd]:null; if(!tint) return
   _mobTintCache.set(k,cv); }
  return cv; }
 // ---------- hub / world decor ----------
+// The bottom HUD cluster's geometry, in ONE place. The orbs, the XP bar and the boss subtitle bar
+// all stack off this chain, and when they each recomputed it independently a UIS change slid them
+// apart. Everything below the orbs is measured up from the bottom edge of the screen.
+function hudOrbMetrics(){
+  const us=(typeof UIS!=='undefined')?UIS:1;
+  const r=Math.round(Math.min(34, W*0.08)*us);
+  const xbh=Math.max(4,Math.round(6*us)), xby=H-Math.round(10*us)-xbh;
+  const cy=xby-Math.round(24*us)-r;
+  return {r, xbh, xby, cy, top:cy-r};
+}
+// ---------- THE STATUS BANNER (user, 2026-07-26) ----------
+// Where you are, who you are and who you are playing with, on ONE ornate plaque at the top of the
+// screen. It used to be two thin lines squeezed above the orbs at the very bottom -- the last
+// place you look -- and co-op state was not on screen AT ALL during play: it lived inside a modal
+// you had to open, so you could not tell at a glance whether you were online.
+//
+// The top strip is contested. The minimap owns the left corner and #hudTop is a DOM row painting
+// OVER the canvas on the right, so the banner lives in the gap between them; and the boss bar and
+// the dungeon/arena banners claim the centre band whenever they are up. Rather than fight them,
+// the banner yields: full plaque when the strip is free, one compact line pinned above them when
+// it is not.
+// How much of the top strip the status banner's COMPACT line occupies. Everything else that draws
+// in that band (the boss bar, the objective and arena banners) starts below it, so the line that
+// tells you where you are is never grazed by a phase pip.
+// The floor matters: the compact line's font is clamped at 10px, so a reserve that kept scaling
+// down past it closed the gap back to nothing at the smallest UI sizes.
+function hudTopReserve(){ const us=(typeof UIS!=='undefined')?UIS:1; return Math.max(16,Math.round(17*us)); }
+function coopTag(){
+  if(typeof coop==='undefined'||!coop) return '';
+  if(coop.on&&coop.pub) return '⚔ EMBER SERVER'+((typeof coopCount==='function')?' · '+coopCount():'');
+  if(coop.on) return '⚔ PRIVATE '+(coop.code||'');
+  // `auto` stays true for the whole session while it retries, so it is NOT "connecting" -- only
+  // _trying is actually in flight. Offline-and-idle shows nothing: solo is the default, not a
+  // state to report, and a permanent "connecting…" would be a lie after the first failure.
+  if(coop.auto&&coop._trying) return '⚔ connecting…';
+  return '';
+}
+function drawStatusBanner(){
+  if(!rpg||!curRoom) return;
+  const us=(typeof UIS!=='undefined')?UIS:1;
+  const zn=(typeof curRegionN!=='undefined'&&curRegionN)?curRegionN:(curRoom.name||'');
+  const hc=(typeof isHardcore==='function'&&isHardcore(rpg))?' ☠':'';
+  const cp=coopTag();
+  // the strip is taken by the boss bar (y 18-49) or an objective/arena banner (y≈36-66)
+  const busy=!!(typeof bossBar!=='undefined'&&bossBar)
+    || !!(curRoom.dungeon&&curRoom.objs&&curRoom.objs.some(x=>!x.done))
+    || !!(curRoom.arena&&typeof arenaWave!=='undefined'&&arenaWave);
+  // horizontal safe zone: clear of the minimap on the left and the DOM button row on the right
+  const loX=Math.round(170*us), hiX=W-Math.round(240*us);
+  const cx=Math.max(loX+40, Math.min(hiX-40, (loX+hiX)/2));
+  ctx.save(); ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  if(busy){
+    // compact: one line, pinned above whatever owns the strip
+    const fs=Math.max(10,Math.round(11*us));
+    ctx.font='bold '+fs+'px "Pixelify Sans",monospace';
+    const t=zn+'  ·  Lv '+rpg.lvl+hc+(cp?'  ·  '+cp:'');
+    ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillText(t,cx+1,fs+2);
+    ctx.fillStyle='#c9b98a'; ctx.fillText(t,cx,fs+1);
+    ctx.restore(); ctx.textAlign='left'; return;
+  }
+  const f1=Math.max(12,Math.round(15*us)), f2=Math.max(9,Math.round(11*us));
+  ctx.font='bold '+f1+'px "Pixelify Sans",monospace';
+  const zw=ctx.measureText(zn).width;
+  ctx.font=f2+'px "Pixelify Sans",monospace';
+  const sub='Lv '+rpg.lvl+hc+'   ·   '+((typeof accountGlory==='function')?accountGlory():0)+'✦   ·   '
+    +(player.kills||0)+' kills'+(cp?'   ·   '+cp:'');
+  const sw=ctx.measureText(sub).width;
+  const padX=Math.round(20*us), padY=Math.round(7*us);
+  const bw=Math.min(hiX-loX, Math.max(zw,sw)+padX*2);
+  const bh=Math.round(f1*1.15+f2*1.5)+padY*2;
+  const x=cx-bw/2, y=Math.round(6*us);
+  // plaque: a dark slab with a hairline gold frame and clipped corners, matching the loot plates
+  const c=Math.round(7*us);
+  ctx.beginPath();
+  ctx.moveTo(x+c,y); ctx.lineTo(x+bw-c,y); ctx.lineTo(x+bw,y+c); ctx.lineTo(x+bw,y+bh-c);
+  ctx.lineTo(x+bw-c,y+bh); ctx.lineTo(x+c,y+bh); ctx.lineTo(x,y+bh-c); ctx.lineTo(x,y+c); ctx.closePath();
+  const g=ctx.createLinearGradient(0,y,0,y+bh);
+  g.addColorStop(0,'rgba(30,23,40,.90)'); g.addColorStop(1,'rgba(12,9,16,.90)');
+  ctx.fillStyle=g; ctx.fill();
+  ctx.lineWidth=Math.max(1,Math.round(1.5*us)); ctx.strokeStyle='rgba(201,160,74,.62)'; ctx.stroke();
+  // a thin ember rule under the zone name, the width of the name itself
+  const ry=y+padY+f1*0.95+Math.round(2*us);
+  ctx.fillStyle='rgba(224,122,46,.55)';
+  ctx.fillRect(cx-Math.min(zw,bw-padX*2)/2, ry, Math.min(zw,bw-padX*2), Math.max(1,Math.round(1*us)));
+  ctx.font='bold '+f1+'px "Pixelify Sans",monospace';
+  ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillText(zn,cx+1,y+padY+f1*0.92+1);
+  ctx.fillStyle='#ffd07a'; ctx.fillText(zn,cx,y+padY+f1*0.92);
+  ctx.font=f2+'px "Pixelify Sans",monospace';
+  ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillText(sub,cx+1,y+bh-padY-Math.round(1*us)+1);
+  ctx.fillStyle='#d8cfb8'; ctx.fillText(sub,cx,y+bh-padY-Math.round(1*us));
+  ctx.restore(); ctx.textAlign='left';
+}
 // HP/MP liquid orb: dark glass + colored fill (bottom->frac) inside the ornate frame
 function drawOrb(cx,cy,R,frac,c1,c2,txt,glow){
   frac=Math.max(0,Math.min(1,frac||0));
@@ -1573,9 +1665,8 @@ function render(){
   // HP + MP orbs flanking the bottom-centre; resource+XP strip beneath, status text above. All
   // scale with UIS and stack bottom-up with UIS-scaled gaps so nothing overlaps at any UI size
   // (the old fixed 8/15px offsets sank into the orbs once they grew).
-  const orbR=Math.round(Math.min(34, W*0.08)*UIS);
-  const _xbh=Math.max(4,Math.round(6*UIS)), _xby=H-Math.round(10*UIS)-_xbh;
-  const oy=_xby-Math.round(24*UIS)-orbR, _og=Math.round(5*UIS);
+  const _om=hudOrbMetrics();
+  const orbR=_om.r, _xbh=_om.xbh, _xby=_om.xby, oy=_om.cy, _og=Math.round(5*UIS);
   const hpF=Math.max(0,player.hp/player.maxhp), mpF=Math.max(0,Math.min(1,mp/mm));
   drawOrb(W/2-orbR-_og, oy, orbR, hpF, '#f0705a','#8a1f14', Math.round(100*hpF)+'%', false);
   drawOrb(W/2+orbR+_og, oy, orbR, mpF, '#6ab8e0','#274f7a', Math.round(100*mpF)+'%', mp>=cost);
@@ -1585,20 +1676,9 @@ function render(){
     ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,xbh);
     ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),xbh);
     ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,xbh+1);
-    // integrated status line above the orbs (replaces the old top HUD bar)
-    const zn=(typeof curRegionN!=='undefined'&&curRegionN)?curRegionN:(curRoom.name||'');
-    const syB=oy-orbR-Math.round(7*UIS), syT=syB-Math.round(15*UIS);
-    ctx.textAlign='center';
-    ctx.font='bold '+Math.round(13*UIS)+'px "Pixelify Sans",monospace';
-    // ☠ = this hero is past Lv20, so death is permanent — keep the stakes visible
-    const l1='Lv '+rpg.lvl+((typeof isHardcore==='function'&&isHardcore(rpg))?' ☠':'')+'  ·  '+zn;
-    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l1,W/2+1,syT+1);
-    ctx.fillStyle='#ffd07a'; ctx.fillText(l1,W/2,syT);
-    ctx.font=Math.round(11*UIS)+'px "Pixelify Sans",monospace';
-    const l2=(typeof accountGlory==='function'?accountGlory():0)+'✦   ·   '+(player.kills||0)+' kills';
-    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(l2,W/2+1,syB+1);
-    ctx.fillStyle='#d8cfb8'; ctx.fillText(l2,W/2,syB);
-    ctx.textAlign='left'; }
+    // the status line that used to live here is a banner at the top of the screen now
+    // (drawStatusBanner) -- where you are is the first thing you should see, not the last.
+  }
   // ability loadout buttons (bottom-left) + "tap right to cast" hint
   if(typeof drawAbilButtons==='function') drawAbilButtons();
   if(typeof drawUltButton==='function') drawUltButton();
@@ -1606,12 +1686,16 @@ function render(){
   // the sack you would open. Loot draws first so the world prompt wins any overlap.
   if(typeof drawLootPrompt==='function') drawLootPrompt();
   drawPortalPrompt();
-  // big boss bar, top of screen — shows from the first hit on a boss
+  // where you are / who you are / who you are with — top of screen, yields to the bar below
+  if(typeof drawStatusBanner==='function') drawStatusBanner();
+  // big boss bar, top of screen — shows from the first hit on a boss.
+  // Scales with UIS now: it was hard-coded pixels and ignored the UI-size slider entirely.
   if(typeof bossBar!=='undefined' && bossBar){
-    const bw=Math.min(W*0.62,540), bh=15, bx=W/2, by=34;
-    ctx.textAlign='center'; ctx.font='bold 15px "Pixelify Sans",monospace';
-    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(bossBar.name||'CHAMPION',bx+1,by-8);
-    ctx.fillStyle='#ff9c50'; ctx.fillText(bossBar.name||'CHAMPION',bx,by-9);
+    const _u=(typeof UIS!=='undefined')?UIS:1;
+    const bw=Math.min(W*0.62,540*_u), bh=Math.round(15*_u), bx=W/2, by=hudTopReserve()+Math.round(26*_u);
+    ctx.textAlign='center'; ctx.font='bold '+Math.round(15*_u)+'px "Pixelify Sans",monospace';
+    ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillText(bossBar.name||'CHAMPION',bx+1,by-Math.round(8*_u));
+    ctx.fillStyle='#ff9c50'; ctx.fillText(bossBar.name||'CHAMPION',bx,by-Math.round(9*_u));
     ctx.fillStyle='rgba(8,6,10,.82)'; ctx.fillRect(bx-bw/2,by,bw,bh);
     const fr=Math.max(0,bossBar.hp/bossBar.maxhp);
     const grd=ctx.createLinearGradient(bx-bw/2,0,bx+bw/2,0);
@@ -1619,7 +1703,8 @@ function render(){
     ctx.fillStyle=grd; ctx.fillRect(bx-bw/2,by,bw*fr,bh);
     // phase threshold ticks at 66% / 33% — you can SEE the next phase coming
     ctx.fillStyle='rgba(0,0,0,.55)';
-    ctx.fillRect(bx-bw/2+bw*0.66-1,by,2,bh); ctx.fillRect(bx-bw/2+bw*0.33-1,by,2,bh);
+    const _tk=Math.max(2,Math.round(2*_u));
+    ctx.fillRect(bx-bw/2+bw*0.66-_tk/2,by,_tk,bh); ctx.fillRect(bx-bw/2+bw*0.33-_tk/2,by,_tk,bh);
     // a bright flash sweeps the bar the moment a phase breaks
     if(bossBar.phaseFlash>0){ ctx.fillStyle='rgba(255,255,255,'+(0.5*Math.min(1,bossBar.phaseFlash/0.7)).toFixed(2)+')';
       ctx.fillRect(bx-bw/2,by,bw,bh); }
@@ -1629,33 +1714,36 @@ function render(){
       ctx.drawImage(_hpbarImg,bx-fw/2,by+bh/2-fh/2,fw,fh); }
     // phase pips beside the name (filled = reached), 3 stages
     const pph=(bossBar.phase||0);
-    for(let i=0;i<3;i++){ const dx=bx+bw/2-14-i*15, dy=by-16;
+    const _pr=Math.max(3,Math.round(4*_u));
+    for(let i=0;i<3;i++){ const dx=bx+bw/2-Math.round(14*_u)-i*Math.round(15*_u), dy=by-Math.round(16*_u);
       ctx.fillStyle = i<=pph ? '#ffd23d' : 'rgba(255,255,255,.22)';
-      ctx.save(); ctx.translate(dx,dy); ctx.rotate(Math.PI/4); ctx.fillRect(-4,-4,8,8); ctx.restore(); }
+      ctx.save(); ctx.translate(dx,dy); ctx.rotate(Math.PI/4); ctx.fillRect(-_pr,-_pr,_pr*2,_pr*2); ctx.restore(); }
     ctx.textAlign='left';
   }
   if(typeof drawMinimap==='function') drawMinimap();           // always-on corner map (replaces the map button)
   if(typeof drawBossQuote==='function') drawBossQuote();       // a slain boss's dying words of truth
-  // dungeon objective banner (screen space): the first unfinished chamber's task
+  // Dungeon objective / arena banners. Both sit in the top-centre band UNDER the status banner's
+  // compact line, and both scale with UIS now -- they were hard-coded pixels that ignored the
+  // UI-size slider, so at 170% they collided with everything around them.
+  const _bu=(typeof UIS!=='undefined')?UIS:1, _bY=hudTopReserve()+Math.round(32*_bu);
   if(curRoom.dungeon && curRoom.objs && !(typeof bossBar!=='undefined'&&bossBar)){
     const o=curRoom.objs.find(x=>!x.done);
     ctx.textAlign='center';
+    ctx.font='bold '+Math.round(14*_bu)+'px "Pixelify Sans",monospace';
+    let t='FACE THE AWAKENED', col='#ff6b5a';
     if(o){ let prog=o.type==='waves'?'':('  '+o.got+' / '+o.need);
       if(o.mode==='relay'&&o.got>0&&!o.done) prog+='  ·  '+Math.max(0,Math.ceil(o.timer))+'s';
-      ctx.font='bold 14px "Pixelify Sans",monospace';
-      ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText(o.label+prog, W/2+1, 47);
-      ctx.fillStyle='#ffe08a'; ctx.fillText(o.label+prog, W/2, 46); }
-    else { ctx.font='bold 14px "Pixelify Sans",monospace';
-      ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText('FACE THE AWAKENED', W/2+1, 47);
-      ctx.fillStyle='#ff6b5a'; ctx.fillText('FACE THE AWAKENED', W/2, 46); }
+      t=o.label+prog; col='#ffe08a'; }
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText(t, W/2+1, _bY+1);
+    ctx.fillStyle=col; ctx.fillText(t, W/2, _bY);
     ctx.textAlign='left';
   }
   // arena wave banner
   if(curRoom.arena){ ctx.textAlign='center';
-    ctx.font='bold 18px "Pixelify Sans",monospace'; ctx.fillStyle='rgba(0,0,0,.6)';
-    ctx.fillText('WAVE '+arenaWave, W/2+1, 47); ctx.fillStyle='#e2604c'; ctx.fillText('WAVE '+arenaWave, W/2, 46);
-    ctx.font='11px monospace'; ctx.fillStyle='#cfc8bd';
-    ctx.fillText('best: wave '+((rpg&&rpg.arenaBest)||0)+'   ·   foes left: '+enemies.length, W/2, 64);
+    ctx.font='bold '+Math.round(18*_bu)+'px "Pixelify Sans",monospace'; ctx.fillStyle='rgba(0,0,0,.6)';
+    ctx.fillText('WAVE '+arenaWave, W/2+1, _bY+1); ctx.fillStyle='#e2604c'; ctx.fillText('WAVE '+arenaWave, W/2, _bY);
+    ctx.font=Math.round(11*_bu)+'px monospace'; ctx.fillStyle='#cfc8bd';
+    ctx.fillText('best: wave '+((rpg&&rpg.arenaBest)||0)+'   ·   foes left: '+enemies.length, W/2, _bY+Math.round(18*_bu));
     ctx.textAlign='left'; }
   // ability hover tooltip draws last so it sits on top of the whole HUD
   if(typeof drawAbilTooltip==='function') drawAbilTooltip();

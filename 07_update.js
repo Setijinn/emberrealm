@@ -47,7 +47,12 @@ function bossReset(e){
   e.phase=0; e.phaseInv=0; e.dlgInv=0; e.phaseFlash=0; e.mechInv=0;
   e.st={}; e.slowT=0; e.stunT=0; e.flash=0;
   e.hidden=false; e.chargeT=0; e.cdur=0; e.sumT=3; e.fireT=1.4; e.ang=0;
-  e.bloom=0; e.pools=null; e.clones=null; e.said=null; e.chatAt=0;
+  // These three were named e.clones / e.said / e.chatAt, which are not fields anything ever sets --
+  // so the mirror puzzle and the dialogue cursor BOTH survived a reset. A boss you walked away from
+  // came back mid-clone-phase and refused to say its opening line again.
+  e.bloom=0; e.pools=null;
+  e.cloneOn=0; e.cloneTimer=0; e._decoys=null;
+  e.saidOpen=false; e.chat=0;
   if(e.mp!==undefined) e.mp=e.maxmp;
   // clear anything this boss put on the field
   for(let i=enemies.length-1;i>=0;i--){ const o=enemies[i];

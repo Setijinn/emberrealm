@@ -1180,9 +1180,33 @@ function enterRoom(key, px, py){
   document.getElementById('roomTxt').textContent=curRoom.name;
   msg(curRoom.name, curRoom.town?'the hearth never dies':(curRoom.band?'a hunting ground for Lv '+curRoom.band:''));
 }
-function msg(t,sub=''){ const m=document.getElementById('msg');
-  m.innerHTML=t+(sub?`<small>${sub}</small>`:''); m.classList.add('show');
-  clearTimeout(msg.t); msg.t=setTimeout(()=>m.classList.remove('show'),1500); }
+// The banner used to CLOBBER: innerHTML= plus one shared clearTimeout, so two calls inside the same
+// second meant only the second was ever read. That is not a hypothetical -- boss phase barks were
+// being erased by the mechanic warning that fired a frame later (see the note in 07_update.js), and
+// the workaround was to not write the second one. It queues now: a banner gets its full time on
+// screen and the next one waits its turn. A repeat of the line already showing is dropped rather
+// than queued, so a per-frame caller cannot build a backlog.
+const MSG_HOLD=1500, MSG_GAP=180;
+let _msgQ=[], _msgT=0, _msgCur=null;
+function msg(t,sub=''){
+  const html=t+(sub?`<small>${sub}</small>`:'');
+  if(_msgCur===html) return;                       // already on screen
+  if(_msgQ.length && _msgQ[_msgQ.length-1]===html) return;
+  if(_msgQ.length>3) _msgQ.shift();                // never hoard: the oldest unseen line loses
+  _msgQ.push(html);
+  if(!_msgCur) _msgPump();
+}
+function _msgPump(){
+  const m=document.getElementById('msg'); if(!m) return;
+  const html=_msgQ.shift();
+  if(html===undefined){ _msgCur=null; m.classList.remove('show'); return; }
+  _msgCur=html; m.innerHTML=html; m.classList.add('show');
+  clearTimeout(_msgT);
+  _msgT=setTimeout(()=>{
+    m.classList.remove('show'); _msgCur=null;
+    if(_msgQ.length) setTimeout(_msgPump,MSG_GAP);
+  },MSG_HOLD);
+}
 
 // ---- portal routing: every portal carries a destination `to` ----
 function usePortal(to){
