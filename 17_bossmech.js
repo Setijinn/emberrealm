@@ -15,6 +15,84 @@
 
 function bossPunishDmg(e){ return Math.min((player&&player.maxhp?player.maxhp*0.30:9999), (e.bd||10)*1.8); }
 
+// ===================================================================================
+// THE FIGHT REGISTRY (user, 2026-07-27): "25 distinct mechanics", and "make the dungeon boss and
+// its overworld version kind of have the same mechanics but not all the way".
+//
+// So: 12 boss identities x 2 forms + the arena champion = 25 FIGHTS, built as 12 FAMILIES. The two
+// forms of a boss share the family's core idea -- you recognise the creature instantly -- but the
+// dungeon form twists one element and adds one of its own, so beating the Grovewarden outside
+// teaches you something about the Awakened Grovewarden without teaching you everything.
+//
+// A fight is keyed by identity AND form, never by e.mech, which only had three values shared
+// twelve ways.
+//   ow<ring>  the overworld lair boss
+//   dn<ring>  its dungeon form (Awakened, or the starter-island elder)
+//   arena     the repeating wave champion
+// Entries are registered from 17f_bossfights.js. Anything with no entry falls through to the old
+// bloom/clones/pools behaviour, so the roster can land in batches without a half-built build.
+// ===================================================================================
+const BOSS_MECH={};
+function bossMechKey(e){
+  if(!e || e.decoy) return null;
+  if(e.ring===undefined || e.ring===null || e.ring<0) return 'arena';
+  return ((e.awk||e.den) ? 'dn' : 'ow')+e.ring;
+}
+function bossMechDef(e){ const k=bossMechKey(e); return k?(BOSS_MECH[k]||null):null; }
+// HP fractions at which the fight escalates. A fight may declare 1, 2, 3 or 4 breaks; the old
+// hard-coded 66/33 is the default so an unconverted boss is unchanged.
+const BOSS_PHASE_DEF=[0.66,0.33];
+function bossPhases(e){ const d=bossMechDef(e); return (d&&d.phases)||BOSS_PHASE_DEF; }
+function bossPhaseFor(e){
+  const th=bossPhases(e), f=(e.maxhp?e.hp/e.maxhp:1);
+  let p=0; for(let i=0;i<th.length;i++) if(f<=th[i]) p=i+1;
+  return p;
+}
+// ---- THE ARENA a boss is bound to, and its middle ----
+// Overworld lairs stored this at worldgen (R.lairs[b]); dungeon boss chambers now do too
+// (room.bossCh). Either shape answers the same two questions.
+function bossArenaOf(e){
+  if(!e) return null;
+  if(e.arena) return e.arena;
+  const R=(typeof curRoom!=='undefined')?curRoom:null;
+  if(R && R.dungeon && R.bossCh){ const b=R.bossCh;
+    return {x0:b.cx-b.rx, y0:b.cy-b.ry, x1:b.cx+b.rx, y1:b.cy+b.ry}; }
+  return null;
+}
+function bossCentre(e){
+  const R=(typeof curRoom!=='undefined')?curRoom:null;
+  if(R && R.dungeon && R.bossCh) return {x:R.bossCh.cx, y:R.bossCh.cy};
+  const A=bossArenaOf(e);
+  if(A) return {x:(A.x0+A.x1)/2, y:(A.y0+A.y1)/2};
+  return {x:e.x, y:e.y};      // no bounds known: anchor where it stands rather than teleport it
+}
+// ---- ANCHORED PHASES ----
+// "It's fine if a boss stands still invincible for a minute and just blasts stuff like a survival
+// stage." A phase may declare anchor:true -- the boss walks to the middle of its arena, plants,
+// and cannot be damaged until the phase ends. The walk is deliberate: a boss that TELEPORTS to
+// the centre reads as a bug, one that stalks to it reads as a decision.
+function bossAnchorPhase(e){
+  const d=bossMechDef(e); if(!d||!d.anchor) return false;
+  const ph=e.phase||0;
+  return Array.isArray(d.anchor) ? !!d.anchor[ph] : (typeof d.anchor==='function' ? !!d.anchor(e,ph) : !!d.anchor);
+}
+// Steer to the middle and lock. Returns true while the boss owes the anchor its movement, so the
+// caller skips the ordinary chase. `anchorInv` is read by bossImmune (06_combat).
+const BOSS_ANCHOR_SNAP=10;
+function bossAnchorStep(e,dt){
+  if(!bossAnchorPhase(e)){ e.anchored=0; e.anchorInv=0; return false; }
+  const c=bossCentre(e), dx=c.x-e.x, dy=c.y-e.y, d=Math.hypot(dx,dy);
+  if(d>BOSS_ANCHOR_SNAP){
+    const s=(e.spd||40)*1.55*dt;      // walks in faster than it fights -- it WANTS the middle
+    if(typeof moveCircle==='function') moveCircle(e,(dx/d)*s,(dy/d)*s);
+    else { e.x+=(dx/d)*s; e.y+=(dy/d)*s; }
+    e.anchored=0; e.anchorInv=0;
+  } else {
+    e.x=c.x; e.y=c.y; e.anchored=1; e.anchorInv=1;
+  }
+  return true;
+}
+
 // ---- DYING WORDS: killing a boss frees it from the corruption-dream (which also ends it); it
 // speaks a couple words of TRUTH as it goes. Shown as a slow, sombre centred quote (separate from
 // the action banner). The final boss's line drops the whole reveal. (user, 2026-07-24) ----
@@ -127,14 +205,22 @@ function drawBossQuote(){
   ctx.restore(); ctx.textAlign='left';
 }
 
+// Is the player ACTUALLY in this fight? Shared by the registry and the legacy path: a world boss
+// that merely spawned near you must not run its mechanic across the overworld at nobody.
+function bossEngaged(e){
+  return (typeof bossBar!=='undefined' && bossBar===e) && (typeof player!=='undefined') &&
+    !e.dormant && Math.hypot(e.x-player.x, e.y-player.y) < 720;
+}
 function bossMechTick(e, dt){
-  if(!e || !e.mech || e.decoy) return;
+  if(!e || e.decoy) return;
+  const D=bossMechDef(e);
+  if(D){ if(D.tick) D.tick(e,dt,e.phase||0,bossEngaged(e)); return; }
+  if(!e.mech) return;
   // Only START a mechanic once the player is ACTUALLY in this fight — i.e. has HIT this boss
   // (bossBar is set on the first hit) and is still nearby. A world boss that merely spawned near
   // you must NOT spam safe-circles + screen shake across the overworld (the "random circles").
   // Already-active events still resolve regardless so nothing gets stuck.
-  const engaged = (typeof bossBar!=='undefined' && bossBar===e) && (typeof player!=='undefined') &&
-    !e.dormant && Math.hypot(e.x-player.x, e.y-player.y) < 720;
+  const engaged = bossEngaged(e);
   if(e.mechT===undefined) e.mechT = 8 + Math.random()*4;
   if(e.mech==='pools'){ if(engaged) _poolsTick(e, dt); return; }
   if(e.mech==='bloom'){
@@ -147,7 +233,10 @@ function bossMechTick(e, dt){
 }
 // forced event on a phase break — a dramatic beat that also introduces the mechanic early
 function bossMechTrigger(e){
-  if(!e || !e.mech || e.decoy) return;
+  if(!e || e.decoy) return;
+  const D=bossMechDef(e);
+  if(D){ if(D.trigger) D.trigger(e,e.phase||0); return; }
+  if(!e.mech) return;
   if(e.mech==='bloom' && !e.bloom) _bloomStart(e);
   else if(e.mech==='clones' && !e.cloneOn) _clonesStart(e);
   else if(e.mech==='pools'){ for(let q=0;q<3;q++) _poolDrop(e, 90+q*30); }
@@ -315,7 +404,10 @@ function bossDecoyHit(d){
 // (fakes drawn dimmer/greyer than the true image) is applied in the enemy draw loop.
 function drawBossMech(){
   if(typeof enemies==='undefined') return;
-  for(const e of enemies){ if(!e || !e.mech || e.decoy) continue;
+  for(const e of enemies){ if(!e || e.decoy) continue;
+    const D=bossMechDef(e);
+    if(D){ if(D.draw) D.draw(e); continue; }
+    if(!e.mech) continue;
     if(e.mech==='bloom' && e.bloom) _bloomDraw(e);
     if(e.mech==='pools' && e.pools) _poolsDraw(e);
   }

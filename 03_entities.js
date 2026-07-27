@@ -752,6 +752,13 @@ function genDungeon(ring){
   room.objs.push(obj); }
  const bc=chs[NCH-1];
  room.spawns.push({t:'B',x:Math.floor(bc.cx),y:Math.floor(bc.cy),ch:99});
+ // THE BOSS CHAMBER, PERSISTED. It was computed here and thrown away -- only the {t:'B'} spawn
+ // tile survived -- so a dungeon boss had no arena bounds, no lock and no tether, and could not be
+ // anchored to the middle of its room the way an overworld lair boss can. In world px, matching
+ // the shape of R.lairs[b] so bossCentre/bossArenaOf can read either without caring which it is.
+ room.bossCh={cx:(bc.cx+0.5)*TILE, cy:(bc.cy+0.5)*TILE,
+              rx:bc.r*TILE, ry:(bc.ry||bc.r)*TILE,
+              tx:Math.floor(bc.cx), ty:Math.floor(bc.cy)};
  // entry + boss centres guaranteed open (mirror: python brushes these at the end)
  brush(chs[0].cx,chs[0].cy,2.5); brush(bc.cx,bc.cy,3.0);
  // --- everything below is JS-only garnish (no grid mutation the sim needs) ---

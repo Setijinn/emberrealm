@@ -475,8 +475,39 @@ function drawEnemySprite(e,pn){
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
  else { // awakened dungeon bosses use their spectral sprite when it exists
    const _ba=(typeof bossArt==='function')?bossArt(e.ring):e.ring;   // art slot, NOT the boss id
+   // THE ANIMATION POSE (17f_bossanim). Squash/stretch/lean/rise around the sprite's own centre,
+   // wrapped around whichever frame the code below picks. It is a transform rather than new art
+   // because that is what reads at this size and it layers under real frames if they ever ship.
+   const _P=(typeof bossAnimPose==='function')?bossAnimPose(e):null;
+   if(_P && (_P.sx!==1||_P.sy!==1||_P.rot||_P.dx||_P.dy||_P.glow||_P.a!==1)){
+     ctx.save();
+     ctx.translate(e.x+_P.dx, e.y+_P.dy);
+     if(_P.rot) ctx.rotate(_P.rot);
+     // anchor the scale at the FEET, not the middle: a boss that squashes about its centre sinks
+     // into the floor and floats out of it, which reads as a rendering fault rather than weight.
+     const _fy=e.r*1.05;
+     ctx.translate(0,_fy); ctx.scale(_P.sx,_P.sy); ctx.translate(0,-_fy);
+     ctx.translate(-e.x,-e.y);
+     if(_P.a!==1) ctx.globalAlpha*=_P.a;
+     if(_P.glow>0){ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=_P.glow*0.5;
+       const g=ctx.createRadialGradient(e.x,e.y,e.r*0.2,e.x,e.y,e.r*2.1);
+       g.addColorStop(0,e.col||'#ff9c50'); g.addColorStop(1,'rgba(0,0,0,0)');
+       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(e.x,e.y,e.r*2.1,0,6.29); ctx.fill(); ctx.restore(); }
+     _drawBossBody(e,_ba,pn,flip);
+     ctx.restore();
+     return;
+   }
+   _drawBossBody(e,_ba,pn,flip); return; }
+}
+// the body itself, factored out so the pose transform can wrap it without duplicating the
+// awakened / animated / static / procedural fallback chain
+function _drawBossBody(e,_ba,pn,flip){
+   {
    // awakened dream bosses AND starter-dungeon den elders both use the alternate sprite, so a
    // dungeon fight never shows the identical creature you already beat in the open world
+   // a hand-drawn frame for this beat wins if one exists (bossAnimFrames is the seam)
+   const bf=(typeof bossAnimFrames==='function')?bossAnimFrames(e,_ba):null;
+   if(bf){ blit(bf,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/bf.width,flip); return; }
    if((e.awk||e.den) && typeof _awakImg!=='undefined'){ const ai=_awakImg[_ba];
      if(ai&&ai.complete&&ai.naturalWidth){ blit(ai,e.x,e.y+Math.sin(pn*2)*1.5,(e.r*2.6)/ai.width,flip); return; } }
    const fr=_enemyFrame((typeof _bossAnim!=='undefined')?_bossAnim[_ba]:null,e,pn);
@@ -1701,10 +1732,12 @@ function render(){
     const grd=ctx.createLinearGradient(bx-bw/2,0,bx+bw/2,0);
     grd.addColorStop(0,'#c03a2a'); grd.addColorStop(1,'#ff9c50');
     ctx.fillStyle=grd; ctx.fillRect(bx-bw/2,by,bw*fr,bh);
-    // phase threshold ticks at 66% / 33% — you can SEE the next phase coming
+    // phase threshold ticks — you can SEE the next phase coming. Read from the FIGHT now, so a
+    // boss with two breaks or four shows two or four, not always the old fixed 66/33 pair.
+    const _th=(typeof bossPhases==='function')?bossPhases(bossBar):[0.66,0.33];
     ctx.fillStyle='rgba(0,0,0,.55)';
     const _tk=Math.max(2,Math.round(2*_u));
-    ctx.fillRect(bx-bw/2+bw*0.66-_tk/2,by,_tk,bh); ctx.fillRect(bx-bw/2+bw*0.33-_tk/2,by,_tk,bh);
+    for(const _f of _th) ctx.fillRect(bx-bw/2+bw*_f-_tk/2,by,_tk,bh);
     // a bright flash sweeps the bar the moment a phase breaks
     if(bossBar.phaseFlash>0){ ctx.fillStyle='rgba(255,255,255,'+(0.5*Math.min(1,bossBar.phaseFlash/0.7)).toFixed(2)+')';
       ctx.fillRect(bx-bw/2,by,bw,bh); }
@@ -1713,9 +1746,9 @@ function render(){
       const fw=bw*1.06, fh=bh*2.3;
       ctx.drawImage(_hpbarImg,bx-fw/2,by+bh/2-fh/2,fw,fh); }
     // phase pips beside the name (filled = reached), 3 stages
-    const pph=(bossBar.phase||0);
+    const pph=(bossBar.phase||0), _np=_th.length+1;
     const _pr=Math.max(3,Math.round(4*_u));
-    for(let i=0;i<3;i++){ const dx=bx+bw/2-Math.round(14*_u)-i*Math.round(15*_u), dy=by-Math.round(16*_u);
+    for(let i=0;i<_np;i++){ const dx=bx+bw/2-Math.round(14*_u)-i*Math.round(15*_u), dy=by-Math.round(16*_u);
       ctx.fillStyle = i<=pph ? '#ffd23d' : 'rgba(255,255,255,.22)';
       ctx.save(); ctx.translate(dx,dy); ctx.rotate(Math.PI/4); ctx.fillRect(-_pr,-_pr,_pr*2,_pr*2); ctx.restore(); }
     ctx.textAlign='left';

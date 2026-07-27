@@ -21,6 +21,8 @@ function bossImmune(e){ if(!e) return false;
  if((e.phaseInv||0)>0) return true;         // mid phase-transition
  if((e.dlgInv||0)>0) return true;           // a dramatic line is landing
  if(e.bloom) return true;                   // SURVIVAL: thornrot bloom, reach the safe ground
+ if(e.anchorInv) return true;               // planted at the middle of its arena, running a survival phase
+ if(e.wardInv) return true;                 // a fight has raised its own shield (conduits, pillars, tide)
  return false; }
 function applyStatus(e,id,dur,val){ if(!e||e.hp<=0||e.node) return;   // objective nodes immune
   // in co-op the host owns this enemy's health, so a status applied here must be mirrored there

@@ -53,6 +53,9 @@ function bossReset(e){
   e.bloom=0; e.pools=null;
   e.cloneOn=0; e.cloneTimer=0; e._decoys=null;
   e.saidOpen=false; e.chat=0;
+  // registry-fight state: the anchor, any self-raised ward, and whatever the fight parked on `mk`
+  e.anchored=0; e.anchorInv=0; e.wardInv=0; e.mk=null; e.mechT=undefined;
+  e.anim=null; e.animT=0;
   if(e.mp!==undefined) e.mp=e.maxmp;
   // clear anything this boss put on the field
   for(let i=enemies.length-1;i>=0;i--){ const o=enemies[i];
@@ -206,7 +209,10 @@ function bossEnterPhase(e, ph){
   if(typeof addShake==='function') addShake(11+ph*4);
   // STORY: the boss speaks a line from its backstory as it escalates (its role in the rift)
   const gb=(typeof GBOSS!=='undefined'&&e.ring!=null&&e.ring>=0)?GBOSS[e.ring]:null;
-  const titles=['','ENRAGED','FINAL STAND'];
+  // A fight may name its own stages; the generic ladder is the fallback and now stretches far
+  // enough for a four-break boss instead of running off the end of a three-entry array.
+  const _D=(typeof bossMechDef==='function')?bossMechDef(e):null;
+  const titles=(_D&&_D.titles)||['','ENRAGED','FINAL STAND','NOTHING HELD BACK'];
   const line=(gb&&gb.bark&&gb.bark[ph-1])?gb.bark[ph-1]:'';
   // Banner keeps the loud stage title; the SPOKEN line goes in the plaque above the boss's head,
   // so every word a boss says appears in the same place instead of split across two UIs.
@@ -214,6 +220,7 @@ function bossEnterPhase(e, ph){
   // fires its own msg() a line later ("REACH THE SAFE GROUND"), so every canon boss — they all
   // have a mech — overwrote its own phase dialogue almost immediately. Nobody ever read it.
   if(typeof msg==='function') msg('☠ '+((e.name||'THE BOSS').toUpperCase())+' — PHASE '+(ph+1), titles[ph]||'');
+  if(typeof bossAnim==='function'){ bossAnim(e,'phase',1.1); bossAnimFx(e,'phase'); }
   // the spoken beat is a protected moment: it cannot be melted mid-sentence (user)
   if(line && typeof bossSayNow==='function'){ bossSayNow(line,5800,e); e.dlgInv=Math.max(e.dlgInv||0,2.2); }
   navigator.vibrate&&navigator.vibrate([30,40,30]);
@@ -221,6 +228,7 @@ function bossEnterPhase(e, ph){
   if(typeof bossMechTrigger==='function') bossMechTrigger(e);
   // summon adds from phase 2 onward to change the fight's shape
   if(ph>=1 && typeof enemies!=='undefined'){
+    if(typeof bossAnim==='function') bossAnim(e,'summon');
     const mlv=e.lv||10, edr=(typeof eDR==='function')?eDR(eDef(mlv)):0, mh=40*eHpScale(mlv)*(1-edr);
     const alive=enemies.filter(m=>m.summoned).length, nAdd=ph+1;
     for(let q=0; q<nAdd && alive+q<8; q++){ const a=Math.random()*6.283;
@@ -578,15 +586,25 @@ function update(dt){
         else if(e.woke && !bossArenaHasPlayer(A)){ e.woke=false; bossReset(e); }  // left -> full reset
         if(!e.woke){ e.fireT=Math.max(e.fireT,0.6); continue; }   // dormant until someone walks in
       }
+      if(typeof bossAnimTick==='function') bossAnimTick(e,dt);   // pose clock (17f_bossanim)
       if(typeof bossMechTick==='function') bossMechTick(e,dt);   // signature mechanic / puzzle
-      // --- PHASES: escalating stages at 66% / 33% HP, each with a dramatic transition beat ---
+      // --- PHASES. The count and the thresholds belong to the FIGHT now (bossPhases in
+      // 17_bossmech): a fight may break at 1, 2, 3 or 4 points instead of the old fixed 66/33.
       if(e.phase===undefined) e.phase=0;
-      const frac=e.hp/e.maxhp, np = frac>0.66?0 : frac>0.33?1 : 2;
+      const np=(typeof bossPhaseFor==='function')?bossPhaseFor(e)
+              :((e.hp/e.maxhp)>0.66?0:(e.hp/e.maxhp)>0.33?1:2);
       if(np>e.phase){ e.phase=np; bossEnterPhase(e,np); }
       if(typeof bossChatter==='function') bossChatter(e);       // engage line + HP-milestone dialogue
       if(e.phaseInv>0) e.phaseInv-=dt;
       if(e.dlgInv>0) e.dlgInv-=dt;                               // protected dialogue window
       if(e.phaseFlash>0) e.phaseFlash-=dt;
+      // ANCHORED PHASE: it walks to the middle of its arena, plants and goes untouchable while the
+      // phase runs. Movement belongs to the anchor for the duration; it still shoots (that is the
+      // whole point of a survival stage), so only the movement half of the block below is skipped.
+      const _anch=(typeof bossAnchorStep==='function') && bossAnchorStep(e,dt);
+      // A fight may take the wheel entirely -- no shared volley, no shared chase.
+      const _D=(typeof bossMechDef==='function')?bossMechDef(e):null;
+      if(_D && _D.ownsCombat){ if(e.animAtk>0) e.animAtk-=dt; continue; }
       if(!e.hidden){                              // hidden while its clone puzzle is up — images do the work
       const ph=e.phase, enraged=ph>=1;            // enrage behaviours from phase 2 on
       const fireMul=[1,0.78,0.6][ph]||0.6;        // attacks come faster each phase
@@ -595,23 +613,28 @@ function update(dt){
       e.ang+=dt*(2.2+ph*0.6);
       // movement: charge bosses lunge, others drift toward the player (a touch faster each phase)
       const mv=1+ph*0.14;
-      if(pat==='charge'){
+      if(_anch){ /* the anchor owns movement this phase */ }
+      else if(pat==='charge'){
         e.chargeT-=dt;
         if(e.chargeT<=0){ e.chargeT=(1.6+Math.random())/mv;
+          if(typeof bossAnim==='function') bossAnim(e,'lunge');
           e.cvx=(dx/dd)*e.spd*4.2; e.cvy=(dy/dd)*e.spd*4.2; e.cdur=0.45; }
         if(e.cdur>0){ e.cdur-=dt; moveCircle(e,e.cvx*dt,e.cvy*dt); }
         else moveCircle(e,(dx/dd)*e.spd*0.4*slowF(e)*dt,(dy/dd)*e.spd*0.4*slowF(e)*dt);
       } else {
         moveCircle(e,(dx/dd)*e.spd*mv*slowF(e)*dt,(dy/dd)*e.spd*mv*slowF(e)*dt);
       }
-      // tether: whatever the movement did, the boss stays inside its den
-      if(e.wb && e.arena){ const A=e.arena, m=e.r*0.5;
-        e.x=Math.max(A.x0+m,Math.min(A.x1-m,e.x));
-        e.y=Math.max(A.y0+m,Math.min(A.y1-m,e.y)); }
+      // tether: whatever the movement did, the boss stays inside its den. Dungeon chambers have
+      // bounds now too (room.bossCh), so an Awakened boss is as bound to its room as a lair boss.
+      if(!_anch){ const A=(typeof bossArenaOf==='function')?bossArenaOf(e):(e.wb?e.arena:null);
+        if(A){ const m=e.r*0.5;
+          e.x=Math.max(A.x0+m,Math.min(A.x1-m,e.x));
+          e.y=Math.max(A.y0+m,Math.min(A.y1-m,e.y)); } }
       // during the transition beat the boss holds fire (you're dodging the shockwave)
       if((e.phaseInv||0)<=0){
         e.fireT-=dt;
         if(e.fireT<=0){ e.animAtk=0.5;
+          if(typeof bossAnim==='function') bossAnim(e,pat==='nova'||pat==='ring8'?'roar':'wind');
           e.fireT=bossVolley(e,pat,Math.atan2(dy,dx),spd,enraged)*fireMul; }
         // LAYER the second pattern from phase 2 on (awakened bosses always) — fires on its own timer
         const other=(pat===e.pat2)?e.pat:e.pat2;
