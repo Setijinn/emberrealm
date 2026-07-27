@@ -803,6 +803,52 @@ function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
 function hitPortalPrompt(sx,sy){ const b=portalPromptRect(); if(!b) return false;
   return Math.abs(sx-b.cx)<=b.w/2+10 && Math.abs(sy-b.cy)<=b.h/2+12; }
 
+// ---------- THE HEARTH FLOCK ----------
+// Drawn with the world, under the hero and under loot, so nothing important is ever hidden behind
+// a sheep. The idle poses are procedural on top of the walk art: a hen dips to peck on a fast
+// irregular beat, a sheep lowers its head and holds it there. That is the whole warmth of it --
+// livestock that stands perfectly still reads as scenery, livestock that fidgets reads as alive.
+function drawCritters(){
+  if(typeof critters==='undefined' || !critters.length) return;
+  const t=performance.now()/1000;
+  for(const c of critters){
+    const C=(typeof CRITTERS!=='undefined')?CRITTERS[c.spec]:null; if(!C) continue;
+    const moving=(c.st==='wander')||c.fleeT>0;
+    const im=(typeof critterFrame==='function')?critterFrame(c.spec,c.dir,c.fr,moving):null;
+    // soft contact shadow: without it they look pasted on rather than standing on the ground
+    ctx.save(); ctx.globalAlpha=0.26; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(c.x,c.y+C.r*0.75,C.r*0.95,C.r*0.42,0,0,6.29); ctx.fill(); ctx.restore();
+    let dy=0, sy=1, sx=1;
+    if(moving){ dy=-Math.abs(Math.sin(t*C.bobF+c.seed))*C.bobA; }
+    else if(C.idle==='peck'){
+      // a hen pecks in bursts: a couple of quick dips, then a pause to look around
+      const cyc=(t*0.9+c.seed)%1;
+      const peck=cyc<0.42 ? Math.abs(Math.sin(cyc*Math.PI*4.8)) : 0;
+      dy=peck*3.2; sy=1-peck*0.16; sx=1+peck*0.10;
+    } else {
+      // a sheep grazes: head down, and a very slow breath
+      const b=Math.sin(t*0.7+c.seed);
+      dy=1.6+b*0.5; sy=1-0.03+b*0.012; sx=1+0.02-b*0.012;
+    }
+    if(im){
+      // Size the ANIMAL, not its canvas. These are 48x48 and 68x68 files with a lot of transparent
+      // margin, so scaling by naturalWidth counted the padding as bird and the flock rendered as
+      // specks -- the same trap the loot sacks hit.
+      const bb=(typeof _imgBBox==='function')?_imgBBox(im)
+        :{x:0,y:0,w:im.naturalWidth,h:im.naturalHeight};
+      const sc=C.draw/Math.max(bb.w,bb.h);
+      const w=bb.w*sc*sx, h=bb.h*sc*sy;
+      ctx.save(); ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(im, bb.x,bb.y,bb.w,bb.h,
+        Math.round(c.x-w/2), Math.round(c.y+dy-h*0.68), Math.round(w), Math.round(h));
+      ctx.restore();
+    } else {
+      // art not in yet: a legible blob rather than nothing
+      ctx.fillStyle=(c.spec==='sheep')?'#efe9dc':'#f4f0e6';
+      ctx.beginPath(); ctx.ellipse(c.x,c.y+dy-C.r*0.3,C.r*0.9*sx,C.r*0.75*sy,0,0,6.29); ctx.fill();
+    }
+  }
+}
 // ---------- THE LOOT PROMPT ----------
 // Its own button, anchored to the SACK rather than to the hero, and drawn in the sack's own colour
 // so the two prompts never read as the same control. Sits lower than the world prompt (which rides
@@ -1444,6 +1490,7 @@ function render(){
     ctx.fillText(gp.home?'EXIT':(GBOSS[gp.ring]?GBOSS[gp.ring].dn:'DUNGEON'),gp.x,gp.y-24); ctx.textAlign='left'; }
   // someone else's soulbound sack is not mine to see. `lb.own` is only ever set when networked,
   // so solo pays one undefined property read per bag.
+  if(typeof drawCritters==='function') drawCritters();      // the Hearth flock, under everything
   for(const lb of loots){ if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;
     drawLootBag(lb,pn); }
   if(typeof drawEggDrops==='function') drawEggDrops();

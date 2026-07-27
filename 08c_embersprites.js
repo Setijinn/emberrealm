@@ -54,6 +54,28 @@ const _eventChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); 
 const _LOOT_SPR={_lootSack:_lootSack, _lootSackT9:_lootSackT9, _lootSackT11:_lootSackT11,
                  _lootSackRelic:_lootSackRelic, _eventChest:_eventChest};
 function lootSackImg(name){ const im=_LOOT_SPR[name]; return (im&&im.naturalWidth)?im:_lootSack; }
+// THE FLOCK (03b_critters.js). 4 facings x 4 walk frames each, plus a standing pose. Loaded
+// through _track() like everything else, so the boot curtain waits on them and a missing file
+// degrades to the standing frame rather than to nothing.
+const _critterImg={};
+if(typeof window!=='undefined'){
+  for(const sp of ['chicken','sheep']){
+    _critterImg[sp]={stand:{},walk:{}};
+    for(const d of ['south','east','north','west']){
+      _critterImg[sp].stand[d]=(()=>{ const i=new Image(); i.src='assets/critters/'+sp+'_'+d+'.png'; return _track(i); })();
+      _critterImg[sp].walk[d]=[0,1,2,3].map(f=>{ const i=new Image();
+        i.src='assets/critters/'+sp+'_walk_'+d+'_'+f+'.png'; return _track(i); });
+    }
+  }
+}
+function critterFrame(spec,dirIdx,frame,moving){
+  const set=_critterImg[spec]; if(!set) return null;
+  const d=['south','east','north','west'][dirIdx|0]||'south';
+  if(moving){ const a=set.walk[d]; const im=a&&a[(frame|0)%4];
+    if(im&&im.complete&&im.naturalWidth) return im; }
+  const st=set.stand[d];
+  return (st&&st.complete&&st.naturalWidth)?st:null;
+}
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',

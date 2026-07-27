@@ -338,6 +338,56 @@ function drawTileG(x,y){
     if(off(x,y-1)) pxH(tx,ty,TILE,'rgba(40,26,16,0.9)',0.8);        // rope rails on the open sides
     if(off(x,y+1)) pxH(tx,ty+TILE-1,TILE,'rgba(40,26,16,0.9)',0.8);
     return; }
+  // GRASS ('g') — a lawn tile. Value-noise green rather than a stamped image, so a patch reads as
+  // one continuous field instead of a grid, with the 8-bit detail pass laying blades over the top.
+  if(c==='g'){
+    const hh=hmix(x,y);
+    // MUTED, not lawn-green. Everything else in this game is warm browns and tans, and a saturated
+    // grass green sat on top of that palette like a sticker. This is a mossy olive with a lot of
+    // per-tile variation, so a patch reads as turf rather than as a filled rectangle.
+    const n1=Math.sin(x*0.63+y*0.29)+Math.sin(x*0.17-y*0.77);          // large soft patches
+    const n2=Math.sin(x*1.9-y*1.31)+Math.sin(x*2.7+y*2.1);             // finer mottling
+    const v=n1*0.34+n2*0.16;                                            // ~ -1 .. 1
+    const R=Math.round(66+v*16), G=Math.round(84+v*20), Bl=Math.round(46+v*11);
+    ctx.fillStyle='rgb('+R+','+G+','+Bl+')';
+    ctx.fillRect(tx,ty,TILE,TILE);
+    // a second, coarser wash at quarter-tile resolution breaks the flat fill up further
+    for(let qy=0;qy<2;qy++)for(let qx=0;qx<2;qx++){
+      const q=hmix(x*2+qx,y*2+qy)&7;
+      if(q<3){ ctx.fillStyle=q===0?'rgba(0,0,0,0.10)':'rgba(196,214,150,0.055)';
+        ctx.fillRect(tx+qx*TILE/2,ty+qy*TILE/2,TILE/2,TILE/2); } }
+    // the 8-bit blades
+    if(typeof drawFloorDetail==='function') drawFloorDetail('grass',tx,ty,x,y,1);
+    // edge shading against neighbouring stone, so a lawn has a lip rather than a border
+    const Gr=curRoom.grid, gr=(xx,yy)=>{ const r=Gr[yy]; return r&&r[xx]==='g'; };
+    if(!gr(x,y-1)) { ctx.fillStyle='rgba(30,40,22,0.40)'; ctx.fillRect(tx,ty,TILE,3); }
+    if(!gr(x,y+1)) { ctx.fillStyle='rgba(30,40,22,0.30)'; ctx.fillRect(tx,ty+TILE-2,TILE,2); }
+    if(!gr(x-1,y)) { ctx.fillStyle='rgba(30,40,22,0.40)'; ctx.fillRect(tx,ty,3,TILE); }
+    if(!gr(x+1,y)) { ctx.fillStyle='rgba(30,40,22,0.30)'; ctx.fillRect(tx+TILE-2,ty,2,TILE); }
+    // WILDFLOWERS (user: "add some flowers around"). Clusters, not lone dots -- flowers grow in
+    // company, and one 2px pip per tile read as dirt rather than as a bloom. Each cluster picks a
+    // single species so a patch is one colour, the way a real clump of the same plant would be.
+    if((hh>>4)%2===0){                 // half the lawn tiles carry a clump
+      const SP=[['#d8b84a','#f0d878'],   // buttercup
+                ['#dcd4e0','#ffffff'],   // daisy
+                ['#c86a8e','#e89ab4'],   // clover pink
+                ['#8a6ac0','#b39ae0'],   // small bellflower
+                ['#d86a4a','#f09a7a']];  // poppy
+      const sp=SP[(hh>>9)%SP.length];
+      const n=3+((hh>>13)%4);
+      const cx0=6+((hh>>7)%(TILE-14)), cy0=6+((hh>>11)%(TILE-14));
+      for(let i=0;i<n;i++){
+        const j=hmix(x*7+i,y*11+i);
+        const fx=tx+cx0+((j%9)-4), fy=ty+cy0+(((j>>4)%9)-4);
+        if(fx<tx+2||fy<ty+2||fx>tx+TILE-4||fy>ty+TILE-5) continue;
+        ctx.fillStyle='rgba(24,38,20,0.9)'; ctx.fillRect(fx+1,fy+3,1,3);       // stem
+        ctx.fillStyle='rgba(20,32,16,0.55)'; ctx.fillRect(fx,fy+1,3,3);         // bloom shadow
+        ctx.fillStyle=sp[0]; ctx.fillRect(fx,fy,3,3);                           // bloom
+        ctx.fillStyle=sp[1]; ctx.fillRect(fx+1,fy,1,2);                         // highlight
+      }
+    }
+    return;
+  }
   // town floor (PixelLab): cobble base, 'p' = paved walkway, ~11% broken variant
   // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes).
   // Decor cells (h planter / H brazier / l lamp) draw floor UNDER their sprite.
@@ -356,6 +406,8 @@ function drawTileG(x,y){
     const v=(hh>>2)%5;
     if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
     else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+    // 8-bit grit over the cobble: chips, grout speckle and the odd hairline crack
+    if(typeof drawFloorDetail==='function') drawFloorDetail('stone',tx,ty,x,y,0.85);
     // decor sprite on the floor (short objects, drawn base-anchored in the tile pass)
     if(c==='h'||c==='H'||c==='l'){
       const dimg=c==='h'?_hearth.planter:c==='H'?_hearth.brazier:_hearth.lamp;
@@ -368,6 +420,10 @@ function drawTileG(x,y){
   const r1=h2(x,y);
   if(r1>0.55){ ctx.fillStyle='rgba(0,0,0,0.14)';
     ctx.fillRect(tx+(r1*30)%TILE,ty+(r1*57)%TILE,3,3); }
+  // 8-BIT DETAIL on every remaining walkable surface -- the overworld, the groves, the dungeons.
+  // Family comes from the grid char and the room, so a crypt pits and a field grains.
+  if(typeof drawFloorDetail==='function' && 'WhlHwXDtk'.indexOf(c)<0){
+    drawFloorDetail(floorFamily(c,curRoom),tx,ty,x,y,0.9); }
   if(c==='W'){
     const wimg=(t&&typeof _hearth!=='undefined')?_hearth.wall:null;
     if(wimg&&wimg.complete&&wimg.naturalWidth){

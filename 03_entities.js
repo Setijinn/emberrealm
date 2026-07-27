@@ -1281,6 +1281,7 @@ function enterRoom(key, px, py){
   enemies=[]; pShots=[]; eShots=[]; embers=[]; loots=[]; zones=[]; fx=[];
   worldBoss=null; ringBossCd=[]; if(!curRoom||!curRoom.dungeon) groundPortals=[];
   for(const al of allies){al.x=player.x;al.y=player.y;}
+  if(typeof spawnCritters==='function') spawnCritters(curRoom);   // the Hearth flock
   buildRoomCache();
   curRegionN='';
   const rnow=Date.now();

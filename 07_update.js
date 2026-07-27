@@ -429,6 +429,7 @@ function update(dt){
   // move: touch stick when held, else keyboard (WASD/arrows) at full speed
   const m=stick.move;
   if(typeof tickPotions==='function') tickPotions(dt);   // potions trickle back; gold is gone
+  if(typeof tickCritters==='function') tickCritters(dt);  // the Hearth flock (03b_critters.js)
   tickPlayerStatuses(dt);                       // burn/poison/bleed/shock tick, chill/weak/curse apply
   const frozen=!playerCanAct();                 // freeze and stun cost you the frame entirely
   const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1)

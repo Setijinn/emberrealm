@@ -45,8 +45,35 @@
    const nx=px+dx, ny=py+dy;
    if(nx>0&&ny>0&&nx<HW-1&&ny<HH-1&&hub[ny][nx]==='f') put(hub,nx,ny,'h'); } }
  dressPortal(21,2); dressPortal(6,5); dressPortal(35,5); dressPortal(6,20); dressPortal(35,20);
+ // GRASS (user, 2026-07-27). Four lawns, deliberately placed where nobody has to walk: the two
+ // shoulders of the south garden and the two quiet corners behind the stalls. Roads and the plaza
+ // apron stay stone, so grass never interrupts the way anyone actually crosses the square -- it
+ // fills the dead space that was cobble for no reason, and it gives the flock somewhere to be.
+ // Eroded at the edges by a position hash: a perfect rectangle of lawn reads as a rug someone put
+ // down, and the whole point is that grass grew here. The interior is solid; only the border cells
+ // are thinned, and corners are thinned hardest, which rounds the shape.
+ function lawn(x0,y0,x1,y1){
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+   if(!hub[y]||hub[y][x]!=='f') continue;
+   const ex=(x===x0||x===x1), ey=(y===y0||y===y1);
+   let keep=100;
+   if(ex&&ey) keep=25; else if(ex||ey) keep=62;
+   if(keep<100){ let m=(Math.imul(x,374761393)+Math.imul(y,668265263))>>>0;
+    m=(m^(m>>>15))>>>0; if((m%100)>=keep) continue; }
+   put(hub,x,y,'g'); } }
+ lawn(14,16,19,21);   // south garden, west shoulder
+ lawn(23,16,28,21);   // south garden, east shoulder
+ lawn(8,8,14,15);     // behind the west stalls
+ lawn(28,8,34,15);    // behind the east stalls
+ // a few tufts of grass creeping out of the lawns onto neighbouring cobble
+ for(const [gx,gy] of [[13,15],[20,15],[29,7],[15,7],[9,16],[33,16],[19,22],[24,22]])
+  if(hub[gy]&&hub[gy][gx]==='f') put(hub,gx,gy,'g');
  put(hub,21,17,'P');                     // spawn south of the fountain, facing the realm
+ // The flock (03b_critters.js). Not enemies, not pets, no stats — they are here so the town reads
+ // as somewhere people live. Counts are deliberately modest: a dozen hens would be a farmyard, six
+ // is a village square.
  ROOM_DEFS['0,0']={ name:'The Hearth', town:true, hub:true, map:hub,
+  critters:{chicken:6, sheep:4},
   portalDefs:[
    {tx:21, ty:2,  to:'G',         label:'THE REALM',  col:'#ff9c50', big:true},
    {tx:6,  ty:5,  to:'COSMETICS', label:'COSMETICS',  col:'#e07ad4'},
