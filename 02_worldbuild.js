@@ -43,6 +43,9 @@ for(const key in rooms){
   // the Wardrobe's mirror, in pixels — a room-level interactable, like a stall without a vendor
   const _wd=ROOM_DEFS[key].wardrobe;
   r.wardrobe=_wd?{x:_wd.x*TILE, y:_wd.y*TILE}:null;
+  // the Vault's strongbox (17j_vault.js) -- same shape as the mirror above, tile-indexed
+  const _sb=ROOM_DEFS[key].strongbox;
+  r.strongbox=_sb?{x:(_sb.tx+.5)*TILE, y:(_sb.ty+.5)*TILE}:null;
   // explicit destination portals (hub + sub-rooms)
   const pd=ROOM_DEFS[key].portalDefs;
   if(pd) for(const p of pd){

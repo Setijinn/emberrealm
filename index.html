@@ -244,6 +244,35 @@
  <div id="bntRows"></div>
  <button class="mbtn go" id="bntClose">LEAVE</button>
 </div></div></div>
+<!-- THE VAULT (17j_vault.js) -- account-wide storage, opened at the strongbox in The Vault.
+     Two columns because a stash is a MOVE between two places, and a single list makes you
+     remember which side you were looking at. -->
+<div class="scr" id="vaultScr" style="background:rgba(9,7,12,.92);"><div id="shopCard"><div id="shopInner">
+ <div id="shopTitle">THE VAULT</div>
+ <div id="vaultCount"></div>
+ <div class="mnote">Stored gear outlives the hero who found it.</div>
+ <div class="vaultCols">
+  <div class="vaultCol">
+   <div class="vaultHead" id="vaultHeadStored">STORED</div>
+   <div id="vaultGrid" class="igrid"></div>
+  </div>
+  <div class="vaultCol">
+   <div class="vaultHead">SATCHEL <span id="vaultBagCount" class="mnote"></span></div>
+   <div id="vaultBag" class="igrid"></div>
+  </div>
+ </div>
+ <div class="vaultNav">
+  <button class="mbtn" id="vaultPrev">‹</button>
+  <button class="mbtn" id="vaultAll">STORE EVERYTHING</button>
+  <button class="mbtn" id="vaultNext">›</button>
+ </div>
+ <div id="vaultSel" class="isel">Tap a piece on either side</div>
+ <div class="vaultAct">
+  <button class="mbtn go" id="vaultIn">STORE IT ▸</button>
+  <button class="mbtn go" id="vaultOut">◂ TAKE IT</button>
+  <button class="mbtn" id="vaultClose">LEAVE</button>
+ </div>
+</div></div></div>
 <!-- The diamond exchange (Sella) and the Wardrobe (17d_cosmetics.js). Diamonds are declared but
      cannot be bought: taking payment needs a server, so the packs explain themselves instead. -->
 <div class="scr" id="dmdScr" style="background:rgba(9,7,12,.9);"><div id="shopCard"><div id="shopInner">
@@ -362,6 +391,7 @@
 <script src="17c_bounty.js"></script>
 <script src="17d_cosmetics.js"></script>
 <script src="17e_relics.js"></script>
+<script src="17j_vault.js"></script>
 <!-- last: it waits on every image the scripts above registered while they loaded -->
 <script src="10b_loading.js"></script>
 <script src="12_devpanel.js"></script>

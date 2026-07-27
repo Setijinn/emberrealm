@@ -102,11 +102,19 @@
 
  // ------------------------------------------------------------- VAULT
  const vault=room(28,18,'f');
- block(vault,11,6,16,9,'h');             // vault strongbox block
+ block(vault,11,6,16,9,'h');             // the back bank of deposit boxes -- solid, purely scenery
+ // Braziers on the approach. The room was a dark box with one lit thing in it; a vault should look
+ // like somewhere valuables are KEPT, which means somebody paid to light it.
+ [[9,7],[18,7],[9,12],[18,12]].forEach(q=>put(vault,q[0],q[1],'H'));
  put(vault,14,14,'P');
  ROOM_DEFS['VAULT']={ name:'The Vault', town:false, safe:true, map:vault,
   portalDefs:[ {tx:14, ty:16, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
-  decor:[{t:'sign',x:14,y:11,txt:'STASH — coming soon'},{t:'chest',x:12.5,y:8},{t:'chest',x:15.5,y:8}] };
+  // The strongbox is the real interactable (17j_vault.js). It stands on open floor in FRONT of the
+  // back bank, not on it -- decor drawn inside a solid block is painted over and invisible, which
+  // is exactly how the two chests were lost on the first pass.
+  strongbox:{tx:14, ty:10},
+  decor:[{t:'strongbox',x:14,y:10.4},{t:'sign',x:14,y:13,txt:'THE VAULT'},
+         {t:'chest',x:11,y:10.6},{t:'chest',x:17,y:10.6}] };
 
  // ------------------------------------------------------------- GUILD HALL
  const guild=room(32,20,'f');

@@ -938,6 +938,9 @@ function update(dt){
     if(curRoom.wardrobe){ const wd=curRoom.wardrobe, d=Math.hypot(wd.x-player.x,wd.y-player.y);
       if(d<70 && d<_pbest){ _pbest=d; portalPrompt={kind:'wardrobe',x:wd.x,y:wd.y-40,
         ctx:'The Wardrobe', label:'WARDROBE'}; } }
+    if(curRoom.strongbox){ const sb=curRoom.strongbox, d=Math.hypot(sb.x-player.x,sb.y-player.y);
+      if(d<74 && d<_pbest){ _pbest=d; portalPrompt={kind:'vault',x:sb.x,y:sb.y-40,
+        ctx:'The Vault', label:'STORE'}; } }
   }
   // dungeon: objective progress + orb pickup + dream motes
   if(curRoom.dungeon){

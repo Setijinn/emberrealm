@@ -685,3 +685,75 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #tgtBtn .tgtIc{position:static;inset:auto;width:calc(20px*var(--uis));height:calc(20px*var(--uis));
  image-rendering:pixelated;flex:0 0 auto;}
 #tgtBtn .tgtTx{opacity:.85;}
+
+/* ---- THE VAULT (17j_vault.js) ----------------------------------------------------------------
+   WHY THIS PANEL SIZES ITSELF INSTEAD OF USING #shopCard's defaults.
+   equip_panel.png is 448x600 painted at background-size:100% 100%, so the frame STRETCHES to
+   whatever box it gets. Its usable dark field sits at a fixed PERCENTAGE inset -- measured off the
+   art: 16.5% top, 18% bottom, ~16% each side -- while #shopInner pads a fixed 46/40/44px. Those
+   two agree at exactly one card size and nowhere else, which is why content crept out from under
+   the border: the taller the card, the further the real border moved and the padding never moved
+   with it.
+   Two fixes, together:
+     1. pin the card to the art's own aspect ratio, so the border stops distorting at all, and
+        derive the padding from the same percentages the art was measured at;
+     2. make the CONTENT proportional too. A phone's card is barely half a desktop's, so fixed-px
+        chrome that fits at 579px tall overflows by 87px at 407px tall. Every fixed row here is
+        sized in --u (one hundredth of the card's height) and the two item grids take whatever is
+        left over, showing fewer rows and scrolling. Nothing is allowed to push the panel taller
+        than its own frame at any size. */
+#vaultScr>#shopCard{
+  --vH: min(94vh, calc(min(95vw,432px) * 600 / 448));
+  --vW: calc(var(--vH) * 448 / 600);
+  --u:  calc(var(--vH) / 100);
+  width:var(--vW); height:var(--vH); max-height:none;
+}
+#vaultScr>#shopCard>#shopInner{
+  padding: calc(var(--vH)*0.170) calc(var(--vW)*0.163) calc(var(--vH)*0.185);
+  overflow:hidden;                 /* the frame is the boundary; the grids do the scrolling */
+}
+/* fixed chrome -- never grows, scales with the frame */
+#vaultScr #shopTitle{ flex:0 0 auto; font-size:calc(var(--u)*3.6); margin-bottom:calc(var(--u)*0.5); }
+#vaultCount{ flex:0 0 auto; text-align:center; margin-bottom:calc(var(--u)*0.6); }
+#vaultCount .purse{ font-size:calc(var(--u)*2.7); padding:calc(var(--u)*0.7) calc(var(--u)*2.4); }
+#vaultScr>#shopCard>#shopInner>.mnote{ flex:0 0 auto; font-size:calc(var(--u)*2.0);
+  line-height:1.25; margin-bottom:calc(var(--u)*0.6); }
+
+/* The two sides sit SIDE BY SIDE and never wrap. Wrapping was the first bug: at the panel's width
+   the columns stacked, the section doubled in height, and the panel outgrew its frame. Side by
+   side is also the only layout that reads as moving a thing from one place to another. */
+.vaultCols{ flex:1 1 auto; min-height:0; display:flex; gap:calc(var(--u)*1.4);
+  align-items:stretch; flex-wrap:nowrap; }
+.vaultCol{ flex:1 1 0; min-width:0; min-height:0; display:flex; flex-direction:column;
+  gap:calc(var(--u)*0.8); }
+.vaultHead{ flex:0 0 auto; font-family:'Pixelify Sans',monospace; font-weight:700;
+  font-size:calc(var(--u)*2.1); letter-spacing:.5px; color:#e8c98a; text-align:center;
+  padding-bottom:calc(var(--u)*0.4); border-bottom:1px solid rgba(196,158,90,.35);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vaultHead .mnote{ font-size:inherit; color:#8a8494; }
+
+/* the grids absorb every remaining pixel and scroll inside themselves */
+#vaultGrid,#vaultBag{ flex:1 1 0; min-height:calc(var(--u)*8); max-height:none; overflow-y:auto; }
+#vaultGrid,#vaultBag{ align-content:flex-start; }
+#vaultGrid::-webkit-scrollbar,#vaultBag::-webkit-scrollbar{ width:4px; }
+#vaultGrid::-webkit-scrollbar-thumb,#vaultBag::-webkit-scrollbar-thumb{ background:#5a4326; border-radius:2px; }
+/* Slots stay a real tap target rather than shrinking with the frame -- on a small card the column
+   simply shows fewer of them. A 24px slot nobody can hit is not a smaller UI, it is a broken one. */
+.vaultCol .igrid{ grid-template-columns:repeat(auto-fill,40px); gap:4px; justify-content:center; padding:1px; }
+.vaultCol .islot{ width:40px; height:40px; }
+.vaultCol .islot .isprite{ width:34px; height:29px; }
+.vaultCol .islot .tbadge{ font-size:8px; top:0; right:2px; }
+
+/* .mbtn is width:min(78vw,300px) -- a full-bleed button. Dropped inside a column it just overflows
+   the frame, which is what the page arrows and STORE EVERYTHING did. Every button here shares a row. */
+.vaultNav,.vaultAct{ flex:0 0 auto; display:flex; gap:calc(var(--u)*1.0); justify-content:center;
+  margin-top:calc(var(--u)*0.8); }
+.vaultNav .mbtn,.vaultAct .mbtn{ width:auto; flex:1 1 0; min-width:0;
+  font-size:calc(var(--u)*2.3); padding:calc(var(--u)*1.2) calc(var(--u)*1.0);
+  letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#vaultPrev,#vaultNext{ flex:0 0 calc(var(--u)*8); font-size:calc(var(--u)*2.8); }
+
+#vaultScr #vaultSel{ flex:0 0 auto; text-align:center; margin-top:calc(var(--u)*0.8);
+  font-size:calc(var(--u)*2.2); line-height:1.25;
+  overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; }
+#vaultScr #vaultSel .istats{ margin-top:calc(var(--u)*0.5); font-size:calc(var(--u)*1.8); line-height:1.4; }

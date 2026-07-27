@@ -1123,6 +1123,41 @@ function drawChest(x,y){
  ctx.fillStyle='#e8b34b'; ctx.fillRect(x-2,y-4,4,7);
  ctx.strokeStyle='#3a2a1c'; ctx.lineWidth=1; ctx.strokeRect(x-11,y-6,22,14);
 }
+// THE STRONGBOX. Deliberately not a chest: a chest in this game is loot you open once and it is
+// gone, and this is the opposite of that. Twice the mass, iron-banded, bolted to the floor, with a
+// brass dial instead of a latch -- it should read as furniture that was here before you and will be
+// here after you. It breathes very slightly so it does not look like a painted-on tile.
+function drawStrongbox(x,y){
+ const t=performance.now()/1000;
+ ctx.save();
+ // shadow it sits in, so it has weight on the floor
+ ctx.globalAlpha=0.28; ctx.fillStyle='#000';
+ ctx.beginPath(); ctx.ellipse(x,y+13,24,7,0,0,6.29); ctx.fill();
+ ctx.globalAlpha=1;
+ // body
+ ctx.fillStyle='#4a4038'; ctx.fillRect(x-21,y-10,42,24);
+ ctx.fillStyle='#5a4e42'; ctx.fillRect(x-21,y-10,42,4);
+ // lid
+ ctx.fillStyle='#3f362f'; ctx.fillRect(x-22,y-22,44,13);
+ ctx.fillStyle='#6b5c4c'; ctx.fillRect(x-22,y-22,44,3);
+ // iron bands
+ ctx.fillStyle='#2a251f';
+ ctx.fillRect(x-14,y-22,4,36); ctx.fillRect(x+10,y-22,4,36);
+ ctx.fillRect(x-22,y-11,44,3);
+ // rivets
+ ctx.fillStyle='#8a7c68';
+ for(const bx of [-12,12]) for(const by of [-19,-3,10]) ctx.fillRect(x+bx,y+by,2,2);
+ // brass dial, the one warm thing on it
+ const k=0.5+0.5*Math.sin(t*1.6);
+ ctx.fillStyle='#e8b34b'; ctx.beginPath(); ctx.arc(x,y+1,6,0,6.29); ctx.fill();
+ ctx.fillStyle='#8a6a24'; ctx.beginPath(); ctx.arc(x,y+1,3.2,0,6.29); ctx.fill();
+ ctx.globalAlpha=0.22+0.30*k; ctx.strokeStyle='#ffd98a'; ctx.lineWidth=1.5;
+ ctx.beginPath(); ctx.arc(x,y+1,8.5,0,6.29); ctx.stroke();
+ ctx.globalAlpha=1;
+ ctx.strokeStyle='#241f1a'; ctx.lineWidth=1;
+ ctx.strokeRect(x-21,y-10,42,24); ctx.strokeRect(x-22,y-22,44,13);
+ ctx.restore();
+}
 function drawBanner(x,y){
  ctx.fillStyle='#7a3f22'; ctx.fillRect(x-2,y,4,44);
  ctx.fillStyle='#8a2c2c'; ctx.beginPath();
@@ -1569,6 +1604,7 @@ function render(){
     if(d.t==='fountain') drawFountain(dx,dy);
     else if(d.t==='sign') drawSign(dx,dy,d.txt);
     else if(d.t==='chest') drawChest(dx,dy);
+    else if(d.t==='strongbox') drawStrongbox(dx,dy);
     else if(d.t==='banner') drawBanner(dx,dy); }
   // particles: normal pass, then additive pass for glow ones (embers, magic, sparks)
   let _anyGlow=false;
