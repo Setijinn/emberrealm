@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v415.
+Service worker is at emberrealm-v431.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -39,10 +39,32 @@ WHAT SHIPPED MOST RECENTLY (v339 -> v369)
 COMBAT / CONTENT
 - The Monk has a real weapon: 'fists' retired in place (legacy:1), 'gauntlet' added
   and droppable, with a save migration for stranded relic weapons.
-- Creature roster 18 -> 54 species. Every band gained a second chaser and shooter,
-  plus two that exist ONLY inside dungeons. A band's pool is a list; which one a
+- CREATURE ROSTER 18 -> 54 -> 252. Fourteen species per band in the open, and
+  every DUNGEON has its own twelve on top of that. A pool is a list; which one a
   spawn point gets is hashed from the point. sp.spec names a species outright
   (that is how the dev tool spawns dungeon-only creatures anywhere).
+- A DUNGEON'S ROSTER IS KEYED TO THE BOSS'S RING (DUNSPEC), not to the terrain
+  band its index lands on. It used to CONCATENATE the overworld list, so the
+  Windward Roost — a lighthouse crag — spawned Wolfwood wolves and three dungeons
+  shared the Ashfall's list. Invariant: ZERO species appear in two dungeons, and
+  zero dungeon species walk the surface. Assert it after touching MOBSPEC/DUNSPEC.
+- The nightmare roster is named for what it is (Choir of Open Mouths, Stag of
+  Nails, Rope of Necks) and dungeon creatures RENDER differently: body darkened,
+  violet-black bleed beneath, red eyes, a per-creature shudder instead of the
+  calm sine bob. Not a dream. A nightmare.
+- ELITES: ~1 roaming spawn in 13 (ELITE_P=0.075), rolled from the spawn POINT so
+  a spot keeps its elite across respawns. Not a new creature — the band's own
+  species grown: 2.9x hp, 1.45x dmg/touch, its own title, 3x XP, one tier band
+  richer on loot (zoneTierRowUp) and the only way a chaser drops an egg. Reads as
+  a gold ground ring, chevrons round a gold name, and a crown. Wire bit 256.
+- TWELVE ARCHETYPES carry all 252 species (crab, swarm, bird, husk, golem, plant,
+  wisp, boar, slinger, shaman, acolyte, beast). e.arch is stamped at spawn BEFORE
+  the elite prefix renames the species, or every elite misses MOB_ARCH by name.
+  Band tint on top = 108 looks. MOBTINT entries match the ground named beside
+  them now; they had drifted (index 0 is a BEACH and was tinting things green).
+- EVERY CREATURE IN THE GAME IS ANIMATED: 12 archetypes idle+attack (9 frames),
+  12 bosses, 68 classes/ascensions, the flock, 3 allies, all 32 pets. Pet sets
+  load LAZILY per species — only the one beside you is ever probed.
 - THE AGGRESSION RAMP. Shooters fire 1 shot below Lv12, 2 below Lv30, 3 beyond;
   cadence 1.61s -> 0.66s; flat damage floors dropped (shooter 8->5, touch 12->7)
   so the cut lands on the early game. Net pressure vs before: 20% at Lv1, 56% at
@@ -162,7 +184,7 @@ UI / WORLD
   membership and every AoE would slaughter them.
 - THE DEV WORKBENCH (12b_devplus.js): ten tabs, ~300 controls, every list reading
   the live system rather than a copy. Sacks, relics, items, flasks, all 24 bosses
-  in both forms, every animation beat, all 54 species, dungeons, UI/FX, balance
+  in both forms, every animation beat, all 252 species, dungeons, UI/FX, balance
   readouts. Spawn lists carry the creature's real sprite.
 
 ---------------------------------------------------------------------------
@@ -252,6 +274,13 @@ QA TRAPS THAT COST TIME THIS SESSION (on top of HANDOFF.md's list)
   close of a tick function; 17i_bossfights.js stopped parsing and every fight fell
   back to stale definitions. The parse check caught it in one run; the game looked
   merely "wrong" without it.
+- PIXELLAB animate_image TAKES BASE64 AND THE TRANSPORT TRUNCATES IT, intermittently
+  and NOT by size: inputs smaller than one that just succeeded still arrived
+  clipped by a few bytes. What works: downscale to 22-40px on the long side, hard
+  alpha edge (soft edges cost most of the bytes), 6-16 colour palette, and retry.
+  animate_object (for things PixelLab generated) has no such problem — it takes an
+  id. Frames come out of the object/image DOWNLOAD endpoint as a zip; the direct
+  backblaze URLs are 403.
 - HARNESS BUGS OUTNUMBERED REAL BUGS in this sweep. Before reporting a finding,
   check the API you called: floorFamily takes (tileChar, room) not (x,y);
   zoneTierRow is POSITIONAL so a loot test must roll inside the zone it means;

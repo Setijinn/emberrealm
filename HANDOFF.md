@@ -129,6 +129,21 @@ them whenever co-op ends.
 ### Enemies
 - `MOBSPEC` holds a **list** of species per band per type; which one a spawn point gets is hashed
   from the point, so a spot keeps its character across respawns. `sp.spec` names one outright.
+- **`DUNSPEC` is the dungeon roster, keyed by the boss's RING** — the dungeon's identity — not by
+  the terrain band its index happens to land on. `mobPool(band,t,dun,ring)` prefers it, then falls
+  back to `MOBSPEC[band].d`, then to the overworld list. Two invariants worth asserting after any
+  roster change: no species in two dungeons, and no dungeon species on the surface.
+- **An elite is a species, grown, not a new creature.** `eliteRoll(sp)` is hashed from the spawn
+  POINT (its own constants, so "is elite" never correlates with "is a wolf"), and `makeElite`
+  multiplies the FINISHED creature — after species, behaviour and corruption. `e.arch` is stamped
+  before the elite title renames `e.spn`, or the archetype lookup misses on every elite.
+- **Twelve archetypes carry every species.** `MOB_ARCH` maps name → archetype; anything unlisted
+  falls back to `beast`/`caster`, so a new species without an entry degrades rather than blanks.
+  The band tint is what makes the same crab a sand crab or a peat-stained one.
+- **Every creature is animated.** Archetypes have 9-frame idle+attack under
+  `assets/mobs/anim/arch_<name>/`; allies under `ally_<name>/`; pets under
+  `assets/pets/anim/<spr>/`, loaded LAZILY per species. Every layer falls back: animated set →
+  static sprite → hound/cultist → procedural shape.
 - `EBEH` is the engagement rule (when to approach, when to break off); a species' `sig` is its
   movement *shape*. Both are needed or every creature walks the same straight line.
 - Shot count and cadence ramp with level (`eShotCount`, `eFireCd`). The flat damage floors in
