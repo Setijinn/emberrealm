@@ -440,9 +440,9 @@ let petWanderers=[], petKoi=[], petDucks=[], _petReturn=null;
 function _pondPoint(wf,off){ const a=Math.random()*6.28, rr=0.15+Math.random()*0.6;
   return {x:(wf.pcx+Math.cos(a)*wf.prx*rr)*TILE, y:(wf.pcy+(off||0)+Math.sin(a)*wf.pry*rr)*TILE}; }
 function spawnKoi(){ petKoi=[]; const R=rooms['PETS'], wf=R&&R.waterfall; if(!wf) return;
-  for(let i=0;i<7;i++){ const p=_pondPoint(wf,0.4); petKoi.push({x:p.x,y:p.y,tx:p.x,ty:p.y,spd:16+Math.random()*12,face:1,ph:Math.random()*6.28}); } }
+  for(let i=0;i<7;i++){ const p=_pondPoint(wf,0.4); petKoi.push({x:p.x,y:p.y,tx:p.x,ty:p.y,spd:(16+Math.random()*12)*MOVE_SCALE,face:1,ph:Math.random()*6.28}); } }
 function spawnDucks(){ petDucks=[]; const R=rooms['PETS'], wf=R&&R.waterfall; if(!wf) return;
-  for(let i=0;i<3;i++){ const p=_pondPoint(wf,0.2); petDucks.push({x:p.x,y:p.y,tx:p.x,ty:p.y,spd:9+Math.random()*7,face:1,ph:Math.random()*6.28}); } }
+  for(let i=0;i<3;i++){ const p=_pondPoint(wf,0.2); petDucks.push({x:p.x,y:p.y,tx:p.x,ty:p.y,spd:(9+Math.random()*7)*MOVE_SCALE,face:1,ph:Math.random()*6.28}); } }
 function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['PETS']) return rooms['PETS'];
   const W=40,H=28, grid=[];
   for(let y=0;y<H;y++){ const row=[]; for(let x=0;x<W;x++) row.push((x===0||y===0||x===W-1||y===H-1)?'W':'.'); grid.push(row); }
@@ -480,7 +480,7 @@ function _petLawnPoint(){ const R=rooms['PETS']; for(let i=0;i<30;i++){ const tx
   return {x:(R.px+0.5)*TILE, y:(R.py+0.5)*TILE}; }
 function spawnWanderers(){ petWanderers=[]; const u=petStore(); if(!u||!rooms['PETS']) return;
   for(const p of u.pets){ const s=_petLawnPoint();
-    petWanderers.push({def:p, x:s.x, y:s.y, tx:s.x, ty:s.y, spd:16+Math.random()*16, face:Math.random()<0.5?-1:1, wait:Math.random()*3, ph:Math.random()*6.28}); } }
+    petWanderers.push({def:p, x:s.x, y:s.y, tx:s.x, ty:s.y, spd:(16+Math.random()*16)*MOVE_SCALE, face:Math.random()<0.5?-1:1, wait:Math.random()*3, ph:Math.random()*6.28}); } }
 function enterPetRoom(){ const u=petStore(); if(!u||typeof enterRoom!=='function') return;
   const key=Object.keys(rooms).find(k=>rooms[k]===curRoom)||'0,0';
   _petReturn={key, x:player.x, y:player.y};

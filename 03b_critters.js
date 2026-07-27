@@ -18,7 +18,7 @@ let critters=[];
 // Each species: how it moves, how long it dwells, how big it draws, and what it does standing still.
 const CRITTERS={
   chicken:{
-    n:'chicken', spd:26, r:7, draw:23,
+    n:'chicken', spd:26*MOVE_SCALE, r:7, draw:23,
     wander:[0.6,1.6],        // seconds spent walking
     dwell:[1.2,3.4],         // seconds spent stopped
     flee:74, fleeSpd:88, fleeFor:1.5,
@@ -26,7 +26,7 @@ const CRITTERS={
     bobF:9.5, bobA:1.3,      // a quick nervous bounce while walking
   },
   sheep:{
-    n:'sheep', spd:15, r:11, draw:34,
+    n:'sheep', spd:15*MOVE_SCALE, r:11, draw:34,
     wander:[1.4,3.2],
     dwell:[3.0,7.5],         // sheep stand around for a LONG time
     flee:56, fleeSpd:46, fleeFor:1.1,

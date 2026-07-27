@@ -194,7 +194,7 @@ function bossVolley(e,pat,base,spd,enraged){
         const mlv=e.lv||10, mh=40*eHpScale(mlv);   // minions ride the unified curve too
         const ss=safeSpot(curRoom,e.x+Math.cos(a)*40,e.y+Math.sin(a)*40);   // never in a wall
         enemies.push({type:'c',summoned:true,owner:e,ring:e.ring,x:ss.x,y:ss.y,
-         r:15,hp:Math.round(mh),maxhp:Math.round(mh),spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:e.lv}); } } }
+         r:15,hp:Math.round(mh),maxhp:Math.round(mh),spd:120*MOVE_SCALE,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:e.lv}); } } }
     for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); return 2.2; }
   for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); return 0.9;
 }
@@ -243,7 +243,7 @@ function bossEnterPhase(e, ph){
       const ss=(typeof safeSpot==='function')?safeSpot(curRoom,e.x+Math.cos(a)*62,e.y+Math.sin(a)*62):{x:e.x,y:e.y};
       enemies.push({type:'c',summoned:true,owner:e,ring:e.ring,x:ss.x,y:ss.y,
         r:15,hp:Math.round(mh),maxhp:Math.round(mh),
-        spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:mlv,
+        spd:120*MOVE_SCALE,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:mlv,
         def:eDef(mlv),dr:edr,dex:eDex(mlv),maxmp:eMp(mlv),mp:eMp(mlv)}); } }
 }
 // ---- ascension capstone helpers ----
@@ -442,9 +442,23 @@ function update(dt){
   tickPlayerStatuses(dt);                       // burn/poison/bleed/shock tick, chill/weak/curse apply
   const frozen=!playerCanAct();                 // freeze and stun cost you the frame entirely
   const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1)
-    *((typeof dynSpd==='function')?dynSpd():1)*playerSpdMul()*(frozen?0:1);
+    *((typeof dynSpd==='function')?dynSpd():1)*playerSpdMul()*(frozen?0:1)*MOVE_SCALE;
   player._moving=false; _pmove=true;
-  if(m.id!==null){
+  // POSSESSED: the wisp has the stick. Your input does nothing for one second and you travel its
+  // heading instead. Placed ahead of both input branches so touch and keyboard are equally denied,
+  // and routed through moveCircle so it can shove you into the open but never through a wall.
+  if(player.possT>0){
+    player.possT-=dt;
+    const pa=possessAngle();
+    moveCircle(player, Math.cos(pa)*sp*POSS_DRAG*dt, Math.sin(pa)*sp*POSS_DRAG*dt);
+    player._moving=true;
+    if(typeof emitP==='function' && Math.random()<18*dt)
+      emitP(player.x+(Math.random()*18-9),player.y-6,
+        {vx:0,vy:-16,life:0.45,col:'#c07ad4',sz:2,glow:true});
+    if(player.possT<=0){ player.possT=0; player.possE=null;
+      if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:'RELEASED',col:'#9ad4ef',life:0.6}); }
+  }
+  else if(m.id!==null){
     const d=Math.hypot(m.dx,m.dy)||1;
     moveCircle(player,(m.dx/d)*sp*dt*Math.min(1,d/28),(m.dy/d)*sp*dt*Math.min(1,d/28));
     player._moving=true;
@@ -465,6 +479,7 @@ function update(dt){
     if(Math.abs(camRot-camRotT)<0.0008 && camRotT===0) camRot=0;
   }
   player.inv=Math.max(0,player.inv-dt);
+  if(player.possCd>0) player.possCd-=dt;
   // perk conditionals: rebuilt AFTER movement (so `moving`/`still` are current) and BEFORE
   // fire(), so this frame's shot already sees the bonus.
   if(typeof perkDyn==='function') perkDyn(dt);
@@ -540,6 +555,7 @@ function update(dt){
       const ai=enemyAI(e,dx,dy,dd,dt);
       if(ai.move){ const ax=ai.tx-e.x, ay=ai.ty-e.y, al=Math.hypot(ax,ay)||1;
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt); }
+      if(dd<e.r+player.r+POSS_GRAB && typeof possessPlayer==='function') possessPlayer(e);
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
       if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e)*(1-(player.dr||0)));
         if(e.inf) playerStatus(e.inf.id,e.inf.dur,0);        // what this creature leaves on you
@@ -579,6 +595,7 @@ function update(dt){
         else { mvx=-dy/dd*arc; mvy=dx/dd*arc; ms=0.55; }   // shuffle around the ring
         moveCircle(e,mvx*e.spd*ai.smul*ms*slowF(e)*dt,mvy*e.spd*ai.smul*ms*slowF(e)*dt);
       }
+      if(dd<e.r+player.r+POSS_GRAB && typeof possessPlayer==='function') possessPlayer(e);
       if(e.maxmp){ e.mp=Math.min(e.maxmp,(e.mp||0)+e.maxmp*0.35*dt); }   // caster MP regen (~35%/s)
       e.fireT-=dt;
       if(e.fireT<=0 && (e.mp||0)>=8){ e.mp-=8;                           // MP-gated: low-lv casters can't sustain

@@ -75,6 +75,18 @@ function checkSize(){ if((cv.clientWidth||_vpW())!==W||(cv.clientHeight||_vpH())
 // site, and localhost for dev). That makes sw.js the single source of truth.
 // No service worker yet (fresh local port, very first load) leaves it 'dev' — the honest
 // answer, since on those the code came straight off the wire.
+// ---------------------------------------------------------------------------------------------
+// MOVE_SCALE (user: "lower the move speed of everything in the game").
+// ONE dial, applied to locomotion only. Everything that walks is scaled by it and nothing else is
+// -- projectile speeds, telegraph timers, fire cadence, dash DISTANCES and knockback impulses all
+// stay exactly as they were, because those are not movement speed and slowing them would quietly
+// re-tune every boss window in the game.
+// Applied uniformly to the hero and to everything hostile, so the relative footrace is unchanged:
+// the game gets heavier and more deliberate, it does not get easier or harder. The one place it
+// lands unevenly is the ambient wildlife, which is scaled too simply because it would look odd
+// striding past a slowed hero.
+const MOVE_SCALE = 0.80;
+
 let BUILD='dev';
 function paintBuildTag(){ for(const el of document.querySelectorAll('.bTag')) el.textContent='build '+BUILD; }
 function _readBuild(){

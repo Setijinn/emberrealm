@@ -117,7 +117,59 @@ function tickPlayerStatuses(dt){
     if(s.t<=0) delete player.st[id];
   }
 }
-function clearPlayerStatuses(){ player.st={}; }
+function clearPlayerStatuses(){ player.st={}; player.possT=0; player.possCd=0; player.possE=null; }
+
+// ---------------------------------------------------------------------------------------------
+// POSSESSION (user: "the ghost mob should posses the player for only a second forcing them to
+// move whatever direction the ghost is going, then let go").
+//
+// The wisps -- 42 species of Weeper, Voice and Empty Pelt -- had no mechanic of their own; they
+// were an ordinary body with a ghost's sprite on it. This is theirs, and it is the only thing in
+// the game that takes the STICK rather than the character: for one second your input does nothing
+// and you travel the wisp's heading, sampled live, so it tows you wherever it happens to be going.
+//
+// Deliberate limits, each for a reason:
+//   * one second exactly, as asked, and it cannot be extended by a second wisp arriving
+//   * you keep your attacks. Losing movement is already the harshest thing in a dodging game;
+//     taking the whole character away would make a crowd of wisps unplayable rather than scary
+//   * a per-player lockout after release, so two wisps cannot pass you back and forth forever.
+//     The same rule the status caps follow: a lock you cannot escape is not difficulty
+//   * i-frames refuse it outright, exactly as they refuse stun and freeze
+//   * the drag goes through moveCircle, so it can push you into the open but never through a wall
+const POSS_T    = 1.0;    // how long it holds you
+const POSS_CD   = 5.0;    // lockout AFTER release, measured from the grab
+const POSS_GRAB = 12;     // reach past the two bodies -- a caster wisp can take you too
+const POSS_DRAG = 1.05;   // fraction of your own speed it tows you at
+function canPossess(e){
+  if(!e||e.hp<=0||e.node||e.boss) return false;
+  if((player.possT||0)>0 || (player.possCd||0)>0) return false;
+  if(player.inv>0) return false;                              // i-frames refuse control loss
+  return (typeof mobArch==='function') && mobArch(e)==='wisp';
+}
+function possessPlayer(e){
+  if(!canPossess(e)) return false;
+  player.possT=POSS_T; player.possCd=POSS_T+POSS_CD; player.possE=e;
+  // seed the heading from the wisp's own last step; possessTick re-reads it every frame so it
+  // tows you where it is going NOW, not where it was going when it grabbed you
+  const mx=e.x-(e._px===undefined?e.x:e._px), my=e.y-(e._py===undefined?e.y:e._py);
+  player.possA = (Math.hypot(mx,my)>0.05) ? Math.atan2(my,mx)
+                                          : Math.atan2(e.y-player.y,e.x-player.x);
+  if(typeof msg==='function') msg('IT HAS YOU','you go where it goes');
+  if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:'POSSESSED',col:'#c07ad4',life:0.8});
+  if(typeof addShake==='function') addShake(7);
+  if(typeof emitP==='function') for(let i=0;i<18;i++){ const a=Math.random()*6.283;
+    emitP(player.x,player.y,{vx:Math.cos(a)*70,vy:Math.sin(a)*70-20,life:0.5,col:'#c07ad4',sz:2,glow:true}); }
+  return true;
+}
+// The heading, re-read each frame. Falls back to the stored angle when the wisp is standing still
+// or has died mid-grab, so a possession always carries you somewhere rather than freezing you in
+// place -- being held still is a stun, and this is meant to be a shove.
+function possessAngle(){
+  const g=player.possE;
+  if(g && g.hp>0){ const mx=g.x-(g._px===undefined?g.x:g._px), my=g.y-(g._py===undefined?g.y:g._py);
+    if(Math.hypot(mx,my)>0.05){ player.possA=Math.atan2(my,mx); } }
+  return player.possA||0;
+}
 // ===== ONE funnel for every point of PLAYER-SOURCE damage =====
 // Shots, abilities, zones, minions and perk procs all land here, so the multipliers that
 // should apply everywhere (curse / execute / shatter, lifesteal) and the on-hit perk

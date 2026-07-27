@@ -856,7 +856,11 @@ function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
 function eDef(lv){ return Math.round(1 + lv*1.3); }
 function eDR(def){ return Math.min(0.5, def/(def+120)); }
 function eDex(lv){ return Math.round(2 + lv*1.0); }
-function eSpdMul(lv){ return 1 + Math.min(0.45, lv*0.010); }
+// MOVE_SCALE rides here because every enemy speed in makeEnemy is `base * espd` -- contact,
+// caster and boss alike -- so one multiplication covers the whole bestiary, and each species'
+// own spd multiplier still applies on top of it.
+function eSpdMul(lv){ return (1 + Math.min(0.45, lv*0.010))
+  * ((typeof MOVE_SCALE!=='undefined')?MOVE_SCALE:1); }
 function eMp(lv){ return Math.round(12 + lv*4); }
 // ---- THE AGGRESSION RAMP (user, 2026-07-26): "lower damage and fire rate for the lower level
 // parts of the game, introducing higher fire rate and damage as the level goes up."
