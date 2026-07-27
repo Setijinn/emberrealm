@@ -185,7 +185,7 @@ function bossVolley(e,pat,base,spd,enraged){
       if(alive<6){ for(let q=0;q<3;q++){ const a=Math.random()*6.283;
         const mlv=e.lv||10, mh=40*eHpScale(mlv);   // minions ride the unified curve too
         const ss=safeSpot(curRoom,e.x+Math.cos(a)*40,e.y+Math.sin(a)*40);   // never in a wall
-        enemies.push({type:'c',summoned:true,x:ss.x,y:ss.y,
+        enemies.push({type:'c',summoned:true,owner:e,ring:e.ring,x:ss.x,y:ss.y,
          r:15,hp:Math.round(mh),maxhp:Math.round(mh),spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:e.lv}); } } }
     for(let i=-1;i<=1;i++) eFire(e,base+i*0.25,spd); return 2.2; }
   for(let i=0;i<8;i++) eFire(e,e.ang+i*Math.PI/4,spd*0.8); return 0.9;
@@ -233,7 +233,8 @@ function bossEnterPhase(e, ph){
     const alive=enemies.filter(m=>m.summoned).length, nAdd=ph+1;
     for(let q=0; q<nAdd && alive+q<8; q++){ const a=Math.random()*6.283;
       const ss=(typeof safeSpot==='function')?safeSpot(curRoom,e.x+Math.cos(a)*62,e.y+Math.sin(a)*62):{x:e.x,y:e.y};
-      enemies.push({type:'c',summoned:true,x:ss.x,y:ss.y,r:15,hp:Math.round(mh),maxhp:Math.round(mh),
+      enemies.push({type:'c',summoned:true,owner:e,ring:e.ring,x:ss.x,y:ss.y,
+        r:15,hp:Math.round(mh),maxhp:Math.round(mh),
         spd:120,touch:6+eDmgScale(mlv)*0.38,col:e.col,lv:mlv,
         def:eDef(mlv),dr:edr,dex:eDex(mlv),maxmp:eMp(mlv),mp:eMp(mlv)}); } }
 }
@@ -728,6 +729,15 @@ function update(dt){
       else msg('THRONE SHATTERED','the realm is yours — for now'); }
     if(de.sref) de.sref.dead=Date.now()+(de.boss?180000:60000);
     enemies.splice(i,1); player.kills++;
+    // A DEAD BOSS TAKES ITS CONJURATIONS WITH IT (user, 2026-07-27: "make sure enemies don't
+    // respawn inside dungeons"). Summons and mirror-images are the boss's, not the room's -- they
+    // have no spawn point, so nothing ever cleaned them up and a cleared dungeon kept a handful of
+    // adds standing in it for as long as you stayed. They also carried no `owner`, which is why
+    // bossReset's existing purge could never match them either.
+    if(de.boss) for(let q=enemies.length-1;q>=0;q--){ const o=enemies[q];
+      if(o!==de && (o.summoned||o.decoy) && (o.owner===de || (o.owner===undefined && o.ring===de.ring))){
+        if(typeof fxDeath==='function') fxDeath(o.x,o.y,o.col,o.r);
+        enemies.splice(q,1); } }
     if(player.killHeal) healPlayer(player.maxhp*player.killHeal);          // Reaper
     if(player.killInv) player.inv=Math.max(player.inv,0.9);               // Phantom
     if(typeof perkFire==='function') perkFire('kill',{e:de,x:de.x,y:de.y});

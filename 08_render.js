@@ -64,6 +64,30 @@ function vnoise(x,y,scale){
   const a=r(x0,y0), b=r(x0+1,y0), c=r(x0,y0+1), d=r(x0+1,y0+1), sx=s(ux), sy=s(uy);
   return (a*(1-sx)+b*sx)*(1-sy)+(c*(1-sx)+d*sx)*sy;
 }
+// ---- SEAMLESS PER-TILE SHADE ----
+// Every floor renderer in this file had its own copy of the same idea: hash the cell, bucket it,
+// and paint a flat wash across the whole tile. That is what drew the grid. Two things were wrong
+// with it and both had to go: the value was QUANTISED, so a seam was never a small step, and it
+// was HASHED, so neighbours were uncorrelated and every edge jumped the full amplitude.
+//
+// This is the replacement, used by all of them. The value is continuous noise sampled at the tile
+// CORNERS -- which neighbouring tiles share by construction -- and the tile is filled as four
+// bilinear quadrants, so the ramp runs straight through the seam instead of stepping at it. Same
+// large-scale mottling, no visible tiles. `amp` is the peak alpha; the light side is damped
+// because a light wash reads far more strongly than a dark one at the same alpha.
+function tileShade(tx,ty,x,y,amp,seed){
+  const sd=seed||0;
+  const n=(gx,gy)=>vnoise(gx*4+sd,gy*4+sd,26)-0.5;      // -0.5..0.5, smooth over ~6 tiles
+  const n00=n(x,y), n10=n(x+1,y), n01=n(x,y+1), n11=n(x+1,y+1);
+  const h=TILE/2;
+  for(let qy=0;qy<2;qy++) for(let qx=0;qx<2;qx++){
+    const u=(qx+0.5)/2, w=(qy+0.5)/2;
+    const v=(n00*(1-u)+n10*u)*(1-w)+(n01*(1-u)+n11*u)*w;
+    ctx.fillStyle=(v<0) ? 'rgba(0,0,0,'+(-v*amp*2).toFixed(3)+')'
+                        : 'rgba(255,242,212,'+(v*amp*1.1).toFixed(3)+')';
+    ctx.fillRect(tx+qx*h, ty+qy*h, h+1, h+1);
+  }
+}
 // ---- 16-VARIANT ATLAS SAMPLER ----
 // A 128x128 sheet holding sixteen 32x32 tiles of the SAME material (create_tiles_pro). Draws the
 // variant chosen by position hash, so no surface is ever one cell repeated. Returns false when the
@@ -288,16 +312,10 @@ function drawTileG(x,y){
         return; }
       // anti-repetition: fine per-cell brightness buckets PLUS clumped low-frequency
       // blotches (4x4-cell patches) so the dream floor never reads as a uniform grid
-      const v=(hh>>2)%9;
-      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.20)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(v===1){ ctx.fillStyle='rgba(0,0,0,0.11)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(v===2){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(v===3){ ctx.fillStyle='rgba(255,240,210,0.09)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      tileShade(tx,ty,x,y,0.15,31);
       // large-scale brightness blotches via smooth value noise -> organic pools, NOT the old 4x4
       // square blocks (matches the overworld ground rework; user: kill the remaining square patches)
-      const nb=vnoise(x+37,y+91,5.5);
-      if(nb<0.30){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(nb>0.80){ ctx.fillStyle='rgba(255,245,220,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      tileShade(tx,ty,x,y,0.05,91);   // ramped, not thresholded: a threshold snaps to tile edges too
       // Inaccessible cells (walls / locked gates) = the VOID of the boss's consciousness.
       // Darken them hard so the lit dream-floor is unmistakably the play space (user: fill the
       // inaccessible areas so the playable area is highlighted), with sparse drifting motes so
@@ -411,9 +429,7 @@ function drawTileG(x,y){
     else img=((m%100<11)&&ok(_hearth.floor_broken))?_hearth.floor_broken:_hearth.floor;
     ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
     ctx.drawImage(img,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-    const v=(hh>>2)%5;
-    if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
-    else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,TILE); }
+    tileShade(tx,ty,x,y,0.10,7);
     // 8-bit grit over the cobble: chips, grout speckle and the odd hairline crack
     if(typeof drawFloorDetail==='function') drawFloorDetail('stone',tx,ty,x,y,0.85);
     // decor sprite on the floor (short objects, drawn base-anchored in the tile pass)
@@ -578,10 +594,8 @@ function drawTileG(x,y){
               ctx.fillStyle='rgba(58,104,44,'+(0.50*k).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
             else if(FEAT==='ash'){
               ctx.fillStyle='rgba(196,190,180,'+(0.42*k).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); } } } }
-      // per-block variety on top: brightness + weathering so no two blocks read identical
-      const v=(hh>>2)%7;
-      if(v===0){ ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(tx,ty,TILE,TILE); }
-      else if(v===1){ ctx.fillStyle='rgba(255,240,210,0.07)'; ctx.fillRect(tx,ty,TILE,TILE); }
+      // per-block variety on top -- as a continuous ramp, not a per-cell bucket (see tileShade)
+      tileShade(tx,ty,x,y,0.13,53);
       // scattered grit + debris on the FLOOR, keyed off the same noise so it clusters in the
       // hollows instead of sprinkling evenly (even sprinkles read as texture, not as a place)
       if(c==='F'){
@@ -618,7 +632,7 @@ function drawTileG(x,y){
         if(!wl(x+1,y)){ ctx.fillStyle='rgba(0,0,0,0.24)'; ctx.fillRect(tx+TILE-4,ty,4,TILE); }
         ctx.fillStyle='rgba(0,0,0,'+(0.10+0.22*(1-mo)).toFixed(3)+')';   // damp courses go darker
         ctx.fillRect(tx,ty,TILE,TILE);
-        if(v>=4){ ctx.fillStyle='rgba(0,0,0,0.35)';                    // cracked / chipped blocks
+        if(((hh>>2)%7)>=4){ ctx.fillStyle='rgba(0,0,0,0.35)';          // cracked / chipped blocks
           ctx.fillRect(tx+4+((hh>>5)%18), ty+7+((hh>>8)%20), 2, 5+((hh>>11)%6));
           ctx.fillRect(tx+7+((hh>>6)%16), ty+16+((hh>>9)%14), 4, 2); }
         if(mo>0.60 && ((hh>>12)&1)){ ctx.fillStyle='rgba(96,132,64,0.20)';   // moss on the damp side
@@ -636,9 +650,7 @@ function drawTileG(x,y){
         ctx.imageSmoothingEnabled=false; const hh=hmix(x,y), o=hh&3;
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
         ctx.drawImage(_shoreImg,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-        const v=(hh>>2)%5;
-        if(v===0){ ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(tx,ty,TILE,TILE); }
-        else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
+        tileShade(tx,ty,x,y,0.075,17);   // shoreline sand: same seamless ramp as every other floor
         ctx.fillStyle='rgba(70,110,120,0.30)';   // wet darker sand on the water-facing edge(s)
         if(wat(x,y-1)) ctx.fillRect(tx,ty,TILE,4); if(wat(x,y+1)) ctx.fillRect(tx,ty+TILE-4,TILE,4);
         if(wat(x-1,y)) ctx.fillRect(tx,ty,4,TILE); if(wat(x+1,y)) ctx.fillRect(tx+TILE-4,ty,4,TILE);
@@ -676,9 +688,18 @@ function drawTileG(x,y){
       if(!drawAtlas(_terrSet[bd],x,y,tx,ty,hh,16)){
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
         ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
-        const v=(hh>>2)%5;                  // subtle per-tile brightness noise
-        if(v===0){ ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(tx,ty,TILE,TILE); }
-        else if(v===1){ ctx.fillStyle='rgba(255,245,215,0.06)'; ctx.fillRect(tx,ty,TILE,TILE); }
+        // LARGE-SCALE BRIGHTNESS, WITHOUT DRAWING THE GRID (user, 2026-07-27: "the variety in
+        // brightness of each tile is enough to" show the tiles). This used to be a 3-step hash
+        // wash -- 12% black, nothing, or 6% white -- painted flat across the whole tile. Both
+        // halves of that were wrong: the value was QUANTISED, so a seam was never a small step,
+        // and it was HASHED, so neighbours were uncorrelated and every single edge jumped the
+        // full amplitude. Squares, everywhere, exactly as reported.
+        //
+        // Now the value is continuous noise sampled at the tile CORNERS, which neighbouring tiles
+        // share by construction, and each tile is filled as four bilinear quadrants. The ramp
+        // therefore runs straight through the seam instead of stepping at it: same large-scale
+        // mottling, no grid. Four extra fillRects per ground tile.
+        tileShade(tx,ty,x,y,0.065,0);
       }
       if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
       terrainDetail(x,y,tx,ty,bd);      // multi-scale relief, patches and litter (continuous, never tiles)
@@ -686,8 +707,14 @@ function drawTileG(x,y){
       // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
       if(typeof corruptAt==='function'){ const cor=corruptAt(x,y);
         if(cor>0.06){ ctx.fillStyle='rgba(38,8,48,'+(cor*cor*0.6).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE);
-          if(cor>0.35){ const gv=0.10+0.10*(0.5+0.5*Math.sin(performance.now()/700+x*1.3+y*0.7));
-            ctx.fillStyle='rgba(190,60,210,'+(cor*gv).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+          // THE SHIMMER TRAVELS, IT DOES NOT FLICKER PER TILE. This was the source of the visible
+          // grid in the corrupted zones -- x*1.3 rad per tile is ~75 degrees of phase between one
+          // tile and the next, so a bright violet wash landed on each tile at an essentially
+          // random brightness, flat across the whole tile, with a hard edge. Not the ground: the
+          // stain on top of it. At 0.16 rad/tile the pulse reads as a slow wave rolling out from
+          // the rift, and adjacent tiles sit within a few percent of each other.
+          if(cor>0.35){ const gw=0.10+0.09*(0.5+0.5*Math.sin(performance.now()/700+x*0.16+y*0.11));
+            ctx.fillStyle='rgba(190,60,210,'+(cor*gw).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
           if(cor>0.45 && typeof _corruptDec!=='undefined' && _corruptDec){
             const ch=hmix(x+701,y+229);
             if(ch%100 < cor*30){ const im=_corruptDec[ch%_corruptDec.length];

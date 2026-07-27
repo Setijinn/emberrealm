@@ -713,7 +713,11 @@ function genDungeon(ring){
  }
  // `ring` is a BOSS ID here, not a band. Anything wanting a 0-8 theme index (mob names/tints,
  // tile fallbacks) goes through bossArt(ring) — the dream wears the boss's own theme.
- const room={key:'DUN',grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
+ // A dungeon had no `name`, so the "where you are" label -- which reads curRoom.name -- was BLANK
+ // for the entire dungeon. Every other room in the game says where you are; the one place you can
+ // get permanently lost said nothing. It is the boss's dream, so it is named after the dream.
+ const _dn=(typeof GBOSS!=='undefined'&&GBOSS[ring]&&GBOSS[ring].dn)||'The Deep';
+ const room={key:'DUN',name:_dn,grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
   glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,
   px:Math.floor(chs[0].cx),py:Math.floor(chs[0].cy),
   orbs:[], switches:[], plates:[], circles:[], chases:[], objs:[], ddec:[] };
