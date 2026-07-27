@@ -754,7 +754,7 @@ function bagBound(lb){ return !!LOOT_BANDS[bagBand(lb)].bound; }
 // tonic is worse than not having the panel. Public gear used to auto-collect too, which meant the
 // bag UI existed but most players never saw it.
 function bagAuto(lb){ const its=bagItems(lb); if(!its.length) return true;
- const junk=it=>it&&(it.k==='pot'||it.k==='coin'||it.k==='scroll');
+ const junk=it=>it&&(it.k==='coin'||it.k==='scroll');   // 'pot' dropped: potions no longer spawn
  return its.length===1 && junk(its[0]); }
 
 function bagAt(e,items){
@@ -841,7 +841,9 @@ function takeLoot(item){
 // SOULBOUND is rolled separately for each eligible player and belongs only to them.
 // Both run host-side only (07_update gates rollLoot on netSimulates).
 const PUB_GEAR={c:0.025, s:0.06, N:0.025};   // gear-bag chance by enemy type; bosses are handled below
-const PUB_POT ={c:0.10,  s:0.14, N:0.10};
+// PUB_POT is gone (user, 2026-07-26): potions do not drop at all any more. Both flasks refill on
+// their own clocks (tickPotions), so a drop could only ever have topped up a stock that was
+// already coming back -- and it cost a sack roll that could have been gear.
 // ONE PUBLIC SACK PER KILL (user, 2026-07-26). Every public thing a kill pays out goes in the same
 // sack: gear, the tonic, the coin, the scroll. It used to push a separate bag per item, so a
 // dungeon boss carpeted the floor with five or six sacks that each held one thing, and a "bag"
@@ -858,11 +860,9 @@ function rollPublicLoot(e,row,F,extra,cls){
    // opening: one slot roll averages 1.3 pieces, which is how a "bag" ended up meaning "an item".
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);  // a boss always pays out
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
-   if(Math.random()<0.4) items.push({k:'pot'});
  } else {
-   const gp=(PUB_GEAR[e.type]||0)*fmul, pp=(PUB_POT[e.type]||0)*fmul;
+   const gp=(PUB_GEAR[e.type]||0)*fmul;
    if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
-   else if(r<gp+pp) items.push({k:'pot'});
  }
  if(items.length) loots.push(bagAt(e,items));            // everything missed -> no sack at all
 }
@@ -1392,6 +1392,11 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  migrateRelics(ch);
  migrateWpnType(ch);        // after migrateRelics: it can push a relic weapon into the satchel
  if(rpg.eqAff===undefined) rpg.eqAff={}; if(rpg.mp===undefined) rpg.mp=null;
+ // Flask counters. `pots` predates this back-fill and was never defaulted here -- a save from
+ // before it existed rendered "🧪 undefined" and decremented to NaN, because `undefined<=0` is
+ // false and the spend guard let it through. Both get a default now. NOTE rpg.mp above is
+ // loadout data, nothing to do with mana: the mana flask is `mpots`.
+ if(rpg.pots===undefined) rpg.pots=1; if(rpg.mpots===undefined) rpg.mpots=1;
  if(rpg.arenaBest===undefined) rpg.arenaBest=0;
  if(typeof initTrain==='function') initTrain(rpg); }   // max-stat scrolls/training (16_maxstats.js)
 // Steepened for the Lv50 cap so reaching max is a real grind (the outer grind zones), not a
@@ -1507,7 +1512,9 @@ function saveRPG(){ if(curUser&&users[curUser]&&rpg){ LS.set('er-users',users); 
 function hudRPG(){ if(!rpg)return;
  $s('lvlTxt').textContent='Lv '+rpg.lvl;
  $s('goldTxt').textContent=(typeof accountGlory==='function'?accountGlory():0)+'\u2726';
- $s('potBtn').textContent='🧪 '+rpg.pots; }
+ const _pb=$s('potBtn'), _mb=$s('mpotBtn');
+ _pb.textContent='🧪 '+(rpg.pots|0); _pb.classList.toggle('empty',(rpg.pots|0)<=0);
+ _mb.textContent='🔷 '+(rpg.mpots|0); _mb.classList.toggle('empty',(rpg.mpots|0)<=0); }
 // ===== PERMADEATH =====
 // Up to Lv20 the hearth calls you home on death. From Lv20 the run is your life: dying
 // retires the hero to the Hall of the Fallen and you start over with someone new.
@@ -1673,20 +1680,35 @@ function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
  const heal=Math.max(60,Math.round(player.maxhp*0.35));   // scale with HP pool, not flat
  rpg.pots--; player.hp=Math.min(player.maxhp,player.hp+heal); saveRPG(); hudRPG();
  texts.push({x:player.x,y:player.y-22,txt:'+'+heal,col:'#7dc47a',life:1}); }
+// THE MANA FLASK (user, 2026-07-26). Mana is a real economy -- every ability is priced in it
+// (12b_abilities.js) -- but until now a caster who ran dry had nothing to DO about it except walk
+// away and wait on mpregen. Same shape as the tonic in every respect, restoring a slice of the
+// pool rather than a flat number so it keeps up with a Lv50 WIS build.
+function useMana(){ if(!rpg||rpg.mpots<=0||player.mp>=player.maxmp) return;
+ const gain=Math.max(25,Math.round(player.maxmp*0.40));
+ rpg.mpots--; player.mp=Math.min(player.maxmp,player.mp+gain); saveRPG(); hudRPG();
+ texts.push({x:player.x,y:player.y-22,txt:'+'+gain,col:'#6ab8e0',life:1}); }
 
 
-// POTIONS REFILL THEMSELVES (user, 2026-07-26). They were bought with gold, and gold is gone --
+// FLASKS REFILL THEMSELVES (user, 2026-07-26). They were bought with gold, and gold is gone --
 // glory is earned only by dying, so it must never be the thing standing between you and a heal.
 // A slow trickle back to a small cap: enough that you are never stranded, never so much that
-// stacking them replaces playing carefully. Drops still top you up faster than the trickle does.
-const POT_CAP=5, POT_REFILL=48;    // one potion every 48s, up to five held
+// stacking them replaces playing carefully.
+// TWO timers, not one shared clock: a full flask of either kind must never stall the other's
+// trickle, or a caster who never drinks tonics would sit at 5/0 forever.
+const POT_CAP=5,  POT_REFILL=48;    // one tonic every 48s, up to five held
+const MPOT_CAP=5, MPOT_REFILL=48;   // the mana flask, on its own identical clock
 function tickPotions(dt){
   if(!rpg||!inGame) return;
-  autoPotTick(dt);
-  if((rpg.pots||0)>=POT_CAP){ rpg._potT=0; return; }
-  rpg._potT=(rpg._potT||0)+dt;
-  if(rpg._potT>=POT_REFILL){ rpg._potT-=POT_REFILL; rpg.pots=(rpg.pots||0)+1;
-    if(typeof hudRPG==='function') hudRPG(); saveRPG(); }
+  autoPotTick(dt); autoManaTick(dt);
+  let paint=false;
+  if((rpg.pots||0)>=POT_CAP) rpg._potT=0;
+  else { rpg._potT=(rpg._potT||0)+dt;
+    if(rpg._potT>=POT_REFILL){ rpg._potT-=POT_REFILL; rpg.pots=(rpg.pots||0)+1; paint=true; } }
+  if((rpg.mpots||0)>=MPOT_CAP) rpg._mpotT=0;
+  else { rpg._mpotT=(rpg._mpotT||0)+dt;
+    if(rpg._mpotT>=MPOT_REFILL){ rpg._mpotT-=MPOT_REFILL; rpg.mpots=(rpg.mpots||0)+1; paint=true; } }
+  if(paint){ if(typeof hudRPG==='function') hudRPG(); saveRPG(); }
 }
 // AUTO POTION (user, 2026-07-26). Drinks one tonic when you fall to the mark you set.
 //
@@ -1708,7 +1730,25 @@ function autoPotTick(dt){
   if(player.hp>before){ _autoPotT=AUTOPOT_CD;
     texts.push({x:player.x,y:player.y-36,txt:'AUTO',col:'#7dc47a',life:0.9}); }
 }
+// AUTO MANA. Same machinery, its OWN stored setting and its own thresholds -- sharing OPTS.autoPot
+// would silently reinterpret every saved device's HP percentage as a mana one. It carries no
+// warning label: running out of mana costs you a cast, not your character.
+const AUTOMANA_CD=1.0;
+let _autoManaT=0;
+function autoManaTick(dt){
+  const pct=(typeof autoManaPct==='function')?autoManaPct():0;
+  if(_autoManaT>0) _autoManaT-=dt;
+  if(!pct || !rpg || (rpg.mpots||0)<=0) return;
+  if(typeof player==='undefined' || !player.maxmp || player.hp<=0) return;
+  if(_autoManaT>0) return;
+  if((player.mp||0) > player.maxmp*(pct/100)) return;
+  const before=player.mp||0;
+  useMana();
+  if((player.mp||0)>before){ _autoManaT=AUTOMANA_CD;
+    texts.push({x:player.x,y:player.y-36,txt:'AUTO',col:'#6ab8e0',life:0.9}); }
+}
 $s('potBtn').addEventListener('click',usePotion);
+$s('mpotBtn').addEventListener('click',useMana);
 // The four purchasable LEGENDARIES (not relics -- relics are ordinary T13 items now and equip from
 // the satchel like anything else). These still own the wpnL/armL slot wholesale, and the only place
 // they could ever be equipped from used to be a vendor's shop rows, so they live here instead.
@@ -1797,7 +1837,7 @@ $s('wrdClose').addEventListener('click',()=>{ if(typeof closeWardrobe==='functio
 
 
 function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display=(s===id)?'flex':'none';
- $s('menuBtn').style.display='none'; $s('potBtn').style.display='none';
+ $s('menuBtn').style.display='none'; $s('flasks').style.display='none';
  closeVendorPanels();
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
@@ -1869,7 +1909,7 @@ function openMenu(){
 function resumeRun(){ if(!runLive||curChar()!==runChar){ play(); return; }
  hideAll(); showGameHud(); inGame=true; hudRPG(); }
 function migrate(u){ if(!u.chars){ u.chars=[]; u.cur=0;
-  if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||{lvl:1,xp:0,wpn:0,pots:1}}); }
+  if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||{lvl:1,xp:0,wpn:0,pots:1,mpots:1}}); }
   delete u.char; delete u.rpg; LS.set('er-users',users); }
  if(u.cur===undefined||u.cur>=u.chars.length) u.cur=0; }
 function curChar(){ const u=users[curUser]; if(!u) return null; migrate(u); return u.chars[u.cur]||null; }
@@ -1912,7 +1952,7 @@ function openClassPick(){
   paintClassIcon(d.querySelector('.cicCv'), c.id);
   d.onclick=()=>{ const nm=($s('charName').value.trim()||('Hero'+Math.floor(Math.random()*900+100))).slice(0,14);
    const u=users[curUser];
-   u.chars.push({name:nm, cls:c.id, rpg:{lvl:1,xp:0,wpn:0,pots:1}});
+   u.chars.push({name:nm, cls:c.id, rpg:{lvl:1,xp:0,wpn:0,pots:1,mpots:1}});
    u.cur=u.chars.length-1; LS.set('er-users',users); $s('charName').value=''; openMenu(); };
   box.appendChild(d); });
  show('classScr');
@@ -1939,7 +1979,7 @@ function play(){
 // one place that reveals the in-game HUD — used by play() and resumeRun()
 function showGameHud(){
  $s('menuBtn').style.display='flex'; if(isAdmin)$s('devBtn2').style.display='flex';
- $s('potBtn').style.display='flex'; $s('invBtn').style.display='flex';
+ $s('flasks').style.display='flex'; $s('invBtn').style.display='flex';
  $s('abBtn').style.display='none';
  if($s('coopBtn'))$s('coopBtn').style.display='flex';
  if($s('loadBtn'))$s('loadBtn').style.display='flex';
@@ -1979,7 +2019,9 @@ function recordBest(k){ if(curUser&&users[curUser]&&k>(users[curUser].best||0)){
 // autoPot is the HP PERCENTAGE it drinks at; 0 is off. The steps are the only legal values, so a
 // hand-edited save cannot ask for "drink at 95%".
 const AUTOPOT_STEPS=[0,5,10,15];
-const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false,autoPot:0};
+// Mana sits higher than HP on purpose: at 5% mana you have already missed the cast you wanted.
+const AUTOMANA_STEPS=[0,10,20,30];
+const OPT_DEF={ui:1,zoom:1,dmgTxt:true,vib:true,fps:false,fs:true,aim:false,autoPot:0,autoMana:0};
 let OPTS=Object.assign({},OPT_DEF,LS.get('er-opts',{}));
 function saveOpts(){ LS.set('er-opts',OPTS); applyOpts(); }
 function applyOpts(){
@@ -2013,6 +2055,9 @@ function _setPaint(){
  pb.textContent=ap?(ap+'% HP'):'OFF'; pb.classList.toggle('off',!ap);
  $s('setPot').querySelector('span').textContent=ap?'Auto potion at':'Auto potion';
  $s('setPotNote').classList.toggle('on',!!ap);
+ const am=autoManaPct(), mb=$s('setMana').querySelector('b');
+ mb.textContent=am?(am+'% MP'):'OFF'; mb.classList.toggle('off',!am);
+ $s('setMana').querySelector('span').textContent=am?'Auto mana at':'Auto mana';
 }
 // the stored value is only ever one of the steps, whatever a hand-edited save says
 function autoPotPct(){ const v=OPTS.autoPot|0; return AUTOPOT_STEPS.indexOf(v)>0?v:0; }
@@ -2021,6 +2066,12 @@ function autoPotCycle(){ const i=Math.max(0,AUTOPOT_STEPS.indexOf(autoPotPct()))
   if(typeof msg==='function'){ const p=autoPotPct();
     if(p) msg('AUTO POTION · '+p+'%','it will not keep you alive — watch your bar');
     else msg('AUTO POTION OFF','tonics are yours to spend'); } }
+function autoManaPct(){ const v=OPTS.autoMana|0; return AUTOMANA_STEPS.indexOf(v)>0?v:0; }
+function autoManaCycle(){ const i=Math.max(0,AUTOMANA_STEPS.indexOf(autoManaPct()));
+  OPTS.autoMana=AUTOMANA_STEPS[(i+1)%AUTOMANA_STEPS.length]; saveOpts(); _setPaint();
+  if(typeof msg==='function'){ const p=autoManaPct();
+    if(p) msg('AUTO MANA · '+p+'%','drinks a flask when your pool runs low');
+    else msg('AUTO MANA OFF','the flask is yours to spend'); } }
 function openSettings(){ _setPaint(); show('setScr'); }
 $s('setBtn').addEventListener('click',openSettings);
 $s('setBack').addEventListener('click',openMenu);
@@ -2038,6 +2089,7 @@ _setTog('setVib',()=>{ OPTS.vib=(OPTS.vib===false); });
 _setTog('setFps',()=>{ OPTS.fps=!OPTS.fps; });
 _setTog('setFs',()=>{ OPTS.fs=(OPTS.fs===false); });
 $s('setPot').addEventListener('click',autoPotCycle);
+$s('setMana').addEventListener('click',autoManaCycle);
 $s('loginBtn').addEventListener('click',doLogin);
 $s('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 $s('playBtn').addEventListener('click',play);

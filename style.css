@@ -60,9 +60,17 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #devBtn2{display:none;align-items:center;justify-content:center;
  width:42px;height:34px;background:rgba(23,20,29,.85);border:1px solid #7a4a1e;border-radius:8px;font-size:17px;}
 
-#potBtn{display:none;align-items:center;justify-content:center;
- min-width:58px;height:40px;padding:0 12px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;
- color:#d8d2c8;font-family:inherit;font-size:16px;white-space:nowrap;}
+/* THE FLASK SECTION. One plate, two halves divided by a hairline: the section is the frame (it
+   carries the ornate border below), the halves are flat and tinted to the orb each one refills --
+   #f0705a for HP, #6ab8e0 for MP, matching drawOrb in 09_sprites.js. An empty half dims rather
+   than disappearing, so the row never reflows mid-fight. */
+#flasks{display:none;align-items:stretch;background:rgba(23,20,29,.88);border-radius:10px;overflow:hidden;}
+#potBtn,#mpotBtn{display:flex;align-items:center;justify-content:center;
+ min-width:52px;height:40px;padding:0 10px;background:none;border:none;
+ font-family:inherit;font-size:15px;white-space:nowrap;}
+#potBtn{color:#f0705a;}
+#mpotBtn{color:#6ab8e0;border-left:1px solid rgba(138,106,52,.55);}
+#potBtn.empty,#mpotBtn.empty{opacity:.38;}
 
 /* ---------- permadeath (Lv20+) ---------- */
 #hcCard{background:#17141d;border:2px solid #7a2f24;border-radius:12px;padding:14px 18px;
@@ -499,7 +507,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  border:1px dashed #4a2a5c;border-radius:10px;margin-bottom:9px;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#potBtn,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{
+#menuBtn,#flasks,#invBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
@@ -594,7 +602,8 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #hudTop>*,#hudBot>*{pointer-events:auto;}
 #menuBtn{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(18px*var(--uis));}
 #devBtn2{width:calc(42px*var(--uis));height:calc(34px*var(--uis));font-size:calc(17px*var(--uis));}
-#potBtn{min-width:calc(58px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(12px*var(--uis));}
+#potBtn,#mpotBtn{min-width:calc(52px*var(--uis));height:calc(40px*var(--uis));
+ font-size:calc(15px*var(--uis));padding:0 calc(10px*var(--uis));}
 #invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #loadBtn,#skillBtn,#petBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #statsBtn{min-width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(7px*var(--uis));}

@@ -1,0 +1,44 @@
+Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
+RPG, plain numbered JS files, no build step.
+
+FIRST: read HANDOFF.md in the repo root. It has the full project state, how to work
+on this codebase, the QA traps that have already cost real time, everything that
+shipped last session, the ordered next steps, and two architectural walls not to
+build past. Then read the two memory files it names.
+
+WHERE WE ARE
+Last session shipped the complete loot rework and the economy migration — 12 commits,
+service worker now at emberrealm-v303:
+  - Fixed two live co-op bugs: clients could never loot (grant addressing never
+    matched, so pickups DESTROYED the item), and both boss branches minted duplicate
+    bags on every machine.
+  - Rarity stopped being power; tier is the only power axis.
+  - Loot tier now comes from WHERE you are (per-area tables), not from the level of
+    what you killed. Public gear caps at T8; everything above is soulbound.
+  - Bags hold typed slots and open into a panel with per-item TAKE / EQUIP / COMPARE.
+  - Tier is stamped into every item icon, in whichever corner the art left empty.
+  - 12 dungeon relics — 12% from the dungeon boss, 1.5% from its overworld form.
+  - Gold wiped entirely, selling removed with it. Glory is account-level and paid
+    only on permanent death, scored from what the run accomplished.
+  - Permadeath moved onto the bridge instead of a level.
+  - Potions refill themselves (1 per 48s, cap 5).
+  - Every item has a neutral glory value with a +/-50% listing band.
+  - Loot boosters became the premium tier; the Scroll of Plunder is deleted.
+  - Auction house shipped as a date-seeded house rotation.
+
+DO THIS FIRST
+Item 1 from HANDOFF.md's "Do this next, in order": wire the auctioneer NPC in the
+Hearth to openAuction(). That function works and is tested, but nothing calls it, so
+the auction house is currently unreachable in game. Deliberately the smallest
+self-contained step.
+
+HARD RULES
+- Bump CACHE in sw.js on every commit, serve on a fresh port to verify, and commit
+  AND push each change after fetching first (a collaborator shares the repo).
+- LEAVE THE BLACKSMITH ALONE. It is reserved for a future item-fusion system. Open
+  design work: invent the items fusion consumes and where they drop.
+- Do NOT build player-to-player auction listings — the peer-to-peer architecture
+  cannot host them honestly (no escrow, no persistence, editable client-side glory).
+- Do NOT attempt to collect real money for diamonds client-side.
+- Verify by driving the game, not by assuming. Report measurements. Say plainly if
+  something fails.

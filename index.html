@@ -75,6 +75,9 @@
   <div class="setNote" id="setPotNote">Auto potion is <b>not</b> responsible for keeping your hero alive.
    It drinks when you drop below the mark — it cannot outheal a boss, it does nothing at zero
    tonics, and a hit that takes you from above the mark to dead never triggers it. Watch your bar.</div>
+  <!-- the mana flask gets its own threshold and its own stored key. No warning under this one:
+       running dry costs you a cast, not your hero. -->
+  <div class="setRow tog" id="setMana"><span>Auto mana at</span><b>OFF</b></div>
  </div>
  <div class="mnote">saved on this device · applies to every hero</div>
  <div class="mnote bTag"></div>
@@ -133,7 +136,12 @@
   <!-- no shop button: a stall is opened from the prompt above the stall itself (07_update
        vendor detection -> portalPrompt kind 'vendor'), so the HUD does not carry one -->
   <button id="invBtn">🎒</button>
-  <button id="potBtn">🧪 0</button>
+  <!-- One flask SECTION, two halves: the tonic and the mana flask are separate stocks on separate
+       refill clocks, so they are separate counters. Tinted to match the orb each one refills. -->
+  <div id="flasks">
+   <button id="potBtn" title="Ember Tonic (Q)">🧪 0</button>
+   <button id="mpotBtn" title="Mana Flask (G)">🔷 0</button>
+  </div>
  </div>
  <button id="skillBtn">🌟</button>
  <button id="loadBtn">⚔️</button>
@@ -180,7 +188,7 @@
   <button class="mbtn dev" id="dMax">Max character</button>
   <button class="mbtn dev" id="dLvl">+10 levels</button>
   <button class="mbtn dev" id="dGold">+100k glory</button>
-  <button class="mbtn dev" id="dPots">+25 potions</button>
+  <button class="mbtn dev" id="dPots">+25 flasks</button>
   <button class="mbtn dev" id="dPerk">+20 perk pts</button>
   <button class="mbtn dev" id="dRefill">Refill HP/MP</button>
  </div>

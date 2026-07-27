@@ -718,8 +718,7 @@ function update(dt){
         msg('A PORTAL TEARS OPEN',GBOSS[de.ring].dn+' awaits'); }
       else if(curRoom.dungeon && de.boss){
         if(_sim){ const rt2=Math.min(11,Math.round((curRoom.lv||10)/4.2)+2);
-          for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2)));
-          loots.push(bagAt(de,{k:'pot'})); }
+          for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2))); }   // no tonic: flasks refill themselves
         groundPortals.push({x:de.x+TILE,y:de.y,ring:-1,life:600,home:true});
         if(typeof runNote==='function') runNote('dungeons');   // the biggest thing a run can do
         msg('THE CONSCIOUSNESS SHATTERS','its mind falls quiet — step through to return'); }

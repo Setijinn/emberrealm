@@ -34,7 +34,7 @@ const BOOT_MIN_SHOW = 350;        // don't flash the screen for one frame on a w
     'The bridge is the point of no return — cross it and death is permanent.',
     'Relics come out of the six deepest dungeons only, and never from an overworld boss.',
     'Four pieces of one relic set add a rule that none of the four carries alone.',
-    'Potions refill themselves. Nothing you can buy will ever keep you alive.',
+    'Both flasks refill themselves. Nothing you can buy will ever keep you alive.',
     'Where you farm decides what drops, not the level of the thing you killed.',
   ];
   if(tip) tip.textContent=TIPS[Math.floor(Math.random()*TIPS.length)];

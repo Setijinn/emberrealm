@@ -1,7 +1,7 @@
 // ---------- controls ----------
 // TOUCH: left half = move stick, right half = cast the armed ability at the tap.
 // PC (auto-detected): WASD/arrows move, click casts at the cursor, 1/2/3 cast slots,
-// E interact, Q potion, I equipment, K skills, L abilities, M map, Esc closes menus,
+// E interact, F take loot, Q tonic, G mana flask, I equipment, K skills, L abilities, M map, Esc closes menus,
 // Z/C rotate the camera view (hold, smooth), X snaps the view back to north.
 // inputMode follows the LAST input used, so hybrid devices switch seamlessly.
 let inputMode=(typeof matchMedia==='function' && matchMedia('(pointer:fine)').matches)?'pc':'touch';
@@ -100,7 +100,9 @@ addEventListener('keydown',e=>{
   // different mistakes to make: walking into a dungeon when you meant to open a sack costs a run.
   else if(k==='e'){ if(typeof portalPrompt!=='undefined' && portalPrompt && typeof usePortalPrompt==='function') usePortalPrompt(); }
   else if(k==='f'){ if(typeof lootPrompt!=='undefined' && lootPrompt && typeof useLootPrompt==='function') useLootPrompt(); }
+  // two flasks, two keys -- Q heals, G restores mana. Separate stocks, separate decisions.
   else if(k==='q'){ const b=document.getElementById('potBtn'); if(b) b.click(); }
+  else if(k==='g'){ const b=document.getElementById('mpotBtn'); if(b) b.click(); }
   else if(k==='i'||k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
   else if(k==='k'){ const b=document.getElementById('skillBtn'); if(b) b.click(); }
   else if(k==='l'){ const b=document.getElementById('loadBtn'); if(b) b.click(); }
