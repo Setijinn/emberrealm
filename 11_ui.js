@@ -121,7 +121,7 @@ const BAG_VERDICT={
 };
 function bagVerdict(it,ch){
   if(!it||!ch) return 'other';
-  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot') return 'other';
+  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot'||it.k==='egg') return 'other';
   if(!canEquip(it,ch)) return 'noclass';
   const cur=equippedItemFor(it.k,ch);
   if(!cur) return 'upgrade';                       // an empty slot is always worth filling
@@ -141,6 +141,8 @@ function bagDeltaHtml(it,ch){
   // a relic compares like any other item -- it is one -- but its trait is the part that decides
   // whether you want it, so that goes first and the stat deltas follow underneath
   if(!it||it.k==='pot'||it.k==='coin'||it.k==='scroll') return '';
+  if(it.k==='egg'){ const n=[24,44,72][it.cond||0]||24;
+    return '<span class="bagSame">incubates over '+n+' kills</span>'; }
   if(!canEquip(it,ch)) return '';   // the verdict chip already says OTHER CLASS -- do not say it twice
   let head='';
   if(it.relic){ const R=relicDef(it.relic);
@@ -659,7 +661,7 @@ function rollAffixes(it,fortune){ it.rar=rollRarity(it.t,fortune); it.aff=[];
  return it; }
 function affStats(aff){ const s=newStats(); if(aff) for(const a of aff) s[a.s]=(s[a.s]||0)+a.v; return s; }
 // full stat block an item contributes (base + its own affixes)
-function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll') return newStats();
+function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll'||it.k==='egg') return newStats();
  if(it.k==='coin') return newStats();   // coins boost via the carried total, not per-item
  let base;
  if(it.k==='wpn') base=gearBaseStats('wpn',it.t);
@@ -683,6 +685,9 @@ function itemBaseName(it){
  if(it.k==='coin')return (COIN_NAMES[it.t||0])+' Fortune Coin';
  return p; }
 function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
+ if(it.k==='egg'){ const C=(typeof PET_CATS!=='undefined')?PET_CATS[it.cat]:null;
+  const r=(typeof PET_RAR_NAME!=='undefined')?PET_RAR_NAME[it.cond||0]:'';
+  return (C?C.name:'Pet')+' Egg'+(r?' \u00b7 '+r:''); }
  if(it.k==='scroll')return (typeof scrollName==='function')?scrollName(it.st):'Scroll';
  if(it.k==='leg'){ const L=legById(it.id); return '★ '+(L?L.n:'Relic'); }
  // a relic wears its own name -- it is one specific object, not a roll off a table
@@ -693,7 +698,7 @@ function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
 function itemRarCol(it){ if(it&&(it.k==='leg'||it.relic)) return tierCol(RELIC_T);  // relics have their own colour
  return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
 // a relic is equipped from the loadout screen (it owns the wpnL/armL slot), not from a bag row
-function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg')return false;
+function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg'||it.k==='egg')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
@@ -710,6 +715,7 @@ const GLORY_KIND={wpn:1.0, arm:1.0, helm:0.78, ring:0.82};
 const GLORY_SPREAD=0.5;                       // a listing may sit +/- 50% of neutral
 function itemGlory(it){
   if(!it) return 0;
+  if(it.k==='egg')    return 30;
   if(it.k==='pot')    return 6;
   if(it.k==='scroll') return 45;
   // LOOT BOOSTERS ARE THE MOST VALUABLE THINGS IN THE GAME (user, 2026-07-26). A Fortune Coin
@@ -864,6 +870,8 @@ function bagBound(lb){ return !!bagBandRec(lb).bound; }
 // lone consumable still vacuums up as you walk over it, because stopping to read a panel about one
 // tonic is worse than not having the panel. Public gear used to auto-collect too, which meant the
 // bag UI existed but most players never saw it.
+// An EGG is deliberately NOT junk: it is the rarest thing a normal kill can pay out, and it
+// deserves the panel, the name and the picture rather than vanishing into a counter as you jog by.
 function bagAuto(lb){ const its=bagItems(lb); if(!its.length) return true;
  const junk=it=>it&&(it.k==='coin'||it.k==='scroll');   // 'pot' dropped: potions no longer spawn
  return its.length===1 && junk(its[0]); }
@@ -895,6 +903,9 @@ function awardItem(it,x,y){
     texts.push({x:px,y:py-14,txt:'+Fortune Coin',col:'#ffd07a',life:1.2}); return true; }
   if(it.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG();
     texts.push({x:px,y:py-14,txt:'+Tonic',col:'#7dc47a',life:1}); return true; }
+  // an egg goes straight to the incubator: it is not gear and must never eat a satchel slot
+  if(it.k==='egg'){ if(typeof giveEgg==='function') giveEgg(it.cond||0,it.cat);
+    texts.push({x:px,y:py-14,txt:'+Pet Egg',col:'#ffd07a',life:1.6}); return true; }
   // the OLD relic form (k:'leg'), kept only so a sack minted before relics became real items still
   // hands you something. It converts on the spot into the item the relic is now.
   if(it.k==='leg'){ const R=relicDef(it.id); if(!R) return true;
@@ -1059,7 +1070,10 @@ function rollLoot(e){
  if(Math.random() < (e.type==='B'?0.10:0.006)) extra.push({k:'coin'});
  if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) extra.push(sc); }  // max-stat scrolls
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
- if(e.type==='B' && typeof spawnEggDrop==='function') spawnEggDrop(e);   // loose EGG, not a bag
+ // a pet egg rides in the SAME sack as the gear now. It used to spawn beside it as a loose
+ // object with its own drift timer, which quietly broke one-sack-per-kill: a boss left a sack
+ // AND an egg, which is the carpeted floor that rule exists to prevent.
+ if(typeof eggDropFor==='function'){ const eg=eggDropFor(e); if(eg) extra.push(eg); }
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
  // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
  // bandOfTier(bagTopTier) already decides, so a relic in the sack makes it a reliquary by itself.

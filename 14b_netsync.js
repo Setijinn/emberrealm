@@ -140,7 +140,10 @@ function netBroadcast(){
     try{ c.send(m); }catch(err){} }
 }
 // bag -> one int: rarity(3) | band(2) | count(3) | topTier(4) | kind of the headline piece(3)
-const NKIND=['wpn','arm','helm','ring','pot','coin','scroll'];
+// 3 bits, so 8 slots. 'pot' stays at 4 even though potions no longer drop -- the index is packed
+// into the bag word and re-numbering would make a peer on an older build read every coin as a
+// tonic. 'egg' takes the one free slot rather than displacing anything.
+const NKIND=['wpn','arm','helm','ring','pot','coin','scroll','egg'];
 function netPackBag(b){
   const its=(typeof bagItems==='function')?bagItems(b):(b.item?[b.item]:[]);
   const head=its[0]||{};

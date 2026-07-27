@@ -78,12 +78,28 @@ function eggCondForLevel(lv){ let c = lv>=40?2 : lv>=20?1 : 0;
 // returns an egg loot item {k:'egg',cond,cat} or null. Bosses only, rare.
 // Eggs DROP AS LOOSE EGGS on the ground (NOT loot bags): their own drift list, auto-collected on
 // walk-over, drawn as the themed egg sprite with a soft category-coloured glow.
-const EGG_DROP_CHANCE = 0.16;
+// EGGS ARE PART OF THE DROP SYSTEM (user, 2026-07-27). They used to be their own parallel object
+// list: a loose egg that spawned beside the sack, drifted on its own timer and vacuumed up on
+// walk-over. That predates the one-sack-per-kill rule and quietly broke it — a boss left a sack
+// AND an egg, which is exactly the "floor carpeted with things" the rule exists to prevent. An egg
+// is an item now: it rides in the sack with the gear, shows up in the panel with a name and a
+// picture, and is taken like anything else.
+//
+// It also drops from more than bosses now. Boss-only made eggs a thing you could go a whole
+// session without seeing unless you specifically farmed lairs; elites carry a small chance so pets
+// are part of ordinary play.
+const EGG_P={B:0.16, s:0.012, c:0.0, N:0.0};   // by enemy type: boss / elite / chaser / node
+// Rolls an egg ITEM for this kill, or null. Called from rollLoot's `extra` list, so it lands in
+// the same sack as everything else that kill paid out.
+function eggDropFor(e){
+  if(!e) return null;
+  const p=EGG_P[e.type]||0; if(p<=0 || Math.random()>=p) return null;
+  const cat=PET_CAT_KEYS[(Math.random()*PET_CAT_KEYS.length)|0];
+  return {k:'egg', cond:eggCondForLevel(e.lv||1), cat:cat};
+}
+// The old loose-egg list. Kept ONLY so an egg already lying on the ground from a pre-change
+// session still resolves rather than vanishing; nothing pushes to it any more.
 let petEggDrops = [];
-function spawnEggDrop(e){ if(!e||e.type!=='B') return; if(Math.random()>=EGG_DROP_CHANCE) return;
-  const cat=PET_CAT_KEYS[(Math.random()*PET_CAT_KEYS.length)|0], cond=eggCondForLevel(e.lv||1);
-  petEggDrops.push({x:e.x,y:e.y,cond,cat,life:200});
-  if(typeof msg==='function') msg('🥚 A pet egg dropped!', (PET_CATS[cat]?PET_CATS[cat].name:'')+' · '+PET_RAR_NAME[cond]+' condition'); }
 function updateEggDrops(dt){ if(!petEggDrops.length) return;
   for(let i=petEggDrops.length-1;i>=0;i--){ const d=petEggDrops[i]; d.life-=dt;
     if(d.life<=0){ petEggDrops.splice(i,1); continue; }
