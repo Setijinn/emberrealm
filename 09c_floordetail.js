@@ -53,6 +53,49 @@ const FD_FAMILY={
     {n:16, w:2, h:1, col:'26,40,18',    a:0.24},
     {n:10, w:1, h:4, col:'34,52,24',    a:0.30}],
     cracks:0 },
+  // WILD GRASS -- the overworld's own, and NOT the Hearth's. The Hearth lawn is a mossy green and
+  // its blades are dark for contrast; the overworld band colour is a dry khaki, and putting dark
+  // blades on khaki reads as dirt rather than grass. This set is built the other way round:
+  // mostly LIGHTER than its ground, with only enough dark to give a blade an edge. Fewer marks,
+  // bigger, so it reads as growth at a glance instead of as fine speckle.
+  // FEWER, BIGGER, LOUDER. At 44px a tile, dense 1px marks stop being blades and become static --
+  // judged at real game scale, not zoomed in, which is the only scale that matters. A third as
+  // many marks, each taller and higher-contrast, so a clump reads as a tuft of grass instead of
+  // as noise, with visible gaps of bare ground between them.
+  wildgrass:{ marks:[
+    {n:12, w:1, h:6, col:'196,210,128', a:0.46},   // tall blades - few, and clearly blades
+    {n:10, w:1, h:5, col:'216,226,158', a:0.40},   // bright tips
+    {n:9,  w:2, h:3, col:'168,186,108', a:0.34},   // tufts
+    {n:8,  w:1, h:4, col:'86,102,52',   a:0.38},   // the shaded side of a blade
+    {n:5,  w:2, h:2, col:'228,234,186', a:0.30}],  // seed heads
+    cracks:0 },
+  // THE REST OF THE REALM (user: "make sure it applies to all terrains throughout the whole
+  // realm"). 'g' is only a fraction of the ground -- rock, dry earth and ember flats are most of
+  // what you actually walk on -- and they were getting the Hearth's dark-on-light stamps, which is
+  // the same mistake wildgrass fixed. Every one of these is built LIGHT-first for a khaki world,
+  // with just enough dark to define an edge.
+  wilddirt:{ marks:[                                  // dry cracked earth
+    // The first version of this was near-invisible next to wildrock and wildgrass -- it needed
+    // real pebbles and real contrast, not a wash. Dirt should read as GRAINY.
+    {n:44, w:2, h:1, col:'206,194,152', a:0.30},
+    {n:34, w:1, h:1, col:'228,218,178', a:0.28},
+    {n:24, w:2, h:2, col:'164,150,112', a:0.26},
+    {n:20, w:2, h:2, col:'120,104,72',  a:0.26},      // pebbles, big enough to see
+    {n:16, w:1, h:1, col:'74,62,42',    a:0.30},      // pits
+    {n:10, w:3, h:1, col:'186,172,132', a:0.22}],
+    cracks:4 },
+  wildrock:{ marks:[                                  // scree and bare stone
+    {n:30, w:2, h:2, col:'196,196,196', a:0.20},      // chipped faces catching light
+    {n:24, w:1, h:1, col:'224,224,220', a:0.22},
+    {n:20, w:3, h:1, col:'150,150,154', a:0.18},
+    {n:16, w:1, h:2, col:'70,70,76',    a:0.22}],     // the shadowed side of a chip
+    cracks:3 },
+  wildash:{ marks:[                                   // burnt flats near the rift
+    {n:34, w:1, h:1, col:'70,62,58',    a:0.26},
+    {n:22, w:2, h:1, col:'188,178,170', a:0.16},
+    {n:10, w:1, h:1, col:'255,150,70',  a:0.30},      // live embers
+    {n:6,  w:2, h:2, col:'40,34,32',    a:0.24}],
+    cracks:2 },
   // dungeon stone: wetter, darker, more pitting
   crypt:{ marks:[
     {n:44, w:1, h:1, col:'0,0,0',       a:0.22},

@@ -712,19 +712,23 @@ function drawTileG(x,y){
     // the flat fill up first -- a single fill across a whole zone is what made the ground read as
     // a backdrop -- then the stamp library adds grain, and grass tiles get blades and flowers.
     {
-      const n1=Math.sin(x*0.61+y*0.27)+Math.sin(x*0.16-y*0.72);
-      const n2=Math.sin(x*1.83-y*1.24)+Math.sin(x*2.41+y*1.97);
-      const v=n1*0.32+n2*0.14;
-      ctx.fillStyle=(v>0)?'rgba(255,244,214,'+(v*0.045).toFixed(3)+')'
-                         :'rgba(0,0,0,'+((-v)*0.055).toFixed(3)+')';
+      // RESTRAINT. The first pass stacked three noise layers -- large value noise, a quarter-tile
+      // wash and full-strength stamps -- on top of a khaki band colour, and three kinds of noise
+      // at once is not texture, it is mud. One soft octave for large-scale variation, and the
+      // stamps at roughly a third strength so they read as grain rather than dirt. The quarter-
+      // tile wash is gone entirely: it was the blotchy part.
+      const v=Math.sin(x*0.29+y*0.17)+Math.sin(x*0.11-y*0.34);
+      ctx.fillStyle=(v>0)?'rgba(255,246,220,'+(v*0.016).toFixed(3)+')'
+                         :'rgba(0,0,0,'+((-v)*0.022).toFixed(3)+')';
       ctx.fillRect(tx,ty,TILE,TILE);
-      for(let qy=0;qy<2;qy++)for(let qx=0;qx<2;qx++){
-        const q=hmix(x*2+qx,y*2+qy)>>>0;
-        if((q&7)<3){ ctx.fillStyle=((q&1)?'rgba(0,0,0,0.055)':'rgba(255,240,200,0.035)');
-          ctx.fillRect(tx+qx*TILE/2,ty+qy*TILE/2,TILE/2,TILE/2); } }
       if(typeof drawFloorDetail==='function'){
-        const fam=(c==='g')?'grass':(c==='r')?'stone':(c==='e')?'ash':'dirt';
-        drawFloorDetail(fam,tx,ty,x,y,(c==='g')?0.85:0.7);
+        // 'wildgrass', not the Hearth's 'grass': light blades for a dry khaki ground rather than
+        // dark ones for mossy green. Carried at a real strength now that the marks belong to the
+        // palette -- the earlier mud came from the wrong stamps, not from too much of them.
+        // every walkable terrain char in the realm gets its own tuned family, at a strength that
+        // actually reads -- 'g' is a small minority of the ground out here
+        const fam=(c==='g')?'wildgrass':(c==='r')?'wildrock':(c==='e')?'wildash':'wilddirt';
+        drawFloorDetail(fam,tx,ty,x,y,0.85);
       }
     }
     // terrain features layered on the band tint

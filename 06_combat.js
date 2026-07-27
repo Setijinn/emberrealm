@@ -197,9 +197,23 @@ function fire(dt){
     // auto-aim range cap: only engage targets the weapon can actually reach (+15% grace)
     const _psp=(wt.spd||520)*(player.projSpd||1);
     const wRange=_psp*(wt.life||1)*1.15;
+    // TARGETING MODE (user, 2026-07-27) decides WHICH reachable enemy wins, not whether to
+    // auto-aim at all. Range and line-of-sight are still absolute: a mode can only ever reorder
+    // the targets you could already hit, never let you shoot through a wall or past your reach.
     let best=null, bd=1e9;
-    for(const e of enemies){ const d=Math.hypot(e.x-ref.x,e.y-ref.y);
-      if(d<bd && Math.hypot(e.x-player.x,e.y-player.y)<=wRange && los(player.x,player.y,e.x,e.y)){bd=d;best=e;} }
+    const _mode=(typeof targetMode==='function')?targetMode():'near';
+    for(const e of enemies){
+      if(e.node) continue;                                   // objective nodes are not targets
+      if(Math.hypot(e.x-player.x,e.y-player.y)>wRange) continue;
+      if(!los(player.x,player.y,e.x,e.y)) continue;
+      // every mode scores LOWER = better, so one comparison serves them all
+      let score;
+      if(_mode==='hp')        score=-(e.hp||0);              // highest HP first
+      else if(_mode==='low')  score=(e.hp||0);               // finish the wounded
+      else if(_mode==='boss') score=(e.boss?0:1e6)+Math.hypot(e.x-ref.x,e.y-ref.y);
+      else                    score=Math.hypot(e.x-ref.x,e.y-ref.y);
+      if(score<bd){ bd=score; best=e; }
+    }
     // lead the target: aim where it WILL be when the shot arrives, not where it is now
     if(best){ const p=aimPoint(best,_psp,wt.life||1);
       ang=Math.atan2(p.y-player.y,p.x-player.x); }
