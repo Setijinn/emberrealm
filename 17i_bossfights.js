@@ -839,13 +839,97 @@ _F('dn11',{ phases:[0.70,0.42,0.16], anchor:[false,false,true,true],
 // THE ARENA CHAMPION — the 25th. A wave mode's boss should test what the waves taught you, so
 // it has no puzzle: it is a pressure check that reads the arena's own escalation.
 // ===================================================================================
+// ===================================================================================
+// THE ARENA CHAMPION -- THE CHALLENGE.  The one fight that punishes you for dodging.
+//
+// It had no mechanic of its own: a circle under your feet and some adds, which is every other
+// fight's opening move and nothing else. A champion in a proving ground should not fight like a
+// monster in a field, and the arena is the one place in the game where the fight is a DUEL rather
+// than a hunt.
+//
+// So it inverts the single instinct all twenty-four other fights have trained. It plants, raises
+// its guard, and calls you out: a wedge in front of it turns gold, and everything OUTSIDE that
+// wedge becomes the dangerous ground. You have to walk INTO its face and be standing there when it
+// swings. Meet it and you parry -- it staggers, and that stagger is the only sustained damage
+// window the fight gives you. Run, and it hits the whole floor.
+//
+// Every escalation tightens the same idea rather than adding a second one: the wedge narrows, the
+// telegraph shortens, and the miss hurts more.
+// ===================================================================================
+const ARENA_CHAL_CD = 6.4;    // seconds between challenges
+const ARENA_STAGGER = 2.8;    // free damage window a parry buys you
 _F('arena',{ phases:[0.60,0.30], titles:['','CHAMPION RISES','LAST STAND'],
-  tick(e,dt,ph,eng){ mechTickCommon(e,dt); if(!eng) return;
+  tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng){ M.chal=0; M.stag=0; return; }
     const P=bossPace(e);
-    if(mechEvery(e,'t',2.8,dt)){ _sig(e,'roar');
+
+    // STAGGERED: it has been parried and is wide open. It does nothing at all -- no challenge, no
+    // hazards, no adds -- because a reward you have to keep dodging through is not a reward.
+    if(M.stag>0){ M.stag-=dt; e.flash=Math.max(e.flash||0,0.12); return; }
+
+    // the wedge narrows and the window shortens as it goes
+    const wedge = (0.62-ph*0.11);              // half-angle, radians
+    const tele  = (1.25-ph*0.22)*P.tele;       // how long the gold wedge is up before it swings
+
+    if(M.chal>0){
+      M.chal-=dt;
+      if(M.chal<=0){
+        const p=_pxy(), d=Math.hypot(p.x-e.x,p.y-e.y);
+        const a=Math.atan2(p.y-e.y,p.x-e.x);
+        let da=Math.abs(((a-M.chalA+Math.PI*3)%(Math.PI*2))-Math.PI);
+        const met = (da<=wedge && d<=TILE*4.2);
+        if(met){
+          // PARRIED. It over-commits and eats the floor.
+          M.stag=ARENA_STAGGER*P.cycle;
+          _sig(e,'break');
+          if(typeof addShake==='function') addShake(10);
+          if(typeof msg==='function') msg('PARRIED','it is wide open');
+        } else {
+          // you ran. The blow lands on everything that is not where you should have been.
+          _sig(e,'roar');
+          if(typeof addShake==='function') addShake(16);
+          _hurt(mechDmg(e,0.55+ph*0.14));
+          if(typeof playerStatus==='function') playerStatus('stun',0.35+ph*0.08,0);
+          if(typeof eFire==='function'){ const n=10+ph*4;
+            for(let i=0;i<n;i++) eFire(e,(i/n)*6.283+e.ang,225*P.speed); }
+          if(typeof msg==='function') msg('YOU GAVE GROUND','meet it next time');
+        }
+      }
+    } else if(mechEvery(e,'t',ARENA_CHAL_CD,dt)){
+      // commit to a DIRECTION now, not at resolve -- a wedge that tracks you is not a challenge,
+      // it is a laser, and you could never fail it or read it
       const p=_pxy();
-      hazAdd(e,p.x,p.y,{r:TILE*1.35,tele:1.0,live:3.5,dmg:0.5,col:'#e2604c'}); }
-    if(ph>=1 && mechEvery(e,'t2',6.0,dt)) mechAdds(e,2,'champ',{hp:0.6});
+      M.chalA=Math.atan2(p.y-e.y,p.x-e.x);
+      M.chal=tele; M.chalW=wedge;
+      _sig(e,'tell');
+      if(typeof msg==='function') msg('IT CALLS YOU OUT','stand in the gold');
+    }
+
+    // it still fights between challenges, but lightly -- the challenge is the fight
+    if(mechEvery(e,'t2',3.2,dt) && M.chal<=0){ const p=_pxy();
+      hazAdd(e,p.x,p.y,{r:TILE*1.2,tele:1.0,live:2.5,dmg:0.34,col:'#e2604c'}); }
+    if(ph>=1 && mechEvery(e,'t3',7.5,dt)) mechAdds(e,1+ph,'champ',{hp:0.6});
   },
   trigger(e,ph){ _sig(e,'roar'); },
-  draw(e){ mechDrawCommon(e); } });
+  draw(e){ mechDrawCommon(e);
+    const M=e.mk; if(!M) return;
+    if(M.stag>0){
+      // the open window, drawn so it is unmistakable from across the arena
+      const k=0.5+0.5*Math.sin(performance.now()/90);
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.30+0.25*k;
+      ctx.strokeStyle='#ffd07a'; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.arc(e.x,e.y,e.r*1.5,0,6.29); ctx.stroke(); ctx.restore();
+      return;
+    }
+    if(M.chal>0){
+      const w=M.chalW||0.6, R=TILE*4.2;
+      const k=1-Math.max(0,Math.min(1,M.chal/1.3));     // fills as the swing approaches
+      ctx.save();
+      ctx.globalAlpha=0.16+0.20*k;
+      ctx.fillStyle='#ffd07a';
+      ctx.beginPath(); ctx.moveTo(e.x,e.y);
+      ctx.arc(e.x,e.y,R,M.chalA-w,M.chalA+w); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=0.55+0.35*k; ctx.strokeStyle='#ffe8aa'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(e.x,e.y);
+      ctx.arc(e.x,e.y,R,M.chalA-w,M.chalA+w); ctx.closePath(); ctx.stroke();
+      ctx.restore();
+    } } });
