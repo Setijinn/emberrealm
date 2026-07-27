@@ -21,6 +21,14 @@ let _miniCache = null;
 // sets the hue -- a zone has to stay recognisable at a glance -- and each terrain character shifts
 // it toward its own material, so coastline, grassland, scree, ash flats and the forest all have
 // distinct shapes on the map. Mixed in the cache, so it costs nothing per frame.
+// ---- TERRAIN PALETTES ----
+// The map exists for every INSTANCE now (user, 2026-07-27: "make mini maps for every instance"),
+// and the four kinds of place do not share a vocabulary. The same character means different things
+// in different rooms -- 'W' is a wall in the Hearth and the VOID outside the corridors in a
+// dungeon -- so the palette is chosen by what kind of room you are standing in, not globally.
+
+// OVERWORLD: the zone ramp sets the hue (a zone has to stay recognisable at a glance) and the
+// terrain character shifts it toward its own material.
 const MINI_TERR = {
   g:{c:[ 96,142, 70], k:0.50},   // grassland
   d:{c:[124,104, 72], k:0.42},   // dirt / open ground
@@ -32,37 +40,68 @@ const MINI_TERR = {
   F:{c:[110, 96,112], k:0.55},   // a lair's own floor
   X:{c:[ 30, 26, 34], k:0.80}    // wall / cliff
 };
+// TOWN and the service rooms: flat, warm, legible. No zones here to colour by.
+const MINI_TOWN = {
+  f:'#6b5a44', p:'#8a7454', g:'#4e7340', w:'#255070',
+  h:'#8a6a46', H:'#a07c50', l:'#d8b45c', W:'#241f28', '.':'#c2a06a'
+};
+// The plain corridor rooms: floor and wall, nothing else to say.
+const MINI_PLAIN = { '.':'#6a6153', W:'#241f28', f:'#6a6153', p:'#8a7454' };
+// DUNGEON: 'W' is not a wall, it is the void outside the dream. Corridors read cooler than
+// chambers so the shape of the place is readable rather than one undifferentiated blob.
+const MINI_DUN = { W:'#0a0812', D:'#e0a04a', '.':'#8b7c99', p:'#6b6184', f:'#8b7c99' };
+
+function _miniClass(R){
+  if(!R) return 'plain';
+  if(R.rings) return 'over';
+  if(R.dungeon) return 'dun';
+  if(R.town || R.key==='VAULT' || R.key==='GUILD' || R.key==='COSMETICS' || R.key==='ARENA') return 'town';
+  return 'plain';
+}
 function _miniMix(hex,rgb,k){
   const h=hex.replace('#',''),
         r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
   return 'rgb('+Math.round(r+(rgb[0]-r)*k)+','+Math.round(g+(rgb[1]-g)*k)+','+Math.round(b+(rgb[2]-b)*k)+')';
 }
-// The whole world rendered once at low resolution. The minimap then blits the sub-rect it needs,
-// so panning and zooming cost one drawImage instead of re-rasterising terrain every frame.
-function miniTerrain(G){
-  const key=G.w+'x'+G.h+':d2';
+// A dungeon is a NEW PLACE every time it is generated, so it needs an identity of its own or the
+// cache and the fog from the last one bleed into it. genDungeon builds a fresh object, so a lazy
+// id on the room is enough -- a regenerated dungeon simply has none yet.
+let _mapSeq=0;
+function _miniId(R){ if(!R._mapId) R._mapId=(R.key||'?')+':'+(++_mapSeq); return R._mapId; }
+
+// The room rendered once at low resolution. The minimap then blits the sub-rect it needs, so
+// panning and zooming cost one drawImage instead of re-rasterising terrain every frame.
+// Scale is chosen from the room's SIZE: at a fixed 0.62 px/tile a 42-tile Hearth is a 26px
+// thumbnail, which is not a map of anything.
+function miniTerrain(R){
+  const key=_miniId(R)+':'+R.w+'x'+R.h;
   if(_miniCache && _miniCache.key===key) return _miniCache.cv;
-  // Detail lives or dies on this scale: at 0.34 px per tile a forest and a shoreline are the same
-  // smudge. 0.62 doubles the linear resolution (a 1160x720 world is a 719x446 cache, ~1.3MB) and
-  // is what makes the terrain tints legible at all.
-  const s=0.62;                                     // world tiles -> cache pixels
+  const s=Math.min(8, Math.max(0.62, 760/Math.max(R.w,R.h)));
   const cv=document.createElement('canvas');
-  cv.width=Math.max(1,Math.round(G.w*s)); cv.height=Math.max(1,Math.round(G.h*s));
+  cv.width=Math.max(1,Math.round(R.w*s)); cv.height=Math.max(1,Math.round(R.h*s));
   const c=cv.getContext('2d');
-  c.fillStyle='#0b0a10'; c.fillRect(0,0,cv.width,cv.height);
-  const T=(typeof _territories==='function')?_territories(G):null;
-  const zg=G.rings&&G.rings._zg;
-  const step=Math.max(1,Math.ceil(Math.sqrt((G.w*G.h)/420000)));
+  const cls=_miniClass(R);
+  c.fillStyle=(cls==='dun')?'#07060e':'#0b0a10'; c.fillRect(0,0,cv.width,cv.height);
+  const T=(cls==='over'&&typeof _territories==='function')?_territories(R):null;
+  const zg=R.rings&&R.rings._zg;
+  const step=Math.max(1,Math.ceil(Math.sqrt((R.w*R.h)/420000)));
   const bs=s*step+0.7;
   const OCEAN=(typeof MAP_OCEAN!=='undefined')?MAP_OCEAN:'#16324a';
-  for(let ty=0;ty<G.h;ty+=step){ const row=G.grid[ty]; if(!row) continue;
-    for(let tx=0;tx<G.w;tx+=step){ const ch=row[tx]; if(ch==null) continue;
+  const FLAT=(cls==='town')?MINI_TOWN:(cls==='dun')?MINI_DUN:MINI_PLAIN;
+  for(let ty=0;ty<R.h;ty+=step){ const row=R.grid[ty]; if(!row) continue;
+    for(let tx=0;tx<R.w;tx+=step){ const ch=row[tx]; if(ch==null) continue;
       const px=tx*s, py=ty*s;
+      if(cls!=='over'){ const col=FLAT[ch]; if(!col) continue;
+        c.fillStyle=col; c.fillRect(px,py,bs,bs);
+        // the same value noise the overworld gets, so a big flat floor is not dead colour
+        if(((tx*7+ty*13)&7)===0){ c.fillStyle='rgba(0,0,0,0.12)'; c.fillRect(px,py,bs,bs); }
+        else if(((tx*5+ty*11)&7)===0){ c.fillStyle='rgba(255,250,235,0.06)'; c.fillRect(px,py,bs,bs); }
+        continue; }
       if(ch==='w'){
         // shallows read lighter than deep water, so the coastline is a shape and not a hard edge
         const nearLand=(row[tx-1]&&row[tx-1]!=='w')||(row[tx+1]&&row[tx+1]!=='w')||
-                       (G.grid[ty-1]&&G.grid[ty-1][tx]&&G.grid[ty-1][tx]!=='w')||
-                       (G.grid[ty+1]&&G.grid[ty+1][tx]&&G.grid[ty+1][tx]!=='w');
+                       (R.grid[ty-1]&&R.grid[ty-1][tx]&&R.grid[ty-1][tx]!=='w')||
+                       (R.grid[ty+1]&&R.grid[ty+1][tx]&&R.grid[ty+1][tx]!=='w');
         c.fillStyle=nearLand?'#255070':OCEAN; c.fillRect(px,py,bs,bs); continue; }
       if(ch==='b'){ c.fillStyle=(typeof MAP_BRIDGE!=='undefined')?MAP_BRIDGE:'#6b5a3e'; c.fillRect(px,py,bs,bs); continue; }
       const zr=zg&&zg[ty], zi=(zr&&tx<zr.length)?zr[tx]:-1;
@@ -71,7 +110,6 @@ function miniTerrain(G){
       const M=MINI_TERR[ch];
       c.fillStyle=M?_miniMix(base,M.c,M.k):base;
       c.fillRect(px,py,bs,bs);
-      // a little value noise so large flats are not dead colour at high zoom
       if(((tx*7+ty*13)&7)===0){ c.fillStyle='rgba(0,0,0,0.10)'; c.fillRect(px,py,bs,bs); }
       else if(((tx*5+ty*11)&7)===0){ c.fillStyle='rgba(255,250,235,0.07)'; c.fillRect(px,py,bs,bs); } } }
   _miniCache={key:key,cv:cv,s:s};
@@ -86,29 +124,39 @@ function miniTerrain(G){
 const FOG_REVEAL_TILES = 22;
 let _fogCv=null, _fogCtx=null, _fogKey=null, _fogDirty=0, _fogSaveT=0;
 
-function _fogSlot(){
+function _fogSlot(R){
   const ch=(typeof curChar==='function')?curChar():null;
-  const u=(typeof curUser==='function')?curUser():null;
-  return 'er-fog:'+((u&&u.name)||'u')+':'+((ch&&ch.name)||'c');
+  const u=(typeof curUser!=='undefined')?curUser:null;
+  return 'er-fog:'+((u&&u.name)||u||'u')+':'+((ch&&ch.name)||'c')+':'+((R&&R.key)||'G');
 }
-function fogInit(G){
-  const key=G.w+'x'+G.h+':'+_fogSlot();
+// Only the OVERWORLD's exploration is worth keeping: it is one persistent place you map over many
+// runs. A dungeon is a new layout every time, so remembering the last one's fog would uncover a
+// map that does not match the walls -- worse than no map. The Hearth and the service rooms are
+// places you live in; they start fully revealed and never fog at all.
+function _fogPersist(R){ return !!(R && R.rings); }
+function _fogUsed(R){ return !!(R && (R.rings || R.dungeon)); }
+function fogInit(R){
+  const key=_miniId(R)+':'+_fogSlot(R);
   if(_fogCv && _fogKey===key) return;
-  const cv=miniTerrain(G);
+  const cv=miniTerrain(R);
   _fogCv=document.createElement('canvas'); _fogCv.width=cv.width; _fogCv.height=cv.height;
   _fogCtx=_fogCv.getContext('2d');
-  _fogCtx.fillStyle='#05050a'; _fogCtx.fillRect(0,0,_fogCv.width,_fogCv.height);
+  if(_fogUsed(R)){ _fogCtx.fillStyle=(R.dungeon?'#06050c':'#05050a'); _fogCtx.fillRect(0,0,_fogCv.width,_fogCv.height); }
   _fogKey=key;
-  try{ const s=localStorage.getItem(_fogSlot());
-    if(s){ const im=new Image();
+  if(!_fogPersist(R)) return;
+  try{ const st=localStorage.getItem(_fogSlot(R));
+    if(st){ const im=new Image();
       im.onload=()=>{ if(_fogCtx){ _fogCtx.globalCompositeOperation='copy';
         _fogCtx.drawImage(im,0,0,_fogCv.width,_fogCv.height);
         _fogCtx.globalCompositeOperation='source-over'; } };
-      im.src=s; } }catch(e){}
+      im.src=st; } }catch(e){}
 }
-function fogReveal(G,dt){
-  if(!_fogCtx) return;
-  const s=_miniCache.s, r=FOG_REVEAL_TILES*s;
+function fogReveal(R,dt){
+  if(!_fogCtx || !_fogUsed(R)) return;
+  const s=_miniCache.s;
+  // a dungeon corridor is a couple of tiles wide, so the overworld's 22-tile disc would light the
+  // whole floor from the door. Reveal scales with the place.
+  const r=(R.dungeon?9:FOG_REVEAL_TILES)*s;
   const px=(player.x/TILE)*s, py=(player.y/TILE)*s;
   _fogCtx.save();
   _fogCtx.globalCompositeOperation='destination-out';
@@ -118,14 +166,15 @@ function fogReveal(G,dt){
   _fogCtx.fillStyle=g;
   _fogCtx.beginPath(); _fogCtx.arc(px,py,r,0,6.29); _fogCtx.fill();
   _fogCtx.restore();
+  if(!_fogPersist(R)) return;
   _fogDirty=1;
   _fogSaveT-=dt||0.016;
   if(_fogDirty && _fogSaveT<=0){ _fogSaveT=6;      // throttled: a dataURL every frame would stutter
-    try{ localStorage.setItem(_fogSlot(), _fogCv.toDataURL('image/png')); _fogDirty=0; }catch(e){}
+    try{ localStorage.setItem(_fogSlot(R), _fogCv.toDataURL('image/png')); _fogDirty=0; }catch(e){}
   }
 }
-function fogSeen(G,wx,wy){
-  if(!_fogCtx) return true;
+function fogSeen(R,wx,wy){
+  if(!_fogCtx || !_fogUsed(R)) return true;
   const s=_miniCache.s;
   const x=Math.round((wx/TILE)*s), y=Math.round((wy/TILE)*s);
   if(x<0||y<0||x>=_fogCv.width||y>=_fogCv.height) return false;
@@ -159,13 +208,27 @@ function miniHit(mx,my){
 function miniZoomIn(){ miniZoom=Math.max(0,miniZoom-1); }
 function miniZoomOut(){ miniZoom=Math.min(MINI_ZOOMS.length-1,miniZoom+1); }
 
+// Half-window in TILES for the room you are in. A 42-tile Hearth at the overworld's 26-tile zoom
+// would be mostly black void around a small town, so the window is clamped to the room and its
+// centre is clamped to keep it inside -- a small room simply shows all of itself.
+function miniWindow(R){
+  let half=MINI_ZOOMS[miniZoom];
+  // The panel is SQUARE and the rooms are not. Capping only at the long axis let a 274x84 dungeon
+  // zoom out to a 260-tile square window, of which 84 tiles was the dungeon and the rest was void:
+  // the whole place collapsed into a thin band two pixels tall. Cap so the SHORT axis stays mostly
+  // used -- you pan along a long dungeon instead of shrinking it into nothing -- while a nearly
+  // square room like the Hearth still shows all of itself at once.
+  half=Math.min(half, Math.max(R.w,R.h)/2, (Math.min(R.w,R.h)/2)*1.6);
+  let cx=player.x/TILE, cy=player.y/TILE;
+  if(R.w<=half*2) cx=R.w/2; else cx=Math.max(half,Math.min(R.w-half,cx));
+  if(R.h<=half*2) cy=R.h/2; else cy=Math.max(half,Math.min(R.h-half,cy));
+  return {half:half, cx:cx, cy:cy};
+}
 function drawMinimap(){
   if(typeof inGame==='undefined' || !inGame) return;
-  if(!curRoom || !curRoom.rings) return;                 // overworld only; dungeons have their own flow
-  const G=rooms['G']; if(!G||!G.grid) return;
+  const G=curRoom; if(!G||!G.grid) return;              // EVERY instance has a map now
   const R=miniRect();
-  const half=MINI_ZOOMS[miniZoom];                       // half-window in tiles
-  const ptx=player.x/TILE, pty=player.y/TILE;
+  const Wn=miniWindow(G), half=Wn.half;
 
   ctx.save();
   // panel
@@ -177,24 +240,47 @@ function drawMinimap(){
   // terrain window, clipped to the panel
   ctx.beginPath(); ctx.rect(R.x,R.y,R.w,R.h); ctx.clip();
   const cv=miniTerrain(G), s=_miniCache.s;
-  const sx=(ptx-half)*s, sy=(pty-half)*s, sw=half*2*s, sh=half*2*s;
+  const sx=(Wn.cx-half)*s, sy=(Wn.cy-half)*s, sw=half*2*s, sh=half*2*s;
   ctx.imageSmoothingEnabled=false;
   ctx.drawImage(cv, sx,sy,sw,sh, R.x,R.y,R.w,R.h);
   // fog on top of the terrain but UNDER the markers, so your own dot stays visible in the dark
   fogInit(G); fogReveal(G, 0.016);
-  if(_fogCv) ctx.drawImage(_fogCv, sx,sy,sw,sh, R.x,R.y,R.w,R.h);
+  if(_fogCv && _fogUsed(G)) ctx.drawImage(_fogCv, sx,sy,sw,sh, R.x,R.y,R.w,R.h);
 
   // world tile -> panel pixel
-  const P=(wx,wy)=>({x:R.x+((wx/TILE)-(ptx-half))/(half*2)*R.w,
-                     y:R.y+((wy/TILE)-(pty-half))/(half*2)*R.h});
+  const P=(wx,wy)=>({x:R.x+((wx/TILE)-(Wn.cx-half))/(half*2)*R.w,
+                     y:R.y+((wy/TILE)-(Wn.cy-half))/(half*2)*R.h});
   const inPanel=(p)=>p.x>=R.x&&p.x<=R.x+R.w&&p.y>=R.y&&p.y<=R.y+R.h;
 
-  // BOSSES - red. Live world bosses first; off-window ones get clamped to the rim, hollow, so you
-  // can read their direction without mistaking them for something you can reach.
+  // ---- DUNGEON LANDMARKS ----
+  // A dungeon is the one place you can genuinely get lost, so it gets the two things you actually
+  // navigate by: the way out, and the room you are working toward.
+  if(G.dungeon){
+    if(G.bossCh && fogSeen(G,G.bossCh.cx,G.bossCh.cy)){
+      const c0=P((G.bossCh.cx-G.bossCh.rx), (G.bossCh.cy-G.bossCh.ry));
+      const c1=P((G.bossCh.cx+G.bossCh.rx), (G.bossCh.cy+G.bossCh.ry));
+      ctx.strokeStyle='rgba(255,74,61,0.75)'; ctx.lineWidth=1.6;
+      ctx.strokeRect(c0.x,c0.y,c1.x-c0.x,c1.y-c0.y); }
+    if(G.px!=null){ const p=P((G.px+0.5)*TILE,(G.py+0.5)*TILE);
+      if(inPanel(p)){ ctx.fillStyle='#7dc47a'; ctx.beginPath();
+        ctx.moveTo(p.x,p.y-4); ctx.lineTo(p.x+3.6,p.y+3); ctx.lineTo(p.x-3.6,p.y+3);
+        ctx.closePath(); ctx.fill(); } }
+  }
+  // ---- TOWN LANDMARKS ---- the four stalls, so the Hearth map is a map of the town
+  if(G.town && typeof SHOPNPCS!=='undefined') for(const n of SHOPNPCS){
+    const p=P(n.x,n.y); if(!inPanel(p)) continue;
+    ctx.fillStyle=n.awn||'#e8c98a';
+    ctx.fillRect(p.x-2.4,p.y-2.4,4.8,4.8);
+    ctx.strokeStyle='rgba(0,0,0,0.75)'; ctx.lineWidth=1; ctx.strokeRect(p.x-2.4,p.y-2.4,4.8,4.8); }
+
+  // BOSSES - red. Live bosses first; off-window ones get clamped to the rim, hollow, so you can
+  // read their direction without mistaking them for something you can reach.
   const seen=[];
   if(typeof enemies!=='undefined') for(const e of enemies){
-    if(!e.wb || e.hp<=0) continue;
-    seen.push(e.ring);
+    if(!e.boss || e.hp<=0 || e.decoy) continue;
+    if(e.ring!=null) seen.push(e.ring);
+    // a boss you have not found yet stays off the map; once seen it is worth tracking off-window
+    if(!fogSeen(G,e.x,e.y) && Math.hypot(e.x-player.x,e.y-player.y)>TILE*14) continue;
     const p=P(e.x,e.y);
     if(inPanel(p)){
       ctx.fillStyle='#ff4a3d';
@@ -227,7 +313,7 @@ function drawMinimap(){
   const gate=(p,col)=>{ ctx.strokeStyle=col; ctx.lineWidth=1.8;
     ctx.beginPath(); ctx.arc(p.x,p.y,3.4,0,6.29); ctx.stroke();
     ctx.fillStyle=col; ctx.globalAlpha=0.35; ctx.fill(); ctx.globalAlpha=1; };
-  if(curRoom.portals) for(const pt of curRoom.portals){
+  if(G.portals) for(const pt of G.portals){
     const p=P((pt.x+0.5)*TILE,(pt.y+0.5)*TILE);
     if(inPanel(p) && fogSeen(G,(pt.x+0.5)*TILE,(pt.y+0.5)*TILE)) gate(p,'#8fe0ff'); }
   if(typeof groundPortals!=='undefined') for(const gp of groundPortals){
@@ -235,15 +321,17 @@ function drawMinimap(){
 
   // loot on the ground -- a sack you walked past is worth being able to find again
   if(typeof loots!=='undefined') for(const l of loots){
-    const p=P(l.x,l.y); if(!inPanel(p)) continue;
+    const p=P(l.x,l.y); if(!inPanel(p)||!fogSeen(G,l.x,l.y)) continue;
     ctx.fillStyle='#ffcf6a';
     ctx.fillRect(p.x-1.6,p.y-1.6,3.2,3.2);
     ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.lineWidth=1; ctx.strokeRect(p.x-1.6,p.y-1.6,3.2,3.2); }
 
   // ordinary foes: elites read heavier than chaff, so a crowded rim is legible rather than a smear
   if(typeof enemies!=='undefined') for(const e of enemies){
-    if(e.wb || e.hp<=0 || e.decoy || e.node) continue;
-    const p=P(e.x,e.y); if(!inPanel(p)) continue;
+    if(e.boss || e.hp<=0 || e.decoy || e.node) continue;
+    // fog-gated like everything else: a marker on ground you have never walked is a wallhack,
+    // and in a dungeon that is most of the map
+    const p=P(e.x,e.y); if(!inPanel(p)||!fogSeen(G,e.x,e.y)) continue;
     const elite=(e.type==='s');
     ctx.fillStyle=elite?'#ff9a5a':'rgba(230,120,110,0.85)';
     ctx.beginPath(); ctx.arc(p.x,p.y,elite?2.6:1.8,0,6.29); ctx.fill(); }
@@ -251,14 +339,14 @@ function drawMinimap(){
   // objective nodes stand out from the foes that guard them
   if(typeof enemies!=='undefined') for(const e of enemies){
     if(!e.node || e.hp<=0) continue;
-    const p=P(e.x,e.y); if(!inPanel(p)) continue;
+    const p=P(e.x,e.y); if(!inPanel(p)||!fogSeen(G,e.x,e.y)) continue;
     ctx.strokeStyle='#ffe08a'; ctx.lineWidth=1.6;
     ctx.beginPath(); ctx.moveTo(p.x,p.y-3.4); ctx.lineTo(p.x+3.4,p.y);
     ctx.lineTo(p.x,p.y+3.4); ctx.lineTo(p.x-3.4,p.y); ctx.closePath(); ctx.stroke(); }
 
   // PLAYERS - blue. Co-op peers first so the local marker draws on top of them.
   if(typeof coop!=='undefined' && coop && coop.on){
-    const now=performance.now(), rk=(curRoom.key||'?');
+    const now=performance.now(), rk=(G.key||'?');
     for(const id in coop.peers){ const q=coop.peers[id];
       if(!q||q.rm!==rk||now-q.ts>2500) continue;
       const p=P(q.x,q.y); if(!inPanel(p)) continue;
@@ -287,15 +375,17 @@ function drawMinimap(){
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('N', R.x+R.w-Math.round(7.5*us0), R.y+Math.round(8*us0));
     ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    // and the level of the ground you are standing on, which is the number that decides whether
-    // walking one screen further is a good idea
-    if(typeof grvLvAt==='function'){
-      const lv=grvLvAt(ptx,pty);
-      if(lv){ const t='Lv '+lv;
-        ctx.font=Math.round(9*us0)+'px "Pixelify Sans",monospace';
-        const w=ctx.measureText(t).width+8;
-        ctx.fillStyle='rgba(10,8,14,0.66)'; ctx.fillRect(R.x+2, R.y+2, w, Math.round(11*us0));
-        ctx.fillStyle='rgba(255,208,122,0.9)'; ctx.fillText(t, R.x+6, R.y+Math.round(10.5*us0)); } }
+    // and WHERE you are. Out in the realm that is the ground's LEVEL -- the number that decides
+    // whether walking one screen further is a good idea. Indoors there is no such number, so the
+    // dungeon shows its own level and the town shows nothing rather than a lie.
+    let t=null;
+    if(G.rings && typeof grvLvAt==='function'){ const lv=grvLvAt(player.x/TILE,player.y/TILE); if(lv) t='Lv '+lv; }
+    else if(G.dungeon) t='Lv '+(G.lv||'?');
+    else if(G.band) t='Lv '+G.band;
+    if(t){ ctx.font=Math.round(9*us0)+'px "Pixelify Sans",monospace';
+      const w=ctx.measureText(t).width+8;
+      ctx.fillStyle='rgba(10,8,14,0.66)'; ctx.fillRect(R.x+2, R.y+2, w, Math.round(11*us0));
+      ctx.fillStyle='rgba(255,208,122,0.9)'; ctx.fillText(t, R.x+6, R.y+Math.round(10.5*us0)); }
     ctx.restore();
   }
 
@@ -311,11 +401,11 @@ function drawMinimap(){
       ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(glyph,bx+b/2,B.by+b/2+1);
       ctx.textAlign='left'; ctx.textBaseline='alphabetic'; } };
   drawBtn(B.in,  (typeof _miniPlus!=='undefined')?_miniPlus:null, '+');
-  drawBtn(B.out, (typeof _miniMinus!=='undefined')?_miniMinus:null, '−');
+  drawBtn(B.out, (typeof _miniMinus!=='undefined')?_miniMinus:null, '\u2212');
   // scale readout, bottom-LEFT inside the frame now that the buttons hold the right corner
   const us=(typeof UIS!=='undefined')?UIS:1;
   ctx.font=Math.round(9*us)+'px "Pixelify Sans",monospace';
-  const lab=(half*2)+'t';
+  const lab=Math.round(half*2)+'t';
   ctx.fillStyle='rgba(10,8,14,0.66)';
   ctx.fillRect(R.x+2, R.y+R.h-Math.round(13*us), ctx.measureText(lab).width+8, Math.round(11*us));
   ctx.fillStyle='rgba(226,216,196,0.82)';
