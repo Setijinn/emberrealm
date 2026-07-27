@@ -1,44 +1,152 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-FIRST: read HANDOFF.md in the repo root. It has the full project state, how to work
-on this codebase, the QA traps that have already cost real time, everything that
-shipped last session, the ordered next steps, and two architectural walls not to
-build past. Then read the two memory files it names.
+Service worker is at emberrealm-v369.
 
-WHERE WE ARE
-Last session shipped the complete loot rework and the economy migration — 12 commits,
-service worker now at emberrealm-v303:
-  - Fixed two live co-op bugs: clients could never loot (grant addressing never
-    matched, so pickups DESTROYED the item), and both boss branches minted duplicate
-    bags on every machine.
-  - Rarity stopped being power; tier is the only power axis.
-  - Loot tier now comes from WHERE you are (per-area tables), not from the level of
-    what you killed. Public gear caps at T8; everything above is soulbound.
-  - Bags hold typed slots and open into a panel with per-item TAKE / EQUIP / COMPARE.
-  - Tier is stamped into every item icon, in whichever corner the art left empty.
-  - 12 dungeon relics — 12% from the dungeon boss, 1.5% from its overworld form.
-  - Gold wiped entirely, selling removed with it. Glory is account-level and paid
-    only on permanent death, scored from what the run accomplished.
-  - Permadeath moved onto the bridge instead of a level.
-  - Potions refill themselves (1 per 48s, cap 5).
-  - Every item has a neutral glory value with a +/-50% listing band.
-  - Loot boosters became the premium tier; the Scroll of Plunder is deleted.
-  - Auction house shipped as a date-seeded house rotation.
+FIRST, READ THESE
+  1. This file, all of it. It is current.
+  2. HANDOFF.md — deep background on architecture, the economy rules and the QA traps.
+     WARNING: it was written at v339 and has NOT been updated since. Everything in its
+     "how to work on this project" and "traps" sections still holds; its "what shipped"
+     and "do this next" sections are ~30 commits behind. The "SINCE THE HANDOFF" list
+     below is the gap.
+  3. The two memory files HANDOFF.md names.
 
-DO THIS FIRST
-Item 1 from HANDOFF.md's "Do this next, in order": wire the auctioneer NPC in the
-Hearth to openAuction(). That function works and is tested, but nothing calls it, so
-the auction house is currently unreachable in game. Deliberately the smallest
-self-contained step.
-
-HARD RULES
-- Bump CACHE in sw.js on every commit, serve on a fresh port to verify, and commit
-  AND push each change after fetching first (a collaborator shares the repo).
-- LEAVE THE BLACKSMITH ALONE. It is reserved for a future item-fusion system. Open
-  design work: invent the items fusion consumes and where they drop.
-- Do NOT build player-to-player auction listings — the peer-to-peer architecture
-  cannot host them honestly (no escrow, no persistence, editable client-side glory).
+---------------------------------------------------------------------------
+HARD RULES — these are not preferences
+---------------------------------------------------------------------------
+- Bump CACHE in sw.js on EVERY commit, and serve on a FRESH PORT to verify
+  (py -m http.server 9NNN). The trap is the browser's HTTP cache, not the SW.
+- Commit AND push each change, fetching first. A collaborator shares this repo.
+- Verify by DRIVING THE GAME, not by assuming. Report measurements. Say plainly
+  when something fails or when you did not test it.
+- LEAVE THE BLACKSMITH ALONE. Reserved for a future item-fusion system. Bram's
+  stock is empty by design; the stall stays. Open design work: invent what fusion
+  consumes and where it drops.
+- Do NOT build player-to-player auction listings. The peer-to-peer architecture
+  cannot host them honestly — no escrow, no persistence, client-editable glory.
 - Do NOT attempt to collect real money for diamonds client-side.
-- Verify by driving the game, not by assuming. Report measurements. Say plainly if
-  something fails.
+- GLORY MUST NEVER BUY POWER, and nothing may mint spendable glory mid-run. It is
+  account-level and paid only on permanent death.
+- LOOT FROM A KILL IS ALWAYS A SACK. One sack per kill, band decided by the best
+  thing inside it. The Emberwrought chest is the ONE exception and it is not a
+  drop — it is a placed event object, and it looks like nothing else so it can
+  never be mistaken for something a monster left.
+
+---------------------------------------------------------------------------
+SINCE THE HANDOFF (v339 -> v369) — what you will not find in HANDOFF.md
+---------------------------------------------------------------------------
+COMBAT / CONTENT
+- The Monk has a real weapon: 'fists' retired in place (legacy:1), 'gauntlet' added
+  and droppable, with a save migration for stranded relic weapons.
+- Creature roster 18 -> 54 species. Every band gained a second chaser and shooter,
+  plus two that exist ONLY inside dungeons. A band's pool is a list; which one a
+  spawn point gets is hashed from the point. sp.spec names a species outright
+  (that is how the dev tool spawns dungeon-only creatures anywhere).
+- THE AGGRESSION RAMP. Shooters fire 1 shot below Lv12, 2 below Lv30, 3 beyond;
+  cadence 1.61s -> 0.66s; flat damage floors dropped (shooter 8->5, touch 12->7)
+  so the cut lands on the early game. Net pressure vs before: 20% at Lv1, 56% at
+  Lv12, 103% at Lv30, 138% at Lv50. The top end got HARDER on purpose.
+- ALL 25 BOSS FIGHTS have their own mechanic (17i_bossfights.js), built on a
+  primitive library (17h_mechlib.js). 12 identities x 2 forms + arena champion.
+  Both forms of a boss share a family; the dungeon form twists one element and
+  adds one of its own.
+- Fight difficulty scales with level through ONE dial: bossPace(e). Telegraphs
+  1.00->0.55, cycles 1.00->0.62, counts 1.00->1.90, damage 1.00->1.30, and a
+  dungeon form is harder again. No primitive hard-codes a timing — if you add
+  one, read bossPace.
+- Boss framework: fights keyed ow<ring> / dn<ring> / arena; per-fight phase
+  counts (1-4 breaks, boss bar reads the same list); anchored phases where the
+  boss walks to its arena centre and goes untouchable; room.bossCh persisted so
+  dungeon bosses finally have arena bounds.
+- Boss animation: 15 shared beats (17f_bossanim.js) plus all twelve identities
+  with their OWN idle, tell, speech, death and signature moves (17g_bossprofiles).
+  Procedural squash/stretch/lean, scaled about the FEET. bossAnimFrames is the
+  seam if hand-drawn frames ever ship.
+
+ITEMS / ECONOMY
+- Two flasks: rpg.pots (HP) and rpg.mpots (MP), independent 48s clocks, cap 5.
+  Q drinks the tonic, G the mana flask. Auto-potion gained a sibling with its own
+  OPTS.autoMana key and its own steps.
+- POTIONS NO LONGER DROP AT ALL. PUB_POT deleted. 'pot' stays in NKIND at index 4
+  — that index is bit-packed into the co-op bag word and renumbering would make
+  an older peer read every coin sack as a tonic.
+- PET EGGS ARE ITEMS now, rolled in rollLoot's extras and riding in the same sack.
+  16% boss / 1.2% elite. Taking one goes to the incubator, never the satchel.
+  'egg' is NKIND index 7.
+- The Emberwrought chest (spawnEventChest): 35% relic, avg tier T11.2, 5.3 pieces.
+- Sack panel decides for you: bagVerdict() rates each piece UPGRADE / SIDEGRADE /
+  WORSE / OTHER CLASS, rows sort best-first, one primary button plus a compare
+  toggle, and EQUIP BEST. The sort is a VIEW — bagTakeOne splices by index, so
+  sorting the array itself makes every button take the wrong piece.
+
+UI / WORLD
+- Portal and loot prompts are SEPARATE controls: E uses the world, F takes loot.
+  Taps test TAKE first.
+- iOS zoom is locked out: * is touch-action:manipulation, canvas is none, plus JS
+  backstops for WebKit pinch gestures and a canvas double-tap guard. The guard is
+  canvas-only on purpose — preventDefault on touchend kills the synthesised click,
+  which on the HUD would eat the second tap of a potion-mash.
+- Boss dialogue is a FIXED subtitle bar above the orbs, with the speaker named.
+- Status labels moved to an ornate top-centre banner carrying zone, level, glory,
+  kills and co-op state, yielding to a compact line when the boss bar or an
+  objective banner owns that strip.
+- msg() QUEUES now (it used to clobber; two calls in a second meant only the
+  second was read).
+- 8-bit floor detail on every surface (09c_floordetail.js): five stamp families,
+  eight variants each, pre-rendered at boot. 1.32ms/frame for the whole pass.
+- The Hearth has grass, wildflowers, and a flock: 6 hens and 4 sheep
+  (03b_critters.js). They are deliberately NOT in `enemies` — one stray
+  membership and every AoE would slaughter them.
+- THE DEV WORKBENCH (12b_devplus.js): ten tabs, ~300 controls, every list reading
+  the live system rather than a copy. Sacks, relics, items, flasks, all 24 bosses
+  in both forms, every animation beat, all 54 species, dungeons, UI/FX, balance
+  readouts. Spawn lists carry the creature's real sprite.
+
+---------------------------------------------------------------------------
+DO THIS FIRST
+---------------------------------------------------------------------------
+CO-OP SERIALIZATION FOR THE 25 BOSS MECHANICS. This is a known, stated gap, not a
+discovery. Enemy AI is host-only (07_update.js, netIsClient guard), so on a co-op
+client none of the new hazards render or apply. Nothing desyncs and nothing
+crashes — a client simply does not see them — but every fight is
+single-player-correct only until this lands.
+
+The old pools/bloom path shows the shape: serialize in netBroadcast
+(14b_netsync.js), deserialize in netApplyWorld, apply client-side in netHazards.
+The snapshot row is a FIXED 15-slot array carrying only `phase` and 4 bit-packed
+flags of boss state, so new phase-visible state needs new slots or clients see
+nothing. Everything a fight puts on the field lives on e.mk, which is one object
+per boss — that is deliberate, and it is the one place to look.
+
+Do it zone by zone, not all twelve at once, and verify with two clients.
+
+---------------------------------------------------------------------------
+STILL OPEN, IN NO PARTICULAR ORDER
+---------------------------------------------------------------------------
+- Blacksmith fusion. Design work only so far; nothing built. See the hard rule.
+- Bounty board has no fog objective.
+- Lv1-20 zone progression on the starter island is thin.
+- Per-class stat caps.
+- The arena champion has no signature mechanic by choice — it is a pressure check
+  inside a wave mode. Revisit if that reads as an omission in play.
+
+---------------------------------------------------------------------------
+QA TRAPS THAT COST TIME THIS SESSION (on top of HANDOFF.md's list)
+---------------------------------------------------------------------------
+- Size sprites by their OPAQUE BOUNDING BOX (_imgBBox), never by naturalWidth.
+  PixelLab files carry transparent margin; scaling by canvas size made the relic
+  sack the smallest bag in the game and the entire flock render as specks.
+- Top-level `const` is a LEXICAL global, NOT a window property. `window[name]`
+  lookups against const-declared images silently return undefined — that is why
+  every loot sack drew as plain burlap for weeks.
+- .scr centres its children; a flex container centring content taller than itself
+  clips BOTH ends, so the top becomes unreachable no matter what scrollTop says.
+  A child with only a max-height also gets flex-shrunk to its min-content.
+- When editing files with a script, build the whole text in memory and write to a
+  temp before moving it into place. Opening the target for writing first will
+  TRUNCATE it if anything later throws. This destroyed 11_ui.js once this session.
+- touch-action does NOT inherit. Setting it on html/body says nothing about the
+  canvas or the buttons on top of it.
+- Loops driven by wall clock cannot be probed by stepping a frame counter — stub
+  performance.now() or they read as motionless.
