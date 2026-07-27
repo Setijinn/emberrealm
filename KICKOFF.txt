@@ -5,11 +5,11 @@ Service worker is at emberrealm-v369.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
-  2. HANDOFF.md — deep background on architecture, the economy rules and the QA traps.
-     WARNING: it was written at v339 and has NOT been updated since. Everything in its
-     "how to work on this project" and "traps" sections still holds; its "what shipped"
-     and "do this next" sections are ~30 commits behind. The "SINCE THE HANDOFF" list
-     below is the gap.
+  2. HANDOFF.md — the DURABLE reference: architecture, invariants, the subsystem map,
+     QA traps and the two walls not to build past. It carries no "what shipped" and no
+     "do this next" any more, on purpose. This file owns the current state; that one
+     owns how the project works. They cannot contradict each other about where we are
+     because only one of them talks about it.
   3. The two memory files HANDOFF.md names.
 
 ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-SINCE THE HANDOFF (v339 -> v369) — what you will not find in HANDOFF.md
+WHAT SHIPPED MOST RECENTLY (v339 -> v369)
 ---------------------------------------------------------------------------
 COMBAT / CONTENT
 - The Monk has a real weapon: 'fists' retired in place (legacy:1), 'gauntlet' added

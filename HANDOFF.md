@@ -1,221 +1,174 @@
-# EmberRealm — session handoff
+# EmberRealm — project reference
 
-Written 2026-07-26. Everything below is shipped and pushed to `main` unless marked otherwise.
-Current service-worker version: **`emberrealm-v339`** (`sw.js`, bump every release).
+**This file is the DURABLE half.** Architecture, invariants, subsystem rules, QA traps and the two
+walls not to build past. It changes when the *design* changes, not when a session ends.
 
-**How `sw.js` picks up a new script file** (this was an open question): it does not enumerate them.
-`ASSETS` precaches only `index.html`, the manifest and the icons, and every `.js` is **network-first**,
-so a new numbered file is live as soon as `index.html` lists it. The cache-first trap is the *browser's*
-HTTP cache, not the SW — hence the fresh-port rule below, which is real and cost time again today.
+**Current state, what shipped and what to do next live in `KICKOFF.txt`.** Exactly one file owns
+the volatile story, on purpose: this document and that one used to both carry "what shipped this
+session", they drifted, and the stale one confidently misled. If you are looking for where the
+project *is*, you are in the wrong file.
 
 ---
 
 ## How to work on this project
 
-- Plain numbered JS files loaded in order by `index.html`. **No build step.**
+- Plain numbered JS files loaded in order by `index.html`. **No build step**, no modules.
 - **Bump `CACHE` in `sw.js` on every commit** or the service worker serves stale files.
-- **Serve on a fresh port for every edit** (`py -m http.server 86NN`) — the SW is cache-first.
-- Drive QA with Chrome MCP `javascript_tool`. The tab may be throttled; step frames manually with
-  `for(let i=0;i<N;i++){update(0.016);}`.
+- **Serve on a fresh port for every edit** (`py -m http.server 9NNN`). The cache-first trap is the
+  *browser's* HTTP cache, not the SW.
 - **Commit AND push every change, fetching first** — a collaborator shares the repo.
+- Drive QA with Chrome MCP `javascript_tool`. The tab may be throttled: **step frames manually**
+  with `for(let i=0;i<N;i++){update(0.016);}` and never wait on `requestAnimationFrame`.
+- Verify by driving the game. Report measurements. Say plainly when something fails, or when you
+  did not test it.
 
-### QA traps that have cost real time
-- Place the QA player in verified **open ground** (LOS clear in 16 directions), and re-check the
-  room didn't change after the first `update()` — placing across a room boundary teleports the
-  player thousands of px and every measurement silently becomes nonsense.
-- Clear `allies` each frame when measuring weapon DPS, or the pet's damage lands in the total.
-- Enemy AI is **host-only**; a co-op client interpolates snapshots and runs none of it.
-- An ascension's capstone only applies when the character's class owns that ascension.
-- The global CSS rule is `canvas{position:fixed;inset:0;width:100vw}` — it exists for the
-  fullscreen game canvas, so **every in-panel canvas must opt out** with `position:relative;inset:auto`
-  or it stacks invisibly at its card's origin at full viewport size.
-- `fire()` is polled once per frame and discards the remainder, so **fire rate is quantised to
-  16ms steps**. A rof change that doesn't cross a frame boundary does nothing. Always measure.
+**How `sw.js` picks up a new script file:** it does not enumerate them. `ASSETS` precaches only
+`index.html`, the manifest and the icons; every `.js` is **network-first**, so a new numbered file
+is live as soon as `index.html` lists it.
 
 ---
 
-## What shipped this session
+## Invariants — the rules the design rests on
 
-**Loot rework (the approved plan, complete).**
-- Two live co-op bugs fixed: clients could never loot (a 6-char id prefix meant grant addressing
-  never matched, so pickups *destroyed* the item), and both boss branches minted duplicate bags on
-  every machine.
-- **Rarity is no longer power.** It sets border colour and affix count only; `RAR_MULT` is deleted.
-  Tier is the sole power axis.
-- **Per-area tier tables** (`ZONE_TIERS`, keyed by the 13 clumps `zoneAt()` returns). Public gear
-  caps at T8 everywhere; everything above is soulbound. 5% overflow tail.
-- **Bags hold typed slots** (`BAG_SLOTS`) — ~0.94 items/roll, 35% empty, occasionally 2–3.
-- **Two channels**: public (2.5% trash, shared) and soulbound (rolled independently per eligible
-  player, guaranteed once per boss). Soulbound rows are filtered *per connection* at send time, so
-  another player's T12 never reaches the wire.
-- **Sack panel** with per-item TAKE / EQUIP / COMPARE, sprites, and stat deltas vs equipped.
-- Tier is **stamped into the item icon**, in whichever corner the art left empty.
-- **12 dungeon relics**, one per dungeon; 12% from the dungeon boss, 1.5% from its overworld form.
+**Tier is the only power axis.** Rarity sets border colour and affix count, nothing else.
 
-**Economy (directives, not a formal plan).**
-- **Gold wiped entirely.** Selling removed with it.
-- **Glory**: account-level, awarded *only* on permanent death, scored from what the run did
-  (dungeons 240 each, bosses, kills, fog uncovered, levels, relics, deepest zone). One `GLORY` table.
-- **Permadeath is the bridge**, not `rpg.lvl >= 20`.
-- **Potions refill themselves** — one per 48s, cap 5.
-- **Neutral glory value per item, ±50% listing band.**
-- **Loot boosters are the premium tier**: coins 300/6,000/120,000, drop 0.6%/10%; the Scroll of
-  Plunder is deleted and Fortune is not trainable at all.
-- **Permanent trainable stat halved** (`TRAIN_BASE` 12→6, badly-scaled steps fixed).
-- **Auction house** shipped as a **house rotation**: 6 items derived from the calendar date via a
-  seeded PRNG, so everyone sees the same shelf with nothing stored or synced.
+**`MAXT` stays 12. Do not raise it.** It is the top *rollable* tier and every random draw clamps to
+`MAXT-1`, which is the only thing keeping T13 out of drop tables, auction shelves and shops.
+`_nTiers()` in `08c_embersprites.js` reads `MAXT` for the same reason — counting the 13th tier name
+would re-map every existing tier onto the wrong sprite.
 
----
+**Glory must never buy power, and nothing may mint spendable glory mid-run.** It is account-level
+and paid only on permanent death, scored from what the run accomplished. Bounties *bank* onto the
+run and pay out on death for exactly this reason.
 
-## The four stalls (items 1–3 — done 2026-07-26)
+**Loot from a kill is always a sack.** One sack per kill; its art follows the best item inside it
+(`bagAt` → `bandOfTier(bagTopTier)`), so a relic makes it a reliquary. Progression reads through
+material and ornament, never through shape. The Emberwrought chest is the ONE exception, and it is
+not a drop — it is a placed event object that looks like nothing else precisely so it can never be
+mistaken for something a monster left behind.
 
-| stall | role | opens |
-|---|---|---|
-| **Bram** | **BLACKSMITH — reserved for item fusion, untouched** | the old shop panel (T1–T3 weapons, weapon relics) |
-| Sella | diamond merchant | the exchange: diamond packs (stubbed) + the cosmetic catalogue |
-| Maren | auctioneer | the date-seeded house rotation |
-| Odo | event NPC | the daily bounty board |
+**In co-op, bound loot never crosses another player's wire.** Soulbound rows are filtered *per
+connection* at send time rather than tagged and filtered client-side. One shared sack plus your own
+bound one is the confirmed shape.
 
-- **Stalls are opened at the stall.** The HUD shop button is gone; vendors register a `portalPrompt`
-  of `kind:'vendor'` and the prompt above the stall reads SHOP / AUCTION / BOUNTIES / DIAMONDS.
-  The Wardrobe's mirror uses the same path (`kind:'wardrobe'`, from `ROOM_DEFS.COSMETICS.wardrobe`).
-- **Bounties** (`17c_bounty.js`): 3 date-seeded objectives, first slot always an everyday kill goal
-  so a short session can always touch the board. Progress is per account per day, collected off the
-  existing `runNote()` calls. **Claiming BANKS the glory onto the run** and it pays out on death —
-  nothing may mint spendable glory mid-run.
-- **Cosmetics** (`17d_cosmetics.js`): account-level diamonds (`u.gems`), a 7-item catalogue priced in
-  glory *or* diamonds but never both, worn via `u.skin`, applied by recolouring the class's own art
-  through `_tintImg`. **Colour only — never a stat, never a silhouette.** Diamond packs are a stub;
-  `diamondPacks()` is the one function a payment provider would replace.
-- **Relics moved to the equipment screen** (`paintRelics`). They own the `wpnL`/`armL` slot and used
-  to be equippable *only* from inside a vendor's shop rows, so retiring a stall would have stranded
-  any armour relic you had earned.
-- **Retired**: Sella's T2/T3 armour + helms and Odo's three bought pets — both were glory buying
-  power, and the pets were a second follower system running beside the egg/Sanctuary one.
+**Enemy AI is host-only.** A co-op client interpolates snapshots and runs none of it
+(`netIsClient()` guard in `07_update.js`). Anything that damages the player from an enemy needs
+three parts: serialize in `netBroadcast`, deserialize in `netApplyWorld`, apply client-side in
+`netHazards` (all `14b_netsync.js`). The snapshot row is a **fixed 15-slot array**.
 
-## Relics: twelve four-piece T13 sets (done 2026-07-26)
+**Cosmetics are colour only** — never a stat, never a silhouette.
 
-The band above the ladder exists, and forty-eight relics in twelve SETS live on it. Data in
-`17e_relics.js`; `11_ui.js` keeps only the machinery that turns one into a wearable item.
-
-- `TIER_NAMES` has a 13th entry, **Riftforged**; `RELIC_T` (12) is its index.
-- **`MAXT` stays 12 — do not raise it.** It is the top *rollable* tier and every random draw clamps
-  to `MAXT-1`, which is the only thing keeping a T13 out of drop tables, auction shelves and shops.
-  `_nTiers()` in `08c_embersprites.js` reads `MAXT` for the same reason: counting the 13th name
-  would re-map every existing tier onto the wrong sprite.
-- A relic is an **ordinary item** (`{k, wt|mt, t:RELIC_T, relic:id, aff:[...]}`) — same equip path,
-  satchel, compare and icon as anything else. Its id rides in `rpg.eqAff[slot].rel`.
-- Each carries **fixed exclusive affixes** no roll can reach; **seven also carry a trait**, which
-  reuses the `player` flag its matching ascension capstone already sets (`burnHit`, `splash`,
-  `moveRof`, `execute`, `killHeal`, `thorns`, `slowAura`) — no new combat special cases.
-- A relic drops **shaped for its finder** (their class's `wt`/`mt`), so `canEquip` just works.
-- **Twelve sets of four** — weapon, armour, helm, ring. Wearing all four adds a rule none of the
-  pieces carries alone (`activeRelicSet()`), from the same verified flag family. Set bonuses only
-  use flags read in `06_combat`/`07_update`; flags read only by `12b_abilities` modify one ability
-  rather than always applying, so they are deliberately not used.
-- **Six dungeons drop them**, two sets each: Shattered Vault + Windward Roost at **0.25%**, and
-  Cinder Crypt / Scorch Barrows / Ashen Keep / Core Sanctum at **1%**, per boss kill, dungeon only.
-  `relicChanceFor()` returns 0 everywhere else — no overworld boss, no shallow dungeon.
-- Archetype spread is **5 caster / 4 agile / 3 tank** against 7 robe / 6 leather / 4 plate classes.
-  Every set fits every class (pieces adapt to `wt`/`mt`); the STATS are what suit an archetype.
-- Forty-eight sprites at `assets/items/relic_<id>.png`. The icon stamps **R** where ordinary items
-  stamp their tier, and `RELIC_COL` / `--relic` (#ffd24a) is the one GOLD for everything relic — the vivid
-  violet it used to wear moved down to Epic in `RAR_COL`.
-- **INSANE DROP!** (`insaneDrop`) fires for the finder as it hits the ground, showing the piece,
-  its set and your progress toward four.
-- `rpg.relics` is the record (duplicate rule + death-screen scoring); `migrateRelics()` carries old
-  `wpnL`/`armL` saves across. The four purchasable legendaries are **not** relics and are unchanged.
-
-## Also shipped 2026-07-26 (later session)
-
-- **Loot: one sack per kill.** Everything a kill pays out goes in one sack (1/kill, ~4.7 pieces off
-  a boss). **With other players present the channels stay apart** — one shared sack plus your own
-  bound one — because the netsync keeps bound loot off other wires entirely rather than tagging it
-  and trusting clients to filter. The user confirmed one personal + one shared is the wanted shape.
-  A sack's art follows its best item (`bagAt` → `bandOfTier(bagTopTier)`), so a relic inside makes
-  it a reliquary. Anything with gear or 2+ pieces opens the panel; a lone tonic/coin still vacuums.
-- **`LOOT_BANDS` sprite lookup was broken** since the art landed: it resolved the sprite name off
-  `window`, but those images are `const` (lexical, never a window property), so **every** sack drew
-  as plain burlap. Use `lootSackImg()`. It was the only `window[...]` sprite lookup in the codebase.
-- **Co-op had no enemies for clients.** Clients never activate spawn points (deliberate), but the
-  host measured its spawn ring from its OWN hero, so a client anywhere else walked an empty world.
-  The host now anchors on every hero it simulates for (`netSimAnchors`), spawns and culls against
-  the nearest, and the swarm cap is per hero using the zone THAT hero stands in.
-- **Loading screen** (`10b_loading.js`). Images register in `ASSET_IMGS` at creation (`_track`);
-  the curtain waits on exactly that list (~3,500 images), capped at 12s, 404s count as settled.
-- **The 1–3s "refresh" was real**: `boot.js` called `location.reload()` the moment a new SW
-  activated. It is deferred while `inGame` and taken at the menu (`emberReloadIfPending`).
-- **Auto potion** at 5/10/15% with a standing warning that it will not keep you alive, and the
-  settings rows an input cannot use (manual aim on touch, vibration/fullscreen on desktop) grey out
-  and refuse taps. All eight settings were audited against real behaviour.
-- **Minimap** shrunk to 148px, zoom buttons scale off the panel.
-
-## The Monk's weapon (done 2026-07-26)
-
-The Monk was the one class whose weapon slot did not work. `CWEAP.monk` was `'fists'`, and
-`'fists'` was filtered out of **both** item generators, so no drop, sack or auction shelf could
-ever produce a weapon a Monk could equip — `rpg.wpn` was frozen at 0 for the life of the character
-while every other class climbed to a T12 worth +218 ATK. `WSPR` had no `fists` entry either, so
-`wpnSpr` fell back to `WSPR.sword`: a Monk's weapon icon had always drawn as a sword.
-
-- **`WTYPE.gauntlet`** ("Gauntlets") is the Monk's weapon, carrying the *identical* numbers fists
-  had (reach `spd*life` ≈ 94px, the shortest in the game, hence the fastest rate). Nothing was
-  re-derived — the rate rule needs no revisit.
-- **`fists` is retired in place** with `legacy:1`, not deleted. The generators now filter on
-  `!WTYPE[x].legacy` (`mkItem`, `auctionListings`) instead of matching the name, so retiring a type
-  is one flag. Keeping the row is what stops a stale save throwing in `itemBaseName`.
-- **`migrateWpnType(ch)`** (beside `migrateRelics`, called from `loadRPG`) retypes satchel weapons
-  whose type is `legacy` to the class's current one. Only legacy types are touched — an off-class
-  weapon being carried to trade is a supported state and must never become free power. Without it
-  a Monk's **T13 relic weapon** would sit unequippable forever.
-- 12 sprites at `assets/items/wpn_gauntlet_0..11.png`, registered by adding one word to the list in
-  `08c_embersprites.js`; `WSPR.gauntlet` covers the procedural fallback.
-- **The gauntlet plays by the same rules as every other weapon** — including drawing in the hand in
-  the fallback path. The old `wtype!=='fists'` exception is gone.
-- **A small bias toward your own weapon** (`WPN_BIAS=0.15` in `11_ui.js`): that slice of weapon
-  rolls is forced to the RECIPIENT's class and the rest stay uniform, so your own type lands ~27%
-  instead of 14.3% (measured 26.93% ± 0.85% over 2,729 weapons). Deliberately small — finding a
-  weapon for someone else is part of what makes a shared world feel like one.
-  - `mkItem(k,t,fort,cls)` / `rollBagSlots(...,cls)` take the recipient; **omitting `cls` means no
-    bias**, which is the co-op shared sack: loot anyone can walk over must not favour one class.
-  - A **bound** sack is biased to the class of the player it belongs to, not the host's —
-    `netLootRoster` now carries `cls` (presence already had it). Verified: shared sack 14.2%,
-    my bound 25%, a Pyromancer peer's bound sack 25.2% **staff**.
-
-## Do this next
-
-1. **Fusion for the blacksmith.** Still the open design work: invent the items fusion consumes
-   (materials / catalysts / duplicate gear) and where they drop. Nothing is built.
-2. **Bram still sells power for glory.** T1–T3 weapons and two legendaries, priced in glory, which
-   the economy forbids everywhere else. Left alone because the blacksmith is reserved — decide what
-   he should be when fusion lands.
-3. **The bounty board has no fog objective.** `fogPct()` samples the *current character's* mask, so
-   it is not an incremental daily counter. Would need a real per-day tile counter to add one.
-
-### Then, older outstanding items
-- **1–20 zone progression.** The user's long-standing complaint that "the spawn is weird with how
-  the territories are laid out". Root cause found: **theme band and radial level are separate
-  mappings**, so The Landing Sands is described Lv1–8 but spawns Lv20 in places.
-- **Per-class stat caps.** `spd` is hard-flattened to 8 for every class by a `FLAT_CAP` override
-  that bypasses the affinity maths; `vit`/`luck` come out near-identical so they carry no identity.
-  `def`/`wis` already work correctly (Knight DEF cap 11 vs caster 6).
-- ~~**The tier above T12.**~~ Built: it is **T13 Riftforged**, and the twelve relics are what sit on
-  it. See the relic section above.
-- ~~**Verify how `sw.js` picks up new script files.**~~ Answered at the top: it does not enumerate
-  them; `.js` is network-first, so a new numbered file is live once `index.html` lists it.
+**Permadeath is the bridge**, not a level number.
 
 ---
 
-## Two architectural walls (do not build past these)
+## Subsystem map
+
+### Items and loot
+- An item is `{k, wt|mt|st, t, rar, aff:[…]}`. `k` ∈ `wpn|arm|helm|ring|coin|scroll|egg|leg|pot`.
+- `LOOT_BANDS` picks a sack sprite by tier band. Resolve sprites through **`lootSackImg()`** — see
+  the `const` trap below.
+- **Public gear caps at T8** (`PUB_TMAX`); everything above is soulbound.
+- `mkItem(k,t,fort,cls)` / `rollBagSlots(…,cls)` take the *recipient*. **Omitting `cls` means no
+  class bias**, which is what the shared co-op sack wants; a bound sack passes the owner's class.
+- `bagVerdict()` rates a piece for the sack panel. The panel's sort is a **VIEW** — `bagTakeOne`
+  splices the bag by index, so sorting the array itself makes every button take the wrong piece.
+
+### Relics — T13 Riftforged
+- Forty-eight relics in **twelve four-piece sets** (`17e_relics.js`). `RELIC_T` (12) is the index
+  of the 13th `TIER_NAMES` entry.
+- A relic is an **ordinary item** with `relic:id` — same equip path, satchel, compare and icon.
+  Its id rides in `rpg.eqAff[slot].rel`.
+- It drops **shaped for its finder** (their class's `wt`/`mt`), so `canEquip` just works.
+- Fixed exclusive affixes no roll can reach; some carry a trait, and set bonuses reuse the `player`
+  flag family the ascension capstones already set — **no new combat branches**. Flags read only by
+  `12b_abilities` modify one ability rather than always applying, so they are deliberately unused.
+- Six dungeons drop them, two sets each, `relicChanceFor()` returning 0 everywhere else.
+- `RELIC_COL` / `--relic` (#ffd24a) is the one gold for everything relic. The icon stamps **R**
+  where ordinary items stamp their tier.
+
+### Bosses
+- Twelve identities in `GBOSS`; a boss's index is its **`ring`** everywhere in the code (a legacy
+  name — it is a boss id, not a terrain band).
+- A fight is keyed by identity AND form: `ow<ring>` / `dn<ring>` / `arena`, registered in
+  `BOSS_MECH`. Both forms of a boss share a family; the dungeon form twists one element.
+- **Per-fight phase counts** (`bossPhases`), 1–4 breaks. The boss bar reads the same list.
+- **Anchored phases**: the boss walks to its arena centre and goes untouchable. Overworld lairs
+  store their centre in `R.lairs[b]`; dungeon chambers in `room.bossCh`.
+- **Difficulty scales through one dial**, `bossPace(e)`. No mechanic may hard-code a timing.
+- Everything a fight puts on the field lives on **`e.mk`** — one object per boss, so `bossReset`
+  clears a fight completely and the netcode has one place to look.
+- `bossImmune()` (`06_combat.js`) is the single immunity rule: `mechInv`, `phaseInv`, `dlgInv`,
+  `bloom`, `anchorInv`, `wardInv`.
+- Animation: shared beats in `17f_bossanim.js`, per-identity profiles in `17g_bossprofiles.js`.
+  Procedural transform scaled **about the feet**. `bossAnimFrames` is the seam for real frames.
+
+### Enemies
+- `MOBSPEC` holds a **list** of species per band per type; which one a spawn point gets is hashed
+  from the point, so a spot keeps its character across respawns. `sp.spec` names one outright.
+- `EBEH` is the engagement rule (when to approach, when to break off); a species' `sig` is its
+  movement *shape*. Both are needed or every creature walks the same straight line.
+- Shot count and cadence ramp with level (`eShotCount`, `eFireCd`). The flat damage floors in
+  `makeEnemy` are the low-level difficulty dial.
+
+### The four stalls
+| stall | role |
+|---|---|
+| **Bram** | **BLACKSMITH — reserved for item fusion. Leave alone.** Stock is empty by design; the stall stays. |
+| Sella | diamond merchant — the exchange and the cosmetic catalogue |
+| Maren | auctioneer — a date-seeded house rotation |
+| Odo | event NPC — the daily bounty board |
+
+Stalls are opened **at the stall** (`portalPrompt` of `kind:'vendor'`), never from a HUD button.
+
+### Date-seeded content
+The auction and the bounty board derive their contents from the calendar date via a seeded PRNG, so
+everyone sees the same shelf with nothing stored or synced. Per-account records are period-keyed and
+self-clearing (`if(u.x.p!==period) reset`).
+
+---
+
+## QA traps that have cost real time
+
+- **Top-level `const` is a LEXICAL global, not a `window` property.** `window[name]` lookups against
+  const-declared images silently return `undefined` — this is why every loot sack in the game drew
+  as plain burlap for weeks.
+- **Size sprites by their opaque bounding box** (`_imgBBox`), never `naturalWidth`. PixelLab files
+  carry transparent margin: scaling by canvas size made the relic sack the *smallest* bag in the
+  game and rendered the entire Hearth flock as specks.
+- **When editing files with a script, build the whole text in memory and write to a temp before
+  moving it into place.** Opening the target for writing first will TRUNCATE it if anything later
+  throws. This destroyed `11_ui.js` once.
+- **`fire()` is polled once per frame and discards the remainder**, so fire rate is quantised to
+  16ms steps. A rate change that does not cross a frame boundary does literally nothing. Measure.
+- **`touch-action` does not inherit.** Setting it on `html`/`body` says nothing about the canvas or
+  the buttons on top of it.
+- **`.scr` centres its children**, and a flex container centring content taller than itself clips
+  BOTH ends — the top becomes unreachable whatever `scrollTop` says. A child with only a
+  `max-height` also gets flex-shrunk to its min-content.
+- **The global rule is `canvas{position:fixed;inset:0;width:100vw}`** — it exists for the fullscreen
+  game canvas, so **every in-panel canvas must opt out** with `position:relative;inset:auto` or it
+  stacks invisibly at its card's origin at full viewport size.
+- **Place the QA player in verified open ground** and re-check the room did not change after the
+  first `update()` — placing across a room boundary teleports the player thousands of px and every
+  measurement silently becomes nonsense.
+- **Clear `allies` when measuring weapon DPS**, or the pet's damage lands in the total.
+- **Loops driven by wall clock cannot be probed by stepping a frame counter.** Stub
+  `performance.now()` or they read as motionless.
+- **An ascension's capstone only applies when the character's class owns that ascension.**
+
+---
+
+## Two architectural walls — do not build past these
 
 **The auction cannot host player listings.** Static PWA on GitHub Pages, peer-to-peer WebRTC with an
 elected host: no neutral party to escrow the item or the glory, no storage outliving the host's tab,
-and a glory balance in the buyer's own editable save. It is built on a generic
+and a glory balance sitting in the buyer's own editable save. It is built on a generic
 `{id, item, price, seller}` listing and **`auctionListings()` is the single function a backend would
 extend** — the UI, buy path, price rules and ledger all work unchanged. Real listings need a server.
 
 **Diamonds cannot collect real money client-side.** Build the currency, catalogue, gating and UI;
-stub the purchase.
+stub the purchase. `diamondPacks()` is the one function a payment provider would replace.
 
 ---
 
@@ -225,4 +178,4 @@ stub the purchase.
 - `emberrealm-mob-rules.md` — movement signatures, weapon-only projectile count, fire-rate
   quantisation, QA traps.
 - `emberrealm-economy-roadmap.md` — glory rules, the blacksmith fusion reservation, vendor roles,
-  and why the auction can't take player listings.
+  and why the auction cannot take player listings.
