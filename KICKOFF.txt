@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v380.
+Service worker is at emberrealm-v406.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -57,12 +57,30 @@ COMBAT / CONTENT
   one, read bossPace.
 - Boss framework: fights keyed ow<ring> / dn<ring> / arena; per-fight phase
   counts (1-4 breaks, boss bar reads the same list); anchored phases where the
-  boss walks to its arena centre and goes untouchable; room.bossCh persisted so
-  dungeon bosses finally have arena bounds.
+  boss plants at its arena centre; room.bossCh persisted so dungeon bosses
+  finally have arena bounds.
+- AN ANCHORED PHASE IS A TIMED WINDOW, NEVER A STATE. 9s untouchable and firing,
+  then IT IS EXPOSED and 7.5s open (scaled by bossPace), then it re-plants. It is
+  not immune until it ARRIVES. A fight that gates itself — cut the knots, break
+  the conduits — sets e.anchorNoInv=1 and uses wardInv instead, so the two rules
+  never stack. Shipped as an unbounded per-phase state first, which made twelve of
+  the fifteen anchored fights literally unkillable.
+- RULE FOR ANY NEW IMMUNITY: there must be an exit the player can reach. dn5
+  pinned mechInv for phases 0-2 whose only exit was HP it forbade you from taking,
+  so the Bog Horror could never be fought at all. It surfaces in punish windows now.
+- SWEEP TEST, run it after touching any fight: spawn all 25, drive each to 0 with
+  fixed DPS, assert none reads NEVER and the longest immune streak is <= 9.0s.
 - Boss animation: 15 shared beats (17f_bossanim.js) plus all twelve identities
   with their OWN idle, tell, speech, death and signature moves (17g_bossprofiles).
   Procedural squash/stretch/lean, scaled about the FEET. bossAnimFrames is the
   seam if hand-drawn frames ever ship.
+
+- A DYING BOSS TAKES ITS SUMMONS WITH IT. Summons have no spawn point, so nothing
+  culled them, and they carried no `owner`, so bossReset's purge could not match
+  them either — a cleared dungeon kept a handful of adds standing in it. Both
+  summon paths tag their adds now. The 60s streaming respawner is separately gated
+  on !curRoom.dungeon: dungeons do not repopulate, verified by object identity
+  over 180s of game time per dungeon, not by counting.
 
 ITEMS / ECONOMY
 - Two flasks: rpg.pots (HP) and rpg.mpots (MP), independent 48s clocks, cap 5.
@@ -95,6 +113,21 @@ UI / WORLD
   second was read).
 - 8-bit floor detail on every surface (09c_floordetail.js): five stamp families,
   eight variants each, pre-rendered at boot. 1.32ms/frame for the whole pass.
+- NO FLOOR MAY PAINT A HASHED FLAT WASH ACROSS A WHOLE TILE. Five renderers each
+  had their own copy and every one drew the grid: the value was quantised so a
+  seam was never a small step, and hashed so neighbours were uncorrelated and
+  every edge jumped the full amplitude. They all call tileShade(tx,ty,x,y,amp,seed)
+  now — continuous noise sampled at the tile CORNERS, filled as four bilinear
+  quadrants, so the ramp runs through the seam. Largest adjacent jump 21.8 -> 11.8.
+  The same mistake in animated form was the corruption shimmer at 1.3 rad/tile.
+- A DUNGEON IS NAMED after the boss's dream (GBOSS[ring].dn). genDungeon never set
+  room.name, so the "where you are" label was blank for the whole dungeon.
+- THE MINIMAP has its zoom buttons INSIDE the frame, bottom-right (miniBtns() owns
+  the geometry for both the painter and the hit-test). Terrain is tinted per
+  character on top of the zone ramp, cache at 0.62 px/tile, plus live foes,
+  objective nodes, loot, portals, ground level and a north mark — all fog-gated.
+  It is OVERWORLD ONLY: curRoom.rings gates it, so the Hearth and every dungeon
+  have no minimap at all. That is a gap, not a decision.
 - The Hearth has grass, wildflowers, and a flock: 6 hens and 4 sheep
   (03b_critters.js). They are deliberately NOT in `enemies` — one stray
   membership and every AoE would slaughter them.
@@ -173,3 +206,18 @@ QA TRAPS THAT COST TIME THIS SESSION (on top of HANDOFF.md's list)
   canvas or the buttons on top of it.
 - Loops driven by wall clock cannot be probed by stepping a frame counter — stub
   performance.now() or they read as motionless.
+- CHECK YOUR OWN DIFF STAT AFTER A SCRIPTED EDIT. A replacement meant to touch one
+  function ate ~90 lines — the entire boss dialogue system and bossEngaged, whose
+  absence threw on the first tick of every registered fight. `git diff --stat`
+  reading "38 insertions, 126 deletions" for a 40-line rewrite is the whole tell.
+- PARSE-CHECK EVERY FILE as part of the run: fetch each script[src] and
+  new Function(text). Manual frame-stepping does not need the rAF loop, so it
+  cannot see a syntax error or a dead loop. rAF is throttled to ZERO in a
+  backgrounded tab — waiting on it hangs the tool call.
+- enterRoom(key, px, py) NEEDS the coordinates. Calling it with one argument puts
+  the player at NaN and solid() then throws reading grid[NaN]. Only '0,0' has
+  R.px/R.py; everywhere else use safeSpot().
+- HARNESS BUGS OUTNUMBERED REAL BUGS in this sweep. Before reporting a finding,
+  check the API you called: floorFamily takes (tileChar, room) not (x,y);
+  zoneTierRow is POSITIONAL so a loot test must roll inside the zone it means;
+  a Lv1 test hero dies in one frame in a Lv75 zone and the death resets the room.
