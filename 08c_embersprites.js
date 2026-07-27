@@ -80,7 +80,14 @@ function critterFrame(spec,dirIdx,frame,moving){
 const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',
   'floor_walk','floor_walk2','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
-  'wall','planter','brazier','lamp']
+  'wall','planter','brazier','lamp',
+  // THE VAULT (user: rework the visuals for the entire storage room). The strongroom's own
+  // furniture -- everything the hub's market art could not say about a bank.
+  'vault_door','vault_boxes','vault_coins','vault_crates','vault_sacks','vault_candelabra',
+  // The wall racks are FRONT ELEVATIONS drawn across a 2x3-tile unit (see the 'h' branch in
+  // 08_render.js). Two variants, alternated per unit, so a twenty-tile wall is not one rack
+  // photocopied eleven times.
+  'vault_rack0','vault_rack1']
   .forEach(k=>{ _hearth[k]=_img('assets/hearth/'+k+'.png'); });
 // water tile (global â€” hub pool + grove lakes)
 const _waterImg=(typeof window!=='undefined')?_img('assets/tiles/water.png'):null;

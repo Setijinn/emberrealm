@@ -414,6 +414,149 @@ function drawTileG(x,y){
     }
     return;
   }
+  // ============================ THE VAULT STRONGROOM ============================
+  // The vault used the hub's cobble and looked like a shed behind the market. A strongroom is the
+  // one room in the game that has to look EXPENSIVE, and the read has to be instant: polished
+  // stone, brass, and a carpet that tells you where to walk.
+  //
+  // Drawn procedurally rather than from art because every part of it is a GRID: the slabs are
+  // 2x2 tiles, the brass seams run along slab boundaries, the deposit-box doors are 2x2 per tile,
+  // and the runner needs to know which of its own edges are exposed. A tile image cannot see its
+  // neighbours, so a seam baked into art breaks the moment the room is reshaped -- and reshaping
+  // the room is exactly what this pass does. Procedural also tiles perfectly and loads instantly,
+  // which is most of the room's first impression.
+  //
+  //   f  polished granite, 2x2-tile slabs with brass seams
+  //   p  crimson runner, gold trim drawn only on its exposed edges
+  //   h  the back bank of safe-deposit doors
+  //   W  dressed stone with a brass dado rail
+  if(curRoom.key==='VAULT'){
+    const VG=curRoom.grid, vat=(xx,yy)=>{ const r=VG[yy]; return r?r[xx]:'W'; };
+    const vh=hmix(x,y);
+
+    if(c==='W'){
+      // dressed ashlar, courses offset every other row, with a brass rail at the base
+      ctx.fillStyle='#241f28'; ctx.fillRect(tx,ty,TILE,TILE);
+      const off=(y&1)?TILE/2:0;
+      for(let i=-1;i<2;i++){
+        const bx=tx+off+i*TILE, g2=hmix(x*3+i,y*7);
+        ctx.fillStyle=['#332b36','#2e2731','#3a313d'][g2%3];
+        ctx.fillRect(bx+1,ty+1,TILE-2,TILE/2-2);
+        ctx.fillStyle=['#2b242e','#352d38','#292330'][(g2>>>4)%3];
+        ctx.fillRect(bx+1-TILE/2,ty+TILE/2+1,TILE-2,TILE/2-2);
+      }
+      ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,2);
+      ctx.fillStyle='rgba(0,0,0,0.34)';       ctx.fillRect(tx,ty+TILE-5,TILE,5);
+      // the rail only runs on wall cells with open floor below, so it reads as a line running
+      // around the room rather than a stripe painted on every block in the map
+      if('fph'.indexOf(vat(x,y+1))>=0){
+        ctx.fillStyle='#7a5c22'; ctx.fillRect(tx,ty+TILE-11,TILE,3);
+        ctx.fillStyle='#c9a04a'; ctx.fillRect(tx,ty+TILE-11,TILE,1);
+        if((vh&7)===0){ ctx.fillStyle='#e8c98a'; ctx.fillRect(tx+((vh>>>3)%(TILE-4)),ty+TILE-11,2,1); }
+      }
+      return;
+    }
+
+    if(c==='h'){
+      // THE SCROLL RACKS (user: "more like a wine cellar with the walls being wine shelfs but full
+      // of scrolls", then "like that but a bunch of them from the front side").
+      //
+      // These are FRONT ELEVATIONS, not a top-down pattern. The first attempt drew the lattice
+      // procedurally from above and it read as a honeycomb of coins -- a wine rack is recognised
+      // by its front, by the X-braces and the ends of what is stored in it, and none of that
+      // survives being flattened into a floor plan.
+      //
+      // So a rack is one image spanning a 2x3-TILE UNIT, and each tile blits its own sixth of it.
+      // The unit is anchored to a global grid (floor(x/2)*2, floor(y/3)*3) rather than to the
+      // block's own corner, which means the walls line up on their own no matter where a block is
+      // placed -- 00b_hearth just has to put its rack blocks on those boundaries. Two variants
+      // alternate per unit so a twenty-tile wall is not one rack repeated eleven times.
+      const UW=2, UH=3;
+      const ux=Math.floor(x/UW)*UW, uy=Math.floor(y/UH)*UH;
+      const rk=(typeof _hearth!=='undefined')
+        ? _hearth[(hmix(ux,uy)&1)?'vault_rack1':'vault_rack0'] : null;
+      if(rk&&rk.complete&&rk.naturalWidth){
+        const sw=rk.naturalWidth/UW, sh=rk.naturalHeight/UH;
+        ctx.imageSmoothingEnabled=false;
+        ctx.fillStyle='#120c07'; ctx.fillRect(tx,ty,TILE,TILE);   // behind, so gaps read as dark
+        ctx.drawImage(rk,(x-ux)*sw,(y-uy)*sh,sw,sh, tx,ty,TILE,TILE);
+        // the lowest course of a rack gets a contact shadow, so it sits ON the floor
+        if(vat(x,y+1)!=='h'){ ctx.fillStyle='rgba(0,0,0,0.34)'; ctx.fillRect(tx,ty+TILE-4,TILE,4); }
+        return;
+      }
+      // art not decoded yet: a dark panel, never the bare floor (which would flash as a hole)
+      ctx.fillStyle='#1a1209'; ctx.fillRect(tx,ty,TILE,TILE);
+      ctx.fillStyle='rgba(0,0,0,0.32)'; ctx.fillRect(tx,ty+TILE-4,TILE,4);
+      return;
+    }
+
+    // ---- the floor: 2x2-tile polished slabs, brass seams on the slab grid ----
+    // COLD AND DARK ON PURPOSE. The room's light is eight additive warm glows (09_sprites), and a
+    // mid-tone stone under that much orange comes out khaki -- the first pass looked like packed
+    // dirt, not a bank. Sitting the granite this low and this blue leaves the lamplight somewhere
+    // to go: the warm pools read as warm because the stone between them stays cold.
+    const sh=hmix(x>>1,y>>1);                       // one hash per SLAB, not per tile
+    ctx.fillStyle=['#15141d','#191825','#121119','#1c1a28'][sh%4];
+    ctx.fillRect(tx,ty,TILE,TILE);
+    // polish: a broad sheen that does NOT follow the tile grid, so the stone reads as one surface
+    const sheen=vnoise(x*0.5,y*0.5,2.4);
+    if(sheen>0.5){ ctx.fillStyle='rgba(150,160,210,'+((sheen-0.5)*0.16).toFixed(3)+')';
+      ctx.fillRect(tx,ty,TILE,TILE); }
+    for(let i=0;i<5;i++){ const g3=hmix(x*13+i,y*17+i);
+      ctx.fillStyle=(g3&1)?'rgba(255,255,255,0.035)':'rgba(0,0,0,0.16)';
+      ctx.fillRect(tx+(g3%TILE),ty+((g3>>>6)%TILE),1,1); }
+    const sL=(x&1)===0, sT=(y&1)===0;
+    if(sL){ ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(tx,ty,2,TILE);
+            ctx.fillStyle='rgba(201,160,74,0.42)'; ctx.fillRect(tx+1,ty,1,TILE); }
+    if(sT){ ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(tx,ty,TILE,2);
+            ctx.fillStyle='rgba(201,160,74,0.42)'; ctx.fillRect(tx,ty+1,TILE,1); }
+    if(sL&&sT){ ctx.fillStyle='#c9a04a'; ctx.fillRect(tx,ty,3,3);
+                ctx.fillStyle='#f7e6b4'; ctx.fillRect(tx,ty,1,1); }
+
+    // ---- the runner ----
+    // The spawn cell left a black square in the middle of the carpet, ringed in gold trim, because
+    // its neighbours correctly saw a non-runner cell and drew their own edge against it. The map
+    // writes that cell as 'P', but 02_worldbuild REWRITES IT TO '.' while lifting the spawn point
+    // out -- so checking for 'P' here matches nothing and the hole stayed. Checking for '.' is
+    // what actually works, and it is qualified by a neighbour test so a '.' out on the stone floor
+    // never turns into an orphan square of carpet.
+    const runAt=(xx,yy)=>{ const q=vat(xx,yy);
+      if(q==='p') return true;
+      if(q!=='.') return false;
+      return vat(xx-1,yy)==='p'||vat(xx+1,yy)==='p'||vat(xx,yy-1)==='p'||vat(xx,yy+1)==='p'; };
+    if(runAt(x,y)){
+      const rN=runAt(x,y-1), rS=runAt(x,y+1), rE=runAt(x+1,y), rW=runAt(x-1,y);
+      ctx.fillStyle='#5e1a20'; ctx.fillRect(tx,ty,TILE,TILE);
+      for(let i=0;i<10;i++){ const g4=hmix(x*29+i,y*31+i);
+        ctx.fillStyle=(g4&3)?'rgba(0,0,0,0.13)':'rgba(255,190,170,0.07)';
+        ctx.fillRect(tx+(g4%(TILE-4)),ty+((g4>>>7)%TILE),3,1); }
+      // a faint damask diamond so the carpet carries a PATTERN and not just noise
+      ctx.fillStyle='rgba(226,176,110,0.13)';
+      for(let i=0;i<7;i++){ const w2=(i<4?i:6-i)*2+1;
+        ctx.fillRect(tx+TILE/2-w2, ty+TILE/2-7+i*2, w2*2, 2); }
+      // gold trim ONLY on exposed edges. Trim on every tile is a ladder, not a carpet.
+      if(!rN){ ctx.fillStyle='#8a6a24'; ctx.fillRect(tx,ty,TILE,4);
+               ctx.fillStyle='#d9b45e'; ctx.fillRect(tx,ty,TILE,2); }
+      if(!rS){ ctx.fillStyle='#8a6a24'; ctx.fillRect(tx,ty+TILE-4,TILE,4);
+               ctx.fillStyle='#d9b45e'; ctx.fillRect(tx,ty+TILE-2,TILE,2); }
+      if(!rW){ ctx.fillStyle='#8a6a24'; ctx.fillRect(tx,ty,4,TILE);
+               ctx.fillStyle='#d9b45e'; ctx.fillRect(tx,ty,2,TILE); }
+      if(!rE){ ctx.fillStyle='#8a6a24'; ctx.fillRect(tx+TILE-4,ty,4,TILE);
+               ctx.fillStyle='#d9b45e'; ctx.fillRect(tx+TILE-2,ty,2,TILE); }
+    }
+
+    // props that stand on the vault floor still draw over it
+    // 'l' is the candelabra here rather than the town lamp -- reusing the tile char means the
+    // room's lighting comes for free (02_worldbuild pushes a glow for every 'l' and 'H'), which
+    // a decor entry would not have done.
+    if(c==='H'||c==='l'){
+      const dimg=(c==='H')?_hearth.brazier:_hearth.vault_candelabra;
+      if(dimg&&dimg.complete&&dimg.naturalWidth){ ctx.fillStyle='rgba(0,0,0,.32)';
+        ctx.beginPath(); ctx.ellipse(tx+TILE/2,ty+TILE-3,13,5,0,0,6.29); ctx.fill();
+        drawObjBottom(dimg,tx+TILE/2,ty+TILE-1,c==='l'?30:40); } }
+    return;
+  }
+
   // town floor (PixelLab): cobble base, 'p' = paved walkway, ~11% broken variant
   // (well-mixed hash — a linear x*a+y*b formula makes diagonal stripes).
   // Decor cells (h planter / H brazier / l lamp) draw floor UNDER their sprite.

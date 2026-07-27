@@ -1158,6 +1158,30 @@ function drawStrongbox(x,y){
  ctx.strokeRect(x-21,y-10,42,24); ctx.strokeRect(x-22,y-22,44,13);
  ctx.restore();
 }
+// The strongroom's furniture. One entry point for all of it: every piece is base-anchored art
+// with a contact shadow, and the only thing that differs is which image and how wide. Written as
+// a table rather than six near-identical functions because that is genuinely all the difference
+// there is between them -- and because the great door needs to sit BEHIND the boxes it guards,
+// which is a draw-order decision belonging to the decor list, not to six separate functions.
+const VPROP={ door:{k:'vault_door',w:100}, boxes:{k:'vault_boxes',w:96},
+              coins:{k:'vault_coins',w:44}, crates:{k:'vault_crates',w:56},
+              sacks:{k:'vault_sacks',w:46}, candelabra:{k:'vault_candelabra',w:30} };
+function drawVaultProp(kind,x,y,wOverride){
+  const P=VPROP[kind]; if(!P) return;
+  const img=(typeof _hearth!=='undefined')?_hearth[P.k]:null;
+  if(!img||!img.complete||!img.naturalWidth) return;
+  const w=wOverride||P.w;
+  ctx.fillStyle='rgba(0,0,0,.34)';
+  ctx.beginPath(); ctx.ellipse(x,y-2,w*0.36,w*0.13,0,0,6.29); ctx.fill();
+  drawObjBottom(img,x,y,w);
+  // the candelabra's flames are the room's only moving light, so they get a breath of their own
+  if(kind==='candelabra'){
+    const t=performance.now()/1000, k=0.5+0.5*Math.sin(t*3.1+x*0.05);
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.10+0.07*k;
+    const g=ctx.createRadialGradient(x,y-w*1.5,2,x,y-w*1.5,w*2.4);
+    g.addColorStop(0,'#ffd08a'); g.addColorStop(1,'rgba(255,208,138,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y-w*1.5,w*2.4,0,6.29); ctx.fill(); ctx.restore(); }
+}
 function drawBanner(x,y){
  ctx.fillStyle='#7a3f22'; ctx.fillRect(x-2,y,4,44);
  ctx.fillStyle='#8a2c2c'; ctx.beginPath();
@@ -1605,6 +1629,7 @@ function render(){
     else if(d.t==='sign') drawSign(dx,dy,d.txt);
     else if(d.t==='chest') drawChest(dx,dy);
     else if(d.t==='strongbox') drawStrongbox(dx,dy);
+    else if(d.t&&d.t.slice(0,2)==='v_') drawVaultProp(d.t.slice(2),dx,dy,d.w);
     else if(d.t==='banner') drawBanner(dx,dy); }
   // particles: normal pass, then additive pass for glow ones (embers, magic, sparks)
   let _anyGlow=false;

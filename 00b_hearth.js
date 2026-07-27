@@ -101,20 +101,56 @@
   decor:[{t:'sign',x:20,y:23,txt:'SURVIVE THE WAVES'}] };
 
  // ------------------------------------------------------------- VAULT
- const vault=room(28,18,'f');
- block(vault,11,6,16,9,'h');             // the back bank of deposit boxes -- solid, purely scenery
- // Braziers on the approach. The room was a dark box with one lit thing in it; a vault should look
- // like somewhere valuables are KEPT, which means somebody paid to light it.
- [[9,7],[18,7],[9,12],[18,12]].forEach(q=>put(vault,q[0],q[1],'H'));
- put(vault,14,14,'P');
+ // THE VAULT -- reworked (user: "rework the visuals for entire storage room").
+ // It was a 28x18 box of market cobble with a wall block in it, which is what every other side
+ // room looks like. A strongroom is the one place in the game that has to look like money was
+ // spent on it, so the whole room is built as an approach: you come up the crimson runner, the
+ // great door is dead ahead behind a wall of deposit boxes, and your own strongbox stands between
+ // you and it. Everything else -- crates, coin, candlelight -- flanks that line and stays out of it.
+ // The floor, walls, box doors and runner are drawn in 08_render.js under curRoom.key==='VAULT'.
+ const vault=room(30,18,'f');
+ // The rack art spans a 2x3-tile unit anchored to a GLOBAL grid (08_render.js, the 'h' branch),
+ // so every rack block starts on an even column and a row divisible by three. Off-grid blocks
+ // still draw, they just start mid-rack -- these are placed to land flush.
+ block(vault,4,3,25,5,'h');              // the back wall of scroll racks, wall to wall
+ block(vault,2,6,3,11,'h');              // ...and returns down both sides, so the room is
+ block(vault,26,6,27,11,'h');            // enclosed BY racks rather than by empty stone
+ // The runner is an AISLE, not a floor covering. The first pass carpeted a plus-sign across half
+ // the room and the stone stopped being the room; this is four tiles wide with one apron where
+ // the strongbox stands, so the carpet only ever says "walk here, that is the thing".
+ block(vault,13,7,16,16,'p');
+ block(vault,11,7,18,9,'p');
+ // Candlelight down both sides, and only four of them. Glows are ADDITIVE (09_sprites) -- eight
+ // sources washed the granite out to khaki before anything else was even wrong with it.
+ // 'l' rather than a decor entry so 02_worldbuild's glow pass lights the room for free.
+ [[9,8],[21,8],[9,13],[21,13]].forEach(q=>put(vault,q[0],q[1],'l'));
+ put(vault,15,13,'P');
  ROOM_DEFS['VAULT']={ name:'The Vault', town:false, safe:true, map:vault,
-  portalDefs:[ {tx:14, ty:16, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
-  // The strongbox is the real interactable (17j_vault.js). It stands on open floor in FRONT of the
-  // back bank, not on it -- decor drawn inside a solid block is painted over and invisible, which
-  // is exactly how the two chests were lost on the first pass.
-  strongbox:{tx:14, ty:10},
-  decor:[{t:'strongbox',x:14,y:10.4},{t:'sign',x:14,y:13,txt:'THE VAULT'},
-         {t:'chest',x:11,y:10.6},{t:'chest',x:17,y:10.6}] };
+  portalDefs:[ {tx:15, ty:16, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
+  // The strongbox is the real interactable (17j_vault.js). It stands on open carpet in FRONT of
+  // the bank, never on it -- decor drawn inside a solid block is painted over and invisible,
+  // which is how the two chests were lost on the first pass. It sits CLOSE to the great door on
+  // purpose: the camera follows the player, so a strongbox further down the aisle would push the
+  // door off the top of the screen exactly when you are standing at the thing you came for.
+  strongbox:{tx:15, ty:8},
+  // ORDER IS DRAW ORDER. The great door goes first so everything else stands in front of it --
+  // it is the backdrop the room is arranged around, not a prop in it.
+  // WHERE THE GREAT DOOR SITS, and why it is not on the back wall.
+  // The camera centres on the player and shows about seven tiles above them, and the STORE banner
+  // is drawn at a FIXED SCREEN position near the top rather than in the world. A door mounted on
+  // the actual back wall therefore has no good height: from the aisle it is off the top of the
+  // screen, and from the strongbox -- the one moment it should land -- the banner covers it.
+  // So the door stands almost level with the strongbox, flush under the bank of boxes above it.
+  // Its foot is hidden by the strongbox itself (decor is drawn in list order, door first), which
+  // reads exactly right: a small iron coffer standing in front of a great vault door.
+  decor:[{t:'v_door',x:15,y:8.4,w:100},
+         {t:'strongbox',x:15,y:8.5},
+         {t:'sign',x:15,y:11.5,txt:'THE VAULT'},
+         {t:'v_boxes', x:5.6,y:5.9},{t:'v_boxes', x:24.4,y:5.9},
+         {t:'v_crates',x:4.2,y:8.2},{t:'v_crates',x:25.8,y:8.2},
+         {t:'v_sacks', x:4.6,y:11.0},{t:'v_sacks',x:25.4,y:11.0},
+         {t:'v_coins', x:5.4,y:13.6},{t:'v_coins',x:24.6,y:13.6},
+         {t:'chest',x:11.4,y:11.4},{t:'chest',x:18.6,y:11.4}] };
 
  // ------------------------------------------------------------- GUILD HALL
  const guild=room(32,20,'f');
