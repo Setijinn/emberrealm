@@ -488,7 +488,9 @@ function drawEnemySprite(e,pn){
    ctx.restore();
  }
  const _arch=(typeof mobArch==='function')?mobArch(e):null;
- const _ai=(_arch&&_arch!=='beast'&&_arch!=='caster'&&typeof mobArchImg==='function')?mobArchImg(_arch):null;
+ const _aa=(_arch&&typeof mobArchAnim==='function')?mobArchAnim(_arch):null;   // animated set, if vendored
+ const _af=_aa?_enemyFrame(_aa,e,pn):null;
+ const _ai=_af || ((_arch&&_arch!=='beast'&&_arch!=='caster'&&typeof mobArchImg==='function')?mobArchImg(_arch):null);
  // THE CROWN. Sized off the creature's own radius so it fits an elite Sandfly and an elite
  // Colossus alike. Declared here and CALLED inside each branch on purpose: written as a bare
  // `if(e.elite)` between the branches it silently broke the if/else-if/else chain, and every
