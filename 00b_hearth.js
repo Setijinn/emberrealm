@@ -72,11 +72,20 @@
  // The flock (03b_critters.js). Not enemies, not pets, no stats — they are here so the town reads
  // as somewhere people live. Counts are deliberately modest: a dozen hens would be a farmyard, six
  // is a village square.
+ // THE MIRROR IN THE SQUARE. The Sanctuary took the COSMETICS portal, which would have left the
+ // wardrobe -- and therefore every diamond ever spent -- behind a door with no handle. Rather than
+ // delete a feature the user only asked to move past, the mirror itself comes to the Hearth: same
+ // `wardrobe` interactable the COSMETICS room used, same prompt, two tiles off the top road so it
+ // sits in the corner of the square people already associate with appearance.
  ROOM_DEFS['0,0']={ name:'The Hearth', town:true, hub:true, map:hub,
+  wardrobe:{x:9.5, y:7.4},
   critters:{chicken:6, sheep:4},
   portalDefs:[
    {tx:21, ty:2,  to:'G',         label:'THE REALM',  col:'#ff9c50', big:true},
-   {tx:6,  ty:5,  to:'COSMETICS', label:'COSMETICS',  col:'#e07ad4'},
+   // The Sanctuary took this slot from COSMETICS (user). It was previously reachable ONLY through
+   // a button inside the pets panel, and only once you already owned a pet -- so the one room in
+   // the game built to be looked at was the one room you could not walk to.
+   {tx:6,  ty:5,  to:'PETS',      label:'SANCTUARY',  col:'#8ee0a0'},
    {tx:35, ty:5,  to:'VAULT',     label:'VAULT',      col:'#e8b34b'},
    {tx:6,  ty:20, to:'GUILD',     label:'GUILD HALL', col:'#7ab8d4'},
    {tx:35, ty:20, to:'ARENA',     label:'ARENA',      col:'#e2604c'},
@@ -86,7 +95,7 @@
   // frame: measured, the basin band occupies rows 54-112 of 125, so its middle is 21px (0.49 tile)
   // below the frame's middle while the thin spire fills the top. Anchoring half a tile high puts
   // the BASIN -- the part the eye reads as "the fountain" -- on the square's true centre.
-  decor:[{t:'fountain',x:21.5,y:11.5}],
+  decor:[{t:'fountain',x:21.5,y:11.5},{t:'mirror',x:9.5,y:7.6}],
   stalls:[ {id:'bram', x:9.5,y:10.8}, {id:'sella',x:9.5,y:18.3}, {id:'maren',x:32.5,y:10.8}, {id:'odo',x:32.5,y:18.3} ],
  };
 

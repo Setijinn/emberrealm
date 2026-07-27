@@ -2454,6 +2454,11 @@ function _msgPump(){
 // ---- portal routing: every portal carries a destination `to` ----
 function usePortal(to){
   if(to==='_petback'){ if(typeof leavePetRoom==='function') leavePetRoom(); return; }   // exit the Sanctuary
+  // The Sanctuary is BUILT ON DEMAND (buildPetRoom), so rooms['PETS'] does not exist until someone
+  // asks for it -- the generic `rooms[to]` lookup below would silently do nothing. enterPetRoom
+  // builds it, records where to come back to, and spawns the wanderers, so the portal and the
+  // pets-panel button now arrive by exactly the same path.
+  if(to==='PETS'){ if(typeof enterPetRoom==='function') enterPetRoom(); return; }
   if(curRoom&&curRoom.arena&&arenaActive){ recordArenaBest(); arenaActive=false; }
   if(to==='G'){ const gv=rooms['G']; if(!gv) return;
     // Arrive at the LOW-LEVEL HEART of the starter island (Lv1), not the baked P point — P sits

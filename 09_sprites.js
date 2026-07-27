@@ -1054,7 +1054,8 @@ function drawPillar(pl){
 function drawPortal(pt){
  const t=performance.now()/1000, col=pt.col||'#c07ad4', R=pt.big?36:20;
  // destination-themed portal art in the hub (smaller than the shared arch); shared arch elsewhere
- const dkey=pt.to==='G'?'realm':pt.to==='COSMETICS'?'cos':pt.to==='VAULT'?'vault':pt.to==='GUILD'?'guild':pt.to==='ARENA'?'arena':null;
+ const dkey=pt.to==='G'?'realm':pt.to==='COSMETICS'?'cos':pt.to==='VAULT'?'vault':pt.to==='GUILD'?'guild'
+          :pt.to==='ARENA'?'arena':pt.to==='PETS'?'pets':null;
  const ded=(dkey&&typeof _hearth!=='undefined')?_hearth['portal_'+dkey]:null;
  const hasDed=!!(ded&&ded.complete&&ded.naturalWidth);
  const pimg=hasDed?ded:(typeof _hearth!=='undefined')?_hearth.portal:null;
@@ -1184,6 +1185,33 @@ function drawVaultProp(kind,x,y,wOverride){
     const g=ctx.createRadialGradient(x,fy,2,x,fy,w*2.4);
     g.addColorStop(0,'#ffd08a'); g.addColorStop(1,'rgba(255,208,138,0)');
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,fy,w*2.4,0,6.29); ctx.fill(); ctx.restore(); }
+}
+// The wardrobe mirror. Deliberately a real object rather than an invisible trigger: the vault's
+// strongbox taught that an interactable you cannot see reads as a bug, not as a secret.
+function drawMirror(x,y){
+  const t=performance.now()/1000;
+  ctx.save();
+  ctx.globalAlpha=0.28; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(x,y+3,17,6,0,0,6.29); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#4a3520'; ctx.fillRect(x-4,y-6,8,9);                       // foot
+  ctx.fillStyle='#5c4227'; ctx.fillRect(x-13,y-2,26,5);
+  ctx.fillStyle='#6b4d2c';                                                  // frame
+  ctx.beginPath(); ctx.ellipse(x,y-30,15,26,0,0,6.29); ctx.fill();
+  ctx.fillStyle='#8a6a3a';
+  ctx.beginPath(); ctx.ellipse(x,y-30,13,24,0,0,6.29); ctx.fill();
+  const g=ctx.createLinearGradient(x-11,y-52,x+11,y-8);                     // the glass
+  g.addColorStop(0,'#cfe4f0'); g.addColorStop(0.5,'#8fa8c4'); g.addColorStop(1,'#5d7590');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.ellipse(x,y-30,11,22,0,0,6.29); ctx.fill();
+  const k=0.5+0.5*Math.sin(t*1.4);                                          // a slow sheen
+  ctx.globalAlpha=0.18+0.20*k; ctx.fillStyle='#ffffff';
+  ctx.beginPath(); ctx.moveTo(x-9,y-16); ctx.lineTo(x-1,y-46);
+  ctx.lineTo(x+3,y-46); ctx.lineTo(x-5,y-16); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#e8b34b';                                                  // crest
+  ctx.beginPath(); ctx.arc(x,y-56,3.5,0,6.29); ctx.fill();
+  ctx.restore();
 }
 function drawBanner(x,y){
  ctx.fillStyle='#7a3f22'; ctx.fillRect(x-2,y,4,44);
@@ -1632,6 +1660,7 @@ function render(){
     else if(d.t==='sign') drawSign(dx,dy,d.txt);
     else if(d.t==='chest') drawChest(dx,dy);
     else if(d.t==='strongbox') drawStrongbox(dx,dy);
+    else if(d.t==='mirror') drawMirror(dx,dy);
     else if(d.t&&d.t.slice(0,2)==='v_') drawVaultProp(d.t.slice(2),dx,dy,d.w);
     else if(d.t==='banner') drawBanner(dx,dy); }
   // particles: normal pass, then additive pass for glow ones (embers, magic, sparks)

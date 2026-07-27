@@ -55,6 +55,7 @@ function _miniClass(R){
   if(!R) return 'plain';
   if(R.rings) return 'over';
   if(R.dungeon) return 'dun';
+  if(R.petRoom) return 'town';
   if(R.town || R.key==='VAULT' || R.key==='GUILD' || R.key==='COSMETICS' || R.key==='ARENA') return 'town';
   return 'plain';
 }
