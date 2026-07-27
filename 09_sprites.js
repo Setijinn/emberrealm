@@ -808,6 +808,56 @@ function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
 function hitPortalPrompt(sx,sy){ const b=portalPromptRect(); if(!b) return false;
   return Math.abs(sx-b.cx)<=b.w/2+10 && Math.abs(sy-b.cy)<=b.h/2+12; }
 
+// ---------- STATUS SYMBOLS (user, 2026-07-27) ----------
+// Was a row of coloured duration bars. A bar tells you how long something lasts but not WHAT it
+// is, so you had to have memorised nine colours to read your own character -- and the enemies
+// already had symbols, so the two halves of the same system did not match.
+//
+// Symbols now, on both. Urgency is carried by a BLINK THAT ACCELERATES as the effect runs out
+// (user), which is legible in peripheral vision in a way a shrinking bar is not: you notice
+// something start flashing without looking at it. The rate ramps from a slow pulse to a hard
+// strobe over the last stretch, and only in the last stretch, so a fresh status sits still and
+// does not add noise to a fight.
+function statusBlink(frac){
+  // frac 1 -> just applied, 0 -> about to expire.
+  if(frac>0.55) return 1;                                  // plenty left: solid, no distraction
+  const urg=1-(frac/0.55);                                 // 0..1 across the final 55%
+  const hz=2.2+urg*urg*13;                                 // 2.2Hz -> ~15Hz, ramping hard at the end
+  const w=Math.sin(performance.now()/1000*hz*6.283);
+  return 0.42+0.58*(0.5+0.5*w);                            // never fully invisible
+}
+function drawStatusIcons(ent, cx, cy, size){
+  const st=ent&&ent.st; if(!st) return;
+  const ids=Object.keys(st).filter(k=>st[k]&&st[k].t>0);
+  if(!ids.length) return;
+  // the two that take your controls come first: "why can't I move" must be answerable instantly
+  ids.sort((a,b)=>(((a==='freeze'||a==='stun')?-1:0)-((b==='freeze'||b==='stun')?-1:0))
+                  || (st[b].t-st[a].t));
+  const sz=size||14, gap=2, tot=ids.length*sz+(ids.length-1)*gap;
+  let bx=cx-tot/2;
+  for(const id of ids){
+    const s=st[id];
+    const cap=(typeof PSTAT!=='undefined'&&PSTAT[id])?PSTAT[id].cap:5;
+    const frac=Math.max(0,Math.min(1,s.t/cap));
+    ctx.save();
+    ctx.globalAlpha=statusBlink(frac);
+    const ic=(typeof _stIcons!=='undefined')?_stIcons[id]:null;
+    if(ic&&ic.complete&&ic.naturalWidth){
+      ctx.imageSmoothingEnabled=false;
+      // sized by the opaque box, so a symbol with transparent margin is not rendered tiny
+      const bb=(typeof _imgBBox==='function')?_imgBBox(ic):{x:0,y:0,w:ic.naturalWidth,h:ic.naturalHeight};
+      const sc=sz/Math.max(bb.w,bb.h), w=bb.w*sc, h=bb.h*sc;
+      ctx.drawImage(ic, bb.x,bb.y,bb.w,bb.h, Math.round(bx+(sz-w)/2), Math.round(cy-h/2), Math.round(w), Math.round(h));
+    } else {
+      // art not in: a coloured lozenge, still blinking, so the information never disappears
+      ctx.fillStyle='rgba(8,6,10,0.7)'; ctx.fillRect(bx,cy-sz/2,sz,sz);
+      ctx.fillStyle=(typeof STATUS!=='undefined'&&STATUS[id])?STATUS[id].col:'#fff';
+      ctx.fillRect(bx+2,cy-sz/2+2,sz-4,sz-4);
+    }
+    ctx.restore();
+    bx+=sz+gap;
+  }
+}
 // ---------- THE HEARTH FLOCK ----------
 // Drawn with the world, under the hero and under loot, so nothing important is ever hidden behind
 // a sheep. The idle poses are procedural on top of the walk art: a hen dips to peck on a fast
@@ -1537,15 +1587,9 @@ function render(){
         ctx.imageSmoothingEnabled=false;
         const fw=bw*1.22, fh=Math.max(10,bh*2.4);
         ctx.drawImage(_hpbarImg,bx-fw/2,by-fh/2,fw,fh); }
-      // status pips above the bar
-      if(e.st){ let px3=bx-bw/2;
-        for(const id in e.st){ if(e.st[id].t<=0) continue;
-          const ic=(typeof _stIcons!=='undefined')?_stIcons[id]:null;
-          if(ic&&ic.complete&&ic.naturalWidth){ ctx.imageSmoothingEnabled=false;
-            ctx.drawImage(ic,px3,by-16,9,9); }
-          else { ctx.fillStyle=(typeof STATUS!=='undefined'&&STATUS[id])?STATUS[id].col:'#fff';
-            ctx.fillRect(px3,by-13,6,6); }
-          px3+=11; } } });
+      // the SAME symbols the player gets, with the same accelerating blink -- one system, so a
+      // burn reads identically whoever is on fire
+      if(e.st) drawStatusIcons(e, bx, by-14, 12); });
     ctx.font='10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#cfc8bd';
     if(e.wb){
       // The boss name is the loudest thing on screen after the boss itself, so it gets real
@@ -1586,18 +1630,7 @@ function render(){
   // what is currently ON you: a row of coloured pips above the head, longest-remaining first, with
   // the bar draining. Statuses that take your controls (freeze/stun) sit first and pulse, because
   // "why can't I move" has to be answerable in the half second you have to read it.
-  if(player.st){ const ids=Object.keys(player.st).filter(k=>player.st[k].t>0);
-    if(ids.length){
-      ids.sort((a,b)=>((a==='freeze'||a==='stun')?-1:0)-((b==='freeze'||b==='stun')?-1:0)||player.st[b].t-player.st[a].t);
-      const w=14, gap=3, tot=ids.length*w+(ids.length-1)*gap;
-      let bx=player.x-tot/2, by=player.y-46;
-      for(const id of ids){ const s=player.st[id], C=(STATUS[id]&&STATUS[id].col)||'#fff';
-        const lock=(id==='freeze'||id==='stun');
-        const cap=(typeof PSTAT!=='undefined'&&PSTAT[id])?PSTAT[id].cap:5;
-        ctx.globalAlpha=lock?(0.75+0.25*Math.sin(performance.now()/90)):0.9;
-        ctx.fillStyle='rgba(8,6,10,0.72)'; ctx.fillRect(bx-1,by-1,w+2,7);
-        ctx.fillStyle=C; ctx.fillRect(bx,by,Math.max(1,Math.round(w*Math.min(1,s.t/cap))),5);
-        ctx.globalAlpha=1; bx+=w+gap; } } }
+  if(player.st) drawStatusIcons(player, player.x, player.y-46, 15);
   // ascension shield (Bishop/Warden/Guardian/Soulflayer): cyan ward ring while charged
   if((player.shield||0)>0){ const sf=Math.min(1,player.shield/(player.maxhp*0.2));
     const r=26+Math.sin(performance.now()/200)*2, n=Math.max(20,Math.round(r*0.9)), base=0.25+sf*0.35;
