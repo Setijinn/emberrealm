@@ -51,10 +51,23 @@ mistaken for something a monster left behind.
 connection* at send time rather than tagged and filtered client-side. One shared sack plus your own
 bound one is the confirmed shape.
 
-**Enemy AI is host-only.** A co-op client interpolates snapshots and runs none of it
-(`netIsClient()` guard in `07_update.js`). Anything that damages the player from an enemy needs
-three parts: serialize in `netBroadcast`, deserialize in `netApplyWorld`, apply client-side in
-`netHazards` (all `14b_netsync.js`). The snapshot row is a **fixed 15-slot array**.
+**Only one machine simulates a given room.** That is the actual rule, and it is positional, not
+role-based: `netSimulates()` is true for solo, for the host, and for a client whose host is in a
+*different* room. A client whose host is standing next to it stands down. Getting this wrong as
+"clients never simulate" left anyone paired with a distant stranger in a permanently empty world.
+
+**Enemy AI still runs only where `netSimulates()` says so.** Anything that damages the player from
+an enemy needs three parts: serialize in `netBroadcast`, deserialize in `netApplyWorld`, apply
+client-side in `netHazards` (all `14b_netsync.js`).
+
+**The enemy snapshot row is APPEND-ONLY and has no length validation.** Every optional trailing
+element must be null-guarded on read: an unguarded `a[n].map()` throws inside the PeerJS data
+handler and silently kills the rest of that packet — the remaining entities, the shot replacement
+and the whole loot reconcile — on every snapshot. Same rule as `NKIND`: append, never renumber.
+
+**A `remote` entity is not an entity**, it is a rendering of someone else's, with none of the
+fields the simulation needs. It must never be handed to the local AI — `netDropRemote()` clears
+them whenever co-op ends.
 
 **Cosmetics are colour only** — never a stat, never a silhouette.
 
@@ -155,6 +168,15 @@ self-clearing (`if(u.x.p!==period) reset`).
 - **Clear `allies` when measuring weapon DPS**, or the pet's damage lands in the total.
 - **Loops driven by wall clock cannot be probed by stepping a frame counter.** Stub
   `performance.now()` or they read as motionless.
+- **A SYNTAX ERROR IS INVISIBLE TO THIS PROJECT'S QA METHOD.** Manual `update()`/`render()`
+  stepping does not need the rAF loop, so a file that fails to parse still passes every stepped
+  test while the actual game is dead. After any scripted edit, reload and read the console for
+  `SyntaxError` before trusting a single measurement.
+- **Zero frames in a background tab is throttling, not a break.** Take a screenshot to force a
+  paint before concluding the loop is broken.
+- **Place the QA player where spawn points actually are.** The overworld activation band is
+  240–800px from a hero; `devTeleport('G')` lands somewhere with none in range, so the spawner
+  correctly does nothing and it looks like a bug.
 - **An ascension's capstone only applies when the character's class owns that ascension.**
 
 ---
