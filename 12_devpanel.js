@@ -13,6 +13,7 @@ function openDev(){ devPaint();
   b.textContent=rooms[k].name+(rooms[k].cleared?' \u2713':'');
   b.onclick=()=>{ devTeleport(k); };
   box.appendChild(b); }
+ if(typeof devPaintPlus==='function') devPaintPlus();   // the tabbed workbench (12b_devplus.js)
  inGame=false; show('devScr');
 }
 function devTeleport(k){

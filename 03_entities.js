@@ -1051,6 +1051,10 @@ function mobPool(band,t,dun){
   return list;
 }
 function mobSpec(band,t,sp,dun){
+  // an explicit request wins over the hash -- used by the dev workbench to spawn a named creature
+  // (including a dungeon-only one) anywhere, which the position hash by design cannot do
+  if(sp && sp.spec){ const all=mobPool(band,t,true).concat(mobPool(band,t,false));
+    const hit=all.find(m=>m&&m.n===sp.spec); if(hit) return hit; }
   const list=mobPool(band,t,dun); if(!list.length) return null;
   if(list.length===1||!sp) return list[0];
   const h=(Math.imul(sp.x|0,2246822519)+Math.imul(sp.y|0,3266489917))>>>0;

@@ -704,15 +704,19 @@ function drawLootBag(lb,pn){
   // a relic sack glows the relic violet, not Mythical red -- rarity is meaningless on a relic and
   // the colour has to be the same one its name, its R and its banner use
   const _isRel=its.some(x=>x&&x.relic);
-  const col=_isRel?(typeof RELIC_COL!=='undefined'?RELIC_COL:'#a06bff')
-    :(isPot?'#7dc47a':(RAR_COL[rar]||'#cfc8bd'));
+  // an event chest owns its colour outright: it is gold whatever happens to be inside it, because
+  // the point of a chest is that you do not know yet
+  const col=lb.chest?'#ffd24a'
+    :(_isRel?(typeof RELIC_COL!=='undefined'?RELIC_COL:'#a06bff')
+    :(isPot?'#7dc47a':(RAR_COL[rar]||'#cfc8bd')));
   const t=performance.now()/1000, pulse=0.5+Math.sin(t*2.4+lb.x*0.05)*0.5;
-  const glow=Math.max(rar,band*2);               // a bound sack always announces itself
+  const glow=lb.chest?6:Math.max(rar,band*2);    // a bound sack announces itself; a chest shouts
   if(glow>=1||isPot){ const gr=14+glow*6;
     const g=ctx.createRadialGradient(lb.x,lb.y+6,1,lb.x,lb.y+6,gr);
     g.addColorStop(0,col+(glow>=3?'aa':'66')); g.addColorStop(1,col+'00');
     ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(lb.x,lb.y+6,gr,gr*0.5,0,0,6.29); ctx.fill(); }
-  if(band>=1){ const bh=44+band*24, bw=7+band*2, a=(0.14+band*0.06)*(0.6+pulse*0.4);
+  const _beam=lb.chest?4:band;
+  if(_beam>=1){ const bh=44+_beam*24, bw=7+_beam*2, a=(0.14+_beam*0.06)*(0.6+pulse*0.4);
     const bg=ctx.createLinearGradient(0,lb.y-bh,0,lb.y+4);
     const ah=Math.round(a*180).toString(16).padStart(2,'0');
     bg.addColorStop(0,col+'00'); bg.addColorStop(0.65,col+ah); bg.addColorStop(1,col+'00');
@@ -720,12 +724,15 @@ function drawLootBag(lb,pn){
     ctx.moveTo(lb.x-bw*0.35,lb.y-bh); ctx.lineTo(lb.x+bw*0.35,lb.y-bh);
     ctx.lineTo(lb.x+bw,lb.y+2); ctx.lineTo(lb.x-bw,lb.y+2); ctx.closePath(); ctx.fill(); }
   shadow(lb.x,lb.y+8,10);
-  const bn=(typeof LOOT_BANDS!=='undefined')?LOOT_BANDS[band]:null;
+  const bn=(typeof bagBandRec==='function')?bagBandRec(lb)
+    :((typeof LOOT_BANDS!=='undefined')?LOOT_BANDS[band]:null);
   // resolve the band's sack through the real table, NOT off `window` -- the images are `const`, so
   // they are lexical bindings and were never window properties (every bag drew as plain burlap)
   let img=(bn&&typeof lootSackImg==='function')?lootSackImg(bn.spr):null;
   if(!img||!img.naturalWidth) img=(typeof _lootSack!=='undefined')?_lootSack:null;   // until the art lands
-  const bob=band>=1?Math.sin(t*2.2+lb.x*0.03)*1.5:0;
+  const isChest=!!lb.chest;
+  // a chest does not bob: it is a heavy thing placed on the ground, not a bag someone dropped
+  const bob=isChest?0:(band>=1?Math.sin(t*2.2+lb.x*0.03)*1.5:0);
   if(img&&img.complete&&img.naturalWidth){
     // Size the SACK, not its canvas. Scaling by naturalWidth counts transparent padding as sack, so
     // art with a margin renders small: the relic sack is 45x55 of paint inside a 64x64 file, and it
@@ -734,9 +741,10 @@ function drawLootBag(lb,pn){
     // any future sack immune to however its author framed the file.
     const bb=(typeof _imgBBox==='function')?_imgBBox(img)
       :{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight};
-    const sc=(22+band*3)/bb.w, dw=bb.w*sc, dh=bb.h*sc;
+    const sc=(isChest?40:(22+band*3))/bb.w, dw=bb.w*sc, dh=bb.h*sc;
     ctx.save(); ctx.imageSmoothingEnabled=false;
-    if(band>=2||rar>=4){ ctx.shadowColor=col; ctx.shadowBlur=10*pulse; }
+    if(isChest){ ctx.shadowColor='#ffd24a'; ctx.shadowBlur=16*pulse; }
+    else if(band>=2||rar>=4){ ctx.shadowColor=col; ctx.shadowBlur=10*pulse; }
     ctx.drawImage(img, bb.x,bb.y,bb.w,bb.h,
       Math.round(lb.x-dw/2), Math.round(lb.y-dh/2+bob), dw, dh);
     ctx.restore();
@@ -748,8 +756,8 @@ function drawLootBag(lb,pn){
   //  on top of the artwork it was competing with.)
   // tier is readable on the ground too, not just once it is in a slot — a public sack used to say
   // nothing at all, so you had to walk over it to find out what you were picking up
-  if(top>=0){ ctx.font='bold 10px "Pixelify Sans",monospace'; ctx.textAlign='center';
-    const ly=lb.y-20+bob;
+  if(top>=0||isChest){ ctx.font='bold '+(isChest?12:10)+'px "Pixelify Sans",monospace'; ctx.textAlign='center';
+    const ly=lb.y-(isChest?28:20)+bob;
     let lab=(top>=0?('T'+(top+1)):'');
     if(its.length>1) lab+=' ·'+its.length;
     if(bn&&bn.label) lab+=' '+bn.label;

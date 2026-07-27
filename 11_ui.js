@@ -200,10 +200,13 @@ function paintBagPanel(){
   const ch=curChar(); if(!ch||!rpg) return closeBagPanel();
   const its=bagItems(lb);
   if(!its.length){ closeBagPanel(); return; }
-  const band=bagBand(lb), bn=LOOT_BANDS[band], top=bagTopTier(lb);
+  const band=bagBand(lb), bn=bagBandRec(lb), top=bagTopTier(lb);
   const relic=its.some(x=>x&&(x.k==='leg'||x.relic));
-  $s('bagTitle').textContent=relic?'A RELIC':((bn&&bn.bound)?'SOULBOUND SACK':'SACK');
-  $s('bagSub').innerHTML=(relic
+  $s('bagTitle').textContent=lb.chest?'AN EMBERWROUGHT CHEST'
+    :(relic?'A RELIC':((bn&&bn.bound)?'SOULBOUND SACK':'SACK'));
+  $s('bagSub').innerHTML=(lb.chest
+      ? '<span style="color:#ffd24a">left here on purpose</span>'
+      : relic
       ? '<span style="color:'+RELIC_COL+'">kept by its dungeon — there is only one</span>'
       : '<span style="color:'+tierCol(top)+'">T'+(top+1)+' '+(TIER_NAMES[top]||'')+'</span>')
     +' · '+its.length+' piece'+(its.length===1?'':'s')
@@ -806,13 +809,54 @@ const LOOT_BANDS=[
  // `min:12` is RELIC_T, so bandOfTier finds it on its own and nothing else can reach this band.
  {min:12, spr:'_lootSackRelic', bound:true, life:600, label:'RELIC'},
 ];
+// THE EVENT CHEST is not a band -- it is its own thing, and it opts OUT of bandOfTier entirely by
+// carrying `band:-1` and its own sprite. It sits in `loots` so every prompt, panel and co-op path
+// already works on it; only the drawing and the roll differ.
+const CHEST_BAND={spr:'_eventChest', bound:true, life:900, label:'EVENT'};
+// Deliberately generous: this is the reward for an event, not a kill. A dungeon boss pays a relic
+// at 0.25%-1% (relicChanceFor); a chest pays one better than one time in three, and everything
+// else it holds is drawn from the top of the tier table rather than the middle.
+const CHEST_RELIC_P=0.35, CHEST_PIECES=[4,6], CHEST_TMIN=8;
+function rollEventChest(lv,cls,opts){
+  const o=opts||{};
+  const relicP=(o.relicP!==undefined)?o.relicP:CHEST_RELIC_P;
+  const items=[];
+  if(typeof RELICS!=='undefined' && RELICS.length && Math.random()<relicP){
+    const R=RELICS[Math.floor(Math.random()*RELICS.length)];
+    items.push(mkRelicItem(R.id,cls));
+  }
+  const n=CHEST_PIECES[0]+Math.floor(Math.random()*(CHEST_PIECES[1]-CHEST_PIECES[0]+1));
+  const kinds=['wpn','arm','helm','ring'];
+  for(let i=0;i<n;i++){
+    // weighted to the TOP of the table: floor at T9 and biased upward from there
+    const span=(MAXT-1)-CHEST_TMIN;
+    const t=CHEST_TMIN+Math.floor(Math.pow(Math.random(),0.55)*(span+1));
+    items.push(mkItem(kinds[Math.floor(Math.random()*kinds.length)],Math.min(MAXT-1,t),0,cls));
+  }
+  return items;
+}
+// Place one in the world. `opts.relicP` overrides the rate for a richer event.
+function spawnEventChest(x,y,opts){
+  const ch=(typeof curChar==='function')?curChar():null;
+  const cls=(opts&&opts.cls)||(ch&&ch.cls)||'knight';
+  const lv=(opts&&opts.lv)||(rpg&&rpg.lvl)||1;
+  const items=rollEventChest(lv,cls,opts);
+  const lb=bagAt({x:x,y:y},items);
+  lb.chest=1; lb.band=-1; lb.life=CHEST_BAND.life; lb.own=null;
+  loots.push(lb);
+  if(typeof msg==='function') msg('AN EMBERWROUGHT CHEST','something was left here on purpose');
+  return lb;
+}
 function bagItems(lb){ return (lb&&lb.items)||(lb&&lb.item?[lb.item]:[]); }
 function bagTopTier(lb){ let t=-1; for(const it of bagItems(lb)) if(it&&it.t!==undefined&&it.t>t) t=it.t; return t; }
 function bagTopRar(lb){ let r=0; for(const it of bagItems(lb)) if(it&&(it.rar||0)>r) r=it.rar; return r; }
 function bandOfTier(t){ if(t===undefined||t<0) return 0;
  let b=0; for(let i=0;i<LOOT_BANDS.length;i++) if(t>=LOOT_BANDS[i].min) b=i; return b; }
 function bagBand(lb){ return (lb&&lb.band!==undefined)?lb.band:bandOfTier(bagTopTier(lb)); }
-function bagBound(lb){ return !!LOOT_BANDS[bagBand(lb)].bound; }
+// a chest is band -1: it has no place in the tier ladder, so every band lookup has to route to its
+// own record rather than indexing LOOT_BANDS[-1] and getting undefined
+function bagBandRec(lb){ return (lb&&lb.chest)?CHEST_BAND:(LOOT_BANDS[bagBand(lb)]||LOOT_BANDS[0]); }
+function bagBound(lb){ return !!bagBandRec(lb).bound; }
 // walk-over vs INTERACT: public sacks auto-collect, soulbound sacks are worth pressing a button for.
 // Decided by BAND, not by ownership, so solo and host behave identically.
 // WALK-OVER vs INTERACT. A sack that holds anything worth looking at opens the panel, so you see

@@ -46,8 +46,13 @@ const _lootSackRelic = (typeof window!=='undefined') ? (()=>{ const i=new Image(
 // a property of `window`, so the old `window[bn.spr]` lookup silently returned undefined for every
 // band and every sack in the game drew as the plain burlap one. The T9, T11 and relic art had
 // never appeared on screen.
+// THE EVENT CHEST (user, 2026-07-27). The one deliberate exception to "loot is always a sack":
+// a sack is what a KILL leaves, and that rule stands. A chest is not a drop -- it is an event you
+// walk up to, placed on purpose, and it looks like nothing else in the game precisely so it can
+// never be mistaken for something a monster left behind.
+const _eventChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/event_chest.png'; return _track(i); })() : null;
 const _LOOT_SPR={_lootSack:_lootSack, _lootSackT9:_lootSackT9, _lootSackT11:_lootSackT11,
-                 _lootSackRelic:_lootSackRelic};
+                 _lootSackRelic:_lootSackRelic, _eventChest:_eventChest};
 function lootSackImg(name){ const im=_LOOT_SPR[name]; return (im&&im.naturalWidth)?im:_lootSack; }
 // Hearth (town) PixelLab art: 4 vendor shop stalls (with the vendor built in), fountain, portal.
 const _hearth={};
