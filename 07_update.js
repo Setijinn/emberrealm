@@ -833,6 +833,19 @@ function update(dt){
   // boss bar vanishes when the boss dies, you leave the room, or you get far away
   if(bossBar && (bossBar.hp<=0 || enemies.indexOf(bossBar)<0
       || Math.hypot(player.x-bossBar.x,player.y-bossBar.y)>1100)) bossBar=null;
+  // LOOT, SCANNED ON ITS OWN. Deliberately outside the competition below and outside portalLock:
+  // a sack is never the thing that teleported you, and it must stay offered while you stand on it
+  // next to whatever else is there. A sack that auto-collects on walk-over never prompts, and
+  // somebody else's bound sack is invisible to me.
+  lootPrompt=null;
+  { let _lbest=1e9;
+    for(const lb of loots){ if(bagAuto(lb)) continue;
+      if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;
+      const d=Math.hypot(lb.x-player.x,lb.y-player.y);
+      if(d<52 && d<_lbest){ _lbest=d;
+        const n=bagItems(lb).length, tt=bagTopTier(lb);
+        lootPrompt={x:lb.x,y:lb.y,bag:lb,
+          ctx:'T'+(tt+1)+(n>1?(' · '+n+' pieces'):'')}; } } }
   portalPrompt=null;
   if(!portalLock){ let _pbest=1e9;
     if(curRoom.portals) for(const pt of curRoom.portals){ const d=Math.hypot(pt.x-player.x,pt.y-player.y);
@@ -841,14 +854,6 @@ function update(dt){
       if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'ground',x:gp.x,y:gp.y,gp:gp,ctx:gp.home?'The Vale':'The Dungeon'}; } }
     if(curRoom.pillars) for(const pl of curRoom.pillars){ const d=Math.hypot(pl.x-player.x,pl.y-player.y);
       if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl.band)?pl.name:'Attune '+pl.name}; } }
-    // soulbound sacks are the ones worth a button press; public sacks auto-collect on walk-over.
-    // Someone else's bound sack is invisible to me and must never offer a prompt either.
-    for(const lb of loots){ if(bagAuto(lb)) continue;
-      if(lb.own && typeof netOwnsLoot==='function' && !netOwnsLoot(lb)) continue;
-      const d=Math.hypot(lb.x-player.x,lb.y-player.y);
-      const n=bagItems(lb).length, tt=bagTopTier(lb);
-      if(d<48 && d<_pbest){ _pbest=d; portalPrompt={kind:'loot',x:lb.x,y:lb.y,bag:lb,
-        ctx:'T'+(tt+1)+(n>1?(' ·'+n+' items'):'')}; } }
     if(curRoom.npc){ const np=curRoom.npc, d=Math.hypot(np.x-player.x,np.y-player.y);
       if(d<52 && d<_pbest){ _pbest=d; portalPrompt={kind:'npc',x:np.x,y:np.y,np:np,ctx:np.name}; } }
     if(curRoom.switches) for(const sw of curRoom.switches){ if(sw.on) continue;

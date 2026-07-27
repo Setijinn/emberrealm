@@ -17,7 +17,10 @@ addEventListener('pointerdown',e=>{
   // minimap zoom buttons sit in the top-left corner and must not also fire a shot
   if(typeof miniHit==='function'){ const mh=miniHit(e.clientX,e.clientY);
     if(mh){ if(mh==='in') miniZoomIn(); else miniZoomOut(); return; } }
-  // the floating USE prompt (portal/pillar) takes top precedence
+  // the floating prompts take top precedence. TAKE is tested first: it is the smaller, lower
+  // button, so if the two ever overlap the tap should belong to the one you had to aim at.
+  if(typeof hitLootPrompt==='function' && hitLootPrompt(e.clientX,e.clientY)){
+    if(typeof useLootPrompt==='function') useLootPrompt(); return; }
   if(typeof hitPortalPrompt==='function' && hitPortalPrompt(e.clientX,e.clientY)){
     if(typeof usePortalPrompt==='function') usePortalPrompt(); return; }
   // the ULT button fires on press — no arming, no aiming (rule 5b: a thumb must manage it)
@@ -72,7 +75,10 @@ addEventListener('keydown',e=>{
   }
   // R was the ultimate; it is the Hearth recall now (user request), so the ult keeps 4 only
   else if(k==='4'){ if(typeof castUlt==='function') castUlt(); }    // ascension ultimate
+  // E uses the world (portal, pillar, stall, switch); F takes loot. Two keys because they are two
+  // different mistakes to make: walking into a dungeon when you meant to open a sack costs a run.
   else if(k==='e'){ if(typeof portalPrompt!=='undefined' && portalPrompt && typeof usePortalPrompt==='function') usePortalPrompt(); }
+  else if(k==='f'){ if(typeof lootPrompt!=='undefined' && lootPrompt && typeof useLootPrompt==='function') useLootPrompt(); }
   else if(k==='q'){ const b=document.getElementById('potBtn'); if(b) b.click(); }
   else if(k==='i'||k==='b'){ const b=document.getElementById('invBtn'); if(b) b.click(); }
   else if(k==='k'){ const b=document.getElementById('skillBtn'); if(b) b.click(); }

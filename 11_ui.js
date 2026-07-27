@@ -74,12 +74,17 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   else if(p.kind==='pillar'){ const pl=p.pl;
     if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
     openFastTravel(); }
-  // A soulbound sack opens rather than vanishing into the satchel: it can hold several pieces and
-  // you should get to see them against what you are wearing before deciding. On a client the
-  // panel asks the host first and opens on the grant — it must never award locally.
-  else if(p.kind==='loot'){ if(typeof openBagPanel==='function') openBagPanel(p.bag);
-    else claimBag(p.bag); }
   navigator.vibrate&&navigator.vibrate(30);
+}
+// TAKE, on its own control. A sack opens rather than vanishing into the satchel: it can hold
+// several pieces and you should see them against what you are wearing before choosing. On a client
+// the panel asks the host first and opens on the grant — it must never award locally.
+// Separate from usePortalPrompt on purpose: opening a sack must never be able to move you.
+function useLootPrompt(){
+  const p=(typeof lootPrompt!=='undefined')?lootPrompt:null; if(!p||!p.bag) return;
+  if(loots.indexOf(p.bag)<0){ lootPrompt=null; return; }     // it rotted or someone took it
+  if(typeof openBagPanel==='function') openBagPanel(p.bag); else claimBag(p.bag);
+  navigator.vibrate&&navigator.vibrate(20);
 }
 // ============================================================
 // THE SACK PANEL (user, 2026-07-26)

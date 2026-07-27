@@ -634,8 +634,10 @@ function drawLootBag(lb,pn){
     ctx.fillStyle=col; ctx.fillText(lab,lb.x,ly); ctx.textAlign='left'; }
 }
 // Big reusable INTERACT button (screen space) — anchored above the interactable, clamped on-screen.
+// The plate was a third of the screen wide and sat on top of the thing it was pointing at. It only
+// ever holds two short words, so it is sized to the words now, not to the viewport.
 function portalPromptRect(){ if(typeof portalPrompt==='undefined'||!portalPrompt) return null;
-  const w=Math.round(Math.max(150,Math.min(238,W*0.34))*UIS), h=Math.round(w*0.403);  // match plate 216x87
+  const w=Math.round(Math.max(104,Math.min(154,W*0.20))*UIS), h=Math.round(w*0.403);  // plate is 216x87
   const sp=w2s(portalPrompt.x,portalPrompt.y);    // through the full camera transform (incl. rotation)
   const cx=Math.max(w/2+8,Math.min(W-w/2-8,sp.x));
   const cy=Math.max(h/2+34,sp.y - h*0.6 - 62);
@@ -669,6 +671,47 @@ function drawPortalPrompt(){ const b=portalPromptRect(); if(!b) return;
 }
 function hitPortalPrompt(sx,sy){ const b=portalPromptRect(); if(!b) return false;
   return Math.abs(sx-b.cx)<=b.w/2+10 && Math.abs(sy-b.cy)<=b.h/2+12; }
+
+// ---------- THE LOOT PROMPT ----------
+// Its own button, anchored to the SACK rather than to the hero, and drawn in the sack's own colour
+// so the two prompts never read as the same control. Sits lower than the world prompt (which rides
+// well above its target), so a sack dropped at a portal's feet still shows both without a collision.
+function lootPromptRect(){ if(typeof lootPrompt==='undefined'||!lootPrompt) return null;
+  const w=Math.round(Math.max(92,Math.min(132,W*0.17))*UIS), h=Math.round(w*0.40);
+  const sp=w2s(lootPrompt.x,lootPrompt.y);
+  const cx=Math.max(w/2+8,Math.min(W-w/2-8,sp.x));
+  let cy=Math.max(h/2+34,sp.y - h*0.6 - 26);
+  // A sack dropped at a portal's feet puts both prompts in the same few pixels, and two buttons
+  // stacked on each other is worse than the single ambiguous one this replaced. If they collide,
+  // TAKE steps below USE -- it is anchored to the sack on the ground, so down is where it belongs.
+  const pr=(typeof portalPromptRect==='function')?portalPromptRect():null;
+  if(pr && Math.abs(pr.cx-cx) < (pr.w+w)/2 && Math.abs(pr.cy-cy) < (pr.h+h)/2 + 4)
+    cy = pr.cy + pr.h/2 + h/2 + 6;
+  return {cx,cy,w,h,ctx:lootPrompt.ctx||''}; }
+function hitLootPrompt(sx,sy){ const b=lootPromptRect(); if(!b) return false;
+  return Math.abs(sx-b.cx)<=b.w/2+10 && Math.abs(sy-b.cy)<=b.h/2+12; }
+function drawLootPrompt(){
+  const b=lootPromptRect(); if(!b) return;
+  const lb=lootPrompt.bag;
+  // the sack's own rarity colour, so the button and the thing it opens are obviously one object
+  const its=(typeof bagItems==='function')?bagItems(lb):[];
+  const rel=its.some(x=>x&&x.relic);
+  const col=rel?((typeof RELIC_COL!=='undefined')?RELIC_COL:'#ffd24a')
+    :((typeof RAR_COL!=='undefined'&&typeof bagTopRar==='function')?(RAR_COL[bagTopRar(lb)]||'#cfc8bd'):'#cfc8bd');
+  const x=b.cx-b.w/2, y=b.cy-b.h/2, pulse=0.6+Math.sin(performance.now()/230)*0.3;
+  ctx.save();
+  ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y,b.w,b.h,8); else ctx.rect(x,y,b.w,b.h);
+  ctx.fillStyle='rgba(14,11,18,0.92)'; ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle=col; ctx.globalAlpha=pulse; ctx.stroke(); ctx.globalAlpha=1;
+  const pc=(typeof inputMode!=='undefined' && inputMode==='pc');
+  const fs=Math.round(b.h*0.36);
+  ctx.font='bold '+fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=col; ctx.fillText(pc?'[F] TAKE':'TAKE', b.cx, b.cy-fs*0.28);
+  // what is in it, so the choice to stop and open is an informed one
+  ctx.font=Math.max(9,Math.round(b.h*0.24))+'px "Pixelify Sans",monospace';
+  ctx.fillStyle='rgba(216,210,200,0.72)'; ctx.fillText(b.ctx, b.cx, b.cy+fs*0.62);
+  ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
 function drawPillar(pl){
   const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
   const t=performance.now()/1000, pulse=0.55+0.45*Math.sin(t*3);
@@ -1559,7 +1602,9 @@ function render(){
   // ability loadout buttons (bottom-left) + "tap right to cast" hint
   if(typeof drawAbilButtons==='function') drawAbilButtons();
   if(typeof drawUltButton==='function') drawUltButton();
-  // floating USE prompt above the hero when near a portal/pillar (button-gated)
+  // the two prompts are independent: the world one above what you would use, the loot one above
+  // the sack you would open. Loot draws first so the world prompt wins any overlap.
+  if(typeof drawLootPrompt==='function') drawLootPrompt();
   drawPortalPrompt();
   // big boss bar, top of screen — shows from the first hit on a boss
   if(typeof bossBar!=='undefined' && bossBar){

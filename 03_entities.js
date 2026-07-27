@@ -4,6 +4,11 @@ let curRoom=null, enemies=[], pShots=[], eShots=[], particles=[], embers=[];
 let rpg=null, texts=[], respawnT=1, shopNear=false, loots=[];
 let allies=[], zones=[], fx=[], res=0, lastShotT=99, abT=0, portalLock=false, curRegionN='';
 let portalPrompt=null;   // {kind,x,y,label,...} nearest interactable portal/pillar (USE-gated)
+// LOOT IS ITS OWN PROMPT, not a competitor for the one above. They used to share a single slot, so
+// standing on a sack beside a portal offered you exactly one of them and the button did whichever
+// happened to be nearer -- which is how you end up in a dungeon when you meant to pick up a T12.
+// Two slots, two buttons, two keys: E uses the world, F takes the loot.
+let lootPrompt=null;     // {bag,x,y,ctx} nearest sack I am allowed to open
 let bossBar=null;        // boss whose big top-screen hp bar is showing (set on first hit)
 let arenaActive=false, arenaWave=0, arenaCd=0;
 // ---- world bosses + dungeons ----
