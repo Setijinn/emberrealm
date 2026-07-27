@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v375.
+Service worker is at emberrealm-v380.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -121,14 +121,19 @@ CO-OP (v370-v375) -- done, with two things stated plainly
   marks, wards, pillars, fog); row 16 is e.bd. 24 of 25 send something -- the Ash
   Wraith's overworld form is all real projectiles, which already synced.
 
-TWO THINGS I DID NOT PROVE, so do not assume them:
-1. The "crashes when I go offline" report is UNCONFIRMED. Disabling the shadow
-   purge did not reproduce a throw, so that hypothesis is unproven. The purge is
-   independently correct and stays. The error banner is diagnostic now -- every
-   DISTINCT error with its first stack frame and a repeat count, instead of only
-   the first one ever. Next time it happens, read the red banner.
-2. All of the above was verified by driving both sides inside ONE tab. That
-   tests the code paths and NOT the transport.
+ONE THING NOT PROVEN: all of the above was verified by driving both sides inside
+ONE tab. That tests the code paths and NOT the transport.
+
+THE CRASH IS FOUND (v380). It was the wildflower clumps I added to the Hearth
+grass: hmix() returns an UNSIGNED 32-bit hash, but I indexed the species palette
+with a SIGNED shift (`hh>>9`), which converts to int32 first -- so any hash above
+2^31 came out negative, `% length` gave a negative index, and `SP[-2]` was
+undefined. 43 of the Hearth's 106 grass tiles (40.6%) carried a bad index. It
+threw inside render() EVERY FRAME, so the world stopped drawing: that is the
+"crash". Use >>> for anything that indexes an array from a hash. Note the other
+signed shifts in 08_render.js are coordinate offsets where a negative is merely
+cosmetic; only the array index could throw. The diagnostic error banner is what
+caught it -- it reported `sp[0]` with a repeat count of 256.
 
 ---------------------------------------------------------------------------
 DO THIS FIRST

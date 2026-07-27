@@ -367,18 +367,22 @@ function drawTileG(x,y){
     // WILDFLOWERS (user: "add some flowers around"). Clusters, not lone dots -- flowers grow in
     // company, and one 2px pip per tile read as dirt rather than as a bloom. Each cluster picks a
     // single species so a patch is one colour, the way a real clump of the same plant would be.
-    if((hh>>4)%2===0){                 // half the lawn tiles carry a clump
+    // >>> NOT >>. hmix returns an UNSIGNED 32-bit value, but the signed shift `>>` converts to
+    // int32 first, so any hash above 2^31 comes out NEGATIVE -- and a negative % length is a
+    // negative index, so SP[-2] was undefined and sp[0] threw. Every frame, on any grass tile
+    // whose hash happened to land in the top half of the range. This crashed live play.
+    if((hh>>>4)%2===0){                // half the lawn tiles carry a clump
       const SP=[['#d8b84a','#f0d878'],   // buttercup
                 ['#dcd4e0','#ffffff'],   // daisy
                 ['#c86a8e','#e89ab4'],   // clover pink
                 ['#8a6ac0','#b39ae0'],   // small bellflower
                 ['#d86a4a','#f09a7a']];  // poppy
-      const sp=SP[(hh>>9)%SP.length];
-      const n=3+((hh>>13)%4);
-      const cx0=6+((hh>>7)%(TILE-14)), cy0=6+((hh>>11)%(TILE-14));
+      const sp=SP[(hh>>>9)%SP.length]||SP[0];   // ||SP[0]: never let a bad index reach sp[0] again
+      const n=3+((hh>>>13)%4);
+      const cx0=6+((hh>>>7)%(TILE-14)), cy0=6+((hh>>>11)%(TILE-14));
       for(let i=0;i<n;i++){
         const j=hmix(x*7+i,y*11+i);
-        const fx=tx+cx0+((j%9)-4), fy=ty+cy0+(((j>>4)%9)-4);
+        const fx=tx+cx0+((j%9)-4), fy=ty+cy0+(((j>>>4)%9)-4);
         if(fx<tx+2||fy<ty+2||fx>tx+TILE-4||fy>ty+TILE-5) continue;
         ctx.fillStyle='rgba(24,38,20,0.9)'; ctx.fillRect(fx+1,fy+3,1,3);       // stem
         ctx.fillStyle='rgba(20,32,16,0.55)'; ctx.fillRect(fx,fy+1,3,3);         // bloom shadow
