@@ -51,13 +51,16 @@ _F('ow0',{ phases:[0.66,0.33], titles:['','TAKING ROOT','THE GROVE CLOSES'],
 _F('dn0',{ phases:[0.75,0.45,0.20], anchor:[false,true,false,true],
   titles:['','IT TAKES ROOT','THE GROVE CLOSES','HEARTWOOD'],
   tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
+    // The KNOTS are this fight's only gate. It still plants at the centre, but it must not also
+    // claim the anchor clock's immunity -- two gates stacked left barely a tenth of the fight
+    // hittable, and neither of them was the one the player was being taught to break.
+    e.anchorNoInv=1;
     const anchored=bossAnchorPhase(e);
     if(anchored){
       if(M.ph!==ph){ M.ph=ph; wardRaise(e); mechClearAdds(e,'knot');
         mechAdds(e,4,'knot',{node:true,hp:0.55,dist:TILE*3.2,col:'#6fbf5a',scale:false});
         if(typeof msg==='function') msg('CUT THE HEARTWOOD','it cannot be hurt while they stand'); }
       if(mechAddsAlive(e,'knot')===0 && e.wardInv) wardDrop(e);
-      if(e.wardInv) e.anchorInv=1; else e.anchorInv=0;
       if(mechEvery(e,'t',2.0,dt)){ const p=_pxy();
         hazAdd(e,p.x,p.y,{r:TILE*1.2,tele:1.0,live:5,dmg:0.4,col:'#4a7a3a',inflict:{id:'chill',dur:1.4}}); }
     } else {
@@ -375,23 +378,52 @@ _F('ow5',{ phases:[0.64,0.32],
       ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#7a3a1a';
       ctx.beginPath(); ctx.ellipse(p.x,p.y+6,20,10,0,0,6.29); ctx.fill(); ctx.restore(); } } });
 
-// Dungeon: it never fully surfaces. The fight is against the SCARS — the floor it has already
-// eaten — and it only comes up when the arena is nearly gone.
+const DN5_UNDER=5.0;   // seconds burrowing, untouchable, eating the floor
+const DN5_UP   =3.2;   // seconds surfaced -- your whole damage window until the last phase
+// Dungeon: it stays under for most of the cycle, surfacing in short punish windows, and only
+// comes up FOR GOOD once the arena is nearly gone. The fight is against the SCARS -- the floor it
+// has already eaten -- as much as against the thing eating it.
 _F('dn5',{ phases:[0.75,0.50,0.25], anchor:[false,false,false,true],
   titles:['','IT EATS THE FLOOR','LESS GROUND','IT SURFACES'],
   tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
     const P=bossPace(e);
     const last=(ph>=3);
-    e.hidden=!last; e.mechInv=last?0:1;
+    // IT HAS TO COME UP. The first draft read "it never fully surfaces until the arena is nearly
+    // gone" and implemented that literally: mechInv was pinned on for phases 0-2, and the only way
+    // OUT of those phases is HP the player was forbidden from taking. The Bog Horror could not be
+    // killed, started, or even scratched. It stays a burrowing fight -- it is just under for most
+    // of the cycle and up for a short punish window, the exact inverse of its overworld form, which
+    // is up for most of the cycle and under for a moment.
     if(!last){
+      if(M.up===undefined){ M.up=0; M.dive=DN5_UNDER*P.cycle; }
+      if(M.up>0){                                    // SURFACED: hittable, and it hurts to stand near
+        M.up-=dt; e.hidden=false; e.mechInv=0;
+        if(mechEvery(e,'t3',0.85,dt) && typeof eFire==='function')
+          for(let i=0;i<6+ph*2;i++) eFire(e,(i/(6+ph*2))*6.283+e.ang,200*P.speed);
+        if(M.up<=0){ _sig(e,'burrow'); M.dive=DN5_UNDER*P.cycle; e.hidden=true; e.mechInv=1; }
+      } else {
+        e.hidden=true; e.mechInv=1;
+        M.dive-=dt;
+        if(M.dive<=0){                               // erupts under you, telegraphed by the mound
+          const p=_pxy(); e.x=p.x; e.y=p.y; M.bx=e.x; M.by=e.y;
+          M.up=DN5_UP*P.cycle; e.hidden=false; e.mechInv=0;
+          _sig(e,'erupt');
+          hazAdd(e,e.x,e.y,{r:TILE*1.6,tele:0.0,live:0.5,dmg:1.05,col:'#ff7a3a'});
+          if(typeof addShake==='function') addShake(12);
+          if(typeof msg==='function') msg('IT SURFACES','hit it before it digs back down');
+        }
+      }
       // it tunnels beneath, opening permanent scars
       const p=_pxy();
-      M.bx=(M.bx===undefined)?e.x:M.bx+((p.x-M.bx)*Math.min(1,0.55*dt));
-      M.by=(M.by===undefined)?e.y:M.by+((p.y-M.by)*Math.min(1,0.55*dt));
-      e.x=M.bx; e.y=M.by;
+      if(e.mechInv){
+        M.bx=(M.bx===undefined)?e.x:M.bx+((p.x-M.bx)*Math.min(1,0.55*dt));
+        M.by=(M.by===undefined)?e.y:M.by+((p.y-M.by)*Math.min(1,0.55*dt));
+        e.x=M.bx; e.y=M.by;
+      }
       if(mechEvery(e,'t',1.5,dt)){
         hazAdd(e,e.x,e.y,{r:TILE*1.0,tele:0.6,live:30,dmg:0.42,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
     } else {
+      e.hidden=false; e.mechInv=0;
       if(M.ph!==3){ M.ph=3; _sig(e,'erupt'); e.hidden=false; e.mechInv=0;
         if(typeof msg==='function') msg('IT COMES UP','');
         if(typeof addShake==='function') addShake(16); }
@@ -531,8 +563,8 @@ _F('ow8',{ phases:[0.70,0.45,0.20], anchor:[true,true,true,true],
       mechAdds(e,4,'conduit',{node:true,hp:0.45+ph*0.12,dist:TILE*3.6,col:'#ffb04a',scale:false});
       wardRaise(e); _sig(e,'corebreak');
       if(typeof msg==='function') msg('BREAK THE CONDUITS','it cannot be touched until they fall'); }
-    if(e.wardInv && mechAddsAlive(e,'conduit')===0){ wardDrop(e); e.anchorInv=0; }
-    if(e.wardInv) e.anchorInv=1;
+    e.anchorNoInv=1;                                               // the CONDUITS gate this fight, not the clock
+    if(e.wardInv && mechAddsAlive(e,'conduit')===0) wardDrop(e);
     // it never chases; it blankets. Rotating spokes plus a rising heat.
     if(mechEvery(e,'t',1.6,dt)){ _sig(e,'quake');
       if(typeof eFire==='function'){ const n=6+ph*2;
@@ -551,7 +583,9 @@ _F('dn8',{ phases:[0.78,0.55,0.32,0.12], anchor:[true,true,true,true,true],
   titles:['THE CORE OPENS','VENTING','THE RING CLOSES','ALL OF IT','NOTHING LEFT'],
   tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
     const P=bossPace(e);
-    e.anchorInv=0;                          // exposed: it can always be hurt, it just cannot be reached safely
+    // exposed by design: it can always be HURT, it just cannot be reached safely. It declares
+    // anchor so it stays planted at the core, and never claims immunity from the anchor clock.
+    e.anchorNoInv=1;
     // a ring of fire closes from the arena edge toward the boss, then resets
     if(M.ring2===undefined) M.ring2=TILE*9;
     M.ring2-=dt*(16+ph*7)*P.speed;

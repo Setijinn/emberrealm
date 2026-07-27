@@ -77,22 +77,52 @@ function bossAnchorPhase(e){
   return Array.isArray(d.anchor) ? !!d.anchor[ph] : (typeof d.anchor==='function' ? !!d.anchor(e,ph) : !!d.anchor);
 }
 // Steer to the middle and lock. Returns true while the boss owes the anchor its movement, so the
-// caller skips the ordinary chase. `anchorInv` is read by bossImmune (06_combat).
+// caller skips the ordinary chase.
+//
+// THE WINDOW IS TIMED, AND THAT IS THE WHOLE POINT. The brief was "it's fine if a boss stands
+// still invincible for a minute and just blasts stuff" -- a MINUTE, not a phase. I implemented
+// `anchor` as an unbounded per-phase state, so a boss entering an anchored phase became immune
+// with no exit condition and the fight could never be finished: twelve of the fifteen anchored
+// fights were literally unkillable, which is what the Gullwind Harrier's second phase was.
+//
+// Now: planting grants immunity for ANCHOR_WIN seconds while it blasts, then the ward drops and
+// it is vulnerable again for ANCHOR_CD before it can plant a second time. Survive, punish, repeat.
+// A fight wanting its own rule (break the conduits, cut the knots) uses wardInv instead and never
+// touches this.
 const BOSS_ANCHOR_SNAP=10;
+const ANCHOR_WIN=9.0;    // seconds untouchable, planted, firing
+const ANCHOR_CD =7.5;    // seconds vulnerable before it may plant again
 function bossAnchorStep(e,dt){
-  if(!bossAnchorPhase(e)){ e.anchored=0; e.anchorInv=0; return false; }
+  if(!bossAnchorPhase(e)){ e.anchored=0; e.anchorInv=0; e.anchorT=0; e.anchorCd=0; return false; }
+  // phase change re-arms the window
+  if(e.anchorPh!==e.phase){ e.anchorPh=e.phase; e.anchorT=ANCHOR_WIN; e.anchorCd=0; }
+  const P=(typeof bossPace==='function')?bossPace(e):{cycle:1};
+  if(e.anchorT>0){
+    e.anchorT-=dt;
+    if(e.anchorT<=0){ e.anchorCd=ANCHOR_CD*P.cycle; e.anchorInv=0; e.anchored=0;
+      if(typeof bossAnim==='function') bossAnim(e,'break');
+      if(typeof msg==='function') msg('IT IS EXPOSED','strike it now'); }
+  } else if(e.anchorCd>0){
+    e.anchorCd-=dt;
+    if(e.anchorCd<=0){ e.anchorT=ANCHOR_WIN;
+      if(typeof bossAnim==='function') bossAnim(e,'plant');
+      if(typeof msg==='function') msg('IT PLANTS ITSELF',''); }
+  }
+  // vulnerable stretch: the anchor releases the boss entirely so the fight reads as a normal one
+  if(e.anchorT<=0){ e.anchored=0; e.anchorInv=0; return false; }
   const c=bossCentre(e), dx=c.x-e.x, dy=c.y-e.y, d=Math.hypot(dx,dy);
   if(d>BOSS_ANCHOR_SNAP){
-    const s=(e.spd||40)*1.55*dt;      // walks in faster than it fights -- it WANTS the middle
-    if(typeof moveCircle==='function') moveCircle(e,(dx/d)*s,(dy/d)*s);
-    else { e.x+=(dx/d)*s; e.y+=(dy/d)*s; }
-    e.anchored=0; e.anchorInv=0;
+    const sp=(e.spd||40)*1.55*dt;      // walks in faster than it fights -- it WANTS the middle
+    if(typeof moveCircle==='function') moveCircle(e,(dx/d)*sp,(dy/d)*sp);
+    else { e.x+=(dx/d)*sp; e.y+=(dy/d)*sp; }
+    e.anchored=0; e.anchorInv=0;       // not immune until it actually ARRIVES
   } else {
-    e.x=c.x; e.y=c.y; e.anchored=1; e.anchorInv=1;
+    // a fight may want the PLANTING without the immunity (the Molten Titan's open core is meant to
+    // be hittable, it is just suicidal to reach)
+    e.x=c.x; e.y=c.y; e.anchored=1; e.anchorInv=e.anchorNoInv?0:1;
   }
   return true;
 }
-
 // ---- DYING WORDS: killing a boss frees it from the corruption-dream (which also ends it); it
 // speaks a couple words of TRUTH as it goes. Shown as a slow, sombre centred quote (separate from
 // the action banner). The final boss's line drops the whole reveal. (user, 2026-07-24) ----

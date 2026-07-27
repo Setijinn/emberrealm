@@ -106,8 +106,18 @@ them whenever co-op ends.
 - A fight is keyed by identity AND form: `ow<ring>` / `dn<ring>` / `arena`, registered in
   `BOSS_MECH`. Both forms of a boss share a family; the dungeon form twists one element.
 - **Per-fight phase counts** (`bossPhases`), 1–4 breaks. The boss bar reads the same list.
-- **Anchored phases**: the boss walks to its arena centre and goes untouchable. Overworld lairs
-  store their centre in `R.lairs[b]`; dungeon chambers in `room.bossCh`.
+- **Anchored phases**: the boss walks to its arena centre and plants. Overworld lairs store their
+  centre in `R.lairs[b]`; dungeon chambers in `room.bossCh`.
+  **The immunity is a TIMED WINDOW, never a state.** `ANCHOR_WIN` (9s) untouchable and firing, then
+  `IT IS EXPOSED` and `ANCHOR_CD` (7.5s, scaled by `bossPace().cycle`) vulnerable, then it re-plants.
+  It is not immune until it actually ARRIVES at the centre. A fight that owns its own gate (cut the
+  knots, break the conduits) sets `e.anchorNoInv=1` and uses `wardInv`, so the two rules never stack
+  — two gates at once left barely a tenth of dn0/ow8 hittable.
+  **Rule for any new immunity: there must be an exit the player can reach.** `anchor` shipped as an
+  unbounded per-phase state and made twelve of fifteen fights unkillable; dn5 pinned `mechInv` for
+  phases 0-2 whose only exit was HP it forbade you from taking, so it could never be fought at all.
+  Sweep test: spawn every fight, drive it to 0 with fixed DPS, assert `kill != NEVER` and that the
+  longest immune streak is <= `ANCHOR_WIN`.
 - **Difficulty scales through one dial**, `bossPace(e)`. No mechanic may hard-code a timing.
 - Everything a fight puts on the field lives on **`e.mk`** — one object per boss, so `bossReset`
   clears a fight completely and the netcode has one place to look.
