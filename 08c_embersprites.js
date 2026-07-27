@@ -345,6 +345,18 @@ const _emberImg = {};      // path -> HTMLImageElement
 const _emberFrames = {};   // `${cls}/${anim}_${dir}` -> [img,...] (loaded, contiguous)
 const _emberReady = {};    // cls -> true once idle frames are in
 let _emberPending = 0;
+const _emberClsPending = {};   // cls -> probes still in flight FOR THAT CLASS
+const _emberProbed = {};       // cls -> its probes have been issued
+
+// A CLASS BECOMES READY ON ITS OWN. The build used to run exactly once, when the last of ~2700
+// probes settled, and _emberReady was empty until that single moment -- so one slow request held
+// back all 68 sprite sets and EVERY character in the game drew the procedural fallback until the
+// whole library was in. On a phone that is most of a minute of gold blobs. Each class now
+// assembles the instant its own frames land.
+function _emberDone(cls){
+  if(--_emberClsPending[cls]===0) _emberBuildClass(cls);
+  if(--_emberPending===0) _emberBuild();
+}
 
 function _emberImgAt(cls, anim, dir, n){
   const name = anim + '_' + dir + (n!=null ? ('_'+n) : '');
@@ -353,46 +365,61 @@ function _emberImgAt(cls, anim, dir, n){
   const img = new Image();
   img.decoding = 'async';
   _emberPending++;
-  img.onload = ()=>{ if(--_emberPending===0) _emberBuild(); };
-  img.onerror = ()=>{ if(--_emberPending===0) _emberBuild(); };
+  _emberClsPending[cls] = (_emberClsPending[cls]||0) + 1;
+  img.onload  = ()=>_emberDone(cls);
+  img.onerror = ()=>_emberDone(cls);
   img.src = path;
   _emberImg[path] = _track(img);
   return img;
 }
 
-function preloadEmber(){
-  for(const cls in EMBER_CLASSES){
-    const spec = EMBER_CLASSES[cls];
-    for(const d of EMBER_DIRS) _emberImgAt(cls, 'idle', d, null);
-    for(const d of EMBER_ANIM_DIRS){
-      for(const anim in spec.anims){
-        for(let n=0; n<spec.anims[anim]; n++) _emberImgAt(cls, anim, d, n);
-      }
+// Issue every probe for one sprite set. Idempotent: asking twice is free.
+function emberProbe(cls){
+  const spec = EMBER_CLASSES[cls];
+  if(!spec || _emberProbed[cls]) return;
+  _emberProbed[cls] = true;
+  _emberClsPending[cls] = 1;                 // a guard count, released below, so an all-cached
+  for(const d of EMBER_DIRS) _emberImgAt(cls, 'idle', d, null);
+  for(const d of EMBER_ANIM_DIRS){
+    for(const anim in spec.anims){
+      for(let n=0; n<spec.anims[anim]; n++) _emberImgAt(cls, anim, d, n);
     }
   }
+  _emberPending++;                           // set cannot build before every probe is issued
+  _emberDone(cls);
 }
 
-// After all probes settle, assemble contiguous frame lists from what loaded.
-function _emberBuild(){
-  for(const cls in EMBER_CLASSES){
-    const spec = EMBER_CLASSES[cls];
-    for(const d of EMBER_ANIM_DIRS){
-      for(const anim in spec.anims){
-        const arr = [];
-        for(let n=0; n<spec.anims[anim]; n++){
-          const img = _emberImg['assets/'+cls+'/'+anim+'_'+d+'_'+n+'.png'];
-          if(img && img.complete && img.naturalWidth) arr.push(img); else break;
-        }
-        _emberFrames[cls+'/'+anim+'_'+d] = arr;
-      }
-    }
-    // ready if all four idle poses decoded
-    _emberReady[cls] = EMBER_DIRS.every(d=>{
-      const im = _emberImg['assets/'+cls+'/idle_'+d+'.png'];
-      return im && im.complete && im.naturalWidth;
-    });
-  }
+function preloadEmber(){
+  // ONLY THE PLAYABLE CLASSES AT BOOT. The 51 ascension sets are 1851 files and 11MB -- probing
+  // them up front bought nothing (you cannot be ascended on the loading screen) and it was the
+  // bulk of what the boot curtain was waiting on. They load the first time emberSprite is asked
+  // for one, which is the frame a player with that form comes on screen.
+  for(const cls in EMBER_CLASSES){ if(cls.indexOf('asc_')===0) continue; emberProbe(cls); }
 }
+
+// Assemble one class's contiguous frame lists from whatever decoded.
+function _emberBuildClass(cls){
+  const spec = EMBER_CLASSES[cls]; if(!spec) return;
+  for(const d of EMBER_ANIM_DIRS){
+    for(const anim in spec.anims){
+      const arr = [];
+      for(let n=0; n<spec.anims[anim]; n++){
+        const img = _emberImg['assets/'+cls+'/'+anim+'_'+d+'_'+n+'.png'];
+        if(img && img.complete && img.naturalWidth) arr.push(img); else break;
+      }
+      _emberFrames[cls+'/'+anim+'_'+d] = arr;
+    }
+  }
+  // ready if all four idle poses decoded
+  _emberReady[cls] = EMBER_DIRS.every(d=>{
+    const im = _emberImg['assets/'+cls+'/idle_'+d+'.png'];
+    return im && im.complete && im.naturalWidth;
+  });
+}
+
+// After all probes settle, rebuild everything that has been probed. Kept as a backstop: the
+// per-class build above is what actually gets sprites on screen early.
+function _emberBuild(){ for(const cls in _emberProbed) _emberBuildClass(cls); }
 
 // aim angle (screen space: +x east, +y south) -> cardinal + flip flag
 function _emberDir(aa){
@@ -408,9 +435,13 @@ function _emberIdle(cls, dir){ return _emberImg['assets/'+cls+'/idle_'+dir+'.png
 // Returns {img, flip} or null (=> procedural fallback in renderer)
 function emberSprite(look, state){
   let cls = (look && look.cls) || 'knight';
-  // ascended? use the ascension's own sprite set once its art is in
-  if(look && look.asc && EMBER_CLASSES['asc_'+look.asc] && _emberReady['asc_'+look.asc])
-    cls='asc_'+look.asc;
+  // ascended? use the ascension's own sprite set once its art is in. Asking for it is what
+  // STARTS the load now -- until it arrives this falls through to the base class, which is a
+  // correct-looking hero rather than a blank one.
+  if(look && look.asc && EMBER_CLASSES['asc_'+look.asc]){
+    emberProbe('asc_'+look.asc);
+    if(_emberReady['asc_'+look.asc]) cls='asc_'+look.asc;
+  }
   if(!EMBER_CLASSES[cls] || !_emberReady[cls]) return null;
   const {dir, flip} = _emberDir(state.aim||0);
   let flp = flip;
