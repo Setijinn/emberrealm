@@ -1810,6 +1810,8 @@ function render(){
   // the sack you would open. Loot draws first so the world prompt wins any overlap.
   if(typeof drawLootPrompt==='function') drawLootPrompt();
   drawPortalPrompt();
+  // boss compass: tiny edge markers pointing at nearby lairs (09d_bosscompass.js)
+  if(typeof drawBossCompass==='function') drawBossCompass();
   // where you are / who you are / who you are with — top of screen, yields to the bar below
   if(typeof drawStatusBanner==='function') drawStatusBanner();
   // big boss bar, top of screen — shows from the first hit on a boss.

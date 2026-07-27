@@ -340,7 +340,11 @@ function drawTileG(x,y){
     return; }
   // GRASS ('g') — a lawn tile. Value-noise green rather than a stamped image, so a patch reads as
   // one continuous field instead of a grid, with the 8-bit detail pass laying blades over the top.
-  if(c==='g'){
+  // TOWN ONLY. The overworld uses 'g' for its grass too, and this branch RETURNS -- so it was
+  // intercepting every grove tile and painting the Hearth's flat olive over the grove's per-band
+  // colouring, while 'd'/'r'/'e' tiles still took the old path and stood out as grey squares
+  // against it. The overworld gets its own 8-bit pass further down, on its own colours.
+  if(c==='g' && curRoom.town){
     const hh=hmix(x,y);
     // MUTED, not lawn-green. Everything else in this game is warm browns and tans, and a saturated
     // grass green sat on top of that palette like a sticker. This is a mossy olive with a lot of
@@ -702,9 +706,46 @@ function drawTileG(x,y){
     if(y>0 && grvBandXY(x,y-1)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,TILE,2); }
     if(x>0 && grvBandXY(x-1,y)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,2,TILE); }
     if(y>0 && grvBandXY(x,y-1)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,TILE,2); }
+    // THE OVERWORLD'S 8-BIT PASS (user: "the entire overworld terrain needs better 8-bit features
+    // like the hearth"). Layered ON the band tint rather than replacing it, so every zone keeps
+    // its own colour identity and just gains texture. Two octaves of per-tile value noise break
+    // the flat fill up first -- a single fill across a whole zone is what made the ground read as
+    // a backdrop -- then the stamp library adds grain, and grass tiles get blades and flowers.
+    {
+      const n1=Math.sin(x*0.61+y*0.27)+Math.sin(x*0.16-y*0.72);
+      const n2=Math.sin(x*1.83-y*1.24)+Math.sin(x*2.41+y*1.97);
+      const v=n1*0.32+n2*0.14;
+      ctx.fillStyle=(v>0)?'rgba(255,244,214,'+(v*0.045).toFixed(3)+')'
+                         :'rgba(0,0,0,'+((-v)*0.055).toFixed(3)+')';
+      ctx.fillRect(tx,ty,TILE,TILE);
+      for(let qy=0;qy<2;qy++)for(let qx=0;qx<2;qx++){
+        const q=hmix(x*2+qx,y*2+qy)>>>0;
+        if((q&7)<3){ ctx.fillStyle=((q&1)?'rgba(0,0,0,0.055)':'rgba(255,240,200,0.035)');
+          ctx.fillRect(tx+qx*TILE/2,ty+qy*TILE/2,TILE/2,TILE/2); } }
+      if(typeof drawFloorDetail==='function'){
+        const fam=(c==='g')?'grass':(c==='r')?'stone':(c==='e')?'ash':'dirt';
+        drawFloorDetail(fam,tx,ty,x,y,(c==='g')?0.85:0.7);
+      }
+    }
     // terrain features layered on the band tint
     if(c==='d'){ if(h2(x*3,y*5)>0.7){ ctx.fillStyle='rgba(90,70,40,0.30)'; ctx.fillRect(tx+(x*13)%30+4,ty+(y*17)%30+4,3,3); } }
-    else if(c==='g'){ if(h2(x,y*3)>0.72){ ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(tx+8,ty+12,3,6); ctx.fillRect(tx+24,ty+22,3,6); } }
+    else if(c==='g'){
+      // wildflowers out here too, but far sparser than the Hearth's tended lawn -- one tile in
+      // seven rather than one in two, because this is wilderness, not a garden
+      const gh=hmix(x*3+7,y*5+11)>>>0;
+      if((gh>>>4)%7===0){
+        const SP=[['#d8b84a','#f0d878'],['#dcd4e0','#ffffff'],['#c86a8e','#e89ab4'],
+                  ['#8a6ac0','#b39ae0'],['#d86a4a','#f09a7a']];
+        const sp=SP[(gh>>>9)%SP.length]||SP[0];      // >>> : a signed shift here crashed once
+        const n=1+((gh>>>13)%3);
+        const cx0=7+((gh>>>7)%(TILE-16)), cy0=7+((gh>>>11)%(TILE-16));
+        for(let i=0;i<n;i++){ const j=hmix(x*7+i,y*11+i)>>>0;
+          const fx=tx+cx0+((j%8)-4), fy=ty+cy0+(((j>>>4)%8)-4);
+          if(fx<tx+2||fy<ty+2||fx>tx+TILE-4||fy>ty+TILE-6) continue;
+          ctx.fillStyle='rgba(24,38,20,0.85)'; ctx.fillRect(fx+1,fy+3,1,3);
+          ctx.fillStyle=sp[0]; ctx.fillRect(fx,fy,2,2);
+          ctx.fillStyle=sp[1]; ctx.fillRect(fx,fy,1,1); }
+      } }
     else if(c==='r'){ // rock: a few weathering specks instead of a square outline (no line, no square)
       const rh=hmix(x*5+1,y*9+2); ctx.fillStyle='rgba(0,0,0,.20)';
       ctx.fillRect(tx+4+(rh%13),ty+5+((rh>>4)%13),2,1); ctx.fillRect(tx+19+((rh>>8)%15),ty+21+((rh>>12)%15),1,2);
