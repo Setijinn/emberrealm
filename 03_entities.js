@@ -847,6 +847,25 @@ function eDR(def){ return Math.min(0.5, def/(def+120)); }
 function eDex(lv){ return Math.round(2 + lv*1.0); }
 function eSpdMul(lv){ return 1 + Math.min(0.45, lv*0.010); }
 function eMp(lv){ return Math.round(12 + lv*4); }
+// ---- THE AGGRESSION RAMP (user, 2026-07-26): "lower damage and fire rate for the lower level
+// parts of the game, introducing higher fire rate and damage as the level goes up."
+//
+// The stat curve (DIFF) already scaled damage steeply with level, but two things did NOT scale at
+// all, and they are the two a new player actually feels:
+//   * VOLUME. Every shooter fired a 3-shot spread at every level. A Lv1 Tide Spitter put the same
+//     wall of bullets in the air as a Lv50 Core Cultist -- only weaker ones. Volume is the axis
+//     that decides whether a fight is readable, so it is the one that should open low.
+//   * CADENCE. fireT was 1.4/(1+dex*0.010): 1.36s at Lv1 down to 0.92s at Lv50. A 32% span across
+//     the entire game, which is no ramp at all.
+// Both ramp now, and the flat damage floors come down so the reduction lands on the FIRST hours
+// and barely touches Lv50 (see the floors in makeEnemy: a Lv1 shooter loses ~half its hit, a Lv50
+// one loses ~1.5%).
+function eShotCount(lv){ return lv<12 ? 1 : lv<30 ? 2 : 3; }
+// 1.63s at Lv1 -> 0.80s at Lv50, before DEX. DEX's own term is deliberately smaller than it was
+// (0.004, was 0.010) so the two do not compound into a Lv50 machine gun. Tuned by measurement, not
+// by feel: the first pass (2.05 base, floors of 3/5) left a Lv1 shooter at 11% of its old pressure
+// -- 34 volleys to kill a starting hero, which is not 'gentle', it is furniture.
+function eFireCd(lv){ return 1.65 - Math.min(0.85, (lv/LV_CAP)*0.85); }
 // ---- enemy BEHAVIOURS (user, 2026-07-24) — each is a personality that changes how the
 // enemy SPAWNS (dormant? anchored? in a pack?) and ROAMS (chase / kite / guard / wander),
 // consumed by the movement code in 07_update via enemyAI(). Difficulty comes from these +
@@ -904,68 +923,140 @@ const EBEH={
 const MOBSPEC=[
  // 0 THE LANDING SANDS (Lv1-8) — open beach. The first thing a new hero meets, so it is slow,
  // legible and forgiving: it scuttles at you in the open with nowhere to hide.
- {c:{n:'Sand Crawler',   inf:null,                 hp:0.72,spd:0.88,tch:0.75,r:0.90, w:{roamer:40,hunter:34,sentinel:18,pack:8},
-     sig:{sway:0.62,swayF:3.4,commit:40,harry:0,lunge:null}},   // sidles; never dashes
-  s:{n:'Tide Spitter',   inf:{id:'chill',dur:2.0},  hp:0.85,spd:0.80,bd:0.80,r:0.95, w:{sentinel:48,skirmisher:26,roamer:26}}},
+ {c:[{n:'Sand Crawler',  inf:null,                 hp:0.72,spd:0.88,tch:0.75,r:0.90, w:{roamer:40,hunter:34,sentinel:18,pack:8},
+      sig:{sway:0.62,swayF:3.4,commit:40,harry:0,lunge:null}},   // sidles; never dashes
+     {n:'Shell Skitter',  inf:null,                 hp:0.48,spd:1.14,tch:0.55,r:0.72, w:{pack:52,roamer:30,hunter:18},
+      sig:{sway:0.80,swayF:4.2,commit:34,harry:0,lunge:null,flank:112,collapse:150}}],   // many, tiny, harmless alone
+  s:[{n:'Tide Spitter',  inf:{id:'chill',dur:2.0},  hp:0.85,spd:0.80,bd:0.80,r:0.95, w:{sentinel:48,skirmisher:26,roamer:26}},
+     {n:'Kelp Lobber',    inf:{id:'chill',dur:1.6},  hp:0.95,spd:0.70,bd:0.70,r:1.04, rof:1.30, w:{sentinel:62,roamer:24,skirmisher:14}}],
+  d:{c:[{n:'Drowned Deckhand',inf:{id:'chill',dur:2.4},hp:1.05,spd:0.84,tch:0.85,r:0.98, w:{sentinel:44,hunter:30,roamer:16,ambusher:10},
+        sig:{sway:0.30,swayF:1.2,harry:0,lunge:null}}],
+     s:[{n:'Brine Warden', inf:{id:'chill',dur:2.6},  hp:1.15,spd:0.74,bd:0.90,r:1.02, rof:1.15, w:{sentinel:56,skirmisher:26,roamer:18}}]}},
 
  // 1 GULLWIND SHORE (Lv8-14) — wind-scoured cliffs and wrecks. Things here come at you from above.
- {c:{n:'Cliff Skua',     inf:{id:'bleed',dur:3.0},  hp:0.70,spd:1.22,tch:1.20,r:0.88, w:{ambusher:52,roamer:26,hunter:14,pack:8},
-     sig:{sway:0.66,swayF:2.9,commit:70,harry:88,
-          lunge:{min:130,max:320,mul:3.0,dur:0.34,cd:2.0},breakoff:1.7,rehide:250}},  // stoops, climbs away
-  s:{n:'Wreck Scavenger',inf:{id:'bleed',dur:3.0},  hp:0.95,spd:1.05,bd:0.90,r:0.98, w:{skirmisher:52,roamer:24,sentinel:14,hunter:10}}},
+ {c:[{n:'Cliff Skua',    inf:{id:'bleed',dur:3.0},  hp:0.70,spd:1.22,tch:1.20,r:0.88, w:{ambusher:52,roamer:26,hunter:14,pack:8},
+      sig:{sway:0.66,swayF:2.9,commit:70,harry:88,
+           lunge:{min:130,max:320,mul:3.0,dur:0.34,cd:2.0},breakoff:1.7,rehide:250}},  // stoops, climbs away
+     {n:'Gale Hopper',    inf:null,                 hp:0.62,spd:1.34,tch:0.85,r:0.80, w:{roamer:44,hunter:30,pack:16,ambusher:10},
+      sig:{sway:0.74,swayF:3.6,commit:56,harry:70,lunge:{min:110,max:270,mul:2.7,dur:0.26,cd:1.8}}}],
+  s:[{n:'Wreck Scavenger',inf:{id:'bleed',dur:3.0}, hp:0.95,spd:1.05,bd:0.90,r:0.98, w:{skirmisher:52,roamer:24,sentinel:14,hunter:10}},
+     {n:'Gull Piper',     inf:{id:'weak',dur:3.0},   hp:0.88,spd:1.12,bd:0.85,r:0.92, rof:0.88, w:{skirmisher:60,roamer:24,hunter:16}}],
+  d:{c:[{n:'Lamp-Drowned',inf:{id:'chill',dur:3.0},  hp:1.20,spd:0.96,tch:1.05,r:1.05, w:{ambusher:48,sentinel:28,hunter:24},
+        sig:{sway:0.36,swayF:1.4,breakoff:1.8,rehide:260,harry:0}}],
+     s:[{n:'Beacon Keeper',inf:{id:'shock',dur:2.2}, hp:1.10,spd:0.92,bd:1.00,r:1.00, rof:1.10, w:{sentinel:52,skirmisher:30,roamer:18}}]}},
 
  // 2 SAWGRASS FLATS (Lv14-20) — waist-deep marsh grass. Everything here is slow and hard to see.
- {c:{n:'Reed Lurcher',   inf:{id:'poison',dur:4.0}, hp:1.45,spd:0.74,tch:1.25,r:1.12, w:{ambusher:44,sentinel:30,hunter:20,roamer:6},
-     sig:{sway:0.22,swayF:0.9,harry:0,lunge:null,breakoff:1.6,rehide:250}},   // wades; cannot dash
-  s:{n:'Sawgrass Spitter',inf:{id:'poison',dur:4.5},hp:1.10,spd:0.78,bd:1.10,r:1.02, w:{sentinel:46,skirmisher:28,roamer:26}}},
+ {c:[{n:'Reed Lurcher',  inf:{id:'poison',dur:4.0}, hp:1.45,spd:0.74,tch:1.25,r:1.12, w:{ambusher:44,sentinel:30,hunter:20,roamer:6},
+      sig:{sway:0.22,swayF:0.9,harry:0,lunge:null,breakoff:1.6,rehide:250}},   // wades; cannot dash
+     {n:'Marsh Tick',     inf:{id:'poison',dur:5.0}, hp:0.55,spd:1.16,tch:0.70,r:0.70, w:{pack:56,ambusher:24,roamer:12,hunter:8},
+      sig:{sway:0.70,swayF:3.8,commit:40,harry:54,flank:120,collapse:160,lunge:{min:80,max:190,mul:2.4,dur:0.22,cd:1.6}}}],
+  s:[{n:'Sawgrass Spitter',inf:{id:'poison',dur:4.5},hp:1.10,spd:0.78,bd:1.10,r:1.02, w:{sentinel:46,skirmisher:28,roamer:26}},
+     {n:'Bog Piper',      inf:{id:'chill',dur:3.0},  hp:1.22,spd:0.68,bd:1.00,r:1.08, rof:1.25, w:{sentinel:58,roamer:24,skirmisher:18}}],
+  d:{c:[{n:'Chapel Husk', inf:{id:'weak',dur:4.5},   hp:1.55,spd:0.70,tch:1.30,r:1.14, w:{sentinel:52,ambusher:26,hunter:22},
+        sig:{sway:0.14,swayF:0.8,harry:0,lunge:null,pace:80}}],
+     s:[{n:'Marrow Cantor',inf:{id:'curse',dur:4.0}, hp:1.18,spd:0.74,bd:1.15,r:1.04, rof:1.05, w:{sentinel:48,skirmisher:32,roamer:20}}]}},
 
  // 3 THE VERDANT BELT (Lv20-26) — the first true forest, and the Grovewarden's province. Cultists
  // begin here because this is where the corruption has taken root.
- {c:{n:'Briar Hound',    inf:{id:'bleed',dur:3.0},  hp:0.88,spd:1.10,tch:0.95,r:0.95, w:{pack:48,hunter:24,roamer:16,ambusher:12},
-     sig:{sway:0.58,swayF:2.4,harry:72,lunge:{min:100,max:250,mul:2.5,dur:0.32,cd:2.2}}},
-  s:{n:'Grove Cultist',  inf:{id:'weak',dur:4.0},   hp:1.00,spd:1.00,bd:1.00,r:1.00, w:{skirmisher:40,sentinel:24,roamer:20,hunter:16}}},
+ {c:[{n:'Briar Hound',   inf:{id:'bleed',dur:3.0},  hp:0.88,spd:1.10,tch:0.95,r:0.95, w:{pack:48,hunter:24,roamer:16,ambusher:12},
+      sig:{sway:0.58,swayF:2.4,harry:72,lunge:{min:100,max:250,mul:2.5,dur:0.32,cd:2.2}}},
+     {n:'Thornback Boar', inf:{id:'bleed',dur:3.5},  hp:1.35,spd:0.98,tch:1.30,r:1.10, w:{hunter:56,roamer:22,sentinel:14,pack:8},
+      sig:{sway:0.20,swayF:1.0,commit:170,harry:0,lunge:{min:150,max:380,mul:3.4,dur:0.46,cd:2.8}}}],   // one long charge
+  s:[{n:'Grove Cultist', inf:{id:'weak',dur:4.0},   hp:1.00,spd:1.00,bd:1.00,r:1.00, w:{skirmisher:40,sentinel:24,roamer:20,hunter:16}},
+     {n:'Bramble Weaver', inf:{id:'poison',dur:4.0}, hp:0.92,spd:0.94,bd:0.95,r:0.96, rof:0.85, w:{skirmisher:48,roamer:26,sentinel:26}}],
+  d:{c:[{n:'Heartwood Thrall',inf:{id:'bleed',dur:4.0},hp:1.25,spd:1.02,tch:1.10,r:1.04, w:{pack:44,hunter:32,ambusher:14,roamer:10},
+        sig:{sway:0.52,swayF:2.2,harry:70,lunge:{min:100,max:250,mul:2.6,dur:0.30,cd:2.0}}}],
+     s:[{n:'Root Speaker', inf:{id:'weak',dur:5.0},   hp:1.20,spd:0.90,bd:1.10,r:1.02, rof:1.10, w:{sentinel:50,skirmisher:30,roamer:20}}]}},
 
  // 4 WOLFWOOD (Lv26-32) — it is named for what hunts there. The definitive pack: they surround
  // first and commit together.
- {c:{n:'Dire Wolf',      inf:{id:'bleed',dur:4.0},  hp:0.95,spd:1.18,tch:1.10,r:1.02, w:{pack:70,hunter:18,ambusher:8,roamer:4},
-     sig:{sway:0.44,swayF:2.6,commit:90,harry:78,flank:168,collapse:230,
-          lunge:{min:105,max:280,mul:2.9,dur:0.32,cd:1.9}}},
-  s:{n:'Wolfwood Seer',  inf:{id:'curse',dur:5.0},  hp:1.05,spd:0.98,bd:1.10,r:1.00, w:{sentinel:40,skirmisher:32,roamer:16,hunter:12}}},
+ {c:[{n:'Dire Wolf',     inf:{id:'bleed',dur:4.0},  hp:0.95,spd:1.18,tch:1.10,r:1.02, w:{pack:70,hunter:18,ambusher:8,roamer:4},
+      sig:{sway:0.44,swayF:2.6,commit:90,harry:78,flank:168,collapse:230,
+           lunge:{min:105,max:280,mul:2.9,dur:0.32,cd:1.9}}},
+     {n:'Wolfwood Stalker',inf:{id:'bleed',dur:4.5}, hp:1.10,spd:1.06,tch:1.25,r:1.06, w:{ambusher:64,hunter:20,pack:12,roamer:4},
+      sig:{sway:0.30,swayF:1.8,commit:120,harry:0,breakoff:2.0,rehide:290,lunge:null}}],   // waits, then one hit
+  s:[{n:'Wolfwood Seer', inf:{id:'curse',dur:5.0},  hp:1.05,spd:0.98,bd:1.10,r:1.00, w:{sentinel:40,skirmisher:32,roamer:16,hunter:12}},
+     {n:'Barkhide Shaman',inf:{id:'chill',dur:3.5},  hp:1.28,spd:0.86,bd:1.20,r:1.08, rof:1.20, w:{sentinel:56,skirmisher:24,roamer:20}}],
+  d:{c:[{n:'Fogbound Hound',inf:{id:'weak',dur:4.0}, hp:0.92,spd:1.24,tch:1.05,r:0.98, w:{pack:66,ambusher:20,hunter:14},
+        sig:{sway:0.50,swayF:3.0,harry:84,flank:150,collapse:200,lunge:{min:110,max:300,mul:3.0,dur:0.30,cd:1.7}}}],
+     s:[{n:'Antler Oracle',inf:{id:'curse',dur:5.5}, hp:1.14,spd:0.96,bd:1.15,r:1.00, rof:0.90, w:{skirmisher:46,sentinel:34,roamer:20}}]}},
 
  // 5 DEEP TIMBER (Lv32-39) — old growth gone to rot, the Bog Horror's ground. Nothing charges you
  // here; it waits in the standing water until you are past it.
- {c:{n:'Timber Lurker',  inf:{id:'poison',dur:5.0}, hp:1.30,spd:0.92,tch:1.35,r:1.05, w:{ambusher:62,sentinel:20,hunter:12,pack:6},
-     sig:{sway:0.68,swayF:1.6,commit:150,breakoff:2.1,rehide:280,harry:0}},
-  s:{n:'Mire Cultist',   inf:{id:'poison',dur:5.5}, hp:1.15,spd:0.86,bd:1.15,r:1.02, w:{sentinel:44,skirmisher:28,roamer:18,hunter:10}}},
+ {c:[{n:'Timber Lurker', inf:{id:'poison',dur:5.0}, hp:1.30,spd:0.92,tch:1.35,r:1.05, w:{ambusher:62,sentinel:20,hunter:12,pack:6},
+      sig:{sway:0.68,swayF:1.6,commit:150,breakoff:2.1,rehide:280,harry:0}},
+     {n:'Rotfly Swarm',   inf:{id:'poison',dur:6.0}, hp:0.50,spd:1.30,tch:0.65,r:0.74, w:{pack:60,roamer:24,hunter:16},
+      sig:{sway:0.90,swayF:4.6,commit:30,harry:48,flank:104,collapse:140,lunge:null}}],   // clouds, not chargers
+  s:[{n:'Mire Cultist',  inf:{id:'poison',dur:5.5}, hp:1.15,spd:0.86,bd:1.15,r:1.02, w:{sentinel:44,skirmisher:28,roamer:18,hunter:10}},
+     {n:'Fen Whisperer',  inf:{id:'curse',dur:5.0},  hp:1.34,spd:0.72,bd:1.25,r:1.10, rof:1.22, w:{sentinel:60,skirmisher:22,roamer:18}}],
+  d:{c:[{n:'Sunken Warden',inf:{id:'poison',dur:6.0},hp:1.70,spd:0.78,tch:1.40,r:1.18, w:{sentinel:56,ambusher:28,hunter:16},
+        sig:{sway:0.16,swayF:0.9,harry:0,lunge:null,pace:74,leash:400}}],
+     s:[{n:'Drowned Chorus',inf:{id:'poison',dur:6.5},hp:1.22,spd:0.80,bd:1.22,r:1.04, rof:0.92, w:{skirmisher:44,sentinel:36,roamer:20}}]}},
 
  // 6 STONEBROW RISE (Lv39-45) — bare rock and Stonefist's terraces. Guards, not hunters: they hold
  // a line and make you come through it.
- {c:{n:'Stone Warden',   inf:{id:'stun',dur:0.7},   hp:1.85,spd:0.80,tch:1.30,r:1.16, w:{sentinel:60,hunter:26,ambusher:8,roamer:6},
-     sig:{sway:0.12,swayF:0.8,harry:0,lunge:null,pace:96,leash:430}},
-  s:{n:'Scree Slinger',  inf:{id:'stun',dur:0.6},   hp:1.25,spd:0.76,bd:1.30,r:1.05, w:{sentinel:56,skirmisher:20,hunter:16,roamer:8}}},
+ {c:[{n:'Stone Warden',  inf:{id:'stun',dur:0.7},   hp:1.85,spd:0.80,tch:1.30,r:1.16, w:{sentinel:60,hunter:26,ambusher:8,roamer:6},
+      sig:{sway:0.12,swayF:0.8,harry:0,lunge:null,pace:96,leash:430}},
+     {n:'Scarp Crawler',  inf:{id:'bleed',dur:4.0},  hp:1.05,spd:1.04,tch:1.05,r:0.96, w:{roamer:42,ambusher:28,hunter:20,pack:10},
+      sig:{sway:0.58,swayF:2.6,commit:80,harry:80,lunge:{min:100,max:240,mul:2.6,dur:0.28,cd:2.1}}}],
+  s:[{n:'Scree Slinger', inf:{id:'stun',dur:0.6},   hp:1.25,spd:0.76,bd:1.30,r:1.05, w:{sentinel:56,skirmisher:20,hunter:16,roamer:8}},
+     {n:'Quarry Sling',   inf:{id:'stun',dur:0.8},   hp:1.45,spd:0.66,bd:1.45,r:1.14, rof:1.35, w:{sentinel:68,roamer:18,skirmisher:14}}],
+  d:{c:[{n:'Vault Sentinel',inf:{id:'stun',dur:0.9}, hp:2.05,spd:0.72,tch:1.45,r:1.22, w:{sentinel:70,hunter:22,ambusher:8},
+        sig:{sway:0.10,swayF:0.7,harry:0,lunge:null,pace:88,leash:460}}],
+     s:[{n:'Shatterstone Adept',inf:{id:'shock',dur:2.4},hp:1.30,spd:0.80,bd:1.30,r:1.06, rof:0.88, w:{skirmisher:46,sentinel:36,hunter:18}}]}},
 
  // 7 CINDERWATCH (Lv45-50) — the volcanic shelf the Crag Gargoyle roosts on. Everything here leaps.
- {c:{n:'Crag Leaper',    inf:{id:'burn',dur:3.5},   hp:0.80,spd:1.12,tch:1.20,r:0.94, w:{hunter:38,ambusher:26,pack:22,roamer:14},
-     sig:{sway:0.50,swayF:2.8,commit:90,harry:96,
-          lunge:{min:120,max:340,mul:3.3,dur:0.40,cd:1.7}}},    // the longest dash in the world
-  s:{n:'Ember Cultist',  inf:{id:'burn',dur:4.0},   hp:1.05,spd:1.08,bd:1.05,r:0.98, w:{skirmisher:58,hunter:18,roamer:14,sentinel:10}}},
+ {c:[{n:'Crag Leaper',   inf:{id:'burn',dur:3.5},   hp:0.80,spd:1.12,tch:1.20,r:0.94, w:{hunter:38,ambusher:26,pack:22,roamer:14},
+      sig:{sway:0.50,swayF:2.8,commit:90,harry:96,
+           lunge:{min:120,max:340,mul:3.3,dur:0.40,cd:1.7}}},    // the longest dash in the world
+     {n:'Magma Hound',    inf:{id:'burn',dur:4.5},   hp:1.00,spd:1.16,tch:1.15,r:1.00, w:{pack:62,hunter:22,ambusher:10,roamer:6},
+      sig:{sway:0.46,swayF:2.9,commit:86,harry:84,flank:158,collapse:214,
+           lunge:{min:110,max:300,mul:3.1,dur:0.34,cd:1.8}}}],
+  s:[{n:'Ember Cultist', inf:{id:'burn',dur:4.0},   hp:1.05,spd:1.08,bd:1.05,r:0.98, w:{skirmisher:58,hunter:18,roamer:14,sentinel:10}},
+     {n:'Ashvent Shaman', inf:{id:'burn',dur:5.0},   hp:1.30,spd:0.90,bd:1.30,r:1.08, rof:1.18, w:{sentinel:52,skirmisher:30,roamer:18}}],
+  d:{c:[{n:'Keep Cinderguard',inf:{id:'burn',dur:5.0},hp:1.75,spd:0.94,tch:1.35,r:1.14, w:{sentinel:48,hunter:34,pack:12,ambusher:6},
+        sig:{sway:0.22,swayF:1.2,commit:70,harry:0,lunge:{min:110,max:230,mul:2.2,dur:0.36,cd:2.6}}}],
+     s:[{n:'Pyre Chanter', inf:{id:'burn',dur:5.5},   hp:1.24,spd:1.02,bd:1.25,r:1.02, rof:0.86, w:{skirmisher:60,hunter:20,sentinel:20}}]}},
 
  // 8 THE ASHFALL and the grind ring beyond it (Lv50) — burnt ground at the rift's edge. These do
  // not circle, do not break off and do not stop coming.
- {c:{n:'Ash Revenant',   inf:{id:'burn',dur:4.5},   hp:1.70,spd:0.90,tch:1.35,r:1.10, w:{hunter:58,sentinel:22,pack:12,roamer:8},
-     sig:{sway:0.24,swayF:1.1,commit:60,harry:0,
-          lunge:{min:110,max:220,mul:1.9,dur:0.40,cd:3.2}}},
-  s:{n:'Core Cultist',   inf:{id:'burn',dur:5.0},   hp:1.30,spd:0.88,bd:1.40,r:1.06, w:{sentinel:44,skirmisher:30,hunter:16,roamer:10}}},
+ {c:[{n:'Ash Revenant',  inf:{id:'burn',dur:4.5},   hp:1.70,spd:0.90,tch:1.35,r:1.10, w:{hunter:58,sentinel:22,pack:12,roamer:8},
+      sig:{sway:0.24,swayF:1.1,commit:60,harry:0,
+           lunge:{min:110,max:220,mul:1.9,dur:0.40,cd:3.2}}},
+     {n:'Cinder Husk',    inf:{id:'burn',dur:5.0},   hp:2.10,spd:0.78,tch:1.50,r:1.22, w:{hunter:52,sentinel:30,ambusher:12,roamer:6},
+      sig:{sway:0.12,swayF:0.8,commit:50,harry:0,lunge:null}}],   // never stops, never swerves
+  s:[{n:'Core Cultist',  inf:{id:'burn',dur:5.0},   hp:1.30,spd:0.88,bd:1.40,r:1.06, w:{sentinel:44,skirmisher:30,hunter:16,roamer:10}},
+     {n:'Rift Chanter',   inf:{id:'curse',dur:6.0},  hp:1.20,spd:0.94,bd:1.30,r:1.02, rof:0.82, w:{skirmisher:52,sentinel:28,hunter:20}}],
+  d:{c:[{n:'Sanctum Devout',inf:{id:'burn',dur:5.5}, hp:1.60,spd:1.00,tch:1.30,r:1.08, w:{hunter:44,pack:30,ambusher:16,sentinel:10},
+        sig:{sway:0.38,swayF:2.0,commit:80,harry:76,lunge:{min:105,max:260,mul:2.8,dur:0.32,cd:1.9}}}],
+     s:[{n:'Molten Herald',inf:{id:'burn',dur:6.0},  hp:1.40,spd:0.90,bd:1.45,r:1.08, rof:0.80, w:{skirmisher:48,sentinel:32,hunter:20}}]}},
 ];
-function mobSpec(band,t){ const S=MOBSPEC[Math.max(0,Math.min(MOBSPEC.length-1,band|0))];
-  return S?S[t==='s'?'s':'c']:null; }
+// A band's pool is a LIST now, not a single creature per type (user: "we need more open world and
+// dungeon enemies"). Inside a dungeon the band's `d` entries are appended, so a dream holds things
+// that never walk the overworld above it. Which one a spawn point gets is hashed from the point
+// itself -- the same rule pickBehaviour uses, with different multipliers so species and behaviour
+// stay uncorrelated (or every Dire Wolf in the world would also be the pack one).
+function mobPool(band,t,dun){
+  const S=MOBSPEC[Math.max(0,Math.min(MOBSPEC.length-1,band|0))]; if(!S) return [];
+  let list=S[t==='s'?'s':'c']; if(!list) return [];
+  if(!Array.isArray(list)) list=[list];
+  if(dun&&S.d){ const ex=S.d[t==='s'?'s':'c']; if(ex) list=list.concat(Array.isArray(ex)?ex:[ex]); }
+  return list;
+}
+function mobSpec(band,t,sp,dun){
+  const list=mobPool(band,t,dun); if(!list.length) return null;
+  if(list.length===1||!sp) return list[0];
+  const h=(Math.imul(sp.x|0,2246822519)+Math.imul(sp.y|0,3266489917))>>>0;
+  return list[((h^(h>>>15))>>>0)%list.length];
+}
 // deterministic per-spawn so a given spot keeps its character across respawns (a guarded
 // chokepoint stays guarded). Weights come from the SPECIES, so which behaviours an area even
 // contains is part of what makes that area itself.
-function pickBehaviour(sp,lv,type,band){
+function pickBehaviour(sp,lv,type,band,dun){
   const h=(Math.imul(sp.x|0,374761393)+Math.imul(sp.y|0,668265263))>>>0;
   const roll=(h^(h>>>13))%100;
-  const S=mobSpec(band===undefined?5:band,type);
+  // must resolve the SAME creature makeEnemy did, or a wolf would inherit a crab's weights
+  const S=mobSpec(band===undefined?5:band,type,sp,dun);
   if(S&&S.w){ let acc=0, tot=0;
     for(const k in S.w) tot+=S.w[k];
     const r=(roll/100)*tot;
@@ -992,8 +1083,12 @@ function makeEnemy(sp){
   const edef=eDef(lv), edr=eDR(edef), edex=eDex(lv), espd=eSpdMul(lv), emp=eMp(lv);
   const hpm=hm*(1-edr);   // TTK-neutral: (base*hpm)/(1-edr) == base*hm, so kills-to-die is unchanged
   let e;
-  if(sp.t==='c') e={type:'c',r:15,hp:40*hpm,spd:95*espd,touch:12+dm,col:'#c04a3d'};
-  else if(sp.t==='s') e={type:'s',r:16,hp:60*hpm,spd:46*espd,fireT:1,bd:8+dm*0.63,col:'#8a5ac0'};
+  // The FLAT terms are the low-level difficulty dial: at Lv1 dm is only ~3, so a floor of 12 was
+  // 80% of what a starting hero actually took, while at Lv50 dm is ~502 and the floor is noise.
+  // Dropping the floors cuts a Lv1 hit roughly in half and a Lv50 hit by ~1.5% -- exactly where
+  // the user asked the reduction to land. Bosses keep their old floors: they are the spike.
+  if(sp.t==='c') e={type:'c',r:15,hp:40*hpm,spd:95*espd,touch:7+dm,col:'#c04a3d'};
+  else if(sp.t==='s') e={type:'s',r:16,hp:60*hpm,spd:46*espd,fireT:1,bd:5+dm*0.63,col:'#8a5ac0'};
   else if(sp.t==='N'){ // dungeon objective node: stationary, harmless, must be destroyed
     const th=GBOSS[(curRoom&&curRoom.ring)||0];
     e={type:'N',r:16,hp:Math.round(46*hm),spd:0,touch:0,col:th?th.col:'#7ab8d4',node:true}; }
@@ -1029,7 +1124,8 @@ function makeEnemy(sp){
             : 5;
     if(!(_bd>=0)) _bd=5;
     e.band=Math.max(0,Math.min(MOBSPEC.length-1,_bd));
-    const S=mobSpec(e.band,e.type);
+    const _dun=!!(curRoom&&curRoom.dungeon);
+    const S=mobSpec(e.band,e.type,sp,_dun);
     if(S){
       e.spn=S.n; e.sig=S.sig||null; e.inf=S.inf||null;   // what it leaves on you when it connects
       if(S.hp) e.hp*=S.hp;
@@ -1037,8 +1133,9 @@ function makeEnemy(sp){
       if(S.tch&&e.touch) e.touch*=S.tch;
       if(S.bd&&e.bd) e.bd*=S.bd;
       if(S.r) e.r=Math.round(e.r*S.r);
+      if(S.rof) e.rof=S.rof;                             // species cadence, on top of the level ramp
     }
-    e.beh=pickBehaviour(sp,lv,e.type,e.band); const B=EBEH[e.beh]||EBEH.hunter;
+    e.beh=pickBehaviour(sp,lv,e.type,e.band,_dun); const B=EBEH[e.beh]||EBEH.hunter;
     e.home={x:e.x,y:e.y}; e.roamA=Math.random()*6.283;
     if(B.hpMul) e.hp*=B.hpMul;
     if(B.spdMul) e.spd*=B.spdMul;

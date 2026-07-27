@@ -557,10 +557,14 @@ function update(dt){
       if(e.maxmp){ e.mp=Math.min(e.maxmp,(e.mp||0)+e.maxmp*0.35*dt); }   // caster MP regen (~35%/s)
       e.fireT-=dt;
       if(e.fireT<=0 && (e.mp||0)>=8){ e.mp-=8;                           // MP-gated: low-lv casters can't sustain
-        e.fireT=1.4/(1+(e.dex||0)*0.010);                               // DEX -> attack speed (Lv50 ~0.92s)
+        // cadence and VOLUME both ramp with level now (eFireCd / eShotCount in 03_entities) --
+        // a Lv1 shooter puts one slow bolt in the air, a Lv50 one a fast three-wide fan.
+        // `rof` lets a species be quicker or heavier than its band's baseline.
+        e.fireT=eFireCd(e.lv||1)/(1+(e.dex||0)*0.004)*(e.rof||1);
         e.animAtk=0.45; const base=Math.atan2(dy,dx);
         const psp=210*(1+(e.dex||0)*0.006);                             // DEX -> projectile speed
-        for(let i=-1;i<=1;i++) eFire(e, base+i*0.22, psp); }
+        const n=eShotCount(e.lv||1), half=(n-1)/2;
+        for(let i=0;i<n;i++) eFire(e, base+(i-half)*0.22, psp); }
     }
     if(e.type==='B' && !e.decoy){
       // ---- ARENA LOCK ----
