@@ -10,7 +10,16 @@ let coop={on:false, host:false, code:null, peer:null, conns:[], peers:{}, id:nul
 function _coopPid(code){ return 'emberrealm-room-'+code.toLowerCase(); }
 function _coopRand(){ const A='BCDFGHJKMNPQRSTVWXYZ23456789'; let s='';
   for(let i=0;i<4;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
-function _coopReset(keepAuto){ const au=keepAuto?coop.auto:true;
+// EVERY reset bumps this. A connection attempt captures it and checks it in each async callback:
+// PeerJS 'open'/'error' can land seconds after the user has already gone solo or reconnected, and
+// those callbacks write coop.peer / coop.host / coop.on wholesale. Without the guard a stale
+// attempt resurrects co-op after GO SOLO, or nulls the peer belonging to a NEWER attempt.
+let _coopEpoch=0;
+function _coopReset(keepAuto){ const au=keepAuto?coop.auto:true; _coopEpoch++;
+  // Drop every remote shadow BEFORE the flags flip. One frame with coop.on false and a world full
+  // of un-simulable entities is all it takes to crash. This covers coopSolo, a lost relay and a
+  // reconnect, because they all come through here.
+  if(typeof netDropRemote==='function') netDropRemote();
   for(const c of coop.conns){ try{c.close();}catch(e){} }
   if(coop.peer){ try{coop.peer.destroy();}catch(e){} }
   coop={on:false,host:false,code:null,peer:null,conns:[],peers:{},id:null,err:null,
@@ -18,12 +27,16 @@ function _coopReset(keepAuto){ const au=keepAuto?coop.auto:true;
 // ---- public server auto-connect (claim the server id, else join whoever holds it) ----
 function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) return;
   coop._trying=true;
+  const ep=_coopEpoch;                       // this attempt belongs to THIS epoch and no other
+  const stale=()=>_coopEpoch!==ep;
   const p=new Peer(COOP_PUB_ID);
   p.on('open',()=>{ // I hold the server id -> I'm the relay
+    if(stale()){ try{p.destroy();}catch(err){} return; }
     coop.peer=p; coop.host=true; coop.pub=true; coop.on=true; coop.id='H'; coop.code='SERVER';
     coop._trying=false; _coopPanel();
     p.on('connection',c=>_coopWire(c)); });
   p.on('error',e=>{
+    if(stale()){ try{p.destroy();}catch(err){} return; }
     if(e.type==='unavailable-id'){ // someone else is the server -> join them
       try{p.destroy();}catch(err){}
       const g=new Peer();
@@ -31,10 +44,13 @@ function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) ret
       // host addresses its loot grants with the full id ({t:'G',to:...}); a 6-char coop.id could
       // never match it and every client pickup silently destroyed the item instead of awarding it.
       // Presence keys (coop.peers[d.id]) and ownership tags ride the same id, so it must be one space.
-      g.on('open',id=>{ coop.peer=g; coop.id=id; coop.pub=true; coop.code='SERVER';
+      g.on('open',id=>{
+        if(stale()){ try{g.destroy();}catch(err2){} return; }
+        coop.peer=g; coop.id=id; coop.pub=true; coop.code='SERVER';
         const c=g.connect(COOP_PUB_ID,{reliable:false}); _coopWire(c);
-        setTimeout(()=>{ coop._trying=false; if(!coop.on){ try{g.destroy();}catch(err2){} coop.peer=null; } },7000); });
-      g.on('error',()=>{ coop._trying=false; });
+        setTimeout(()=>{ if(stale()){ try{g.destroy();}catch(err2){} return; }
+          coop._trying=false; if(!coop.on){ try{g.destroy();}catch(err2){} coop.peer=null; } },7000); });
+      g.on('error',()=>{ if(stale()) return; coop._trying=false; });
     } else { coop.err=''+e.type; coop._trying=false; try{p.destroy();}catch(err){} }
   });
 }
@@ -64,7 +80,10 @@ function coopJoin(code){ if(typeof Peer==='undefined'){ _coopMsg('co-op needs in
 function coopSolo(){ _coopReset(false); coop.auto=false; _coopMsg('gone solo'); _coopPanel(); }
 function coopOnline(){ coop.auto=true; _coopMsg('reconnecting to the server…'); _coopPanel(); }
 function _coopWire(c){
-  c.on('open',()=>{ coop.conns.push(c); coop.on=true; coop._trying=false;
+  const ep=_coopEpoch, stale=()=>_coopEpoch!==ep;
+  c.on('open',()=>{
+    if(stale()){ try{c.close();}catch(e){} return; }
+    coop.conns.push(c); coop.on=true; coop._trying=false;
     if(!coop.pub) _coopMsg(coop.host?'a hero joined your room':'joined room '+coop.code);
     else if(!coop.host) _coopMsg('connected to the EMBER SERVER');
     _coopPanel(); });

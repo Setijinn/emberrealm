@@ -29,9 +29,30 @@ let netEnts = null;                 // client: nid -> {tx,ty} interpolation targ
 function netOn(){ return typeof coop!=='undefined' && coop && coop.on && coop.conns.length>0; }
 function netIsHost(){ return netOn() && coop.host; }
 function netIsClient(){ return netOn() && !coop.host; }
+// Is the HOST standing in the same room as me? Presence already carries `rm` (14_coop.js) and the
+// host is always id 'H'. Stale presence counts as gone, matching netSimAnchors' 4s rule.
+function netHostInMyRoom(){
+  if(typeof coop==='undefined'||!coop||!coop.peers) return false;
+  const h=coop.peers['H']; if(!h) return false;
+  if(performance.now()-(h.ts||0)>4000) return false;
+  const rk=(typeof curRoom!=='undefined'&&curRoom&&curRoom.key)||'?';
+  return (h.rm||'?')===rk;
+}
 // The one predicate the rest of the game asks: "should I be simulating the shared world?"
-// Solo play and the host both say yes, so single-player behaviour is completely unchanged.
-function netSimulates(){ return !netIsClient(); }
+//
+// This used to be `!netIsClient()`, and that was the wrong rule. The reason a client must not
+// simulate is that two machines simulating the SAME room disagree -- it says nothing about a room
+// the host is not standing in. Combined with netApplyWorld's room filter (a snapshot from another
+// room is discarded) it left a client whose host was ANYWHERE ELSE with a permanently empty world:
+// the host was not filling that room, and the client was forbidden from doing it. On the public
+// server, where you are paired with a stranger who is almost certainly somewhere else, that was
+// the NORMAL case rather than an edge one.
+//
+// Positional now. The invariant is preserved exactly where it matters and nowhere else.
+function netSimulates(){
+  if(!netIsClient()) return true;          // solo and host: unchanged
+  return !netHostInMyRoom();               // host is elsewhere -> nobody else will fill this room
+}
 // EVERY HERO THE HOST IS SIMULATING FOR, in the host's own room. The world spawner used to measure
 // only from `player`, which meant the host populated the ground around ITSELF and nobody else: a
 // client standing anywhere on a 1160x720-tile map saw an empty world, because clients never
@@ -62,6 +83,22 @@ function netNearestSim(x,y,anchors){
 // (forced at both host entry points in 14_coop); a client uses its full peer id, which is exactly
 // what the host sees as conn.peer. Offline returns 'S', which nothing ever compares against.
 function netSelfId(){ return (typeof coop==='undefined'||!coop)?'S':(coop.id||'S'); }
+// CO-OP ENDED -> DROP THE SHADOWS. A `remote` entity is not an entity, it is a rendering of
+// someone else's: netApplyWorld builds it with position, hp and a name and NOTHING the simulation
+// needs -- no beh, no bd, no touch, no home, and for a boss no ang/chargeT. The moment coop.on
+// goes false, netIsClient() flips and the full local AI loop runs over them, does arithmetic on
+// undefined, fills their positions with NaN and throws. That is the "game crashes when I go
+// offline" bug. They are meaningless without the connection that produced them, so they go.
+function netDropRemote(){
+  if(typeof enemies!=='undefined') for(let i=enemies.length-1;i>=0;i--)
+    if(enemies[i]&&enemies[i].remote) enemies.splice(i,1);
+  if(typeof eShots!=='undefined') for(let i=eShots.length-1;i>=0;i--)
+    if(eShots[i]&&eShots[i].remote) eShots.splice(i,1);
+  if(typeof loots!=='undefined') for(let i=loots.length-1;i>=0;i--)
+    if(loots[i]&&loots[i].remote) loots.splice(i,1);
+  if(typeof bossBar!=='undefined' && bossBar && bossBar.remote) bossBar=null;
+  netEnts={};
+}
 // True for public bags, my own bags, and EVERY bag in solo play — `own` is only ever set when
 // networked, so the short-circuit at the call sites means solo pays one undefined read.
 function netOwnsLoot(b){ return !b || !b.own || b.own===netSelfId(); }
@@ -109,10 +146,22 @@ function netBroadcast(){
     if(e.bloom){ const b=e.bloom;
       bl=[b.ph==='tele'?0:1, +b.t.toFixed(2), Math.round(b.sr),
           (b.safes||[]).map(s=>[Math.round(s.x),Math.round(s.y)])]; }
+    // Flags word: bits 0-3 were all that was used. `awk`/`den` MUST cross or bossMechKey() reads
+    // ow<ring> on a client standing in a dungeon and runs the wrong fight's client logic. New bits
+    // are free forward-compat -- an older peer masks them off and never notices.
+    const fl=(e.wb?1:0)|(e.boss?2:0)|(e.hidden?4:0)|(e.woke?8:0)
+            |(e.awk?16:0)|(e.den?32:0)|(e.wardInv?64:0)|(e.anchorInv?128:0);
     ents.push([netId(e), e.type||'c', Math.round(e.x), Math.round(e.y),
                Math.round(e.hp), Math.round(e.maxhp||e.hp), Math.round(e.r||12),
                e.ring===undefined?-1:e.ring, e.lv||1, e.phase||0,
-               (e.wb?1:0)|(e.boss?2:0)|(e.hidden?4:0)|(e.woke?8:0), e.name||'', st, po, bl]);
+               fl, e.name||'', st, po, bl,
+               // 15: mechanic state. Every client-visible hazard the 25 fights produce, packed
+               // from the shared primitive layer rather than per-fight. See netPackMech.
+               (typeof netPackMech==='function')?netPackMech(e):null,
+               // 16: the boss's own damage. netHazards priced every client-side hazard off
+               // (e.bd||10), so a client took FLAT 10-based mechanic damage at any level while
+               // the host took properly scaled damage.
+               Math.round(e.bd||0)]);
   }
   const sh=[];
   for(const s of eShots) sh.push([Math.round(s.x),Math.round(s.y),Math.round(s.vx),Math.round(s.vy),
@@ -183,12 +232,18 @@ function netApplyWorld(m){
     netEnts[nid]={tx:a[2],ty:a[3]};
     e.hp=a[4]; e.maxhp=a[5]; e.r=a[6]; e.lv=a[8]; e.phase=a[9];
     const f=a[10]; e.wb=!!(f&1); e.boss=!!(f&2); e.hidden=!!(f&4); e.woke=!!(f&8);
+    e.awk=!!(f&16); e.den=!!(f&32); e.wardInv=(f&64)?1:0; e.anchorInv=(f&128)?1:0;
+    if(a[16]) e.bd=a[16];
     if(a[11]) e.name=a[11];
     // statuses: rebuilt each snapshot so an expiry on the host clears here too
     e.st={}; if(a[12]) for(const s of a[12]) e.st[s[0]]={t:s[1],val:0};
     e.pools = a[13] ? a[13].map(p=>({x:p[0],y:p[1],r:p[2],rmax:p[2],ph:p[3]?'live':'tele',t:1,dcd:0})) : null;
     e.bloom = a[14] ? {ph:a[14][0]?'live':'tele', t:a[14][1], dur:a[14][1], sr:a[14][2],
                        safes:a[14][3].map(s=>({x:s[0],y:s[1]}))} : null;
+    // 15: the 25 fights' mechanic state. MUST be null-guarded -- an unguarded read of a missing
+    // trailing element throws inside the PeerJS data handler, which skips the rest of the
+    // entities, the shot replacement and the whole loot reconcile, every single packet.
+    if(typeof netUnpackMech==='function') netUnpackMech(e, a[15]||null);
   }
   for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i];
     if(e.remote && !seen[e.nid]){ enemies.splice(i,1); if(netEnts) delete netEnts[e.nid]; } }
@@ -227,6 +282,8 @@ function netInterp(dt){
 function netHazards(dt){
   if(!netIsClient() || typeof damagePlayer!=='function') return;
   for(const e of enemies){
+    // the registry fights (17i) -- all 25 of them go through this one call
+    if(typeof netMechHurt==='function') netMechHurt(e,dt);
     if(e.pools) for(const p of e.pools){
       if(p.ph!=='live') continue;
       p.dcd=(p.dcd||0)-dt; if(p.dcd>0) continue;

@@ -296,6 +296,32 @@ function arenaWash(e,col,a){
 function mechDrawCommon(e){
   if(!e.mk) return;
   hazDraw(e); safeDraw(e); beamDraw(e); markDraw(e); wardDraw(e);
+  netMechDraw(e);
+}
+// What a CLIENT draws for the shapes that only exist on the wire. The fights' own draw functions
+// read host-side fields (M.isles, M.dx, M.fog) that a client never has, so they silently no-op;
+// this renders the generic equivalents so the mechanic is visible where it is playable.
+function netMechDraw(e){
+  const M=e.mk; if(!M||!M.remote) return;
+  if(M.fog>0){
+    const R=(TILE*7.0)*(1-0.35*M.fog);
+    ctx.save(); ctx.globalAlpha=0.74*M.fog;
+    const g=ctx.createRadialGradient(player.x,player.y,R*0.55,player.x,player.y,R*1.7);
+    g.addColorStop(0,'rgba(148,166,178,0)'); g.addColorStop(1,'rgba(148,166,178,1)');
+    ctx.fillStyle=g; ctx.fillRect(player.x-R*1.8,player.y-R*1.8,R*3.6,R*3.6);
+    ctx.restore();
+  }
+  if(M.safe&&M.safe.length){
+    const A=(typeof bossArenaOf==='function')?bossArenaOf(e):null;
+    ctx.save(); ctx.globalAlpha=0.26; ctx.fillStyle='#2f6f8f';
+    if(A) ctx.fillRect(A.x0,A.y0,A.x1-A.x0,A.y1-A.y0);
+    ctx.globalCompositeOperation='destination-out';
+    for(const s of M.safe){ ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.29); ctx.fill(); }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha=0.7; ctx.strokeStyle='#8fd6e8'; ctx.lineWidth=3;
+    for(const s of M.safe){ ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.29); ctx.stroke(); }
+    ctx.restore();
+  }
 }
 // ...and every fight's tick starts with it.
 function mechTickCommon(e,dt){
@@ -309,4 +335,116 @@ function mechEvery(e,key,period,dt){
   M[key]-=dt;
   if(M[key]<=0){ M[key]=period*bossPace(e).cycle; return true; }
   return false;
+}
+
+// ===================================================================================
+// CO-OP: THE PRIMITIVE LAYER ON THE WIRE
+//
+// Enemy AI is host-only, so without this a client sees none of what the 25 fights put on the
+// ground. The fights are NOT serialized individually — everything that can damage you lives in a
+// handful of shared shapes on `e.mk`, so syncing the primitives makes all 25 work at once and
+// keeps the netcode one thing instead of twenty-five.
+//
+// Only what a client must SEE or ACT ON crosses. Bespoke visual state (the Bog Horror's islands,
+// the fog radius, the echo trail) stays home — a client missing it loses flavour, not fairness.
+// Stonefist's pillars are the exception and do cross, because they are COVER: whether one stands
+// between you and the boss decides whether the slam hits you, and a client that cannot see them
+// cannot play the mechanic at all.
+//
+// Rows are arrays of rounded ints, matching the packing style of the rest of the snapshot.
+// ===================================================================================
+const NETMK_HAZ_CAP=20;    // a client dodging 20 circles is not meaningfully better off at 28
+function netPackMech(e){
+  const M=e&&e.mk; if(!M) return null;
+  const haz=[];
+  if(M.haz&&M.haz.length){
+    // newest last; if we are over the cap drop the OLDEST, which are the ones about to expire
+    const src=M.haz.length>NETMK_HAZ_CAP?M.haz.slice(M.haz.length-NETMK_HAZ_CAP):M.haz;
+    for(const h of src) haz.push([Math.round(h.x),Math.round(h.y),Math.round(h.r),
+                                  h.ph==='tele'?0:1, h.col||'']);
+  }
+  const ring=M.ring?[M.ring.ph==='tele'?0:1, Math.round(M.ring.r),
+                     (M.ring.safes||[]).map(s=>[Math.round(s.x),Math.round(s.y)])]:null;
+  const beam=M.beam?[+M.beam.ang.toFixed(2), +M.beam.w.toFixed(2), Math.round(M.beam.len)]:null;
+  const mark=M.mark?[+M.mark.t.toFixed(2), Math.round(M.mark.r)]:null;
+  const pil=(M.pillars&&M.pillars.length)
+    ? M.pillars.filter(q=>q.hp>0).map(q=>[Math.round(q.x),Math.round(q.y)]) : null;
+  const beams=(M.beams&&M.beams.length)?M.beams.map(b=>+b.a.toFixed(2)):null;
+  const ring2=(M.ring2!==undefined)?Math.round(M.ring2):null;
+  // GROUND YOU MUST BE STANDING ON. Six fights express their mechanic as "everywhere except here
+  // is lethal" rather than as hazards, and the primitive layer alone did not carry them -- on a
+  // client the Bog Horror's sinking islands and the Tidewrack's dry ring simply did not exist, so
+  // the mechanic was unplayable rather than merely unseen. One generic list covers all of them.
+  let safe=null;
+  if(M.isles&&M.isles.length) safe=M.isles.map(s=>[Math.round(s.x),Math.round(s.y),Math.round(s.r)]);
+  else if(M.dx!==undefined&&M.dy!==undefined) safe=[[Math.round(M.dx),Math.round(M.dy),Math.round(TILE*1.9)]];
+  // the Tidewrack's dry ground is the circle around ITSELF, and only while the tide is in. It is
+  // derivable from the boss position, but only if the client is told the tide is up at all.
+  else if(M.tide!==undefined && Math.sin(M.tide)>0.25)
+    safe=[[Math.round(e.x),Math.round(e.y),Math.round(TILE*3.2)]];
+  // the fog radius: the Mistantler's whole identity is that you cannot see, and a client that can
+  // see the arena is playing a different fight
+  const fog=(M.fog>0)?+M.fog.toFixed(2):null;
+  if(!haz.length&&!ring&&!beam&&!mark&&!pil&&!beams&&ring2===null&&!safe&&fog===null) return null;
+  return [haz,ring,beam,mark,pil,beams,ring2,safe,fog];
+}
+// Rebuild a DISPLAY-AND-HAZARD `e.mk` on a client. Marked `remote` so nothing here is ever mistaken
+// for authoritative state, and so the host's own resolution (which decides real damage for the
+// host's player) is never confused with the client evaluating the same hazard against itself.
+function netUnpackMech(e,a){
+  if(!a){ if(e.mk&&e.mk.remote) e.mk=null; return; }
+  const M=e.mk=(e.mk&&e.mk.remote)?e.mk:{remote:true};
+  M.remote=true;
+  const prev=M.haz||[];
+  M.haz=(a[0]||[]).map((h,i)=>({x:h[0],y:h[1],r:h[2],ph:h[3]?'live':'tele',col:h[4]||'#7a3a2a',
+    t:9,live:9,dmg:0.55,tick:0.4, ct:(prev[i]&&prev[i].ct)||0}));   // keep local tick cooldowns
+  M.ring=a[1]?{ph:a[1][0]?'fire':'tele', r:a[1][1],
+                safes:(a[1][2]||[]).map(s=>({x:s[0],y:s[1]})), t:9, _done:(M.ring&&M.ring._done)}:null;
+  M.beam=a[2]?{ang:a[2][0], w:a[2][1], len:a[2][2], from:'boss', col:'#ffd07a', ct:0}:null;
+  M.mark=a[3]?{t:a[3][0], r:a[3][1], col:'#ff6a3d'}:null;
+  M.pillars=a[4]?a[4].map(q=>({x:q[0],y:q[1],hp:1})):null;
+  M.beams=a[5]?a[5].map(v=>({a:v,s:0})):null;
+  if(a[6]!==null&&a[6]!==undefined) M.ring2=a[6];
+  M.safe=a[7]?a[7].map(q=>({x:q[0],y:q[1],r:q[2]})):null;
+  M.fog=(a[8]!==null&&a[8]!==undefined)?a[8]:0;
+}
+// Evaluate the wire's hazards against THIS machine's player. The host resolves its own; every
+// client resolves its own; nobody resolves anybody else's.
+function netMechHurt(e,dt){
+  const M=e&&e.mk; if(!M||!M.remote||typeof player==='undefined') return;
+  const bd=(e.bd||10);
+  for(const h of M.haz){
+    if(h.ph!=='live') continue;
+    h.ct-=dt; if(h.ct>0) continue;
+    if(Math.hypot(player.x-h.x,player.y-h.y)<h.r){
+      h.ct=0.4; damagePlayer(bd*0.55);
+      if(typeof boom==='function') boom(player.x,player.y,h.col,4); }
+  }
+  // safe ground resolves ONCE, exactly like the host's version
+  const R=M.ring;
+  if(R && R.ph==='fire' && !R._done){ R._done=1;
+    const ok=(R.safes||[]).some(s=>Math.hypot(player.x-s.x,player.y-s.y)<R.r);
+    if(!ok){ damagePlayer(Math.min(player.maxhp*0.26, bd*1.5));
+      player.inv=Math.max(player.inv||0,0.35);
+      if(typeof addShake==='function') addShake(10); }
+    else if(typeof texts!=='undefined')
+      texts.push({x:player.x,y:player.y-30,txt:'SAFE!',col:'#8fd48c',life:0.9}); }
+  const B=M.beam;
+  if(B){ const dx=player.x-e.x, dy=player.y-e.y, d=Math.hypot(dx,dy);
+    if(d<=B.len){ let ang=Math.atan2(dy,dx)-B.ang;
+      while(ang>Math.PI) ang-=6.283; while(ang<-Math.PI) ang+=6.283;
+      B.ct-=dt;
+      if(Math.abs(ang)<B.w/2 && B.ct<=0){ B.ct=0.5; damagePlayer(bd*0.5); } } }
+  // off the safe ground: the same slow drowning/burning tick the host applies to itself
+  if(M.safe&&M.safe.length){
+    const on=M.safe.some(s=>Math.hypot(player.x-s.x,player.y-s.y)<s.r);
+    M.wet=(M.wet||0)+dt;
+    if(!on && M.wet>0.5){ M.wet=0; damagePlayer(bd*0.40);
+      if(typeof playerStatus==='function') playerStatus('chill',1.6,0); }
+  }
+  if(M.beams){ M.hit=(M.hit||0)-dt;
+    for(const b of M.beams){ const dx=player.x-e.x, dy=player.y-e.y;
+      if(Math.hypot(dx,dy)>TILE*12) continue;
+      let ang=Math.atan2(dy,dx)-b.a; while(ang>Math.PI) ang-=6.283; while(ang<-Math.PI) ang+=6.283;
+      if(Math.abs(ang)<0.21 && M.hit<=0){ M.hit=0.5; damagePlayer(bd*0.45); } } }
 }
