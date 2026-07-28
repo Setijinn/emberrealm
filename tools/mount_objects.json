@@ -97,6 +97,12 @@
     },
     "arch_colossus": {
       "knight": "d68b398a-5831-4c48-b554-455e03b9843c"
+    },
+    "arch_drake": {
+      "knight": "5248b3fe-53ef-4aa3-ac11-fd315a329484"
+    },
+    "arch_lizard": {
+      "knight": "24e3f719-237c-4840-95a0-0e295bda9381"
     }
   },
   "_riders_note": "Rider composites, keyed archetype -> class. Extracted against their OWN archetype (extract_riders.py <cls> <composite> <base>), which is what makes leftover fragments invisible: stray pixels are that mount's pixels going back onto that mount. The eight plain quadrupeds share the horse-extracted layer; only visually distinct mounts need their own.",
