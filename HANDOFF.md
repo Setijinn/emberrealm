@@ -172,10 +172,29 @@ it hands you the prestige caps while there are still levels left to earn.
 - **`rings.names` is BAND-indexed, not zone-indexed** (`11_ui.js` reads `names[pl.band]` for fast
   travel; `02_worldbuild.js` appends the grind name gated on `length===8`). The four starter names
   live in their own `rings.starterZones`; do not add a ninth entry to `names`.
-- Terrain bands are a SEPARATE index space that tops out at 8, and `MOBNAME`/`MOBTINT` share one
-  array between bands 0-8 and boss art slots 9+. A terrain band 9 would therefore collide with boss
-  art slot 9, and `GBANDCOL[9]` is indexed unguarded on the pre-decode path (a hard TypeError, not a
-  fallback). The fourth starter zone borrows band 6 instead.
+- **Terrain bands are a SEPARATE index space from zones**, 0-9, and `MOBSPEC` is keyed by it — so a
+  zone with no band of its own gets another band's creature roster. The Cairnworks borrowed band 6
+  briefly and spawned the Lv39-45 Stonebrow list at Lv12; it has band 9 now.
+- **Band 9 is APPENDED, never inserted** — pillar band ids are `er-pillars` save keys. That makes it
+  numerically the highest band while sitting between 1 and 2 on the ground, so the two places that
+  read band as an ORDERED ramp special-case it: the gold "danger rises" seam (`08_render.js`) and
+  the hot-band secondary-terrain rule.
+- **`MOBNAME`/`MOBTINT` are indexed by two different things that both start at 0**: a terrain band
+  on the overworld, a boss ART SLOT in a dungeon. Rows 0-8 serve both deliberately; rows 9-12 are
+  the starter bosses' slots. `BAND_ROW` maps a terrain band to its row — without it, band 9 reads
+  the Tidewrack's name and tint. The dev panel's mob preview passes a raw band and needs it too.
+- **`GBANDCOL[bd]` is the one that crashes rather than degrades.** It is indexed unguarded on the
+  fallback path taken every session before `set_N` decodes, so a band without an entry is a
+  TypeError inside the tile loop. Add it in the same commit as the band.
+- A new band needs: `set_N`/`setv_N`/`terr_N` art, the `b<=N` loader loops, `DECAL_SRC`,
+  `GBANDCOL`, `TERR_ACCENT`, `MRAMP`, `_bandTree`/`_bandBoulder`/`_bandTone`, `MOBSPEC[N]` (+
+  `MOB_ARCH` rows for every species), and a `BAND_ROW` entry. It does NOT need `lairset/floor/wall`:
+  arena tiles are keyed to the BOSS (`lairTileSet`), never to the ground it stands on.
+- **PixelLab will not give you a texture if you ask for one.** Asking for a "seamless ground
+  texture" returns a composed SUBJECT — a blob ringed by pebbles. You have to say *no centre, no
+  focal point, no border, uniform density edge to edge*, and separately *no straight lines, no
+  seams, no stripes* or it returns something that will not tile. When the palette comes back wrong,
+  correct it with `_bandTone` rather than burning generations chasing it; bands 0, 7, 8 and 9 all do.
 
 ### Bosses
 - Thirteen identities in `GBOSS`; a boss's index is its **`ring`** everywhere in the code (a legacy
