@@ -453,6 +453,7 @@ function update(dt){
   if(typeof tickPotions==='function') tickPotions(dt);   // potions trickle back; gold is gone
   if(typeof tickCritters==='function') tickCritters(dt);  // the Hearth flock (03b_critters.js)
   if(typeof tickMounts==='function') tickMounts(dt);      // remount cooldown + the boss-fight throw
+  if(typeof tickBoosts==='function') tickBoosts();         // draught countdown (17l_boosts.js)
   tickPlayerStatuses(dt);                       // burn/poison/bleed/shock tick, chill/weak/curse apply
   const frozen=!playerCanAct();                 // freeze and stun cost you the frame entirely
   // MOUNT SPEED rides in the existing chain rather than touching MOVE_SCALE, so it composes with

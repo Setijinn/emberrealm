@@ -221,7 +221,7 @@ function drawItemIcon(g,it,cw,ch,noTier){ if(!it) return; g.imageSmoothingEnable
 const _TIER_CORNERS=[[1,1],[0,1],[1,0],[0,0]];   // BR, BL, TR, TL — preference order on a tie
 function drawItemTier(g,it,cw,ch){
   if(!it || it.t===undefined || it.t===null) return;
-  if(it.k==='pot'||it.k==='coin'||it.k==='scroll'||it.k==='egg'||it.k==='food') return;   // no tier ladder
+  if(it.k==='pot'||it.k==='coin'||it.k==='scroll'||it.k==='egg'||it.k==='food'||it.k==='boost') return;   // no tier ladder
   // A relic stamps R, not T13. It is read in the same corner, in the same place, by the same
   // glance that reads a tier — which is the point: one mark per item, and R means "above the
   // ladder" without asking anyone to remember what the thirteenth number was.

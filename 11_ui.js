@@ -127,7 +127,7 @@ const BAG_VERDICT={
 };
 function bagVerdict(it,ch){
   if(!it||!ch) return 'other';
-  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot'||it.k==='egg'||it.k==='food') return 'other';
+  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot'||it.k==='egg'||it.k==='food'||it.k==='boost') return 'other';
   if(!canEquip(it,ch)) return 'noclass';
   const cur=equippedItemFor(it.k,ch);
   if(!cur) return 'upgrade';                       // an empty slot is always worth filling
@@ -678,7 +678,7 @@ function rollAffixes(it,fortune){ it.rar=rollRarity(it.t,fortune); it.aff=[];
  return it; }
 function affStats(aff){ const s=newStats(); if(aff) for(const a of aff) s[a.s]=(s[a.s]||0)+a.v; return s; }
 // full stat block an item contributes (base + its own affixes)
-function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll'||it.k==='egg'||it.k==='food') return newStats();
+function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll'||it.k==='egg'||it.k==='food'||it.k==='boost') return newStats();
  if(it.k==='coin') return newStats();   // coins boost via the carried total, not per-item
  let base;
  if(it.k==='wpn') base=gearBaseStats('wpn',it.t);
@@ -717,7 +717,7 @@ function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
 function itemRarCol(it){ if(it&&(it.k==='leg'||it.relic)) return tierCol(RELIC_T);  // relics have their own colour
  return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
 // a relic is equipped from the loadout screen (it owns the wpnL/armL slot), not from a bag row
-function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg'||it.k==='egg'||it.k==='food')return false;
+function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg'||it.k==='egg'||it.k==='food'||it.k==='boost')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
@@ -956,6 +956,11 @@ function awardItem(it,x,y){
   // a mount goes straight to the Stable, for the same reason an egg goes to the incubator: its
   // home is a collection on the account, and it must never eat a satchel slot
   if(it.k==='mount'){ if(typeof mountTake==='function') mountTake(it); return true; }
+  // a boost draught goes to its own stock, not the satchel — it is a counter, like the flasks
+  if(it.k==='boost'){ if(typeof boostGive==='function') boostGive(it.bt,1);
+    const d=(typeof boostDef==='function')?boostDef(it.bt):null;
+    texts.push({x:px,y:py-14,txt:(d?d.icon+' '+d.name:'Draught'),col:(d?d.col:'#e6c76a'),life:1.5});
+    return true; }
   // the OLD relic form (k:'leg'), kept only so a sack minted before relics became real items still
   // hands you something. It converts on the spot into the item the relic is now.
   if(it.k==='leg'){ const R=relicDef(it.id); if(!R) return true;
@@ -1035,8 +1040,17 @@ function rollPublicLoot(e,row,F,extra,cls){
    // opening: one slot roll averages 1.3 pieces, which is how a "bag" ended up meaning "an item".
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);  // a boss always pays out
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
+   // ...and a Hoarder's Draught buys a boss the extra rolls it cannot get from a doubled chance
+   const _bl=(typeof boostLootMul==='function')?boostLootMul():1;
+   for(let k=1;k<_bl;k++){
+     for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);
+     for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it); }
  } else {
-   const gp=(PUB_GEAR[e.type]||0)*fmul;
+   // A Hoarder's Draught doubles how OFTEN a sack appears. On a boss, which always pays out, that
+   // cannot mean "twice as likely" -- it means an extra roll of the public table into the same
+   // sack, so the boost is worth the same to a boss killer as to anyone else without breaking
+   // one-sack-per-kill.
+   const gp=(PUB_GEAR[e.type]||0)*fmul*((typeof boostLootMul==='function')?boostLootMul():1);
    if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
  }
  if(items.length) loots.push(bagAt(e,items));            // everything missed -> no sack at all
@@ -1118,7 +1132,11 @@ function rollLoot(e){
  // keeps the rule intact: still exactly ONE sack, it is just a better one.
  const row=(e && e.elite && typeof zoneTierRowUp==='function') ? zoneTierRowUp(e.x,e.y)
                                                               : zoneTierRow(e.x,e.y);
- const F=(typeof player!=='undefined'&&player.fortune)||0;
+ // A Prospector's Draught doubles FORTUNE, which is the quality dial -- it makes what is inside a
+ // sack better, and does nothing to whether one appears. The Hoarder's Draught is the other half
+ // and lives in rollPublicLoot/rollSoulbound, where the drop CHANCES are.
+ const F=((typeof player!=='undefined'&&player.fortune)||0)
+        *((typeof boostFortMul==='function')?boostFortMul():1);
  // Fortune Coin (bronze) — its own roll, can drop alongside gear. Rare on purpose: a coin boosts
  // EVERY future drop for as long as you carry it, so it compounds where gear does not. At the old
  // 4%/85% they were routine, which quietly made Fortune the cheapest stat in the game.
@@ -1137,6 +1155,8 @@ function rollLoot(e){
  // pet FOOD stays with the gear on purpose -- see the note on CREATURE_BAND. It drops far too
  // often to justify a carrier, and it is a consumable, not a creature.
  if(typeof petFoodDropFor==='function'){ const fd=petFoodDropFor(e); if(fd) extra.push(fd); }  // pet food
+ // boost draughts ride in the ordinary gear sack (17l_boosts.js)
+ if(typeof boostDropFor==='function'){ const bd=boostDropFor(e); if(bd) extra.push(bd); }
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
  // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
  // bandOfTier(bagTopTier) already decides, so a relic in the sack makes it a reliquary by itself.
@@ -1846,7 +1866,11 @@ function hcCheck(){ const ch=curChar(); if(!ch||!rpg||!inGame) return false;
  $s('hcScr').style.display='flex';
  navigator.vibrate&&navigator.vibrate([40,60,40]);
  return true; }
-function gainXP(x,g){ if(!rpg)return; rpg.xp+=x;   // g is ignored: kills pay xp, never currency
+function gainXP(x,g){ if(!rpg)return;              // g is ignored: kills pay xp, never currency
+ // a Scholar's Draught doubles it (17l_boosts.js). Applied here rather than at each caller so
+ // every source of experience -- kills, objectives, bounties -- is covered by one line.
+ if(typeof boostXpMul==='function') x=Math.round(x*boostXpMul());
+ rpg.xp+=x;
  while(rpg.lvl<LV_CAP && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;

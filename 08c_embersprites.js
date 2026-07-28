@@ -210,8 +210,18 @@ const _relicArt={};
 function relicArtImg(id){ if(typeof window==='undefined'||!id) return null;
   if(_relicArt[id]===undefined){ const i=new Image(); i.src='assets/items/relic_'+id+'.png'; _relicArt[id]=i; }
   const im=_relicArt[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+// The three boost draughts (17l_boosts.js). Lazy per bottle, like the relics: three images cost
+// nothing until one is actually in a sack.
+const _boostArt={};
+function boostArtImg(bt){ if(typeof window==='undefined'||!bt) return null;
+  const d=(typeof boostDef==='function')?boostDef(bt):null; if(!d) return null;
+  if(_boostArt[bt]===undefined){ const i=new Image(); i.src='assets/items/'+d.spr+'.png'; _boostArt[bt]=i; }
+  const im=_boostArt[bt]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
   if(it.relic){ const r=relicArtImg(it.relic); if(r) return r; }   // its own art wins outright
+  // a draught has no tier and no band -- its own bottle is the whole identity
+  if(it.k==='boost'){ return boostArtImg(it.bt); }
   const NTIERS=_nTiers();
   let key=null;
   if(it.k==='wpn') key='wpn_'+it.wt; else if(it.k==='arm') key='arm_'+it.mt;

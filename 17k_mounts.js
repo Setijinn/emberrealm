@@ -575,14 +575,76 @@ const _mountArt={};
 function mountImg(spr){ if(typeof window==='undefined'||!spr) return null;
   if(_mountArt[spr]===undefined){ const i=new Image(); i.src='assets/mounts/'+spr+'.png'; _mountArt[spr]=i; }
   const im=_mountArt[spr]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+
+// ============================================================
+//  DIRECTIONAL ANIMATION (assets/mounts/<arch>/…)
+// ------------------------------------------------------------
+//  An archetype ships EIGHT rotations and an eight-direction walk cycle:
+//     assets/mounts/<arch>/idle_<dir>.png
+//     assets/mounts/<arch>/walk_<dir>_<i>.png
+//  with dir in n / ne / e / se / s / sw / w / nw.
+//
+//  EIGHT, not the hero's four. The hero's own art has n/s/e/w and flips west from east, which is
+//  fine for a humanoid whose silhouette is nearly symmetric; a quadruped seen from three-quarters
+//  is not, and a horse that snaps between four facings under a rider that snaps between four reads
+//  worse than either alone. The mount gets the finer set and the rider keeps his.
+//
+//  EVERY LAYER FALLS BACK, exactly like the mob archetypes: animated frames -> the 8-way idle ->
+//  the flat single-image sprite this file shipped first -> nothing drawn. A half-generated
+//  archetype degrades to a still mount rather than to a hole in the world.
+const MOUNT_DIRS=['e','se','s','sw','w','nw','n','ne'];
+function _mountDir(aa){
+  // 8 sectors of 45 degrees, starting at east. Returns the folder name, never a flip: a
+  // three-quarter view cannot be mirrored honestly, which is the whole reason for having eight.
+  const d=Math.atan2(Math.sin(aa),Math.cos(aa))*180/Math.PI;
+  const i=Math.round(((d+360)%360)/45)%8;
+  return MOUNT_DIRS[i]; }
+
+const _mountAnim={};      // path -> Image
+function _mountFrame(arch,name){
+  if(typeof window==='undefined') return null;
+  const p='assets/mounts/'+arch+'/'+name+'.png';
+  if(_mountAnim[p]===undefined){ const i=new Image(); i.src=p; _mountAnim[p]=i; }
+  const im=_mountAnim[p]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+
+// How many walk frames an archetype actually has. Probed once by walking up from 0 until a frame
+// is missing, then cached — a set that ships 9 and a set that ships 4 both just work.
+const _mountFrameN={};
+function _mountWalkCount(arch,dir){
+  const k=arch+'/'+dir;
+  if(_mountFrameN[k]!==undefined) return _mountFrameN[k];
+  let n=0; while(n<24 && _mountFrame(arch,'walk_'+dir+'_'+n)) n++;
+  // do NOT cache a zero: on the first frame every Image is still loading, and caching 0 here
+  // would pin the archetype to "no animation" for the rest of the session
+  if(n>0) _mountFrameN[k]=n;
+  return n; }
+
+// The frame to draw right now. Returns null when this archetype has no directional art at all,
+// which is the caller's signal to fall back to the flat sprite.
+function mountFrameFor(d,aim,moving,clock){
+  if(!d||!d.spr) return null;
+  // the FOLDER is named after the sprite key (arch_horse), which is also the flat sprite's
+  // filename -- d.arch is the short key ('horse') and points at nothing on disk
+  const arch=d.spr, dir=_mountDir(aim||0);
+  if(moving){ const n=_mountWalkCount(arch,dir);
+    if(n>0){ const i=Math.floor((clock||0)*10)%n;
+      const f=_mountFrame(arch,'walk_'+dir+'_'+i); if(f) return f; } }
+  return _mountFrame(arch,'idle_'+dir); }
 // A SPECIES IS AN ARCHETYPE IN A COAT. The archetype owns the drawing; the coat is a tint, cached
 // by _tintImg on (src,col,alpha) so seventy-eight mounts cost twelve images and one canvas each
 // the first time they are looked at. Returns null while the archetype is still loading — every
 // caller already falls back, and a lazily-loaded Image returns null on the FIRST call because that
 // call is what starts the load.
-function mountArtFor(m){
+// The base drawing for a species, before the coat goes on. `st` is optional {aim,moving,clock} —
+// with it, the eight-direction animated frame wins; without it (panels, chips) the flat sprite is
+// what you want, because a UI card should not pick a facing.
+function mountBaseImg(d,st){
+  if(st){ const f=mountFrameFor(d, st.aim, st.moving, st.clock); if(f) return f; }
+  return mountImg(d.spr); }
+
+function mountArtFor(m,st){
   const d=(typeof m==='string')?mountDef(m):m; if(!d) return null;
-  const im=mountImg(d.spr); if(!im) return null;
+  const im=mountBaseImg(d,st); if(!im) return null;
   if(!d.tint || typeof _tintImg!=='function') return im;
   return _tintImg(im, d.tint, d.tintA||0.3, 0); }
 
@@ -728,13 +790,22 @@ function _mountShadow(x,y,w){
 function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   if(!mounted() || typeof blit!=='function') return 0;
   const d=mountDef(player.mnt); if(!d) return 0;
-  const art=mountArtFor(d); if(!art) return 0;
+  // the eight-way animated frame if this archetype has one, else the flat sprite
+  const st={aim:faceAng, moving:moving, clock:clock};
+  const art=mountArtFor(d,st); if(!art) return 0;
   // OPAQUE BOX, never the canvas. _imgBBox caches on src, and the tinted canvas keeps the source's
   // geometry, so measuring the untinted archetype is both correct and cheaper. Every one of these
-  // is a 64x64 PixelLab canvas with a different amount of transparent margin — scaling by canvas
-  // size is exactly what made the relic sack the smallest bag in the game.
-  const base=mountImg(d.spr);
-  const bb=(typeof _imgBBox==='function'&&base)?_imgBBox(base):null;
+  // is a PixelLab canvas with a different amount of transparent margin — scaling by canvas size is
+  // exactly what made the relic sack the smallest bag in the game.
+  //
+  // MEASURE A FIXED REFERENCE PER DIRECTION, never the frame being drawn. Every frame is scaled to
+  // reach MOUNT_DRAW_H, so measuring each one individually would scale a leg-extended frame DOWN
+  // to the same height as a tucked one and the animal would visibly pulse as it walked. The idle
+  // pose for the current direction is the anchor: same silhouette proportions, constant across the
+  // whole cycle. Falls through to the flat sprite for archetypes with no directional art yet.
+  const ref=(typeof mountFrameFor==='function'
+              ? _mountFrame(d.spr,'idle_'+_mountDir(faceAng||0)) : null) || mountImg(d.spr);
+  const bb=(typeof _imgBBox==='function'&&ref)?_imgBBox(ref):null;
   const realH=(bb&&bb.h)?bb.h:(art.height||64);
   const sc=MOUNT_DRAW_H/Math.max(1,realH);
   const fly=!!d.fly;

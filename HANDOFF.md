@@ -329,6 +329,32 @@ asks for a full-bleed texture — measured 67% opaque with a 0%-opaque border on
 attempts, and the previews hide it. `create_image` is not implemented on this server. For a ground
 tile, crop to the largest fully-opaque square and stamp it with random orientations.
 
+**WHAT ACTUALLY WORKS IN A PIXELLAB PROMPT** — learned across ~30 mount and sack generations, and
+worth following rather than rediscovering:
+- **Describe anatomy, not the species name.** "eagle head and front talons, tawny lion
+  hindquarters" produced a griffon; "a griffon" produced something small and muddy. "carved
+  granite slabs, glowing orange runes in the cracks" produced a stone construct; "a stone golem
+  mount" produced a green lizard.
+- **Negatives are unreliable and need repeating in the positive.** "wingless ground drake" came
+  back with wings. What worked was saying it three ways at once: "NO wings at all", "running on
+  two muscular hind legs", "ground mount".
+- **Say how much of the frame to fill.** The first griffon rendered small and dark in a 64px
+  canvas. "large ... filling the frame, bright warm colours" fixed it in one retry. There is no
+  way to ask for a size directly, so frame language is the lever.
+- **"in profile" reliably gives a clean side view** for a quadruped, which is what a mount wants.
+  For the 8-direction pipeline drop it — the rotation set decides the angles itself.
+- **Add "no rider" to anything rideable.** Without it the model sometimes bakes a figure into the
+  saddle, which is unusable when the hero is a separate layer.
+- **`view:'low top-down'`** matches this game's camera. `'side'` reads too flat next to the hero
+  art and `'high top-down'` loses the animal's silhouette.
+- Two prompts that differ only in wording still produce **different palettes** — see the grass
+  tiles above. Anything meant to sit side by side needs one prompt and one batch, or gain-matching
+  afterwards.
+
+**`create_8_direction_object` bills 20 generations, ON COMPLETION, not when queued.** The balance
+does not move while a batch is processing, so `get_balance` mid-run will under-report what you have
+already committed to. Budget from the number of jobs you fired, never from the balance.
+
 **Two independently generated textures will not tone-match.** The two grass tiles came out with
 means of (41,86,14) and (66,143,49) and read as a quilt. Gain-match the second to the first.
 
