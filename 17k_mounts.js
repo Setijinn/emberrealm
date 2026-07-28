@@ -759,8 +759,24 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   //   hero feet drawn = y - 8 - lift + heroDrawnHeight/2      (09_sprites blits him centred)
   const HERO_HALF=31;                                       // 74px opaque box at EMBER_SC 0.85, halved
   const saddle = MOUNT_FOOT - MOUNT_DRAW_H*MOUNT_SEAT;
-  // the rider goes up with the mount, so altitude is added to the lift rather than handled twice
-  return (23 - saddle) - (31-HERO_HALF) + gait*0.4 + alt; }
+  // THE RIDER SITS IN THE SADDLE, NOT ON TOP OF THE ANIMAL. Landing his FEET on the saddle line
+  // put a standing hero on its back, which is exactly what it looked like. He is dropped
+  // MOUNT_SIT further so his hips meet the saddle instead, and 09_sprites clips his sprite at
+  // that line so the legs below it disappear behind the animal — which is where a rider's legs
+  // actually are. No new art: every class and every ascension already has an idle pose, and this
+  // makes all 68 of them sit correctly on all 130 mounts.
+  _mountSaddleY = y + saddle + alt;                          // world Y of the saddle line, for the clip
+  return (23 - saddle) - (31-HERO_HALF) + gait*0.4 + alt - MOUNT_SIT; }
+
+// How far the rider drops below "feet on the saddle" so that his HIPS sit at the saddle instead.
+// The hero's opaque box is 74px at EMBER_SC 0.85 (63px drawn) and the hip line is roughly 45% up
+// from the feet, so a bit over a third of his drawn height is what goes below the saddle.
+const MOUNT_SIT = 22;
+// Where the clip goes, in world coords, published by the draw above and read by 09_sprites on the
+// same frame. A plain module-level value rather than a return field because the hero blit needs it
+// AFTER mountDrawUnder has already returned its lift.
+let _mountSaddleY = 0;
+function mountSaddleY(){ return _mountSaddleY; }
 
 // ============================================================
 //  THE MOUNTS TAB — inside the companion panel (user, 2026-07-27)
