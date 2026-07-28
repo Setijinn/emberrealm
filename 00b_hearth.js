@@ -137,7 +137,7 @@
  // Candlelight down both sides, and only four of them. Glows are ADDITIVE (09_sprites) -- eight
  // sources washed the granite out to khaki before anything else was even wrong with it.
  // 'l' rather than a decor entry so 02_worldbuild's glow pass lights the room for free.
- [[9,8],[21,8],[9,13],[21,13]].forEach(q=>put(vault,q[0],q[1],'l'));
+ [[9,8],[21,8],[9,13],[21,13],[6,10],[24,10],[12,15],[18,15]].forEach(q=>put(vault,q[0],q[1],'l'));
  put(vault,15,12,'P');
  ROOM_DEFS['VAULT']={ name:'The Vault', town:false, safe:true, map:vault,
   portalDefs:[ {tx:15, ty:14, to:'0,0', label:'LEAVE', col:'#e8a34b'} ],
@@ -159,14 +159,24 @@
   // The cost is honest and small: while you are actually standing at the box the banner covers the
   // arch's upper half. That is the one moment you are reading the panel rather than the room, and
   // from anywhere else on the aisle -- which is every other second -- the door is fully visible.
+  // The room read as an aisle with a lot of unlit floor either side of it. The additions are all
+  // placed ON the two long sight-lines a player actually has -- straight up the runner, and
+  // sideways across the middle -- rather than sprinkled into corners nobody looks at.
+  // TWO STATUES flank the great door: the upper half of the chamber was the emptiest part and it
+  // is the part you walk toward, so it is the part that had to earn the walk.
+  // A LECTERN gives the room a reason to exist beyond storage -- somebody keeps the ledger.
   decor:[{t:'v_door',x:15,y:7.3,w:94},
+         {t:'v_statue',x:11.2,y:7.6},{t:'v_statue',x:18.8,y:7.6},
          {t:'strongbox',x:15,y:9.4},
          {t:'sign',x:15,y:11.5,txt:'THE VAULT'},
-         {t:'v_boxes', x:5.6,y:5.9},{t:'v_boxes', x:24.4,y:5.9},
+         {t:'v_lectern',x:9.4,y:10.4},{t:'v_lectern',x:20.6,y:10.4},
+         {t:'v_boxes', x:7.0,y:7.4},{t:'v_boxes', x:23.0,y:7.4},
          {t:'v_crates',x:4.2,y:8.2},{t:'v_crates',x:25.8,y:8.2},
          {t:'v_sacks', x:4.6,y:11.0},{t:'v_sacks',x:25.4,y:11.0},
          {t:'v_coins', x:5.4,y:13.6},{t:'v_coins',x:24.6,y:13.6},
-         {t:'chest',x:11.4,y:11.4},{t:'chest',x:18.6,y:11.4}] };
+         {t:'v_crates',x:7.6,y:14.4},{t:'v_crates',x:22.4,y:14.4},
+         {t:'chest',x:11.4,y:11.4},{t:'chest',x:18.6,y:11.4},
+         {t:'chest',x:8.2,y:7.2},{t:'chest',x:21.8,y:7.2}] };
 
  // ------------------------------------------------------------- GUILD HALL
  const guild=room(32,20,'f');

@@ -81,6 +81,7 @@ const _hearth={};
 if(typeof window!=='undefined') ['stall_bram','stall_sella','stall_maren','stall_odo','fountain','portal','floor',
   'floor_walk','floor_walk2','floor_broken','portal_realm','portal_cos','portal_vault','portal_guild','portal_arena',
   'wall','planter','brazier','lamp','portal_pets','portal_home',
+  'vault_coffer','chest','signboard','vault_statue','vault_lectern',
   // THE VAULT (user: rework the visuals for the entire storage room). The strongroom's own
   // furniture -- everything the hub's market art could not say about a bank.
   'vault_door','vault_boxes','vault_coins','vault_crates','vault_sacks','vault_candelabra',

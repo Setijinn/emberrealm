@@ -469,13 +469,16 @@ function drawTileG(x,y){
 
     if(c==='W'){
       // dressed ashlar, courses offset every other row, with a brass rail at the base
-      ctx.fillStyle='#241f28'; ctx.fillRect(tx,ty,TILE,TILE);
+      // The wall used to sit within a few values of the floor, so the room had no edge -- it just
+      // faded out. Lifted with the floor and kept a step BRIGHTER than it, which is what gives the
+      // chamber a readable boundary now that the middle is no longer black.
+      ctx.fillStyle='#3a3444'; ctx.fillRect(tx,ty,TILE,TILE);
       const off=(y&1)?TILE/2:0;
       for(let i=-1;i<2;i++){
         const bx=tx+off+i*TILE, g2=hmix(x*3+i,y*7);
-        ctx.fillStyle=['#332b36','#2e2731','#3a313d'][g2%3];
+        ctx.fillStyle=['#4a4256','#443c4f','#51485e'][g2%3];
         ctx.fillRect(bx+1,ty+1,TILE-2,TILE/2-2);
-        ctx.fillStyle=['#2b242e','#352d38','#292330'][(g2>>>4)%3];
+        ctx.fillStyle=['#413a4c','#4c4459','#3d3647'][(g2>>>4)%3];
         ctx.fillRect(bx+1-TILE/2,ty+TILE/2+1,TILE-2,TILE/2-2);
       }
       ctx.fillStyle='rgba(255,240,210,0.05)'; ctx.fillRect(tx,ty,TILE,2);
@@ -524,19 +527,36 @@ function drawTileG(x,y){
     }
 
     // ---- the floor: 2x2-tile polished slabs, brass seams on the slab grid ----
-    // COLD AND DARK ON PURPOSE. The room's light is eight additive warm glows (09_sprites), and a
-    // mid-tone stone under that much orange comes out khaki -- the first pass looked like packed
-    // dirt, not a bank. Sitting the granite this low and this blue leaves the lamplight somewhere
-    // to go: the warm pools read as warm because the stone between them stays cold.
+    // Still cold, because the room's light is additive warm glows and a mid-tone stone under that
+    // much orange comes out khaki -- that part of the original reasoning holds. But it was pushed
+    // so far down (a #12-#1c base) that most of the room read as an unlit void with a carpet in
+    // it, and the brass the whole design hangs on had nothing to sit against. Roughly doubled in
+    // value and given real MARBLE VEINING, which is the thing that makes polished stone read as
+    // stone rather than as flat fill.
     const sh=hmix(x>>1,y>>1);                       // one hash per SLAB, not per tile
-    ctx.fillStyle=['#15141d','#191825','#121119','#1c1a28'][sh%4];
+    ctx.fillStyle=['#2b2a38','#31303f','#262533','#353347'][sh%4];
     ctx.fillRect(tx,ty,TILE,TILE);
     // polish: a broad sheen that does NOT follow the tile grid, so the stone reads as one surface
     const sheen=vnoise(x*0.5,y*0.5,2.4);
-    if(sheen>0.5){ ctx.fillStyle='rgba(150,160,210,'+((sheen-0.5)*0.16).toFixed(3)+')';
+    if(sheen>0.5){ ctx.fillStyle='rgba(168,178,225,'+((sheen-0.5)*0.20).toFixed(3)+')';
       ctx.fillRect(tx,ty,TILE,TILE); }
+    // VEINING. Sampled from continuous value noise rather than a per-tile hash, so a vein runs
+    // ACROSS slabs instead of restarting at every tile edge -- a vein that stops at a seam is the
+    // tell that gives away a stamped floor. Two octaves: a wide pale drift and a fine bright
+    // filament inside it.
+    // FINE and FAINT. The first pass sampled the noise at 1.7 with a 0.045 band and drew veins ten
+    // pixels wide that wandered across half the room -- glowing tubes, not marble. Marble reads as
+    // marble because the veins are hairlines you notice on the second look: the frequency is more
+    // than tripled so the features are small, the band is less than half as wide, and peak alpha
+    // is 0.08 instead of 0.15.
+    for(let vy=0;vy<TILE;vy+=2) for(let vx=0;vx<TILE;vx+=2){
+      const wx=x+vx/TILE, wy=y+vy/TILE;
+      const v=Math.abs(vnoise(wx*5.5,wy*5.5,2.0)-0.5);
+      if(v<0.018){ ctx.fillStyle='rgba(188,194,228,'+((0.018-v)*4.5).toFixed(3)+')';
+        ctx.fillRect(tx+vx,ty+vy,2,2); }
+    }
     for(let i=0;i<5;i++){ const g3=hmix(x*13+i,y*17+i);
-      ctx.fillStyle=(g3&1)?'rgba(255,255,255,0.035)':'rgba(0,0,0,0.16)';
+      ctx.fillStyle=(g3&1)?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.18)';
       ctx.fillRect(tx+(g3%TILE),ty+((g3>>>6)%TILE),1,1); }
     const sL=(x&1)===0, sT=(y&1)===0;
     if(sL){ ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(tx,ty,2,TILE);

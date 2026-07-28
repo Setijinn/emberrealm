@@ -1112,17 +1112,52 @@ function drawFountain(x,y){ const t=performance.now()/1000;
  ctx.fillStyle='#bfe3ef'; ctx.beginPath(); ctx.arc(x,y-26+Math.sin(t*4)*2,3.5,0,6.29); ctx.fill();
 }
 function drawSign(x,y,txt){
- ctx.fillStyle='#4a3524'; ctx.fillRect(x-3,y-2,6,24);
- ctx.fillStyle='#5c3f28'; ctx.fillRect(x-32,y-26,64,22);
- ctx.strokeStyle='#3a2a1c'; ctx.lineWidth=2; ctx.strokeRect(x-32,y-26,64,22);
- ctx.fillStyle='#e8d8c0'; ctx.font='9px "Pixelify Sans",monospace'; ctx.textAlign='center';
+ // Painted board, procedural WORDS. Four rooms write different text on this same sign, so baking
+ // any of it into the image would mean four images and a new one every time a line is reworded.
+ //
+ // The board is sized FROM THE ART, not by eye. Measured off signboard.png: the pale writable
+ // parchment is 57.9% of the frame's width and its middle sits at 49.2% of the height -- the rest
+ // is carved border and post. Drawn at 64 wide that leaves a 37px face, and "THE VAULT" at 9px is
+ // 43px, which is exactly why the first pass rendered "HE VAUL". The numbers below are chosen so
+ // the longest line any room actually writes still fits inside the face.
+ const SIGN_FACE_W=0.579, SIGN_FACE_MID=0.492;
+ const _sg=(typeof _hearth!=='undefined')?_hearth.signboard:null;
+ const art=!!(_sg&&_sg.complete&&_sg.naturalWidth);
+ const fs=art?8:9, lh=art?8:9, wrap=art?10:13;
+ ctx.font=fs+'px "Pixelify Sans",monospace'; ctx.textAlign='center';
+ // wrap FIRST: the block has to be centred on the face, and it cannot be centred until its height
+ // is known. Positioning before wrapping is what pushed a one-line sign off the top edge.
  const words=(txt||'').split(' '); let line='', lines=[];
- for(const wd of words){ if((line+wd).length>13){lines.push(line.trim());line=wd+' ';} else line+=wd+' '; }
+ for(const wd of words){ if((line+wd).length>wrap){lines.push(line.trim());line=wd+' ';} else line+=wd+' '; }
  if(line.trim())lines.push(line.trim());
- lines.slice(0,3).forEach((ln,i)=>ctx.fillText(ln,x,y-16+i*9));
+ lines=lines.slice(0,3);
+ let ty0;
+ if(art){
+   const w=84, h=_sg.naturalHeight*(w/_sg.naturalWidth), top=y+4-h;
+   ctx.fillStyle='rgba(0,0,0,.26)';
+   ctx.beginPath(); ctx.ellipse(x,y+3,17,5,0,0,6.29); ctx.fill();
+   ctx.imageSmoothingEnabled=false;
+   ctx.drawImage(_sg,Math.round(x-w/2),Math.round(top),Math.round(w),Math.round(h));
+   // +3 because fillText positions a BASELINE and the glyphs hang above it
+   ty0=Math.round(top+h*SIGN_FACE_MID-((lines.length-1)*lh)/2+3);
+ } else {
+   ctx.fillStyle='#4a3524'; ctx.fillRect(x-3,y-2,6,24);
+   ctx.fillStyle='#5c3f28'; ctx.fillRect(x-32,y-26,64,22);
+   ctx.strokeStyle='#3a2a1c'; ctx.lineWidth=2; ctx.strokeRect(x-32,y-26,64,22);
+   ty0=Math.round(y-16-((lines.length-1)*lh)/2+9);
+ }
+ ctx.fillStyle=art?'#4a3320':'#e8d8c0';
+ lines.forEach((ln,i)=>ctx.fillText(ln,x,ty0+i*lh));
  ctx.textAlign='left';
 }
+
+
 function drawChest(x,y){
+ const _ch=(typeof _hearth!=='undefined')?_hearth.chest:null;
+ if(_ch&&_ch.complete&&_ch.naturalWidth){
+   ctx.fillStyle='rgba(0,0,0,.30)';
+   ctx.beginPath(); ctx.ellipse(x,y+7,17,6,0,0,6.29); ctx.fill();
+   drawObjBottom(_ch,x,y+10,42); return; }
  ctx.fillStyle='#5c3f28'; ctx.fillRect(x-11,y-6,22,14);
  ctx.fillStyle='#74543a'; ctx.beginPath(); ctx.moveTo(x-11,y-6); ctx.lineTo(x,y-15); ctx.lineTo(x+11,y-6); ctx.closePath(); ctx.fill();
  ctx.fillStyle='#e8b34b'; ctx.fillRect(x-2,y-4,4,7);
@@ -1134,6 +1169,20 @@ function drawChest(x,y){
 // here after you. It breathes very slightly so it does not look like a painted-on tile.
 function drawStrongbox(x,y){
  const t=performance.now()/1000;
+ // Painted art now, with the hand-drawn version kept underneath as the fallback -- this is the
+ // object the whole room is arranged around, and it should not be one 404 away from vanishing.
+ const _cf=(typeof _hearth!=='undefined')?_hearth.vault_coffer:null;
+ if(_cf&&_cf.complete&&_cf.naturalWidth){
+   ctx.fillStyle='rgba(0,0,0,.34)';
+   ctx.beginPath(); ctx.ellipse(x,y+11,26,8,0,0,6.29); ctx.fill();
+   drawObjBottom(_cf,x,y+14,68);
+   // the dial still catches the light, so the thing you interact with reads as live
+   const k=0.5+0.5*Math.sin(t*1.6);
+   ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.16+0.20*k;
+   const g2=ctx.createRadialGradient(x,y-8,1,x,y-8,26);
+   g2.addColorStop(0,'#ffd98a'); g2.addColorStop(1,'rgba(255,217,138,0)');
+   ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(x,y-8,26,0,6.29); ctx.fill(); ctx.restore();
+   return; }
  ctx.save();
  // shadow it sits in, so it has weight on the floor
  ctx.globalAlpha=0.28; ctx.fillStyle='#000';
@@ -1169,6 +1218,7 @@ function drawStrongbox(x,y){
 // there is between them -- and because the great door needs to sit BEHIND the boxes it guards,
 // which is a draw-order decision belonging to the decor list, not to six separate functions.
 const VPROP={ door:{k:'vault_door',w:100}, boxes:{k:'vault_boxes',w:96},
+              statue:{k:'vault_statue',w:52}, lectern:{k:'vault_lectern',w:44},
               coins:{k:'vault_coins',w:44}, crates:{k:'vault_crates',w:56},
               sacks:{k:'vault_sacks',w:46}, candelabra:{k:'vault_candelabra',w:30} };
 function drawVaultProp(kind,x,y,wOverride){
@@ -1978,7 +2028,13 @@ function render(){
   ctx.globalAlpha=1;
   ctx.restore();
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.95);
+  // THREE cases, not two. The rim vignette was town-or-dungeon, and every SAFE room -- the Vault,
+  // Guild, Wardrobe, Arena lobby and Sanctuary -- fell to the dungeon side and got 0.42 of black
+  // pulled over its edges. Measured in the Vault: centre floor (52,38,39) against (26,19,22) at
+  // the rim, which is why lifting the stone palette barely showed. A safe room is not a dungeon;
+  // it gets half the darkening and no colour cast, so its own lighting is what shapes it.
   if(curRoom.town){ vg.addColorStop(0,'rgba(255,140,50,0.05)'); vg.addColorStop(1,'rgba(110,45,10,0.22)'); }
+  else if(curRoom.safe||curRoom.petRoom){ vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.20)'); }
   else { vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.42)'); }
   ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
   { const s=stick.move;
