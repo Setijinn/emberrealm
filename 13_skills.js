@@ -12,8 +12,15 @@
 // Bump whenever node IDs/meanings change: every save is refunded to a clean slate on load,
 // because rewritten trees would otherwise leave points stranded on ids that no longer exist.
 const TREE_VER=4;
-// Rescaled for the Lv50 cap (was floor(lvl/2)=75 pts at Lv150). ~0.7/level -> ~35 pts at cap:
-// enough to nearly complete one 3-branch tree + dip a second, keeping build diversity + respec.
+// Rescaled for the Lv50 cap (was floor(lvl/2)=75 pts at Lv150). ~0.7/level -> 35 pts at cap.
+// WHAT 35 POINTS ACTUALLY BUYS (measured across all 17 trees, not estimated): a full tree costs
+// 67-73 points and a single branch 20-26, so the cap funds about HALF a tree -- one branch taken
+// to the end plus a good part of a second. The comment here used to claim "nearly complete one
+// 3-branch tree + dip a second", which overstated it by roughly 2x; anyone retuning from that
+// figure would have doubled the budget by accident.
+// It is a real choice rather than a shortfall: every keystone in every class is reachable well
+// inside 35 (cheapest 2, dearest 14), two keystones are affordable in all 17, and any one branch
+// can be maxed. Specialisation is the point, and respec is free.
 function perkTotalFor(lvl){ return Math.floor((lvl||1)*0.7); }      // total points earned by level
 function xpTreeInit(rpg){
   if(rpg.perkEarned===undefined) rpg.perkEarned=0;
