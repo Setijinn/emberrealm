@@ -115,6 +115,10 @@ addEventListener('keydown',e=>{
       else { sc.style.display='flex'; if(typeof drawMap==='function') drawMap();
         if(typeof mapInt!=='undefined'&&!mapInt) mapInt=setInterval(drawMap,220); } } }
   else if(k==='h'||k==='r'){ const b=document.getElementById('hearthBtn'); if(b) b.click(); }   // recallhome
+  // V mounts and dismounts. Z/X/C are the camera, so V is the only free key still under the hand
+  // that is holding WASD — every other spare letter is on the right of the board and would mean
+  // letting go of movement to get on a horse.
+  else if(k==='v'){ if(typeof mountToggle==='function') mountToggle(); }
 });
 addEventListener('keyup',e=>{ if(e.key) keys[e.key.toLowerCase()]=false; });
 // normalized WASD/arrow vector, consumed by update() when the touch stick is idle.

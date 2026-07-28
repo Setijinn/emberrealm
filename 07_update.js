@@ -974,6 +974,12 @@ function update(dt){
     if(curRoom.strongbox){ const sb=curRoom.strongbox, d=Math.hypot(sb.x-player.x,sb.y-player.y);
       if(d<74 && d<_pbest){ _pbest=d; portalPrompt={kind:'vault',x:sb.x,y:sb.y-40,
         ctx:'The Vault', label:'STORE'}; } }
+    // The Stable. Opened AT the paddock like every other stall, never from a HUD button. It
+    // prompts even before Lv20 — walking up to a locked door and being told what unlocks it is
+    // how the reward gets advertised; a stable that stays silent until you qualify teaches nobody.
+    if(curRoom.stable){ const sg=curRoom.stable, d=Math.hypot(sg.x-player.x,sg.y-player.y);
+      if(d<78 && d<_pbest){ _pbest=d; portalPrompt={kind:'stable',x:sg.x,y:sg.y-40,
+        ctx:'The Stable', label:'STABLE'}; } }
   }
   // dungeon: objective progress + orb pickup + dream motes
   if(curRoom.dungeon){

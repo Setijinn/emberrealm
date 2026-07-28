@@ -19,10 +19,14 @@ function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov
 function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=null;
   // teleports suppress re-prompt; loot doesn't -- and neither does a stall, or closing the shop
   // while still standing at the counter would leave you unable to open it again
-  if(p.kind!=='loot' && p.kind!=='vendor' && p.kind!=='wardrobe' && p.kind!=='vault') portalLock=true;
+  // 'stable' joins the no-lock list for the same reason the stalls are on it: closing the panel
+  // while still standing at the paddock would otherwise leave you unable to open it again.
+  if(p.kind!=='loot' && p.kind!=='vendor' && p.kind!=='wardrobe' && p.kind!=='vault' && p.kind!=='stable') portalLock=true;
   if(p.kind==='wardrobe'){ if(typeof openWardrobe==='function') openWardrobe();
     navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='vault'){ if(typeof openVault==='function') openVault();
+    navigator.vibrate&&navigator.vibrate(15); return; }
+  if(p.kind==='stable'){ if(typeof openStable==='function') openStable();
     navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='vendor'){ const np=p.np;
     // one flag per stall picks the panel; anything unflagged is a plain shop

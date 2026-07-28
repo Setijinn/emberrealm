@@ -82,6 +82,41 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #potBtn{color:#f0705a;}
 #mpotBtn{color:#6ab8e0;border-left:1px solid rgba(138,106,52,.55);}
 #potBtn.empty,#mpotBtn.empty{opacity:.38;}
+/* the mount button reads its own state: lit amber in the saddle, dimmed while the throw
+   cooldown runs, so you never mash a key that is going to refuse you. */
+#mountBtn.up{color:#ffe08a;background:rgba(58,40,16,.92);}
+#mountBtn.cd{opacity:.42;}
+
+/* THE STABLE reuses the VAULT's frame solution rather than inventing a second one. equip_panel
+   is 448x600 painted at background-size:100% 100%, so its usable dark field is a PERCENTAGE inset
+   of whatever box it is stretched to, while #shopInner's base padding is fixed px -- those agree
+   at exactly one card size. Fixed padding was tried here first and it cannot work: the card
+   auto-sizes to content, and adding content moves the content down 1:1 while the field bottom
+   only moves 0.82:1, so a fuller stable overflows MORE than an empty one (measured: 8px past the
+   art at 1 mount, 12px at 9).
+   Locking the card to the art's own aspect and paying every inset as a fraction of it is what the
+   vault already proved, so the stable does the same and inherits the phone sizes with it. */
+#stableScr>#shopCard{
+  --vH: min(94vh, calc(min(95vw,432px) * 600 / 448));
+  --vW: calc(var(--vH) * 448 / 600);
+  --u:  calc(var(--vH) / 100);
+  width:var(--vW); height:var(--vH); max-height:none;
+}
+#stableScr>#shopCard>#shopInner{
+  padding: calc(var(--vH)*0.170) calc(var(--vW)*0.163) calc(var(--vH)*0.185);
+  overflow:hidden;                 /* the frame is the boundary; the list does the scrolling */
+}
+#stableScr #shopTitle{ flex:0 0 auto; font-size:calc(var(--u)*3.6); margin-bottom:calc(var(--u)*0.5); }
+#stableScr #stableCount{ flex:0 0 auto; font-size:calc(var(--u)*2.0); margin-bottom:calc(var(--u)*0.8); }
+/* the roster takes whatever is left and scrolls -- it is never allowed to push the panel out
+   through its own border */
+#stableScr #stableList{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-wrap:wrap; gap:calc(var(--u)*1.0); justify-content:center; align-content:flex-start; }
+#stableScr #stableSel{ flex:0 0 auto; font-size:calc(var(--u)*2.0); margin:calc(var(--u)*0.8) 0; }
+#stableScr .vaultAct{ flex:0 0 auto; }
+#stableScr .embChip{ width:calc(var(--u)*17); padding:calc(var(--u)*0.8); }
+#stableScr .embChip .cn{ font-size:calc(var(--u)*2.0); }
+#stableScr .embChip .cd{ font-size:calc(var(--u)*1.7); }
 
 /* ---------- permadeath (Lv20+) ---------- */
 #hcCard{background:#17141d;border:2px solid #7a2f24;border-radius:12px;padding:14px 18px;
@@ -115,7 +150,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .istats{margin-top:5px;font-size:10px;line-height:1.5;letter-spacing:.02em;}
 #eqStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:9px;}
 
-#loadBtn,#skillBtn,#petBtn,#statsBtn{display:none;align-items:center;justify-content:center;
+#loadBtn,#skillBtn,#petBtn,#statsBtn,#mountBtn{display:none;align-items:center;justify-content:center;
  width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
 /* Hearth recall. Lives INSIDE #hudBot's flex row rather than being positioned absolutely, so it
    can never overlap another control at any UI scale — the row just reflows around it. */
@@ -539,7 +574,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  border:1px dashed #4a2a5c;border-radius:10px;margin-bottom:9px;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#flasks,#invBtn,#tgtBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#devBtn2,#hearthBtn{
+#menuBtn,#flasks,#invBtn,#tgtBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#mountBtn,#devBtn2,#hearthBtn{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
@@ -637,7 +672,7 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #potBtn,#mpotBtn{min-width:calc(52px*var(--uis));height:calc(40px*var(--uis));
  font-size:calc(15px*var(--uis));padding:0 calc(10px*var(--uis));}
 #invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
-#loadBtn,#skillBtn,#petBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#loadBtn,#skillBtn,#petBtn,#mountBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #statsBtn{min-width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(7px*var(--uis));}
 #mapBtn,#coopBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
 #hearthBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(19px*var(--uis));}

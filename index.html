@@ -149,6 +149,10 @@
  <button id="skillBtn">🌟</button>
  <button id="loadBtn">⚔️</button>
  <button id="petBtn">🐾</button>
+ <!-- Mount toggle. A HUD button rather than a stall interaction, because mounting is an ACTION
+      like drinking a flask, not a place you visit — the Stable is the place. Hidden until you
+      actually own something to ride (hudMounts in 17k_mounts.js). Touch has no V key. -->
+ <button id="mountBtn" title="Mount / dismount (V)" style="display:none;">🐎</button>
  <button id="statsBtn">📜</button>
  <div id="devBtn2">🛠</div>
  <div id="menuBtn">☰</div>
@@ -274,6 +278,19 @@
   <button class="mbtn go" id="vaultIn">STORE IT ▸</button>
   <button class="mbtn go" id="vaultOut">◂ TAKE IT</button>
   <button class="mbtn" id="vaultClose">LEAVE</button>
+ </div>
+</div></div></div>
+<!-- THE STABLE (17k_mounts.js). Reuses the vault's shopCard/shopInner shell rather than declaring
+     a third card, so it inherits the frame fit that was already measured against equip_panel's
+     percentage inset instead of re-earning it. -->
+<div class="scr" id="stableScr" style="background:rgba(9,7,12,.92);"><div id="shopCard"><div id="shopInner">
+ <div id="shopTitle">THE STABLE</div>
+ <div id="stableCount"></div>
+ <div id="stableList" class="embStrip"></div>
+ <div id="stableSel" class="isel">Pick a mount</div>
+ <div class="vaultAct">
+  <button class="mbtn go" id="stableSaddle">SADDLE IT</button>
+  <button class="mbtn" id="stableClose">LEAVE</button>
  </div>
 </div></div></div>
 <!-- The diamond exchange (Sella) and the Wardrobe (17d_cosmetics.js). Diamonds are declared but

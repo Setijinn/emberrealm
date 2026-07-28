@@ -174,7 +174,10 @@ function mountTookDamage(hit){
 function tickMounts(dt){
   if(typeof player==='undefined'||!player) return;
   if((player.mntCd||0)>0){ player.mntCd=Math.max(0,player.mntCd-dt); }
-  if(mounted() && !mountAllowedHere()) dismount('boss'); }
+  if(mounted() && !mountAllowedHere()) dismount('boss');
+  // the HUD button reads state that changes without any input (the throw, the cooldown running
+  // out), so it is refreshed here rather than only on click
+  if(typeof hudMounts==='function') hudMounts(); }
 
 // The factor the player's speed chain multiplies in. 1 when afoot, so it is always safe to call.
 function mountSpdMul(){ return mounted()?mountSpdOf(player.mnt):1; }
@@ -185,3 +188,117 @@ const _mountArt={};
 function mountImg(spr){ if(typeof window==='undefined'||!spr) return null;
   if(_mountArt[spr]===undefined){ const i=new Image(); i.src='assets/mounts/'+spr+'.png'; _mountArt[spr]=i; }
   const im=_mountArt[spr]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+
+// ============================================================
+//  THE STABLE — the Hearth's paddock (00b_hearth.js `stable`)
+// ------------------------------------------------------------
+//  Opened AT the paddock via a portalPrompt like every other stall, never from a HUD button, and
+//  it does NOT set portalLock — closing the panel at the gate would otherwise lock you out of it.
+//  Reuses the vault's shopCard/shopInner shell so it inherits a frame fit that was already
+//  measured against equip_panel's percentage inset instead of re-earning it.
+// ============================================================
+let _stableSel=null;
+
+// THE Lv20 HANDOVER. Claimed at the stable rather than posted through the door on level-up: the
+// reward wants a place, the same way fusion does, and arriving to collect it is what makes the
+// paddock somewhere you go rather than scenery you walk past.
+function stableClaim(){
+  if(!mountUnlocked()) return false;
+  if(mountOwns(MOUNT_STARTER)) return false;
+  const got=giveMount(MOUNT_STARTER);
+  if(got && typeof msg==='function'){ const d=mountDef(MOUNT_STARTER);
+    msg('THE STABLE', (d?d.name:'A mount')+' is yours'); }
+  return got; }
+
+function openStable(){
+  const s=(typeof $s==='function')?$s('stableScr'):document.getElementById('stableScr');
+  if(!s) return;
+  stableClaim();                     // walking up at Lv20 is what hands the starter over
+  _stableSel=(activeMount()||{}).id||null;
+  s.style.display='flex';
+  paintStable(); }
+function closeStable(){
+  const s=(typeof $s==='function')?$s('stableScr'):document.getElementById('stableScr');
+  if(s) s.style.display='none'; }
+
+function paintStable(){
+  const cnt=(typeof $s==='function')?$s('stableCount'):document.getElementById('stableCount');
+  const list=(typeof $s==='function')?$s('stableList'):document.getElementById('stableList');
+  const sel=(typeof $s==='function')?$s('stableSel'):document.getElementById('stableSel');
+  const btn=(typeof $s==='function')?$s('stableSaddle'):document.getElementById('stableSaddle');
+  if(!list) return;
+  const owned=mountsOwned(), act=activeMount();
+
+  if(cnt) cnt.innerHTML= mountUnlocked()
+    ? '<span class="purse">'+owned.length+' of '+MOUNT_DB.length+' mounts stabled</span>'
+    : '<span class="purse">The stablemaster turns you away — reach level '+MOUNT_LV+'</span>';
+
+  list.innerHTML='';
+  if(!mountUnlocked()){
+    const d=document.createElement('div'); d.className='mnote';
+    d.textContent='Mounts are for riders who have crossed the bridge. Reach level '+MOUNT_LV+' and come back.';
+    list.appendChild(d);
+  } else if(!owned.length){
+    const d=document.createElement('div'); d.className='mnote';
+    d.textContent='Empty stalls. Rare mounts are found out in the world.';
+    list.appendChild(d);
+  } else for(const m of owned){
+    const on=act&&act.id===m.id, isSel=_stableSel===m.id;
+    const c=document.createElement('div');
+    c.className='embChip'+(isSel?' sel':'')+(on?' on':'');
+    c.style.borderColor=mountRarCol(m.rar);
+    const im=mountImg(m.spr);
+    if(im){ const cv=document.createElement('canvas'); cv.width=48; cv.height=40; cv.className='isprite';
+      const cc=cv.getContext('2d'); cc.imageSmoothingEnabled=false;
+      // SIZE BY THE OPAQUE BOX, never naturalWidth — PixelLab files carry transparent margin and
+      // scaling by canvas size is what made the relic sack the smallest bag in the game.
+      const bb=(typeof _imgBBox==='function')?_imgBBox(im):null;
+      const sw=bb?bb.w:im.naturalWidth, sh=bb?bb.h:im.naturalHeight;
+      const sx=bb?bb.x:0, sy=bb?bb.y:0;
+      const k=Math.min(46/Math.max(1,sw), 38/Math.max(1,sh));
+      cc.drawImage(im, sx,sy,sw,sh, (48-sw*k)/2,(40-sh*k)/2, sw*k, sh*k);
+      c.appendChild(cv); }
+    const n=document.createElement('div'); n.className='cn'; n.textContent=m.name; c.appendChild(n);
+    const r=document.createElement('div'); r.className='cd'; r.style.color=mountRarCol(m.rar);
+    r.textContent=mountRarName(m.rar)+(on?' · SADDLED':''); c.appendChild(r);
+    c.onclick=function(){ _stableSel=m.id; paintStable(); };
+    list.appendChild(c); }
+
+  const m=_stableSel?mountDef(_stableSel):null;
+  if(sel) sel.textContent = m
+    ? m.name+' — '+Math.round((MOUNT_SPD[m.rar]-1)*100)+'% faster afoot, thrown after '
+      +Math.round(MOUNT_TOUGH[m.rar]*100)+'% of your health in damage'
+    : (mountUnlocked()?'Pick a mount':'Come back at level '+MOUNT_LV);
+  if(btn){ const can=!!(m&&mountOwns(m.id));
+    btn.disabled=!can; btn.style.opacity=can?1:0.45;
+    btn.textContent=(m&&activeMount()&&activeMount().id===m.id)?'UNSADDLE':'SADDLE IT'; } }
+
+// ---- the HUD toggle. Shown only once there is something to ride, so a hero who has never seen
+// the Stable never carries a button that would only ever refuse them. ----
+function hudMounts(){
+  if(typeof document==='undefined') return;
+  const b=document.getElementById('mountBtn'); if(!b) return;
+  const has=mountUnlocked() && !!activeMount();
+  b.style.display=has?'flex':'none';
+  if(!has) return;
+  const cd=(typeof player!=='undefined'&&player&&(player.mntCd||0)>0);
+  b.className=[mounted()?'up':'', cd?'cd':''].filter(Boolean).join(' ');
+  const m=activeMount();
+  b.title=mounted()?('Dismount '+m.name+' (V)'):(cd?'Thrown — remount in '+Math.ceil(player.mntCd)+'s':('Mount '+m.name+' (V)')); }
+
+// wired once the DOM exists; the panel's buttons live in index.html beside the vault's
+(function(){ if(typeof document==='undefined') return;
+  function wire(){
+    const cl=document.getElementById('stableClose'), sd=document.getElementById('stableSaddle');
+    if(cl) cl.onclick=function(){ closeStable(); };
+    if(sd) sd.onclick=function(){
+      if(!_stableSel) return;
+      const cur=activeMount();
+      if(cur&&cur.id===_stableSel){ setActiveMount(null); if(mounted()) dismount('player'); }
+      else setActiveMount(_stableSel);
+      paintStable(); hudMounts(); };
+    const mb=document.getElementById('mountBtn');
+    if(mb) mb.onclick=function(){ if(typeof mountToggle==='function') mountToggle(); hudMounts(); };
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire); else wire();
+})();

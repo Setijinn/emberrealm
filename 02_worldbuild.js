@@ -46,6 +46,10 @@ for(const key in rooms){
   // the Vault's strongbox (17j_vault.js) -- same shape as the mirror above, tile-indexed
   const _sb=ROOM_DEFS[key].strongbox;
   r.strongbox=_sb?{x:(_sb.tx+.5)*TILE, y:(_sb.ty+.5)*TILE}:null;
+  // the Stable's paddock gate (17k_mounts.js) -- same shape and the same x*TILE form as the
+  // mirror, so the room def carries TILE coordinates and never pixels
+  const _st=ROOM_DEFS[key].stable;
+  r.stable=_st?{x:_st.x*TILE, y:_st.y*TILE}:null;
   // explicit destination portals (hub + sub-rooms)
   const pd=ROOM_DEFS[key].portalDefs;
   if(pd) for(const p of pd){

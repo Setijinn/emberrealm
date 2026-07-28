@@ -77,8 +77,15 @@
  // delete a feature the user only asked to move past, the mirror itself comes to the Hearth: same
  // `wardrobe` interactable the COSMETICS room used, same prompt, two tiles off the top road so it
  // sits in the corner of the square people already associate with appearance.
+ // THE STABLE. On the south garden's west lawn, a few strides from the spawn point at (21,17) --
+ // the mount is what the game hands you at Lv20, so the place you collect it is the first thing
+ // you walk past on the way out of town rather than something tucked behind the stalls. It stands
+ // on GRASS on purpose: the two lawn shoulders were laid down as deliberate dead space, and a
+ // paddock is the one building that wants to be on grass rather than on cobble. Clear of the
+ // planters at (18,18) and (17,21) and clear of the bottom road at y19-20.
  ROOM_DEFS['0,0']={ name:'The Hearth', town:true, hub:true, map:hub,
   wardrobe:{x:9.5, y:7.4},
+  stable:{x:16.5, y:18.2},
   critters:{chicken:6, sheep:4},
   portalDefs:[
    {tx:21, ty:2,  to:'G',         label:'THE REALM',  col:'#ff9c50', big:true},
