@@ -783,9 +783,11 @@ function mountBaseImg(d,st){
 function mountArtFor(m,st){
   const d=(typeof m==='string')?mountDef(m):m; if(!d) return null;
   const im=mountBaseImg(d,st); if(!im) return null;
-  // THE COAT IS A GRADIENT MAP. _tintImg's flat wash is kept only as the fallback for a coat that
-  // has no two-tone pair defined -- every shipped coat has one.
-  if(d.coatDef && d.coatDef.d) return coatImg(im, d.coatDef);
+  // THE COAT IS A GRADIENT MAP, and a worn SKIN overrides the species' own — that is the mount
+  // half of an outfit. _tintImg's flat wash survives only as the fallback for a coat with no
+  // two-tone pair defined; every shipped coat has one.
+  const coat=(typeof mountCoatFor==='function')?mountCoatFor(d):(d.coatDef||null);
+  if(coat && coat.d) return coatImg(im, coat);
   if(!d.tint || typeof _tintImg!=='function') return im;
   return _tintImg(im, d.tint, d.tintA||0.3, 0); }
 
@@ -959,12 +961,47 @@ const RIDER_BASE_CLS = 'knight';
 const RIDER_TINT_BY_CLASS = false;
 function riderCoatFor(cls){ return RIDER_COATS[cls] || RIDER_COATS[RIDER_BASE_CLS]; }
 
-// The seam a mount-skin system replaces. Today: nothing, the rider is drawn as authored. Later:
-// return {d,l,...} — or a richer descriptor — chosen by the SKIN the player has on their mount,
-// not by their class, so the pair reads as one outfit.
+// ============================================================
+//  MOUNT SKINS (decided 2026-07-28, not yet built)
+// ------------------------------------------------------------
+//  A SKIN IS AN OUTFIT: an intricate treatment of the RIDER plus a matching coat for the MOUNT,
+//  so the pair reads as one set. The split is not arbitrary — it is what makes skins cheap:
+//
+//    THE RIDER IS AUTHORED. One silhouette, eight frames, hand-made, and it then works on all 146
+//    mounts and all 17 classes forever. Adding mount #147 costs a skin nothing.
+//
+//    THE MOUNT IS A GRADIENT. Silhouette-agnostic by construction, so the same two colours land
+//    correctly on a drake at aspect 0.38 and a roc at 1.51 without being re-solved.
+//
+//  That asymmetry is the whole reason ride mode was chosen over transforming into the mount.
+//  Measured: the rider is ONE silhouette and 8 frames; the mounts are 20 silhouettes and 511
+//  frames spanning aspect 0.38-1.51. Intricate decoration is POSITIONAL — gold filigree along a
+//  horse's barrel has no equivalent place on a moth — so authoring it once against a fixed body is
+//  roughly twenty times less work per skin than authoring it against every animal.
+//
+//  A skin entry will look like:
+//    { id, n, art:'assets/riders/skins/<id>/ride_<d>.png',   // authored, optional
+//      coat:{d:'#…', l:'#…', m:1} }                          // the mount half
+//  with `art` winning when present and `coat` painting the mount. Neither exists yet.
+const MOUNT_SKINS = {};
+function mountSkinWorn(){ const u=mountStore(); return (u&&u.mountSkin)||null; }
+function mountSkinDef(id){ return MOUNT_SKINS[id]||null; }
+
+// The seam. Today: nothing, so the rider draws as authored. It answers to the SKIN rather than to
+// the class on purpose — class is the wrong layer to pick a palette on when a skin is coming that
+// dresses rider and mount together.
 function riderSkinFor(cls){
+  const s=mountSkinDef(mountSkinWorn());
+  if(s && s.rider) return s.rider;
   if(RIDER_TINT_BY_CLASS) return riderCoatFor(cls);
   return null; }
+
+// The mount half of a worn skin, if any, else the species' own coat. Kept beside riderSkinFor so
+// the two halves of an outfit are decided in one place and cannot drift apart.
+function mountCoatFor(d){
+  const s=mountSkinDef(mountSkinWorn());
+  if(s && s.coat) return s.coat;
+  return (d&&d.coatDef&&d.coatDef.d)?d.coatDef:null; }
 
 // TWO PLACES A RIDER LAYER CAN LIVE, and the mount-specific one wins:
 //   assets/riders/<arch>/<cls>/ride_<d>.png   extracted against THAT archetype

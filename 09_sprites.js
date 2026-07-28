@@ -1993,8 +1993,16 @@ function render(){
   // THE MOUNT DRAWS UNDER THE RIDER (17k_mounts.js). Before the hero so he sits ON it, and it
   // hands back how far to lift him so he is not standing through its back. Zero when afoot, so
   // the unmounted path is byte-for-byte what it was.
+  // THE MOUNT DOES NOT BLINK WITH THE RIDER. globalAlpha above drops to 0.45 while player.inv is
+  // running, and the mount is drawn inside that block, so an animal you were merely sitting on
+  // flickered every time YOU took a hit -- which reads as the sprite failing to draw rather than
+  // as invulnerability. The i-frames belong to the hero; the horse is not invulnerable, it is a
+  // horse. Saved and restored so the rider still flashes.
+  const _heroAlpha=ctx.globalAlpha;
+  ctx.globalAlpha=1;
   const _lift=(typeof mountDrawUnder==='function')
     ? mountDrawUnder(player.x+lx, player.y+ly*0.5, bob, faceAng, moving, pn) : 0;
+  ctx.globalAlpha=_heroAlpha;
   // A REAL SEATED SPRITE when one exists. This REPLACES the standing pose rather than hiding half
   // of it: legs cut off is not the same as legs astride, and from the south the animal's body is
   // a narrow column the standing hero simply covers. riderSprite returns null for a class whose

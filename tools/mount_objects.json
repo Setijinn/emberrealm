@@ -67,20 +67,38 @@
       "monk": "8dae5af8-0d30-45e1-b8ad-f728bea88026"
     },
     "arch_wolf": {
-      "generic": "3d49a888-514a-44ff-9d20-3ec80dc4443f"
+      "generic": "3d49a888-514a-44ff-9d20-3ec80dc4443f",
+      "knight": "3d49a888-514a-44ff-9d20-3ec80dc4443f"
     },
     "arch_moth": {
-      "generic": "a8b96797-a4b5-406a-96c9-4f0544f3e4e1"
+      "generic": "a8b96797-a4b5-406a-96c9-4f0544f3e4e1",
+      "knight": "a8b96797-a4b5-406a-96c9-4f0544f3e4e1"
     },
     "arch_roc": {
-      "generic": "4d61616d-12f3-411c-ad3c-7f5e144774f7"
+      "generic": "4d61616d-12f3-411c-ad3c-7f5e144774f7",
+      "knight": "4d61616d-12f3-411c-ad3c-7f5e144774f7"
     },
     "arch_skywyrm": {
-      "generic": "41d1b6cd-7edf-446f-84d2-b5c2caf7d896"
+      "generic": "41d1b6cd-7edf-446f-84d2-b5c2caf7d896",
+      "knight": "41d1b6cd-7edf-446f-84d2-b5c2caf7d896"
     },
     "arch_pegasus": {
-      "generic": "163bb227-26e2-44ac-bc9c-c4e7c8ae0bd7"
+      "generic": "163bb227-26e2-44ac-bc9c-c4e7c8ae0bd7",
+      "knight": "163bb227-26e2-44ac-bc9c-c4e7c8ae0bd7"
+    },
+    "arch_infernal": {
+      "knight": "bc389832-11e3-45da-ad40-8f1830ed7e61"
+    },
+    "arch_wyvern": {
+      "knight": "ae027af5-1946-4350-9753-1385b59c4dc4"
+    },
+    "arch_griffon": {
+      "knight": "8844fad4-3018-4f67-8e4a-d98f742d38be"
+    },
+    "arch_colossus": {
+      "knight": "d68b398a-5831-4c48-b554-455e03b9843c"
     }
   },
-  "_riders_note": "Rider composites, keyed archetype -> class. Extracted against their OWN archetype (extract_riders.py <cls> <composite> <base>), which is what makes leftover fragments invisible: stray pixels are that mount's pixels going back onto that mount. The eight plain quadrupeds share the horse-extracted layer; only visually distinct mounts need their own."
+  "_riders_note": "Rider composites, keyed archetype -> class. Extracted against their OWN archetype (extract_riders.py <cls> <composite> <base>), which is what makes leftover fragments invisible: stray pixels are that mount's pixels going back onto that mount. The eight plain quadrupeds share the horse-extracted layer; only visually distinct mounts need their own.",
+  "_rider_plan": "ONE rider silhouette (knight) for all 17 classes; class identity is deferred to the SKIN system, not baked. Only visually distinct mounts need their own extraction -- the seven plain quadrupeds (destrier, mule, stag, elk, boar, ram, cat) share the horse layer, because extraction fragments only show when a layer moves to a differently-coloured animal."
 }
