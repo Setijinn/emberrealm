@@ -355,6 +355,22 @@ worth following rather than rediscovering:
 does not move while a batch is processing, so `get_balance` mid-run will under-report what you have
 already committed to. Budget from the number of jobs you fired, never from the balance.
 
+**An 8-direction animation costs 8 generations total, not 8 per direction** — measured. It is far
+cheaper than the object it animates. The binding constraint is not budget but the **20-concurrent-job
+cap**: an 8-direction animation is 8 jobs, so only two archetypes animate at a time and a full
+roster is hours of wall clock.
+
+**A PARTIAL ANIMATION LOOKS EXACTLY LIKE A SLOW ONE.** The signature is a frame count of `63/72` —
+one direction short of eight. Count frames *per direction*, not per archetype, or you cannot tell
+which is missing. `animate_object` takes `animation_group_id` + `directions`, so re-firing a single
+direction costs 1 generation instead of 8 and the other seven keep their existing timing.
+
+**But check `pending jobs` with `get_object` BEFORE re-firing.** The download endpoint locks (423)
+while *any* job on the object is pending, and a re-fired direction does not replace a slow one — it
+queues *alongside* it. Because the lock waits for both, re-firing a direction that was merely slow
+makes the install strictly **later**. The destrier lost about fifteen minutes to exactly that, with
+two south-east jobs running at once.
+
 **Two independently generated textures will not tone-match.** The two grass tiles came out with
 means of (41,86,14) and (66,143,49) and read as a quilt. Gain-match the second to the first.
 
