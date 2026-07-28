@@ -829,7 +829,8 @@ function update(dt){
     if(player.killHeal) healPlayer(player.maxhp*player.killHeal);          // Reaper
     if(player.killInv) player.inv=Math.max(player.inv,0.9);               // Phantom
     if(typeof perkFire==='function') perkFire('kill',{e:de,x:de.x,y:de.y});
-    document.getElementById('killTxt').textContent='Kills '+player.kills;
+    // (the last write into #hud is gone -- that div is display:none and nothing un-hides it, so
+    //  this was an unguarded DOM lookup per kill for text no one can read)
     if(de.type==='N' && curRoom.dungeon && curRoom.objs){   // objective node destroyed
       const o=curRoom.objs[de.ch]; if(o&&!o.done){ o.got++;
         texts.push({x:de.x,y:de.y-18,txt:o.got+'/'+o.need,col:'#ffe08a',life:1.0}); }

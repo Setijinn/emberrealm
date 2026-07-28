@@ -455,8 +455,17 @@ const _emberProbed = {};       // cls -> its probes have been issued
 // back all 68 sprite sets and EVERY character in the game drew the procedural fallback until the
 // whole library was in. On a phone that is most of a minute of gold blobs. Each class now
 // assembles the instant its own frames land.
-function _emberDone(cls){
-  if(--_emberClsPending[cls]===0) _emberBuildClass(cls);
+// THE IDLE WAVE IS COUNTED SEPARATELY, and it has to be. _emberReady -- which is what decides
+// whether a hero draws real art or the procedural fallback, and whether the character select
+// screen shows a portrait or an emoji -- depends on the four idle poses ONLY. If both waves share
+// a counter, the second wave's 36 files land in the middle of the first wave's 4 and the count
+// never reaches zero until all 40 are in, so `ready` waits on the frames it was split away from.
+// Measured: it left every class on the emoji fallback until the whole library had arrived, which
+// is the exact failure the per-class build above was written to fix.
+const _emberIdlePending = {};
+function _emberDone(cls, idle){
+  if(idle && --_emberIdlePending[cls]===0) _emberBuildClass(cls);   // ready as soon as it can be
+  if(--_emberClsPending[cls]===0) _emberBuildClass(cls);            // again once the frames are in
   if(--_emberPending===0) _emberBuild();
 }
 
@@ -464,31 +473,59 @@ function _emberImgAt(cls, anim, dir, n){
   const name = anim + '_' + dir + (n!=null ? ('_'+n) : '');
   const path = 'assets/' + cls + '/' + name + '.png';
   if(_emberImg[path]) return _emberImg[path];
+  const idle = (anim === 'idle');
   const img = new Image();
   img.decoding = 'async';
   _emberPending++;
   _emberClsPending[cls] = (_emberClsPending[cls]||0) + 1;
-  img.onload  = ()=>_emberDone(cls);
-  img.onerror = ()=>_emberDone(cls);
+  if(idle) _emberIdlePending[cls] = (_emberIdlePending[cls]||0) + 1;
+  img.onload  = ()=>_emberDone(cls, idle);
+  img.onerror = ()=>_emberDone(cls, idle);
   img.src = path;
   _emberImg[path] = _track(img);
   return img;
 }
 
-// Issue every probe for one sprite set. Idempotent: asking twice is free.
+// A SPRITE SET LOADS IN TWO WAVES, because standing still and running are not equally urgent.
+//
+// The ascension split above established the principle: do not make the loading curtain wait on art
+// that cannot possibly be on screen yet. The same argument applies one level down. A set is 40
+// files -- 4 idle poses and 36 walk/attack frames -- and at boot we probed all 40 for all 17
+// playable classes. But the only thing that needs art before you press PLAY is the character
+// select screen, and that draws each class STANDING. The other 612 files are the running and
+// swinging frames of sixteen heroes you did not pick, and the curtain waited on every one.
+//
+// So: idle at boot (68 files), motion on demand. `emberMotion` is called the first time a class
+// actually moves, and `emberPreloadRest` sweeps the rest in the background once the curtain is up,
+// so switching heroes later is still warm. A class whose motion has not landed yet holds its idle
+// pose, which is the same graceful fallback an un-loaded ascension already used.
 function emberProbe(cls){
   const spec = EMBER_CLASSES[cls];
   if(!spec || _emberProbed[cls]) return;
   _emberProbed[cls] = true;
   _emberClsPending[cls] = 1;                 // a guard count, released below, so an all-cached
+  _emberIdlePending[cls] = 1;                // set cannot build before every probe is issued
   for(const d of EMBER_DIRS) _emberImgAt(cls, 'idle', d, null);
+  _emberPending++;
+  _emberDone(cls, true);
+}
+
+// The walk and attack frames. Separate flag from _emberProbed so the second wave is not swallowed
+// by the first one's guard. Also idempotent, because emberSprite calls it on every frame it draws.
+const _emberMoProbed = {};
+function emberMotion(cls){
+  const spec = EMBER_CLASSES[cls];
+  if(!spec || _emberMoProbed[cls]) return;
+  _emberMoProbed[cls] = true;
+  emberProbe(cls);                           // motion without idle would never become _emberReady
+  _emberClsPending[cls] = (_emberClsPending[cls]||0) + 1;
+  _emberPending++;
   for(const d of EMBER_ANIM_DIRS){
     for(const anim in spec.anims){
       for(let n=0; n<spec.anims[anim]; n++) _emberImgAt(cls, anim, d, n);
     }
   }
-  _emberPending++;                           // set cannot build before every probe is issued
-  _emberDone(cls);
+  _emberDone(cls);                           // releases the guard; rebuilds once the frames land
 }
 
 function preloadEmber(){
@@ -497,6 +534,30 @@ function preloadEmber(){
   // bulk of what the boot curtain was waiting on. They load the first time emberSprite is asked
   // for one, which is the frame a player with that form comes on screen.
   for(const cls in EMBER_CLASSES){ if(cls.indexOf('asc_')===0) continue; emberProbe(cls); }
+}
+
+// Called once the curtain is up. Issued LATE on purpose: anything registered through _track while
+// the curtain is still counting would put itself back on the critical path, which is the whole
+// thing this split exists to avoid.
+//
+// AND IT WAITS FOR THE IDLE WAVE FIRST. The curtain also lifts on a hard 12s cap, so on a cold
+// cache over a slow link it can come up while the idle poses are still in flight -- and dumping
+// 612 more requests into a browser that allows six at a time pushes the four files a hero
+// actually needs to the back of the queue. Measured on a cold load: every class went ready at
+// 58s with the second wave already competing. Deferred art must never delay priority art; that
+// is the entire premise of splitting them.
+// Waits on SETTLED, not on ready. An idle pose that 404s is never going to decode, and gating on
+// _emberReady would then hold the second wave behind a file that does not exist until a timeout
+// expired -- so the condition is "the idle wave is no longer in flight", which a 404 satisfies
+// just as well as a success. That is the same distinction 10b_loading.js draws for the curtain.
+let _emberRestTries = 0;
+function emberPreloadRest(){
+  const playable = [];
+  for(const cls in EMBER_CLASSES){ if(cls.indexOf('asc_')!==0) playable.push(cls); }
+  const settled = playable.every(c=>(_emberIdlePending[c]|0)===0);
+  // the retry cap is a backstop against a request that neither loads nor errors, nothing more
+  if(!settled && ++_emberRestTries < 240){ setTimeout(emberPreloadRest, 500); return; }
+  for(const cls of playable) emberMotion(cls);
 }
 
 // Assemble one class's contiguous frame lists from whatever decoded.
@@ -547,6 +608,9 @@ function emberSprite(look, state){
   if(!EMBER_CLASSES[cls] || !_emberReady[cls]) return null;
   const {dir, flip} = _emberDir(state.aim||0);
   let flp = flip;
+  // This hero is on screen, so its motion frames are now worth fetching. Idempotent and one
+  // property read after the first call, so it is free to sit in the draw path.
+  if(!_emberMoProbed[cls]) emberMotion(cls);
 
   if(state.attacking){
     let fr = _emberFrames[cls+'/attack_'+dir] || [];

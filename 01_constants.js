@@ -40,6 +40,12 @@ function resize(){
   // whatever the browser paints as full-screen IS the buffer. _vp* stay as the 0-fallback.
   W = cv.clientWidth || _vpW();
   H = cv.clientHeight || _vpH();
+  // DPR IS NOT A CONSTANT. It was read once at boot and never again, which is fine on a phone and
+  // wrong on a desktop: dragging the window from a HiDPI laptop panel to an ordinary external
+  // monitor changes devicePixelRatio, and so does every Ctrl+= browser zoom step. The buffer then
+  // stays sized for the old ratio and the whole game renders soft-focus for the rest of the
+  // session -- checkSize() could never heal it, because it only compares CSS width and height.
+  DPR = Math.min(devicePixelRatio||1, 2);
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0); ctx.imageSmoothingEnabled=false;
   document.getElementById('rotate').style.display = H>W ? 'flex':'none'; }
@@ -59,7 +65,10 @@ for(const ev of ['fullscreenchange','webkitfullscreenchange']) addEventListener(
 addEventListener('visibilitychange',()=>{ if(!document.hidden){ resize(); setTimeout(resize,200); } });
 if(window.visualViewport){ visualViewport.addEventListener('resize',resize); visualViewport.addEventListener('scroll',resize); }
 // safety net: some in-app viewers never fire events — poll every frame
-function checkSize(){ if((cv.clientWidth||_vpW())!==W||(cv.clientHeight||_vpH())!==H) resize(); }
+// Watches the pixel ratio too: a zoom step or a monitor change can leave the CSS box exactly the
+// same size while the ratio underneath it moves, and that is the case the old test slept through.
+function checkSize(){ if((cv.clientWidth||_vpW())!==W||(cv.clientHeight||_vpH())!==H
+  || Math.min(devicePixelRatio||1,2)!==DPR) resize(); }
 // Boot heal: the per-frame checkSize() only starts once the main loop is running, and a rotation
 // mid-load can leave the canvas sized to the stale/portrait viewport before then. Poll for the
 // first few seconds (independent of the loop) so a rotate-while-loading always heals the black

@@ -164,7 +164,13 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .ccard .cskull{position:absolute;top:6px;left:8px;font-size:15px;filter:none;}
 .ccard{position:relative;}
 .ccard.sel{border-color:#ffc94d;}
-.ccard .cdel{position:absolute;top:3px;right:8px;color:#8a8494;font-size:14px;padding:3px 5px;}
+/* DELETING A HERO IS PERMANENT, and this was a ~24x20 target sitting 3px inside the corner of a
+   card whose entire body means "play this hero". The platform guideline is 44px and this file
+   already applies it to the bag buttons; it was applied nowhere else. The hit area is 44x44 via
+   padding while the glyph stays visually small, so nothing about the card's look changes. */
+.ccard .cdel{position:absolute;top:0;right:0;color:#8a8494;font-size:14px;
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  padding:0;line-height:1;}
 .ccard.mini{width:152px;padding:10px;}
 #classList{max-height:52vh;overflow-y:auto;}
 
@@ -545,11 +551,20 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 /* very small / landscape-short phones: keep the list scrollable rather than clipping it */
 @media(max-height:520px){ #bagInner{padding-top:26px;padding-bottom:20px;} #bagList{max-height:52vh;overflow-y:auto;} }
 /* small top-right close ✕ for tab/overlay menus (equipment, loadout, skills) */
+/* close buttons: 30px drawn, 44px touchable via the ::before below */
 .tabX{position:absolute;top:10px;right:12px;z-index:5;width:30px;height:30px;padding:0;
  display:flex;align-items:center;justify-content:center;font:700 17px/1 'Pixelify Sans',monospace;
  color:#e8d9b8;background:rgba(20,15,24,.72);border:1px solid #6a4a24;border-radius:8px;
  cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.5);transition:background .12s,color .12s;}
-.tabX:hover{background:#7a2a22;color:#fff;border-color:#a5432f;}
+.tabX::before{content:'';position:absolute;left:50%;top:50%;width:44px;height:44px;
+  transform:translate(-50%,-50%);}   /* invisible 44px hit area around a 30px control */
+/* HOVER IS A LIE ON TOUCH. A tapped element keeps :hover until you tap elsewhere, so the last
+   thing you touched stayed lit as though it were selected. Gated behind a real pointer; touch
+   gets :active feedback instead, which .shopcard already had and .tabX did not. */
+@media (hover:hover) and (pointer:fine){
+  .tabX:hover{background:#7a2a22;color:#fff;border-color:#a5432f;}
+}
+.tabX:active{background:#7a2a22;color:#fff;border-color:#a5432f;transform:scale(0.94);}
 .schip{background:#1c1626;border:1px solid #39323f;border-radius:8px;padding:4px 7px;
  font-size:10px;color:#8a8494;display:flex;flex-direction:column;align-items:center;}
 .schip b{color:#f0e8d8;font-family:'Pixelify Sans',monospace;font-size:13px;}
@@ -569,7 +584,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .shopcard{display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,#1c1626,#151019);
  border:1px solid #39323f;border-radius:12px;padding:8px 11px;cursor:pointer;transition:border-color .12s,transform .06s;}
 .shopcard:active{transform:scale(0.98);}
-.shopcard:hover{border-color:#7a4a1e;}
+@media (hover:hover) and (pointer:fine){ .shopcard:hover{border-color:#7a4a1e;} }
 .shopcard.broke{opacity:0.5;}
 .shopcard.legend{border-color:#7a4a1e;background:linear-gradient(180deg,#241a10,#181009);}
 .shopico{width:48px;height:42px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
@@ -934,3 +949,16 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 .embFoodBtns{ display:flex; gap:calc(var(--u)*0.6); flex:0 0 auto; }
 .embFoodBtns .embBtn{ flex:0 0 auto; padding:calc(var(--u)*0.7) calc(var(--u)*1.1); }
 .embFuseAct{ margin-top:calc(var(--u)*1.0); display:flex; }
+
+/* ---------- KEYBOARD REACHABILITY ----------
+   There was exactly one :focus rule in this file, on a text input, so a keyboard-only player had
+   no idea where they were. Every interactive control gets the same ring. :focus-visible so a
+   mouse click never draws it -- only keyboard traversal does. */
+.mbtn:focus-visible, .ccard:focus-visible, .islot:focus-visible, .shopcard:focus-visible,
+.tabX:focus-visible, .embTab:focus-visible, .eqSlot:focus-visible, .relChip:focus-visible,
+.setRow:focus-visible, .cdel:focus-visible, button:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid #ffc94d; outline-offset:2px; border-radius:6px;
+}
+/* the HUD buttons are divs with onclick; give them a focus ring too */
+#menuBtn:focus-visible, #devBtn2:focus-visible{ outline:2px solid #ffc94d; outline-offset:2px; }
+

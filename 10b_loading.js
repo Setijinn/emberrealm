@@ -63,6 +63,11 @@ const BOOT_MIN_SHOW = 350;        // don't flash the screen for one frame on a w
       paint(1);
       el.classList.add('gone');
       setTimeout(()=>{ el.style.display='none'; }, 420);   // after the fade
+      // The second wave. Every playable class's walk and attack frames -- 612 files that the
+      // curtain no longer waits on (see emberProbe/emberMotion). Started here, once the game is
+      // visible and interactive, so they arrive quietly behind the character select screen rather
+      // than in front of it. A hero drawn before its own frames land holds the idle pose.
+      if(typeof emberPreloadRest==='function') setTimeout(()=>{ try{ emberPreloadRest(); }catch(_){ } }, 900);
       // the world was drawing behind the curtain the whole time; nothing to restart
     }, wait);
   }
