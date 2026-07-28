@@ -186,6 +186,20 @@ const GBOSS=[
         'He gave me the armour. He showed me the rows. Then his hands went grey and I finished the field alone.'],
   death:'...I kept his rows. It was all I could keep. It will reach here too — it always reaches.',
   home:'the reed-fields it worked until the rot took them'},
+ // 12 — The Cairnworks (Lv11-15), the fourth starter province. Same refugee canon as 9-11: a
+ // nobody that crossed early and moved into a human building. The other three follow water, fly
+ // east, and keep a dead man's rows; this one counts. All four are doing something repetitive and
+ // useless that used to be a job, which is the shape grief takes when nobody is left to tell it
+ // to stop.
+ {n:'The Cairnwright',dn:'The Tally Yard',col:'#9a8f7d',pat:'ring8',pat2:'spread5',mech:'bloom',
+  gate:'none',dsub:'the yard is still counting',denN:'The Tally Keeper',
+  title:'mason that cannot stop counting',
+  desc:'It drives shocks through the ground in rings. The cut stone does not shake — stand on it.',
+  lore:'The isles kept a masons’ yard on the rise, for headstones and boundary marks. It moved in the winter the ships stopped coming and has cut nothing since but cairns: small ones, in rows, not one of them marked. The tally scratched into the doorpost passed four thousand some years ago and it is still cutting. No one has ever found a body under any of them.',
+  bark:['One stone for each. I carried the count through the door — the count is the only thing that crossed with me.',
+        'You are standing on a row. Do not KICK them. I will have to start the row again.'],
+  death:'...I lost the number somewhere in the crossing. Every stone since has been a guess.',
+  home:'the quarry-terraces its people cut, before the rot came up through the stone'},
 ];
 // per-ring projectile themes (colour/core/shape/size) — suited to each biome & creature
 // Projectile theme per BOSS — indexed by boss id, exactly parallel to GBOSS above.
@@ -204,6 +218,7 @@ const BOSS_PROJ=[
  {col:'#4a90a8',core:'#cfeaf3',shape:'orb',size:9},    // 9  Tidewrack — brine globs
  {col:'#8fae6a',core:'#eef4cf',shape:'dart',size:6},   // 10 Gullwind Harrier — feather-darts
  {col:'#7ea44a',core:'#e0f2a8',shape:'dart',size:6},   // 11 Sawgrass Reaper — reed spines
+ {col:'#9a8f7d',core:'#eee6d4',shape:'dart',size:7},   // 12 Cairnwright — flung stone chips
 ];
 let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
 function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
@@ -215,7 +230,7 @@ function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return
 // _territories() lays clumps down in a fixed order: 0-3 starter, 4-8 inner main, 9-13 grind rim.
 //   -1 = no boss. Clump 11 is The Molten Heart — the rift's own province, held for the final boss.
 // Starter clump 2 (The Cairnworks, Lv11-15) is the new fourth zone; boss 12 takes it in phase 2.
-const ZBOSS=[9,10,-1,11, 0,1,2,3,4, 6,5,-1,7,8];
+const ZBOSS=[9,10,12,11, 0,1,2,3,4, 6,5,-1,7,8];
 // The starter island's four five-level bands, and the TERRAIN band each one wears. Declared up
 // here beside ZBOSS, not next to _territories 2000 lines below, because stampLairs() runs at load
 // (line ~523) and calls _territories() -- a `const` further down the file is still in its temporal
@@ -250,20 +265,25 @@ function bossBand(bid){ const t=bossClump(bid); return t?t.band:Math.max(0,Math.
 // (named BOSS_SLOT, not BOSS_ART — 09_sprites already owns BOSS_ART, the procedural sprite table)
 // Add an entry here to make a boss BORROW another's art slot until its own sprites land
 // (9/10/11 did, until v218). Empty = every boss wears its own slot.
-const BOSS_SLOT={};
+// 12 borrows Stonefist's slot until its own art lands. bossArtSlots() walks 0..BOSS_SLOT_N and
+// requests every distinct slot at load, so bumping the count WITHOUT an entry here would fire 21
+// image requests for files that do not exist -- and the service worker is cache-first, so the
+// 404s repeat every session. Delete this line in the same commit the art arrives.
+const BOSS_SLOT={12:3};
 function bossArt(i){ return (BOSS_SLOT[i]!==undefined)?BOSS_SLOT[i]:i; }
-const BOSS_SLOT_N=12;                            // grows with the roster
+const BOSS_SLOT_N=13;                            // grows with the roster
 function bossArtSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
 // Borrowing is PER ASSET KIND, because a boss gets its sprite long before it gets a whole
 // tileset and its scatter decor. Leave a boss in one of these and it still wears its own face.
 const TILE_SLOT={};                    // dungeon tilesets — 9/10/11 have their own since v218
-const DEC_SLOT={9:0,10:1,11:2};        // lair scatter decor — shared, same idea as DECAL_SRC
+const DEC_SLOT={9:0,10:1,11:2,12:3};   // lair scatter decor — shared, same idea as DECAL_SRC
 // A boss ARENA is that boss's den, so its walls and floor must carry the BOSS's theme — not the
 // theme of whatever terrain it happens to stand in. Keying lair tiles to the terrain band (which
 // is right for open ground) meant the Grovewarden fought in a stone room, the brine Tidewrack in
 // a forest, and four different grind bosses all shared one molten tileset.
 // Only slots 0-8 have a lairset_N sheet, so the starter three borrow the closest fit.
-const LAIR_TILE={9:2, 10:4, 11:0};     // brine->sunken warren, harrier->windward crag, reaper->green
+const LAIR_TILE={9:2, 10:4, 11:0, 12:3};  // brine->sunken warren, harrier->windward crag,
+                                       // reaper->green, cairnwright->the Shattered Vault's cut stone
 function lairTileSet(b){ return (LAIR_TILE[b]!==undefined)?LAIR_TILE[b]:bossArt(b); }
 function bossTileArt(i){ return (TILE_SLOT[i]!==undefined)?TILE_SLOT[i]:bossArt(i); }
 function bossDecArt(i){ return (DEC_SLOT[i]!==undefined)?DEC_SLOT[i]:bossArt(i); }
@@ -273,7 +293,7 @@ function bossTileSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bo
 // (LAIR_TEMPLATES lived here: 147 lines of ASCII arena blueprints. They stopped being READ when
 //  the organic carve landed — only their width/height was measured — and LAIR_SIZE now states
 //  those dimensions outright, so the blueprints were deleted rather than left to mislead.)
-const LAIR_BOSSES=[0,1,2,3,4,5,6,7,8,9,10,11];       // every boss gets a lair
+const LAIR_BOSSES=[0,1,2,3,4,5,6,7,8,9,10,11,12];    // every boss gets a lair
 // Arena footprint in tiles, SCALED BY THE BOSS'S LEVEL (user: "the higher level the boss fight
 // the bigger the arena should be, unless certain boss fight mechanics demand otherwise").
 // The old fixed ~20x15 was smaller than one screen — the whole arena fit in view with room to
@@ -300,7 +320,7 @@ let _lairsStamped=false;
 // footprint straight into the sea. Swept against the 5-point inZone test: -0.90 gives all three
 // 4/4 arms on land and <=2% obstruction, while 0.30/0.90/1.20 put the chapel 36-87% underwater,
 // which forces the shrink ladder and can drag the lair out of its own zone entirely.
-const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 9:-0.9,10:-0.9,11:-0.9};
+const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 9:-0.9,10:-0.9,11:-0.9, 12:2.95};
 // Is this one of the starter island's plain-place bosses? `gate:'none'` is the real flag -- it is
 // already what lets you walk into the dungeon without ascending (11_ui.js) and what marks the boss
 // a den elder rather than a dream form (makeEnemy). This used to be `LAIR_RAD[ring]!==undefined`,
@@ -333,6 +353,10 @@ const LAIR_ARCH={
  9:{k:'pans',   doors:[[1.57,0.20],[0,0.14]], den:[0,-0.55], szMul:1.08},  // salt-house pans; pools
  10:{k:'tower', doors:[[1.57,0.22]],round:true,den:[0,-0.5], szMul:0.92},  // a drum stops reading as one if scaled up
  11:{k:'nave',  doors:[[3.14,0.16]], den:[0.5,0], spawn:[-0.1,0.1], szMul:1.12}, // chapel: west door, east apse
+ // A masons' yard: cut-stone walls, one cart gate wide enough to haul blocks through, and a
+ // narrow side door. Reuses the 'vault' carve -- a fourth structure does not need a fourth
+ // carve routine, and square corners are exactly what a stone yard should have.
+ 12:{k:'vault', doors:[[1.57,0.22],[3.14,0.13]], den:[0,-0.5], szMul:1.06},
 };
 // Where a boss's lair wants to be, in TILES. Shared by stampLairs and grvLairXY so the stamped
 // footprint and the spawn fallback can never drift apart.
@@ -596,7 +620,7 @@ function spawnRingBoss(b){
 // regrow / chase / order / simon / hold / relay / candles / ambush / timing.
 // 9-11 (the starter three) REUSE implemented puzzle keys — no new puzzle code.
 const DPUZ=['regrow','chase','order','simon','hold','relay','candles','ambush','timing',
- 'order','chase','hold'];
+ 'order','chase','hold','simon'];   // 12 reuses simon -- repeating a counted sequence IS the Cairnwright
 const DPUZ_LABEL=[
  'Sever the Root-Hearts before the grove reknits',
  'Catch the fleeing Wisp',
@@ -609,7 +633,8 @@ const DPUZ_LABEL=[
  'Awaken the Titan Locks as they glow',
  'Work the Sluice Gates — seaward first',
  'Run down the Lamp-Thief',
- 'Hold the Chapel Wards while they burn'];
+ 'Hold the Chapel Wards while they burn',
+ 'Repeat the Tally Stones — in the order they were cut'];
 const DOBJ_PLAN={};
 for(let r=0;r<DPUZ.length;r++) DOBJ_PLAN[r]=[DPUZ[r],'waves'];
 // Per-ring dungeon ARCHITECTURE: room shape, edge irregularity, radii, corridor
@@ -629,6 +654,9 @@ const DSHAPE=[
  {room:'cells',irr:0.20,rmin:6, rmax:9, wob:1.2,cw:1.8,gap:11},  // 9  flooded salt-house
  {room:'vault',irr:0.0, rmin:5, rmax:8, wob:0.0,cw:1.6,gap:13},  // 10 lighthouse + keeper's stair
  {room:'cells',irr:0.15,rmin:6, rmax:9, wob:1.0,cw:1.9,gap:10},  // 11 chapel cloister
+ // DSHAPE is dereferenced immediately in genDungeon (st.rmax) -- a missing entry is a TypeError,
+ // not a fallback. Straightest walls of the four: everything in a masons' yard is cut square.
+ {room:'vault',irr:0.05,rmin:6, rmax:9, wob:0.4,cw:1.7,gap:12},  // 12 masons' yard + tally rows
 ];
 // Living NPCs found inside a dungeon, by boss id. He speaks one line per interaction and then
 // repeats the last — deliberately vague: he has the shape of the truth and none of the facts.
@@ -640,7 +668,9 @@ const DUN_NPC={
           'I can hold the ward. I can\'t hold the ground under it. Go on ahead — and don\'t stop at the water.']}};
 // Dungeon DEPTH drives length/size. Boss ids keep their old depth so every canon dungeon is
 // byte-identical to before; the starter three are deliberately short (4-5 chambers).
-const DDEPTH=[0,1,2,3,4,5,6,7,8, 0,0,1];
+// A MISSING entry here falls back to `||ring`, so boss 12 would silently get depth 12: a
+// 482-wide grid and ~10 chambers for a Lv12 starter dungeon. It is 1, like the other short ones.
+const DDEPTH=[0,1,2,3,4,5,6,7,8, 0,0,1, 1];
 function genDungeon(ring){
  // the mind is a step beyond the zone's peak — "matching but a little more difficult".
  // Measured off the boss's OWN clump (which _territories already samples from the smooth radial
@@ -1906,6 +1936,30 @@ const DUNSPEC=[
      {n:'Lectern Oracle',      inf:{id:'curse',dur:5.5}, hp:1.10,spd:0.96,bd:1.08,r:0.98, rof:0.88, w:{skirmisher:58,sentinel:26,roamer:16}},
      {n:'Psalm-Flinger',       inf:{id:'weak',dur:4.5},  hp:1.34,spd:0.70,bd:1.24,r:1.10, rof:1.30, w:{sentinel:68,roamer:18,skirmisher:14}},
      {n:'Vestry Cantor',       inf:{id:'curse',dur:6.0}, hp:1.22,spd:0.84,bd:1.16,r:1.02, rof:1.00, w:{sentinel:54,skirmisher:30,roamer:16}}]},
+
+ // 12 THE TALLY YARD -- inside the Cairnwright. A masons' yard: the crews that cut the stone, and
+ // the rows they were counted into. Stone is HEAVY and stone is SLOW: this roster leans hardest of
+ // the four starter dungeons on sentinels that hold ground and hit like a dropped block, with one
+ // fast swarm so it cannot be kited forever. Sits between the Saltworks (Lv7) and Marrow Chapel
+ // (Lv20) in every stat, because its dungeon lands around Lv16.
+ {c:[{n:'Tally-Cut Hulk',    inf:{id:'stun',dur:0.9},  hp:1.72,spd:0.66,tch:1.34,r:1.20, w:{sentinel:70,hunter:20,ambusher:10},
+      sig:{sway:0.08,swayF:0.5,harry:0,lunge:null,pace:58,leash:360}},
+     {n:'Chiselback',        inf:{id:'bleed',dur:3.6}, hp:0.68,spd:1.22,tch:0.78,r:0.76, w:{pack:60,roamer:26,hunter:14},
+      sig:{sway:0.80,swayF:4.2,commit:30,harry:56,flank:112,collapse:146,lunge:null}},
+     {n:'The Unnumbered',    inf:{id:'curse',dur:4.6}, hp:1.10,spd:0.98,tch:1.02,r:0.98, w:{ambusher:54,roamer:28,sentinel:18},
+      sig:{sway:0.28,swayF:1.3,harry:0,lunge:null,breakoff:1.8,rehide:250}},
+     {n:'Gravel Kneeler',    inf:{id:'weak',dur:5.0},  hp:1.28,spd:0.78,tch:1.10,r:1.04, w:{sentinel:58,ambusher:26,roamer:16},
+      sig:{sway:0.16,swayF:0.9,harry:0,lunge:null,pace:64}},
+     {n:'Cairn That Walks',  inf:{id:'stun',dur:1.1},  hp:1.90,spd:0.60,tch:1.42,r:1.26, w:{sentinel:72,hunter:20,ambusher:8},
+      sig:{sway:0.06,swayF:0.4,harry:0,lunge:null,pace:50,leash:400}},
+     {n:'Splitwedge Crawler',inf:{id:'bleed',dur:4.2}, hp:1.04,spd:1.04,tch:1.06,r:0.96, w:{ambusher:52,pack:30,hunter:18},
+      sig:{sway:0.56,swayF:2.7,harry:62,lunge:{min:96,max:240,mul:2.7,dur:0.27,cd:1.9}}}],
+  s:[{n:'Reckoning Bell',    inf:{id:'stun',dur:0.8},  hp:1.16,spd:0.76,bd:1.10,r:1.04, rof:1.22, w:{sentinel:64,roamer:20,skirmisher:16}},
+     {n:'Marker Stone',      inf:{id:'weak',dur:4.4},  hp:1.34,spd:0.68,bd:1.20,r:1.10, rof:1.32, w:{sentinel:70,roamer:18,skirmisher:12}},
+     {n:'Grit Weeper',       inf:{id:'curse',dur:4.8}, hp:1.02,spd:0.92,bd:1.02,r:0.98, rof:0.94, w:{skirmisher:54,sentinel:28,roamer:18}},
+     {n:'The Miscounted',    inf:{id:'curse',dur:5.2}, hp:0.94,spd:0.98,bd:0.98,r:0.94, rof:0.86, w:{skirmisher:60,sentinel:24,roamer:16}},
+     {n:'Dust of the Yard',  inf:{id:'shock',dur:2.4}, hp:0.88,spd:1.18,bd:0.92,r:0.90, rof:0.78, w:{skirmisher:62,roamer:24,hunter:14}},
+     {n:'Chip-Flinger',      inf:{id:'bleed',dur:4.0}, hp:1.08,spd:0.88,bd:1.06,r:1.00, rof:1.04, w:{sentinel:52,skirmisher:32,roamer:16}}]},
 ];
 
 // ---- ELITES (user, 2026-07-27: "elites among the mobs that spawn more uncommonly") ----
@@ -1969,6 +2023,21 @@ function makeElite(e,sp){
 // degrades to exactly today's behaviour rather than to a blank.
 const MOB_ARCH={
   // per-dungeon rosters
+  // The Tally Yard (boss 12). Every species here needs a row or mobArch() drops it to the
+  // hound/cultist fallback -- silently, and it looks fine until you notice the whole dungeon
+  // is two silhouettes. Stone leans on golem; the yard crews are husks; the grit is a swarm.
+  'Tally-Cut Hulk':'golem',
+  'Chiselback':'crab',
+  'The Unnumbered':'husk',
+  'Gravel Kneeler':'husk',
+  'Cairn That Walks':'golem',
+  'Splitwedge Crawler':'crab',
+  'Reckoning Bell':'wisp',
+  'Marker Stone':'golem',
+  'Grit Weeper':'shaman',
+  'The Miscounted':'acolyte',
+  'Dust of the Yard':'swarm',
+  'Chip-Flinger':'slinger',
   'Antler Crawler':'crab',
   'Cerement Crawler':'crab',
   'Grafted Thing':'crab',

@@ -419,7 +419,7 @@ function _devSpawnSpecies(band,type,name){
 
 // ---------------------------------- WORLD ----------------------------------------
 DEV_PANE.world=function(B){
-  B.appendChild(_dvHd('DUNGEONS — all 12'));
+  B.appendChild(_dvHd('DUNGEONS — all 13'));
   const g=_dvGrid();
   for(let r=0;r<GBOSS.length;r++){
     const GB=GBOSS[r];
@@ -511,7 +511,7 @@ DEV_PANE.bal=function(B){
         if(it.k==='pot') pots++; if(it.relic) relics++; } }
     loots.length=0; for(const l of keep) loots.push(l);
     devLog('4000 rolls · '+items+' items · '+pots+' potions · '+relics+' relics'); }));
-  g.appendChild(_dvBtn('Fight keys (all 25)',()=>{
+  g.appendChild(_dvBtn('Fight keys (all 27)',()=>{
     const ks=[]; for(let r=0;r<GBOSS.length;r++) ks.push('ow'+r,'dn'+r); ks.push('arena');
     const have=ks.filter(k=>BOSS_MECH[k]);
     devLog(have.length+'/'+ks.length+' fights registered'+(have.length?': '+have.join(' '):' — all on the legacy path')); }));
