@@ -153,7 +153,7 @@ const _tileSlots=(typeof bossTileSlots==='function')?bossTileSlots():_artSlots;
 // would 404 on every session against a cache-first service worker.
 // 9/10/11 are the starter-dungeon den elders -- not dream forms, but still a distinct sprite so a
 // dungeon boss is never the identical creature fought outside.
-const AWAK_SLOTS=[0,1,2,3,4,5,6,7,8,9,10,11];
+const AWAK_SLOTS=[0,1,2,3,4,5,6,7,8,9,10,11,12];
 const _dunSet={}, _awakImg={};
 if(typeof window!=='undefined'){
   for(const b of _tileSlots) _dunSet[b]=_img('assets/tiles/dunset_'+b+'.png');

@@ -265,17 +265,17 @@ function bossBand(bid){ const t=bossClump(bid); return t?t.band:Math.max(0,Math.
 // (named BOSS_SLOT, not BOSS_ART — 09_sprites already owns BOSS_ART, the procedural sprite table)
 // Add an entry here to make a boss BORROW another's art slot until its own sprites land
 // (9/10/11 did, until v218). Empty = every boss wears its own slot.
-// 12 borrows Stonefist's slot until its own art lands. bossArtSlots() walks 0..BOSS_SLOT_N and
-// requests every distinct slot at load, so bumping the count WITHOUT an entry here would fire 21
-// image requests for files that do not exist -- and the service worker is cache-first, so the
-// 404s repeat every session. Delete this line in the same commit the art arrives.
-const BOSS_SLOT={12:3};
+const BOSS_SLOT={};
 function bossArt(i){ return (BOSS_SLOT[i]!==undefined)?BOSS_SLOT[i]:i; }
 const BOSS_SLOT_N=13;                            // grows with the roster
 function bossArtSlots(){ const s=[]; for(let i=0;i<BOSS_SLOT_N;i++){ const a=bossArt(i); if(s.indexOf(a)<0) s.push(a); } return s; }
 // Borrowing is PER ASSET KIND, because a boss gets its sprite long before it gets a whole
 // tileset and its scatter decor. Leave a boss in one of these and it still wears its own face.
-const TILE_SLOT={};                    // dungeon tilesets — 9/10/11 have their own since v218
+// dungeon tilesets — 9/10/11 have their own since v218. 12 has its own sprite, den and animation
+// but no dunset_12: a masons' yard IS the Shattered Vault's cut stone, so borrowing 3 is the
+// right answer rather than a placeholder. Without this entry bossTileArt(12) falls through to
+// bossArt(12)=12 and requests a file that does not exist, every session, against a cache-first sw.
+const TILE_SLOT={12:3};
 const DEC_SLOT={9:0,10:1,11:2,12:3};   // lair scatter decor — shared, same idea as DECAL_SRC
 // A boss ARENA is that boss's den, so its walls and floor must carry the BOSS's theme — not the
 // theme of whatever terrain it happens to stand in. Keying lair tiles to the terrain band (which

@@ -606,9 +606,9 @@ const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // art slots, not to the boss ids.
 const MOBNAME={
  c:['Briar Hound','Mist Hound','Bog Hound','Stone Hound','Crag Hound','Cinder Hound','Ash Hound','Char Hound','Molten Hound',
-    'Brine Hound','Gull Hound','Reed Hound'],
+    'Brine Hound','Gull Hound','Reed Hound','Quarry Hound'],
  s:['Grove Cultist','Fog Cultist','Mire Cultist','Vault Cultist','Wind Cultist','Ember Cultist','Ashbound Cultist','Flame Cultist','Core Cultist',
-    'Salt Cultist','Lamp Cultist','Reed Cultist'],
+    'Salt Cultist','Lamp Cultist','Reed Cultist','Tally Cultist'],
 };
 // THE TINT IS WHAT MAKES A CREATURE BELONG TO ITS GROUND (user, 2026-07-27: "make sure they're
 // fitting of the biomes they're going to roam"), and it had drifted out of alignment with the
@@ -626,7 +626,8 @@ const MOBTINT=[
  'rgba(150,146,140,0.30)',   // 6 Stonebrow Rise  - bare stone
  'rgba(255,116,44,0.28)',    // 7 Cinderwatch     - ember
  'rgba(198,118,92,0.30)',    // 8 The Ashfall     - scorched ash
- 'rgba(74,144,168,0.30)','rgba(143,174,106,0.30)','rgba(126,164,74,0.30)'];   // starter-island slots
+ 'rgba(74,144,168,0.30)','rgba(143,174,106,0.30)','rgba(126,164,74,0.30)',
+ 'rgba(154,143,125,0.30)'];   // starter-island slots (9-12; 12 is the Cairnworks' dry grey stone)
 function enemyBand(e){
  if(curRoom&&curRoom.rings) return grvBandXY(e.x/TILE,e.y/TILE);
  // In a dungeon curRoom.ring is a BOSS ID, which would run off the end of the 9-entry
