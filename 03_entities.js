@@ -224,6 +224,16 @@ const ZBOSS=[9,10,-1,11, 0,1,2,3,4, 6,5,-1,7,8];
 // its own tilesets. The fourth zone borrows band 6, Stonebrow's grey stone and scree, which reads
 // as the rocky spine you climb between the shingle and the marsh.
 const STARTER_ZONES=4, STARTER_BANDS=[0,1,6,2];   // sand / shingle / stone rise / marsh
+// Seeds for the four starter provinces, marching NW->SE from the landing to the bridge. These are
+// REAL territories -- warped Voronoi with irregular borders, the same treatment the main island
+// gets -- not rings. Measured against the actual landmass rather than guessed, on four counts:
+//   area      17/29/31/23% -- no province is a sliver
+//   monotonic each centroid is further from the landing than the last, so the march has an order
+//   NO SKIPS  only CONSECUTIVE provinces share a border. This is the one that matters: it is what
+//             stops a Lv5 player wandering out of The Landing Sands straight into Lv11 ground.
+//             Staggering the middle two north/south is also what stops their map labels colliding.
+//   contiguity each province is a single connected blob, not islands of itself
+const STARTER_SEED=[[90,290],[168,325],[228,392],[292,438]];
 const BOSS_ZONE=[]; for(let i=0;i<ZBOSS.length;i++) if(ZBOSS[i]>=0) BOSS_ZONE[ZBOSS[i]]=i;
 // boss id at a tile (ocean/bridge/unclaimed -> -1). THE spawner key; never assume it equals a band.
 function zoneBossAt(tx,ty){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
@@ -2363,17 +2373,24 @@ function _onStarter(R,tx,ty){ return tx<(R.bridge.x0+R.bridge.x1)*0.5; }
 // LEVEL is still smooth-radial (danger climbs outward), computed from the rings geometry.
 function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
  if(_onBridge(RG,tx,ty)) return 20;
- if(_onStarter(RG,tx,ty)){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r);
-   // The starter ramp runs WEST->EAST: rings.starter is the LANDING on the west shore, not the
-   // middle of the island, and it is also the arrival point (usePortal 'G'), so f=0 is exactly
-   // where you stand when you first walk out. Danger climbs as you head for the bridge.
-   // It used to be centred at (200,360) -- the island's middle -- which is what made all three
-   // zones span Lv1-20: they radiated from spawn as wedges, so every one of them started at Lv1.
-   // EXPONENT is data (rings.lvExp), not a constant. 1.7 was tuned for a centre-out layout where
-   // land area grows as r^2; on a directional march it front-loads the low levels badly. 1.30
-   // splits the island 16/27/31/25% across the four zones -- early bands tighter, later bands
-   // larger, which is the right shape because later levels take longer to clear.
-   return Math.max(1,Math.min(20,Math.round(1+Math.pow(f,RG.lvExp||1.3)*19))); }
+ if(_onStarter(RG,tx,ty)){ const S=RG.starter, d=Math.hypot(tx-S.cx,ty-S.cy);
+   // THE TERRITORY OWNS THE LEVEL. Level is not a radius here: the four starter provinces each
+   // hold exactly five levels, and inside a province the danger ramps from its floor to its
+   // ceiling with distance from the landing. So The Landing Sands is Lv1-5 everywhere in it and
+   // Gullwind Shore is Lv6-10 everywhere in it, no matter what shape the border happens to take.
+   // Crossing a border is a real step, which is the point of a border.
+   // (Before this the island was a smooth radial ramp with the zones cut off it, which made them
+   // concentric rings; before THAT the ramp was centred on the spawn in the island's middle,
+   // which made all three of them span Lv1-20 at once.)
+   const T=RG._terr, zg=RG._zg;
+   if(T&&zg){ const zr=zg[Math.floor(ty)], z=zr?zr[Math.floor(tx)]:-1;
+     if(z>=0&&z<STARTER_ZONES){ const t=T[z], q=t.dq;
+       if(!q) return t.lvmin;
+       let lv=t.lvmin; for(let k=0;k<4;k++) if(d>=q[k]) lv++;
+       return lv; } }
+   // Off-land (coast, shallows) or called before the territories exist: no province to ask, so
+   // approximate smoothly across the island. Only water and the bridge approach take this path.
+   return Math.max(1,Math.min(20,Math.round(1+Math.min(1,d/S.r)*19))); }
  const gR=RG.grindR||0.8, f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax);
  if(f>=gR) return 50;                                   // flat Lv50 grind ring
  return Math.max(20,Math.min(50,Math.round(20+(f/gR)*29))); }
@@ -2383,43 +2400,57 @@ function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) retur
 // 14 clumps: 4 starter + 5 inner main + 5 grind. Order is FIXED and load-bearing --
 // 0-3 starter, 4-8 inner main, 9-13 grind rim -- because ZBOSS and ZONE_TIERS are indexed by it.
 //
-// The main island's zones are ORGANIC CLUMPS: Voronoi provinces around 10 seeds with a wavy warp
-// so borders are irregular. The STARTER ISLAND is not. Its four zones are cut straight off the
-// level curve -- zone = (lv-1)/5 -- so each one is exactly five levels wide and the two can never
-// drift apart. They used to be Voronoi too, over three seeds all placed within ~20 tiles of the
-// spawn, which made them angular wedges that each spanned the whole Lv1-20 range: the map read
-// "Lv1-20" three times over. Deriving zone from level is what fixes that, permanently.
+// EVERY zone in the game is an organic clump: a warped Voronoi province around its own seed, with
+// irregular borders. The starter island's four are no different from the main island's ten -- what
+// changed is where their seeds sit. They used to be three seeds all placed within ~20 tiles of the
+// spawn point in the island's middle, which does not make three provinces, it makes three pie
+// WEDGES radiating outward; combined with a level that came from distance-to-spawn, every one of
+// them spanned the whole Lv1-20 range and the map read "Lv1-20" three times over.
+// The seeds now march NW->SE across the island, and each province owns a five-level band outright
+// (grvLvAtR reads the band off the province, not off a radius). Territory first, level second.
 function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; if(RG._terr) return RG._terr;
- const C=RG.core, Rm=RG.rmax, nm=RG.names, sz=RG.starterZones||[], gr=RG.grind||[], T=[];
- const add=(cx,cy,name,band,gi)=>{ T.push({cx,cy,name,band,gi:(gi==null?-1:gi),lvmin:99,lvmax:0,sx:0,sy:0,n:0}); };
- // Starter seeds are never used for partitioning (see the derived branch below) -- they are the
- // representative points ringInfoAt falls back to for off-land tiles, so they are the measured
- // centroids of the four bands: a clean NW->SE march from the landing to the bridge.
- const sSeed=[[87,292],[160,344],[232,368],[289,414]];
- for(let i=0;i<STARTER_ZONES;i++) add(sSeed[i][0],sSeed[i][1],(sz[i]&&sz[i].n)||('Zone '+i),STARTER_BANDS[i]);
+ const S=RG.starter, C=RG.core, Rm=RG.rmax, nm=RG.names, sz=RG.starterZones||[], gr=RG.grind||[], T=[];
+ const add=(cx,cy,name,band,gi)=>{ T.push({cx,cy,name,band,gi:(gi==null?-1:gi),lvmin:99,lvmax:0,sx:0,sy:0,n:0,dlo:1e18,dhi:-1e18,dq:null}); };
+ for(let i=0;i<STARTER_ZONES;i++) add(STARTER_SEED[i][0],STARTER_SEED[i][1],(sz[i]&&sz[i].n)||('Zone '+i),STARTER_BANDS[i]);
  const iAng=[0.5,-0.7,0.95,-0.35,0.35];                                                            // main inner (bands 3-7)
  // nm is BAND-indexed, not clump-indexed: nm[3+i] stays 3+i even though these are now clumps 4-8.
  for(let i=0;i<5;i++){ const b=3+i, f=(b-2.4)/6; add(Math.round(C.cx+Math.cos(iAng[i])*Rm*f),Math.round(C.cy+Math.sin(iAng[i])*Rm*f),nm[3+i].n,b); }
  const gAng=[-0.8,-0.35,0.05,0.45,0.85];                                                           // grind clumps (band 8)
  for(let i=0;i<gr.length;i++){ add(Math.round(C.cx+Math.cos(gAng[i])*Rm*0.9),Math.round(C.cy+Math.sin(gAng[i])*Rm*0.9),gr[i],8,i); }
+ // Reach histogram per starter province, one bucket per tile of distance from the landing. Used
+ // below to cut each province's five levels by AREA rather than by raw distance -- a province is
+ // widest in its middle, so an even distance split leaves its first and last levels with almost
+ // no ground on them (Lv15 came out with 167 tiles of the 21,296 in its province).
+ const DQN=420, sHist=[]; for(let i=0;i<STARTER_ZONES;i++) sHist.push(new Int32Array(DQN));
  const W=R.w,H=R.h,grid=R.grid,zg=new Array(H);
  for(let ty=0;ty<H;ty++){ const row=grid[ty], zr=new Int8Array(W); zg[ty]=zr;
    for(let tx=0;tx<W;tx++){ const ch=row&&row[tx];
      if(ch==null||ch==='w'||ch==='b'){ zr[tx]=-1; continue; }
-     const lv=grvLvAtR(RG,tx,ty);
-     let bi;
-     if(_onStarter(RG,tx,ty)) bi=Math.max(0,Math.min(STARTER_ZONES-1,Math.floor((lv-1)/5)));
-     else {
-       // Nearest seed among the MAIN clumps only. Unrestricted, this loop also considered the
-       // starter seeds and handed 653 tiles of the starter island's east spill to The Verdant Belt
-       // -- Lv20 ground paying a main-island loot table, owned by a boss whose lair sat 130 tiles
-       // away, so nothing ever spawned there. The two islands partition separately now.
-       const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
-       let bd=1e18; bi=STARTER_ZONES;
-       for(let i=STARTER_ZONES;i<T.length;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
-     }
+     // Same warped-Voronoi rule on both islands -- only the candidate seeds differ. Restricting
+     // the search to one island's own seeds is what stops them bleeding into each other: with a
+     // single unrestricted search, 653 tiles of the starter island's east spill were claimed by
+     // The Verdant Belt -- Lv20 ground paying a main-island loot table, owned by a boss whose lair
+     // sat 130 tiles away, so nothing ever spawned there.
+     const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
+     const st=_onStarter(RG,tx,ty), i0=st?0:STARTER_ZONES, i1=st?STARTER_ZONES:T.length;
+     let bi=i0,bd=1e18;
+     for(let i=i0;i<i1;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
      zr[tx]=bi; const t=T[bi];
-     if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; t.sx+=tx; t.sy+=ty; t.n++; } }
+     t.sx+=tx; t.sy+=ty; t.n++;
+     if(st){ // how far this province reaches, so its five levels can be spread across it
+       const d=Math.hypot(tx-S.cx,ty-S.cy); if(d<t.dlo)t.dlo=d; if(d>t.dhi)t.dhi=d;
+       sHist[bi][Math.max(0,Math.min(DQN-1,Math.round(d)))]++; }
+     else { const lv=grvLvAtR(RG,tx,ty); if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; } } }
+ // A starter province's level range is its own by definition, not something measured off a curve.
+ // Set before _terr is published, because grvLvAtR reads lvmin and dq straight back out of it.
+ for(let i=0;i<STARTER_ZONES;i++){ const t=T[i]; t.lvmin=5*i+1; t.lvmax=5*i+5;
+   if(t.dhi<t.dlo){ t.dlo=0; t.dhi=1; }                                  // province with no land
+   // Quartile cuts by area: each of the five levels gets a fifth of the province's ground.
+   const h=sHist[i], tot=t.n||1, q=[0,0,0,0]; let acc=0, k=0;
+   for(let d=0;d<DQN && k<4;d++){ acc+=h[d];
+     while(k<4 && acc>=tot*(k+1)/5){ q[k]=d; k++; } }
+   for(;k<4;k++) q[k]=DQN;
+   t.dq=q; }
  RG._zg=zg; RG._terr=T; return T; }
 // tx/ty arrive as FLOAT tile coords from every entity-position caller (px/TILE), so they MUST be
 // floored — an unfloored _zg[222.3] is undefined, which silently returned -1 and made every such
