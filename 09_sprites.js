@@ -1990,11 +1990,16 @@ function render(){
     : null;
   // a worn cosmetic recolours the hero's own art (skinImg is identity when nothing is worn)
   const _skin=(typeof skinImg==='function')?skinImg:(x=>x);
+  // THE MOUNT DRAWS UNDER THE RIDER (17k_mounts.js). Before the hero so he sits ON it, and it
+  // hands back how far to lift him so he is not standing through its back. Zero when afoot, so
+  // the unmounted path is byte-for-byte what it was.
+  const _lift=(typeof mountDrawUnder==='function')
+    ? mountDrawUnder(player.x+lx, player.y+ly*0.5, bob, faceAng, moving, pn) : 0;
   if(_es){
     // real PixelLab art: 92px sprite, scaled down; already holds its weapon
-    blit(_skin(_es.img), player.x+lx, player.y-8+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
+    blit(_skin(_es.img), player.x+lx, player.y-8-_lift+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
   } else {
-    blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
+    blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16-_lift+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
   }
   // The gauntlet plays by the same rules as every other weapon: it draws in the hand like a sword
   // or a bow does. The old `wtype!=='fists'` exception existed because fists were not an item at

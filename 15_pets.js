@@ -621,18 +621,26 @@ function _petPaint(ov,u){
   const STATION = (_petTab==='incubator'||_petTab==='fusion');
   const title = _petTab==='incubator' ? 'THE INCUBATOR'
               : _petTab==='fusion'    ? 'THE FUSION ALTAR'
-              : _petTab==='feed'      ? 'THE FEEDING TROUGH' : 'YOUR COMPANION';
+              : _petTab==='feed'      ? 'THE FEEDING TROUGH'
+              : _petTab==='mount'     ? 'YOUR MOUNTS' : 'YOUR COMPANION';
   const sub   = _petTab==='incubator' ? 'warm the egg, and wait'
               : _petTab==='fusion'    ? 'two become one, and carry both'
-              : _petTab==='feed'      ? 'food is the only thing that makes them grow' : '';
+              : _petTab==='feed'      ? 'food is the only thing that makes them grow'
+              : _petTab==='mount'     ? 'a ride costs you your offence' : '';
+  // MOUNTS live in this panel too (user, 2026-07-27). A mount and a pet are the same kind of
+  // thing -- a creature you collect, kept on the account, one picked at a time, and they even drop
+  // in the same carrier -- so they read out of one panel rather than two. The body lives in
+  // 17k_mounts.js, which loads after this file, so it is called through a typeof guard.
   const body  = _petTab==='incubator' ? _petTabIncubator(u)
               : _petTab==='fusion'    ? _petTabFusion(u)
-              : _petTab==='feed'      ? _petTabFeed(u) : _petTabEquipped(u);
+              : _petTab==='feed'      ? _petTabFeed(u)
+              : _petTab==='mount'     ? ((typeof _petTabMounts==='function')?_petTabMounts(u):'')
+              : _petTabEquipped(u);
   // The station screens are ONE THING each -- you walked to a machine to use that machine, so
   // they do not offer a tab strip back to the others. The pocket panel does.
   let tabs='';
   if(!STATION){ tabs='<div class="embTabs">';
-    for(const [k,lbl] of [['pet','COMPANION'],['feed','FEED']])
+    for(const [k,lbl] of [['pet','COMPANION'],['feed','FEED'],['mount','MOUNTS']])
       tabs+='<button class="embTab'+(_petTab===k?' on':'')+'" data-tab="'+k+'">'+lbl+'</button>';
     tabs+='</div>'; }
   const foot='<div class="embBtns">'
@@ -662,6 +670,20 @@ function _petPaint(ov,u){
       if(petCanFuse(a,b)){ const np=petFuse(_petFuseA,uid); _petFuseA=null; if(np) _petSel=np.uid; } }
     rp(); });
   on('petFuseClear',()=>{ _petFuseA=null; rp(); });
+  // MOUNTS tab: tapping a chip saddles it, the hero button rides. Both repaint so the panel and
+  // the world never disagree about which mount is under you.
+  card.querySelectorAll('.embChip[data-mount]').forEach(c=>c.onclick=()=>{
+    const id=c.getAttribute('data-mount');
+    if(typeof setActiveMount==='function'){
+      const cur=(typeof activeMount==='function')?activeMount():null;
+      if(cur&&cur.id===id){ setActiveMount(null); if(typeof mounted==='function'&&mounted()) dismount('player'); }
+      else setActiveMount(id); }
+    if(typeof hudMounts==='function') hudMounts(); rp(); });
+  on('mountRide',()=>{ if(typeof mountToggle==='function') mountToggle();
+    if(typeof hudMounts==='function') hudMounts(); rp(); });
+  // a mount's <img> carries only its ARCHETYPE; the coat is a tint applied on a canvas, so the
+  // markup is stamped with data-mount-img and resolved once it is actually in the DOM
+  if(typeof mountPaintImgs==='function') mountPaintImgs(card);
   // feeding
   card.querySelectorAll('.embFood').forEach(b=>b.onclick=()=>{
     const t=+b.getAttribute('data-t'), n=+b.getAttribute('data-n')||1;

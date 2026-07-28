@@ -51,8 +51,13 @@ const _lootSackRelic = (typeof window!=='undefined') ? (()=>{ const i=new Image(
 // walk up to, placed on purpose, and it looks like nothing else in the game precisely so it can
 // never be mistaken for something a monster left behind.
 const _eventChest = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/event_chest.png'; return _track(i); })() : null;
+// THE CREATURE CARRIER (user, 2026-07-27). Mounts and pet eggs drop in their own sack, always, and
+// always together. It is a WICKER CARRIER rather than a sack precisely because it is the one drop
+// whose contents are alive -- the silhouette says "something is in here" the way no amount of
+// ornament on a sack could, and it can never be mistaken for the gear bag beside it.
+const _creatureSack = (typeof window!=='undefined') ? (()=>{ const i=new Image(); i.src='assets/ui/creature_sack.png'; return _track(i); })() : null;
 const _LOOT_SPR={_lootSack:_lootSack, _lootSackT9:_lootSackT9, _lootSackT11:_lootSackT11,
-                 _lootSackRelic:_lootSackRelic, _eventChest:_eventChest};
+                 _lootSackRelic:_lootSackRelic, _eventChest:_eventChest, _creatureSack:_creatureSack};
 function lootSackImg(name){ const im=_LOOT_SPR[name]; return (im&&im.naturalWidth)?im:_lootSack; }
 // THE FLOCK (03b_critters.js). 4 facings x 4 walk frames each, plus a standing pose. Loaded
 // through _track() like everything else, so the boot curtain waits on them and a missing file

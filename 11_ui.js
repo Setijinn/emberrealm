@@ -839,6 +839,26 @@ const LOOT_BANDS=[
 // carrying `band:-1` and its own sprite. It sits in `loots` so every prompt, panel and co-op path
 // already works on it; only the drawing and the roll differ.
 const CHEST_BAND={spr:'_eventChest', bound:true, life:900, label:'EVENT'};
+// THE CREATURE SACK (user, 2026-07-27). Mounts and pet eggs drop in their OWN sack, always, and
+// always TOGETHER — if a kill pays both, they share one carrier rather than leaving two.
+//
+// This is a DELIBERATE EXCEPTION TO ONE-SACK-PER-KILL, chosen after the rule was pointed out: a
+// kill that pays a mount or an egg now leaves the gear sack AND this one. The rule exists to stop
+// a boss carpeting the floor with single-item bags, and the exception is narrow enough not to undo
+// it — a creature drop is rare, it is capped at ONE extra sack however many creatures are inside,
+// and it is the one payout whose destination is not the satchel. Pet FOOD deliberately stays in
+// the gear sack: it drops on 5.5% of trash and 60% of bosses, so routing it here would put a
+// carrier on the ground after most kills and the sack would stop meaning anything.
+//
+// Band -2 (the chest is -1) so it opts out of bandOfTier the same way, keeps its own sprite, and
+// still sits in `loots` — every prompt, panel, pickup and co-op path already works on it.
+// ALWAYS BOUND: it is personal loot, so it carries `own` and netBroadcast filters it per
+// connection at send time, which is the existing guarantee rather than a new one.
+const CREATURE_BAND={spr:'_creatureSack', bound:true, life:600, label:'CREATURE'};
+function bagCreature(lb){ return !!(lb&&lb.creature); }
+// A creature item is one whose home is a collection, not the satchel. Kept as a predicate rather
+// than a list at each call site so adding a third kind later is one line here.
+function isCreatureItem(it){ return !!it && (it.k==='mount' || it.k==='egg'); }
 // Deliberately generous: this is the reward for an event, not a kill. A dungeon boss pays a relic
 // at 0.25%-1% (relicChanceFor); a chest pays one better than one time in three, and everything
 // else it holds is drawn from the top of the tier table rather than the middle.
@@ -881,7 +901,9 @@ function bandOfTier(t){ if(t===undefined||t<0) return 0;
 function bagBand(lb){ return (lb&&lb.band!==undefined)?lb.band:bandOfTier(bagTopTier(lb)); }
 // a chest is band -1: it has no place in the tier ladder, so every band lookup has to route to its
 // own record rather than indexing LOOT_BANDS[-1] and getting undefined
-function bagBandRec(lb){ return (lb&&lb.chest)?CHEST_BAND:(LOOT_BANDS[bagBand(lb)]||LOOT_BANDS[0]); }
+function bagBandRec(lb){ return (lb&&lb.chest)?CHEST_BAND
+  :(lb&&lb.creature)?CREATURE_BAND
+  :(LOOT_BANDS[bagBand(lb)]||LOOT_BANDS[0]); }
 function bagBound(lb){ return !!bagBandRec(lb).bound; }
 // walk-over vs INTERACT: public sacks auto-collect, soulbound sacks are worth pressing a button for.
 // Decided by BAND, not by ownership, so solo and host behave identically.
@@ -931,6 +953,9 @@ function awardItem(it,x,y){
     return true; }
   if(it.k==='egg'){ if(typeof giveEgg==='function') giveEgg(it.cond||0,it.cat);
     texts.push({x:px,y:py-14,txt:'+Pet Egg',col:'#ffd07a',life:1.6}); return true; }
+  // a mount goes straight to the Stable, for the same reason an egg goes to the incubator: its
+  // home is a collection on the account, and it must never eat a satchel slot
+  if(it.k==='mount'){ if(typeof mountTake==='function') mountTake(it); return true; }
   // the OLD relic form (k:'leg'), kept only so a sack minted before relics became real items still
   // hands you something. It converts on the spot into the item the relic is now.
   if(it.k==='leg'){ const R=relicDef(it.id); if(!R) return true;
@@ -979,6 +1004,8 @@ function takeLoot(item){
   else if(item.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG(); }
   else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
   else if(item.k==='food'){ if(typeof petFoodAdd==='function') petFoodAdd(item.t||0,item.n||1); }
+  else if(item.k==='egg'){ if(typeof giveEgg==='function') giveEgg(item.cond||0,item.cat); }
+  else if(item.k==='mount'){ if(typeof mountTake==='function') mountTake(item); }
   else if(ch.inv.length<20) ch.inv.push(item);
   if(typeof texts!=='undefined'&&typeof player!=='undefined')
     texts.push({x:player.x,y:player.y-30,txt:(typeof itemName==='function')?itemName(item):'loot',
@@ -1100,10 +1127,15 @@ function rollLoot(e){
  if(Math.random() < (e.type==='B'?0.10:0.006)) extra.push({k:'coin'});
  if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) extra.push(sc); }  // max-stat scrolls
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
- // a pet egg rides in the SAME sack as the gear now. It used to spawn beside it as a loose
- // object with its own drift timer, which quietly broke one-sack-per-kill: a boss left a sack
- // AND an egg, which is the carpeted floor that rule exists to prevent.
- if(typeof eggDropFor==='function'){ const eg=eggDropFor(e); if(eg) extra.push(eg); }
+ // CREATURES GET THEIR OWN SACK (user, 2026-07-27), and share it with each other. An egg used to
+ // ride with the gear; it goes in the carrier now, together with any mount, so the two things whose
+ // home is a collection rather than the satchel always arrive in the same place and never in the
+ // bag you are about to compare weapons out of. One carrier however many creatures are in it.
+ const creatures=[];
+ if(typeof eggDropFor==='function'){ const eg=eggDropFor(e); if(eg) creatures.push(eg); }
+ if(typeof mountDropFor==='function'){ const mt=mountDropFor(e); if(mt) creatures.push(mt); }
+ // pet FOOD stays with the gear on purpose -- see the note on CREATURE_BAND. It drops far too
+ // often to justify a carrier, and it is a consumable, not a creature.
  if(typeof petFoodDropFor==='function'){ const fd=petFoodDropFor(e); if(fd) extra.push(fd); }  // pet food
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
  // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
@@ -1117,6 +1149,9 @@ function rollLoot(e){
  const alone = roster.length<=1 &&
    (!roster[0] || !roster[0].id || (typeof netSelfId!=='function') || roster[0].id===netSelfId());
  const myCls=(typeof curChar==='function'&&curChar())?curChar().cls:null;
+ // The carrier is spawned for whoever the roll belongs to, BEFORE the gear sack, so a kill that
+ // pays both leaves them side by side rather than one under the other.
+ if(creatures.length) spawnCreatureSack(e, creatures, (roster[0]&&roster[0].id)||null);
  if(alone){
    const who=roster[0]||{id:null,fort:F};
    if(!who.cls) who.cls=myCls;
@@ -1129,6 +1164,21 @@ function rollLoot(e){
  rollPublicLoot(e,row,F,extra);              // in company: no class bias on loot anyone can take
  for(const who of roster){ rollSoulbound(e,row,who); rollRelic(e,who); }
 }
+// Place the creature carrier. Offset a little from the kill point so it never lands exactly under
+// the gear sack -- two sacks stacked at the same pixel read as one, and the whole reason this is a
+// separate bag is that you can see it is a separate bag. nearestStandable keeps it off a wall.
+function spawnCreatureSack(e,items,ownerId){
+  const lb=bagAt(e,items);
+  lb.creature=1; lb.band=-2; lb.life=CREATURE_BAND.life;
+  // ALWAYS personal. In solo `own` stays null (bagAt only tags when networked) and boundness comes
+  // from CREATURE_BAND instead, so the sack behaves identically alone and in company.
+  if(ownerId) lb.own=ownerId;
+  const a=Math.random()*6.283, d=26+Math.random()*10;
+  const nx=lb.x+Math.cos(a)*d, ny=lb.y+Math.sin(a)*d;
+  const sp=(typeof nearestStandable==='function')?nearestStandable(nx,ny,12,4):null;
+  if(sp){ lb.x=sp.x; lb.y=sp.y; }
+  loots.push(lb);
+  return lb; }
 const ABIL={
  ranger:{res:'Focus',col:'#7dc47a',rule:'hit',d:'Volley: 12-arrow fan'},
  pyro:{res:'Heat',col:'#ff7a3d',rule:'shot',d:'Detonate: fiery blast around you'},

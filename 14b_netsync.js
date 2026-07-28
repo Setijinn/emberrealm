@@ -217,11 +217,19 @@ function netBroadcast(){
     m.lt = mine ? ltPub.concat(mine) : ltPub;
     try{ c.send(m); }catch(err){} }
 }
-// bag -> one int: rarity(3) | band(2) | count(3) | topTier(4) | kind of the headline piece(3)
-// 3 bits, so 8 slots. 'pot' stays at 4 even though potions no longer drop -- the index is packed
-// into the bag word and re-numbering would make a peer on an older build read every coin as a
-// tonic. 'egg' takes the one free slot rather than displacing anything.
-const NKIND=['wpn','arm','helm','ring','pot','coin','scroll','egg'];
+// bag -> one int: rarity(3) | band(2) | count(3) | topTier(4) | kind of the headline piece(4)
+//
+// THE KIND FIELD WAS 3 BITS AND FULL. 'pot' stays at 4 even though potions no longer drop -- the
+// index is packed into the bag word and re-numbering would make a peer on an older build read
+// every coin as a tonic. 'egg' took the last free slot. 'mount' needs a ninth, so the field is
+// WIDENED to 4 bits (12-15) rather than anything being renumbered; bits 16+ of the word were
+// unused, so nothing else moved.
+//
+// What an OLDER PEER does with a mount sack: it masks (f>>12)&7, reads 8 as 0, and draws a weapon
+// sack. That is the whole cost, and it is cosmetic -- netUnpackBag builds a DISPLAY-ONLY ghost bag
+// and only the host's 'G' grant ever carries real contents, so a peer cannot take, duplicate or
+// lose anything by mis-reading the kind. Append only, exactly as before: never renumber.
+const NKIND=['wpn','arm','helm','ring','pot','coin','scroll','egg','mount'];
 function netPackBag(b){
   const its=(typeof bagItems==='function')?bagItems(b):(b.item?[b.item]:[]);
   const head=its[0]||{};
@@ -230,14 +238,19 @@ function netPackBag(b){
   const r=Math.max(0,Math.min(7,(typeof bagTopRar==='function')?bagTopRar(b):(b.rar|0)));
   const bd=Math.max(0,Math.min(3,(typeof bagBand==='function')?bagBand(b):0));
   const n=Math.max(0,Math.min(7,its.length));
-  return r | (bd<<3) | (n<<5) | (t<<8) | (k<<12);
+  return r | (bd<<3) | (n<<5) | (t<<8) | (k<<12);   // k is 4 bits now: 12-15
 }
 // The client rebuilds a DISPLAY-ONLY bag. `ghost` marks every item here as unawardable: only the
 // host's grant carries real contents, and nothing must ever be able to put one of these in a bag.
 function netUnpackBag(f){
-  const r=f&7, bd=(f>>3)&3, n=(f>>5)&7, t=(f>>8)&15, k=NKIND[(f>>12)&7]||'wpn';
+  const r=f&7, bd=(f>>3)&3, n=(f>>5)&7, t=(f>>8)&15, k=NKIND[(f>>12)&15]||'wpn';
   const items=[]; for(let i=0;i<Math.max(1,n);i++) items.push({k:(i?'arm':k), t:t, rar:i?0:r, ghost:true});
-  return {items:items, rar:r, band:bd, top:t};
+  // THE BAND FIELD IS 2 BITS AND ALSO FULL (LOOT_BANDS has exactly four rows), so "this is a
+  // creature carrier" cannot travel as a band the way the sprite choice normally does. It rides on
+  // the KIND instead, which is the one field that can still say it: a headline mount or egg IS the
+  // carrier, by definition, since those two are the only things that ever go in one.
+  const creature=(k==='mount'||k==='egg')?1:0;
+  return {items:items, rar:r, band:bd, top:t, creature:creature};
 }
 
 // ---- client: adopt the host's world ----
