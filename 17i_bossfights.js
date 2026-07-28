@@ -234,7 +234,12 @@ _F('ow3',{ phases:[0.66,0.33], anchor:[false,true,true],
           const la=Math.hypot(ax,ay)||1, lb=Math.hypot(bx,by)||1;
           const cos=(ax*bx+ay*by)/(la*lb);
           if(cos>0.955 && la<lb+TILE) covered=true; }
-        if(!covered){ _hurt(mechDmg(e,1.15)); if(typeof addShake==='function') addShake(14); }
+        // THE RING IS THE PROMISE. There was no distance test here at all, so the slam hit from
+        // anywhere on the map while both the draw and the fx ring depicted a 7-tile shockwave --
+        // unavoidable damage from outside the only tell the fight gives you.
+        const _d=Math.hypot(p.x-e.x,p.y-e.y);
+        if(_d>TILE*7){ /* outside the shockwave entirely */ }
+        else if(!covered){ _hurt(mechDmg(e,1.15)); if(typeof addShake==='function') addShake(14); }
         else if(typeof msg==='function') msg('BLOCKED','');
         // each slam shatters one pillar, so cover runs out
         const alive=M.pillars.filter(q=>q.hp>0);
@@ -280,7 +285,9 @@ _F('dn3',{ phases:[0.70,0.42,0.16], anchor:[false,true,true,true],
           const ax=q.x-e.x, ay=q.y-e.y, bx=p.x-e.x, by=p.y-e.y;
           const la=Math.hypot(ax,ay)||1, lb=Math.hypot(bx,by)||1;
           if((ax*bx+ay*by)/(la*lb)>0.955 && la<lb+TILE) covered=true; }
-        if(!covered){ _hurt(mechDmg(e,1.25)); if(typeof addShake==='function') addShake(15); }
+        // same missing range test as ow3; the fx ring below promises 7.5 tiles
+        const _d=Math.hypot(p.x-e.x,p.y-e.y);
+        if(_d<=TILE*7.5 && !covered){ _hurt(mechDmg(e,1.25)); if(typeof addShake==='function') addShake(15); }
         const alive=M.pillars.filter(q=>q.hp>0);
         if(alive.length) alive[Math.floor(Math.random()*alive.length)].hp--;
         if(typeof fx!=='undefined') fx.push({t:'ring',x:e.x,y:e.y,r:TILE*7.5,life:0.45,col:'#c9b08a'}); } }

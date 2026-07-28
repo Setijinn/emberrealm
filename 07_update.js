@@ -275,6 +275,12 @@ function damagePlayer(raw){
   // if that ever needs to soften.
   if(typeof flyUntouchable==='function' && flyUntouchable()) return 0;
   let hit=raw*playerDmgTaken();   // cursed players take more, same as foes
+  // ARMOUR BELONGS IN THE FUNNEL. player.dr used to be applied by the CALLER, and only two of the
+  // thirteen callers did it -- contact and enemy shots. Every boss mechanic (_hurt, the beam/safe/
+  // mark punishes, the co-op hazard paths) passed raw damage, so a fully DEF-specced hero took
+  // exactly as much from a boss beam as a naked Lv1. The comment above already claimed everything
+  // funnels through here; now the mitigation does too.
+  hit*=(1-(player.dr||0));
   if(player.moveDr&&player._moving) hit*=(1-player.moveDr);
   if(typeof dynDr==='function') hit*=(1-dynDr());          // conditional perks (below X% HP, ...)
   hit=Math.max(1,Math.round(hit));
@@ -575,7 +581,7 @@ function update(dt){
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt); }
       if(dd<e.r+player.r+POSS_GRAB && typeof possessPlayer==='function') possessPlayer(e);
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
-      if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e)*(1-(player.dr||0)));
+      if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e));
         if(e.inf) playerStatus(e.inf.id,e.inf.dur,0);        // what this creature leaves on you
         player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
         const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
@@ -827,7 +833,7 @@ function update(dt){
     if(!_netCl){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
       if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; } }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
-      damagePlayer((s.bd||8)*(1-(player.dr||0)));
+      damagePlayer(s.bd||8);
       // the shot carries whatever its caster inflicts — a Sawgrass Spitter's bolt poisons you the
       // same way your poison bolts poison it. Stamped at eFire from the species.
       if(s.inf) playerStatus(s.inf.id,s.inf.dur,0);
@@ -1087,7 +1093,11 @@ function update(dt){
     // The bridge is the point of no return.
     const _perma=(typeof isHardcore==='function' && isHardcore(rpg)) &&
       (typeof onMainIsland!=='function' || onMainIsland(player.x,player.y));
-    if(_perma){ permaDeath(); return; }
+    // A MOUNT MUST NOT OUTLIVE ITS RIDER. mountClear lived below this line, so the permadeath
+    // path skipped it: the next Lv1 hero spawned already in the saddle and airborne, and
+    // flyUntouchable() made damagePlayer return 0 -- immortal, and unable to attack until they
+    // happened to press V. Same reasoning as the soft-death clear below; it just has to run first.
+    if(_perma){ if(typeof mountClear==='function') mountClear(); permaDeath(); return; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
     // You do not wake up in the Hearth still in the saddle. mountClear rather than dismount,
@@ -1098,5 +1108,4 @@ function update(dt){
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0;
     clearPlayerStatuses();
     const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE); spawnPet(); }
-  document.getElementById('hpTxt').textContent='HP '+Math.ceil(player.hp);
 }

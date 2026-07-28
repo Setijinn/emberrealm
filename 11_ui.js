@@ -2,11 +2,35 @@
 let inGame=false; let isAdmin=false;
 let runLive=false, runChar=null;   // a run is in progress for THIS character -> ☰ offers RESUME
 const memStore={};
+let _lsFull=false;      // latched so a full disk warns once, not every write
 const LS={
  get:(k,d)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):(k in memStore?memStore[k]:d);}catch(e){return k in memStore?memStore[k]:d;}},
- set:(k,v)=>{memStore[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+ // A FAILED WRITE USED TO BE INVISIBLE. This swallowed the quota error while memStore kept
+ // returning the value, so the session looked perfectly healthy and the player lost the lot on
+ // tab close. It still must not throw -- a save failure cannot be allowed to break a run -- but
+ // it says so now, once, loudly enough to act on.
+ set:(k,v)=>{memStore[k]=v;
+   try{ localStorage.setItem(k,JSON.stringify(v)); if(_lsFull){ _lsFull=false; } }
+   catch(e){ if(!_lsFull){ _lsFull=true;
+     try{ console.warn('localStorage write failed ('+k+'): '+(e&&e.name||e)); }catch(_){}
+     if(typeof msg==='function') msg('SAVING FAILED','storage is full — progress is not being kept');
+   } }
+ }
 };
 let users=LS.get('er-users',{});
+// EVERYTHING A CHARACTER OWNS OUTSIDE er-users. Nothing in this game ever called removeItem, so
+// every hero who died left their fog-of-war PNG behind forever -- and in a permadeath game heroes
+// churn by design. Enough of them filled the quota, at which point every save silently failed.
+// Any future per-character key belongs in this list.
+function dropCharData(u,ch){
+  if(!ch) return;
+  // Prefix built the same way _fogSlot builds the key (09b_minimap.js): the user segment is
+  // curUser, the string, not any field on the user object. Matched deliberately -- if the two
+  // ever disagree the delete silently misses and the leak comes straight back.
+  const un=curUser||'u', cn=ch.name||'c', pre='er-fog:'+un+':'+cn+':';
+  try{ for(let i=localStorage.length-1;i>=0;i--){ const k=localStorage.key(i);
+    if(k && k.indexOf(pre)===0) localStorage.removeItem(k); } }catch(e){}
+}
 let curUser=null;
 
 // ---- teleport-pillar fast-travel ----
@@ -1497,7 +1521,9 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
    d.onclick=()=>{ invSelIdx=-1;
      $s('invSel').innerHTML='<b style="color:#ffd07a">'+COIN_NAMES[ci]+' Fortune Coin</b> ×'+cnt
        +'<div class="istats">Carry coins to boost loot — total <span style="color:#ffc94d">+'+coinFortune()+' Fortune</span>. 20 '+COIN_NAMES[ci]+' merge into 1 '+(COIN_NAMES[ci+1]||'—')+'.</div>';
-     $s('invEquip').style.display='none'; $s('invSell').style.display='none'; $s('invDrop').style.display='none'; };
+     // #invSell was removed from index.html; querying it returned null and threw here on every
+     // Fortune Coin click, which also left #invDrop visible with invSelIdx === -1.
+     $s('invEquip').style.display='none'; $s('invDrop').style.display='none'; };
    g.appendChild(d); });
  ch.inv.forEach((it,i)=>{ const d=document.createElement('div'); d.className='islot'+(i===invSelIdx?' sel':'');
   if(it.rar) d.style.borderColor=RAR_COL[it.rar];
@@ -1939,7 +1965,8 @@ function openFallen(){ const u=users[curUser]; if(!u) return; migrate(u);
   paintClassIcon(d.querySelector('.cicCv'), ch.cls);
   d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')
       && confirm('Remove '+ch.name+' from the Hall? Their record is lost.')){
-    u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0; LS.set('er-users',users); openFallen(); } };
+    dropCharData(u,ch); u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0;
+    LS.set('er-users',users); openFallen(); } };
   box.appendChild(d); }
  show('fallenScr'); }
 function usePotion(){ if(!rpg||rpg.pots<=0||player.hp>=player.maxhp) return;
@@ -2196,7 +2223,7 @@ function openChar(){
   paintClassIcon(d.querySelector('.cicCv'), ch.cls);
   d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')){
     if(confirm(gone?('Remove '+ch.name+' from the Hall? Their record is lost.'):('Delete '+ch.name+' forever?'))){
-     u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0;
+     dropCharData(u,ch); u.chars.splice(i,1); if(u.cur>=u.chars.length)u.cur=0;
      LS.set('er-users',users); openChar(); }
     return; }
    if(gone){ msg&&msg(ch.name+' is gone','their ember cannot be rekindled'); return; }   // dead heroes are not playable
@@ -2233,10 +2260,13 @@ function play(){
  player.kills=0; player.inv=1;
  res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0; if(typeof clearPlayerStatuses==='function') clearPlayerStatuses();
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
+ // A ward belongs to the hero who raised it. recalcStats only initialises shield when it is
+ // undefined, so a Guardian who died permanently under a 90%-maxhp ward handed it to the next
+ // Lv1 -- a shield bigger than their entire HP pool, decaying against the NEW maxhp.
+ player.shield=0;
  player.acd={}; armedSlot=0; if(typeof ensureLoadout==='function') ensureLoadout();
  if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);   // backfill earned perk points
  spawnPet(); if(typeof spawnActivePet==='function') spawnActivePet();
- document.getElementById('killTxt').textContent='Kills 0';
  hudRPG();
  hideAll(); showGameHud(); inGame=true;
  runLive=true; runChar=ch;                       // a run is now in progress (enables RESUME)

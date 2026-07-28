@@ -97,7 +97,12 @@ function drawBossCompass(){
     ctx.fillStyle=t.alive?'#ffd07a':'#6a6472';
     ctx.beginPath(); ctx.moveTo(sz*0.34,0); ctx.lineTo(-sz*0.20,sz*0.24); ctx.lineTo(-sz*0.20,-sz*0.24);
     ctx.closePath(); ctx.fill();
-    ctx.setTransform(1,0,0,1,0,0);
+    // BACK TO THE CANVAS BASE, NOT TO IDENTITY. 01_constants.js establishes
+    // setTransform(DPR,0,0,DPR,0,0) as this canvas's identity. Resetting to a true 1:1 matrix
+    // drew everything below at 1/DPR scale AND 1/DPR position -- correct on a non-retina desktop,
+    // wrong on every phone this PWA targets. The arrow above is drawn before the reset, which is
+    // why it looked right while the plate floated half-size in the wrong place.
+    ctx.setTransform(DPR,0,0,DPR,0,0);
     // the portrait plate
     ctx.globalAlpha=a;
     const GB=(typeof GBOSS!=='undefined')?GBOSS[t.b]:null;

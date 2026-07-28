@@ -69,6 +69,7 @@ function hazAdd(e,x,y,opts){
   const M=mkState(e), P=bossPace(e), o=opts||{};
   M.haz.push({ x:x, y:y, r:o.r||TILE*1.1, r0:o.r||TILE*1.1,
     ph:'tele', t:(o.tele!==undefined?o.tele:1.1)*P.tele,
+    t0:(o.tele!==undefined?o.tele:1.1)*P.tele,      // the full telegraph, so hazDraw can show progress
     live:(o.live!==undefined?o.live:4.0), dmg:o.dmg!==undefined?o.dmg:0.55,
     tick:o.tick||0.4, ct:0, col:o.col||'#7a3a2a', grow:o.grow||0,
     follow:o.follow||0, inflict:o.inflict||null });
@@ -97,13 +98,22 @@ function hazDraw(e){
   for(const h of M.haz){
     ctx.save();
     if(h.ph==='tele'){
-      // a dashed, closing ring: you can read both WHERE and WHEN from it
-      const k=1-Math.max(0,h.t)/Math.max(0.001,h.t+0.0001);
+      // A DASHED, CLOSING RING: you read WHERE from the outline and WHEN from the ring closing
+      // into it. This was written as `k = 1 - t/(t+0.0001)`, which is ~0.0002 for every value of
+      // t -- and k was then never used, so nothing ever closed. h.t counts DOWN from h.t0, so
+      // progress is 1 - t/t0 and the closing ring sweeps from the outside in to the real radius.
+      // This is the tell every one of the 27 fights leans on; without it you can read where a
+      // hazard is and never when it lands.
+      const k=Math.max(0,Math.min(1, 1-Math.max(0,h.t)/Math.max(0.001,h.t0||h.t||0.001)));
       ctx.globalAlpha=0.55+0.35*Math.sin(t*14);
       ctx.strokeStyle=h.col; ctx.lineWidth=2; ctx.setLineDash([6,5]); ctx.lineDashOffset=-t*22;
       ctx.beginPath(); ctx.arc(h.x,h.y,h.r,0,6.29); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.globalAlpha=0.14; ctx.fillStyle=h.col;
+      // the incoming edge: starts well outside and lands exactly on h.r as the hazard goes live
+      ctx.globalAlpha=0.75; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(h.x,h.y,h.r*(2.15-1.15*k),0,6.29); ctx.stroke();
+      ctx.lineWidth=2;
+      ctx.globalAlpha=0.14*k+0.06; ctx.fillStyle=h.col;
       ctx.beginPath(); ctx.arc(h.x,h.y,h.r,0,6.29); ctx.fill();
     } else {
       const fade=Math.min(1,h.t/0.6);

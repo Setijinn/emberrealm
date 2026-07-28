@@ -1401,6 +1401,18 @@ const MOBSPEC_MORE=[
   d:{c:[{n:'Sanctum Colossus',inf:{id:'burn',dur:6.5},hp:2.75,spd:0.78,tch:1.75,r:1.38, w:{sentinel:50,hunter:40,ambusher:10},
         sig:{sway:0.08,swayF:0.6,commit:120,harry:0,lunge:{min:140,max:320,mul:2.6,dur:0.48,cd:3.2}}}],
      s:[{n:'Rift Cantor',  inf:{id:'curse',dur:7.0},  hp:1.34,spd:0.92,bd:1.48,r:1.04, rof:0.76, w:{skirmisher:50,sentinel:32,hunter:18}}]}},
+ // 9 THE CAIRNWORKS (Lv11-15) -- the quarry rise. Added when band 9 was created; without a row
+ // here the merge loop's `if(!A||!B) continue` skipped it in silence and the zone shipped with
+ // 3 chasers / 2 shooters against 7+/7+ everywhere else. Quarry crews and the stone itself.
+ {c:[{n:'Sledge Drudge',  inf:{id:'weak',dur:3.8},  hp:1.16,spd:0.80,tch:1.02,r:1.02, w:{sentinel:54,roamer:28,hunter:18},
+      sig:{sway:0.20,swayF:1.0,harry:0,lunge:null,pace:66}},
+     {n:'Scree Scuttler', inf:null,                 hp:0.66,spd:1.16,tch:0.72,r:0.78, w:{pack:56,roamer:28,hunter:16},
+      sig:{sway:0.78,swayF:4.1,commit:32,harry:0,lunge:null,flank:110,collapse:148}}],
+  s:[{n:'Grit Flinger',   inf:{id:'bleed',dur:3.0}, hp:0.94,spd:0.90,bd:0.94,r:0.96, w:{skirmisher:54,sentinel:28,roamer:18}},
+     {n:'Chalkline Caller',inf:{id:'weak',dur:3.6}, hp:1.02,spd:0.84,bd:0.98,r:1.00, rof:1.12, w:{sentinel:58,skirmisher:26,roamer:16}}],
+  d:{c:[{n:'Quarry Revenant',inf:{id:'chill',dur:3.4},hp:1.26,spd:0.88,tch:1.08,r:1.04, w:{ambusher:48,sentinel:32,roamer:20},
+        sig:{sway:0.24,swayF:1.1,harry:0,lunge:null,breakoff:1.8,rehide:250}}],
+     s:[{n:'Dust Cantor', inf:{id:'curse',dur:4.6},  hp:1.10,spd:0.86,bd:1.04,r:1.00, rof:1.02, w:{sentinel:54,skirmisher:30,roamer:16}}]}},
 ];
 for(let _b=0;_b<MOBSPEC.length;_b++){
   const A=MOBSPEC[_b], B=MOBSPEC_MORE[_b]; if(!A||!B) continue;
@@ -1586,6 +1598,15 @@ const MOBSPEC_MORE2=[
         sig:{sway:0.56,swayF:3.2,harry:82,flank:152,collapse:202,lunge:{min:100,max:270,mul:3.0,dur:0.28,cd:1.5}}}],
      s:[{n:'Heart-Ash Cantor',inf:{id:'curse',dur:7.5},hp:1.38,spd:0.88,bd:1.50,r:1.06, rof:0.78, w:{skirmisher:50,sentinel:32,hunter:18}},
         {n:'Riftglass Adept',inf:{id:'shock',dur:3.4},hp:1.28,spd:0.98,bd:1.42,r:1.02, rof:0.88, w:{skirmisher:58,sentinel:26,hunter:16}}]}},
+ // 9 THE CAIRNWORKS (Lv11-15) -- the quarry rise. Added when band 9 was created; without a row
+ // here the merge loop's `if(!A||!B) continue` skipped it in silence and the zone shipped with
+ // 3 chasers / 2 shooters against 7+/7+ everywhere else. Quarry crews and the stone itself.
+ {c:[{n:'Bank Collapser', inf:{id:'stun',dur:0.7},  hp:1.44,spd:0.72,tch:1.16,r:1.10, w:{sentinel:62,hunter:24,ambusher:14},
+      sig:{sway:0.12,swayF:0.7,harry:0,lunge:null,pace:58,leash:320}}],
+  s:[{n:'Plumbline Seer', inf:{id:'curse',dur:4.2}, hp:1.00,spd:0.92,bd:1.00,r:0.98, rof:0.94, w:{skirmisher:56,sentinel:28,roamer:16}}],
+  d:{c:[{n:'Toolmarked Thing',inf:{id:'bleed',dur:4.0},hp:1.20,spd:0.96,tch:1.06,r:1.00, w:{ambusher:52,pack:28,hunter:20},
+        sig:{sway:0.52,swayF:2.6,harry:60,lunge:{min:92,max:230,mul:2.6,dur:0.26,cd:2.0}}}],
+     s:[{n:'Kiln Whisperer',inf:{id:'weak',dur:4.4}, hp:1.08,spd:0.88,bd:1.02,r:1.00, rof:1.06, w:{sentinel:52,skirmisher:32,roamer:16}}]}},
 ];
 for(let _b=0;_b<MOBSPEC.length;_b++){
   const A=MOBSPEC[_b], B=MOBSPEC_MORE2[_b]; if(!A||!B) continue;
@@ -1700,6 +1721,15 @@ const MOBSPEC_NIGHT=[
   s:[{n:'The Rift That Opens', inf:{id:'curse',dur:7.0}, hp:1.36,spd:0.90,bd:1.46,r:1.04, w:{skirmisher:50,sentinel:32,hunter:18}},
      {n:'Herald Flayed',     inf:{id:'burn',dur:6.5},  hp:1.42,spd:0.86,bd:1.48,r:1.08, rof:0.82, w:{skirmisher:48,sentinel:34,hunter:18}},
      {n:'Cantor of the End',inf:{id:'curse',dur:7.5}, hp:1.30,spd:0.94,bd:1.40,r:1.02, rof:0.88, w:{skirmisher:54,sentinel:28,hunter:18}}]},
+ // 9 THE CAIRNWORKS (Lv11-15) -- the quarry rise. Added when band 9 was created; without a row
+ // here the merge loop's `if(!A||!B) continue` skipped it in silence and the zone shipped with
+ // 3 chasers / 2 shooters against 7+/7+ everywhere else. Quarry crews and the stone itself.
+ {c:[{n:'The Unmeasured',  inf:{id:'curse',dur:4.8}, hp:1.30,spd:0.92,tch:1.08,r:1.04, w:{ambusher:50,sentinel:30,roamer:20},
+      sig:{sway:0.26,swayF:1.2,harry:0,lunge:null,breakoff:1.7,rehide:240}},
+     {n:'Cut Wrong',       inf:{id:'bleed',dur:4.2}, hp:1.14,spd:1.02,tch:1.04,r:0.98, w:{ambusher:54,pack:28,hunter:18},
+      sig:{sway:0.54,swayF:2.7,harry:62,lunge:{min:94,max:236,mul:2.7,dur:0.27,cd:1.9}}}],
+  s:[{n:'The Tally Wrong', inf:{id:'curse',dur:5.0}, hp:1.06,spd:0.90,bd:1.06,r:1.00, rof:0.98, w:{skirmisher:54,sentinel:30,roamer:16}},
+     {n:'Chisel Choir',    inf:{id:'stun',dur:0.7},  hp:1.14,spd:0.82,bd:1.10,r:1.04, rof:1.16, w:{sentinel:60,skirmisher:26,roamer:14}}]},
 ];
 for(let _b=0;_b<MOBSPEC.length;_b++){
   const A=MOBSPEC[_b], B=MOBSPEC_NIGHT[_b]; if(!A||!B) continue;
@@ -2044,6 +2074,21 @@ function makeElite(e,sp){
 // degrades to exactly today's behaviour rather than to a blank.
 const MOB_ARCH={
   // per-dungeon rosters
+  // The Cairnworks band-9 expansion rows (MOBSPEC_MORE / _MORE2 / _NIGHT)
+  'Sledge Drudge':'golem',
+  'Scree Scuttler':'crab',
+  'Grit Flinger':'slinger',
+  'Chalkline Caller':'shaman',
+  'Quarry Revenant':'husk',
+  'Dust Cantor':'acolyte',
+  'Bank Collapser':'golem',
+  'Plumbline Seer':'wisp',
+  'Toolmarked Thing':'crab',
+  'Kiln Whisperer':'shaman',
+  'The Unmeasured':'husk',
+  'Cut Wrong':'crab',
+  'The Tally Wrong':'acolyte',
+  'Chisel Choir':'wisp',
   // The Cairnworks, terrain band 9 (overworld + its dungeon fallback pool)
   'Grit Crawler':'crab',
   'Spall Skitter':'crab',
@@ -2612,7 +2657,10 @@ function enterRoom(key, px, py){
   if(!curRoom.big){ for(const sp of curRoom.spawns){ if(!sp.dead||sp.dead<=rnow) enemies.push(makeEnemy(sp)); } }
   document.getElementById('roomTxt').textContent=curRoom.name;
   // entering a room is the most frequent banner in the game and the least newsworthy of them
-  msg(curRoom.name, curRoom.town?'the hearth never dies':(curRoom.band?'a hunting ground for Lv '+curRoom.band:''), 'quiet');
+  // curRoom.band is a DISPLAY RANGE on the old rooms ('141-150') and the sentinel 'boss' on a
+  // dungeon -- truthy either way, so every dungeon entry announced 'a hunting ground for Lv boss'.
+  const _bandTxt=(curRoom.band&&curRoom.band!=='boss')?('a hunting ground for Lv '+curRoom.band):'';
+  msg(curRoom.name, curRoom.town?'the hearth never dies':_bandTxt, 'quiet');
 }
 // The banner used to CLOBBER: innerHTML= plus one shared clearTimeout, so two calls inside the same
 // second meant only the second was ever read. That is not a hypothetical -- boss phase barks were
@@ -2624,7 +2672,7 @@ function enterRoom(key, px, py){
 // even at the same duration. The gap between lines matters as much as the hold -- back-to-back
 // banners with no breath between them are what made a busy moment strobe.
 const MSG_HOLD=1500, MSG_QUIET_HOLD=950, MSG_GAP=260;
-let _msgQ=[], _msgT=0, _msgCur=null;
+let _msgQ=[], _msgT=0, _msgCur=null, _msgGap=0;
 // kind: 'alert' (default, the full banner) or 'quiet' (routine notice -- smaller, dimmer, shorter).
 // Opt-in per call site, so none of the 101 existing calls change behaviour.
 function msg(t,sub='',kind){
@@ -2633,7 +2681,7 @@ function msg(t,sub='',kind){
   if(_msgQ.length && _msgQ[_msgQ.length-1].html===html) return;
   if(_msgQ.length>3) _msgQ.shift();                // never hoard: the oldest unseen line loses
   _msgQ.push({html:html, quiet:(kind==='quiet')});
-  if(!_msgCur) _msgPump();
+  if(!_msgCur && !_msgGap) _msgPump();
 }
 function _msgPump(){
   const m=document.getElementById('msg'); if(!m) return;
@@ -2645,7 +2693,11 @@ function _msgPump(){
   clearTimeout(_msgT);
   _msgT=setTimeout(()=>{
     m.classList.remove('show'); _msgCur=null;
-    if(_msgQ.length) setTimeout(_msgPump,MSG_GAP);
+    // THE GAP IS STILL THE QUEUE'S TURN. _msgCur is null across this window, so a msg() landing
+    // inside it saw an idle queue and pumped immediately -- and then the timeout below pumped
+    // again, clearTimeout-ing the hold of the banner it had just put up. The middle line of a
+    // burst flashed for a fraction of its hold, which is the exact bug this queue exists to fix.
+    if(_msgQ.length){ _msgGap=1; setTimeout(()=>{ _msgGap=0; _msgPump(); },MSG_GAP); }
   }, it.quiet?MSG_QUIET_HOLD:MSG_HOLD);
 }
 
@@ -2683,7 +2735,7 @@ function startArena(){ arenaActive=true; arenaWave=0; arenaCd=1.6; enemies=[]; e
   msg('THE PROVING GROUNDS', (rpg&&rpg.arenaBest)?'best: wave '+rpg.arenaBest:'survive as long as you can'); }
 function arenaSpawnWave(){ const a=rooms['ARENA']; if(!a) return;
   arenaWave++;
-  a.lv=Math.min(LV_CAP, 2+arenaWave*1.3);   // arena scales to the Lv50 cap over its waves
+  a.lv=Math.round(Math.min(LV_CAP, 2+arenaWave*1.3));   // every other level source rounds; this one printed 'Lv5.8999999999999995'   // arena scales to the Lv50 cap over its waves
   const boss=(arenaWave%5===0);
   const n=boss?1:Math.min(22, 3+Math.floor(arenaWave*1.6));
   for(let i=0;i<n;i++){

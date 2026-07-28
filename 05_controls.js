@@ -121,6 +121,14 @@ addEventListener('keydown',e=>{
   else if(k==='v'){ if(typeof mountToggle==='function') mountToggle(); }
 });
 addEventListener('keyup',e=>{ if(e.key) keys[e.key.toLowerCase()]=false; });
+// A KEYUP YOU NEVER RECEIVE LEAVES YOU WALKING. Alt-tab, a notification or an OS overlay while
+// holding a direction sends the keyup to the window that took focus, so `keys` kept that key true
+// and keyMove() returned a permanent vector -- the hero walked into a wall until you pressed and
+// released the key again. Under permadeath that is run-ending, so drop everything held on any
+// loss of focus and let the player re-press.
+function _releaseAllKeys(){ for(const k in keys) keys[k]=false; }
+addEventListener('blur', _releaseAllKeys);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) _releaseAllKeys(); });
 // normalized WASD/arrow vector, consumed by update() when the touch stick is idle.
 // Screen-relative: with the camera rotated, "up" still moves toward the top of the screen.
 function keyMove(){ let x=0,y=0;
