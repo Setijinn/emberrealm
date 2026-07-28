@@ -135,6 +135,10 @@ const MOUNT_ARCH = {
   roc:      {n:'roc',       spr:'arch_roc',      air:1},
   moth:     {n:'moth',      spr:'arch_moth',     air:1},
   skywyrm:  {n:'sky wyrm',  spr:'arch_skywyrm',  air:1},
+  // ---- THE DRAGONS. Endgame, and deliberately only two drawings: a dragon has to stay rare
+  // enough to mean something, and eighteen dragon variants would make it wallpaper. ----
+  dragon:   {n:'dragon',    spr:'arch_dragon',   air:1},
+  infernal: {n:'infernal',  spr:'arch_infernal', air:1},
 };
 // ---- the coats. A tint plus the word that names it. Colours are the game's existing families
 // (PET_CATS, MOBTINT) so a Frost mount reads frost the way everything else frost does. ----
@@ -307,6 +311,33 @@ const _FLYERS = [
   ['pegvoid',  'The Pale Rider',    4,'pegasus','void',    1.77],
   ['wyvdawn',  'Dawnscale',         4,'wyvern', 'dawn',    1.71, 0.33],
 ];
+// ---- THE DRAGONS. The apex of the collection, and the only mounts allowed above the ground
+// roster's 1.84 ceiling. That exception is earned: they sit at the bottom of the drop table, they
+// are Legendary only, and there are two drawings rather than eighteen precisely so a dragon stays
+// rare enough to mean something. Themed on the same coats as everything else, so a frost dragon
+// reads frost the way every frost thing in this game reads frost.
+//
+// `dragon` is the ancient horned wyrm; `infernal` is the molten one with lava between its plates,
+// so the coats land differently on each — an ash INFERNAL is a cooling volcano, an ash DRAGON is
+// a grey old monster.
+const _DRAGONS = [
+  ['drgember',  'Cinderwyrm',            4,'dragon',  'ember',   1.88],
+  ['drgfrost',  'Rimefang',              4,'dragon',  'frost',   1.85, 0.36],
+  ['drgstorm',  'Tempest Wyrm',          4,'dragon',  'storm',   1.90],
+  ['drgvoid',   'The Rift Devourer',     4,'dragon',  'void',    1.92],
+  ['drgblood',  'The Red Ruin',          4,'dragon',  'blood',   1.89],
+  ['drgdawn',   'Aurelian, the Gilded',  4,'dragon',  'dawn',    1.84, 0.38],
+  ['drgstone',  'The Mountain Father',   4,'dragon',  'stone',   1.82, 0.42],
+  ['drgverd',   'The Jade Wyrm',         4,'dragon',  'verdant', 1.86],
+  ['drgtide',   'The Drowned King',      4,'dragon',  'tide',    1.87],
+  ['drgash',    'The Grey Wyrm',         4,'dragon',  'ash',     1.85],
+  ['infember',  'Embermaw',              4,'infernal','ember',   1.91],
+  ['infblood',  'The Blood Forge',       4,'infernal','blood',   1.90],
+  ['infvoid',   'That Which Burns Cold', 4,'infernal','void',    1.92],
+  ['infash',    'The Dying Volcano',     4,'infernal','ash',     1.86, 0.40],
+  ['infstorm',  'Thunderscale',          4,'infernal','storm',   1.89],
+  ['infspirit', 'The Pale Flame',        4,'infernal','spirit',  1.88],
+];
 function _mkMount(r,fly){
   const arch=MOUNT_ARCH[r[3]]||MOUNT_ARCH.horse, coat=MOUNT_COATS[r[4]]||MOUNT_COATS.plain;
   const m={id:r[0], name:r[1], rar:r[2], arch:r[3], coat:r[4], spd:r[5],
@@ -315,7 +346,9 @@ function _mkMount(r,fly){
   if(fly) m.fly=1;
   return m; }
 const MOUNT_DB = _MOUNTS.map(function(r){ return _mkMount(r,0); })
-       .concat(_FLYERS.map(function(r){ return _mkMount(r,1); }));
+       .concat(_FLYERS.map(function(r){ return _mkMount(r,1); }))
+       .concat(_DRAGONS.map(function(r){ const m=_mkMount(r,1); m.dragon=1; return m; }));
+function mountIsDragon(m){ const d=mountDef(m); return !!(d&&d.dragon); }
 const _MOUNT_BY_ID={}; for(const m of MOUNT_DB) _MOUNT_BY_ID[m.id]=m;
 function mountDef(id){ return _MOUNT_BY_ID[id]||null; }
 // THE STARTER. Handed over at the Stable the first time any character reaches Lv20.
@@ -778,10 +811,15 @@ function paintStable(){
 //  specks. The bbox is what tells us how big the animal actually is.
 // ============================================================
 // Target on-screen height of the ANIMAL ITSELF (its opaque box, not its canvas). The hero draws
-// 63px tall here (a 74px opaque box at EMBER_SC 0.85), and a mount that is not at least his height
-// reads as a large dog he is standing over rather than something carrying him — the first pass at
-// 46px measured 0.73x and vanished behind him almost completely.
-const MOUNT_DRAW_H = 58;
+// 63px tall here (a 74px opaque box at EMBER_SC 0.85).
+//
+// THE MOUNT MUST BE BIGGER THAN THE RIDER. 46px was 0.73x and vanished behind him; 58px matched
+// his height and still read as "knight standing in front of a horse", because a rider only looks
+// carried when the animal is visibly the larger object. 82px is ~1.3x the hero, which is roughly
+// the real ratio of a horse's height to a person's and the point at which the silhouette reads
+// mount-first. Everything else is derived from this, so the saddle line and the rider's lift move
+// with it automatically.
+const MOUNT_DRAW_H = 82;
 // Where the saddle sits, as a fraction of the animal's height up from its feet. One number for all
 // twelve archetypes: they are all quadruped-ish profiles of roughly the same build, and measuring
 // off the DRAWN height rather than assuming a canvas position is what lets a wolf and a destrier
