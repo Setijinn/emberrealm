@@ -741,13 +741,28 @@ function _mountFrame(arch,name){
 // How many frames of a given clip an archetype actually has. Probed once by walking up from 0
 // until a frame is missing, then cached — a set that ships 9 and a set that ships 4 both work.
 const _mountFrameN={};
+// Is this path a settled MISS — the browser tried and there is nothing there — as opposed to an
+// image that simply has not arrived yet? `complete` goes true either way; naturalWidth stays 0
+// only for a genuine failure.
+function _mountFrameMissing(arch,name){
+  const p='assets/mounts/'+arch+'/'+name+'.png';
+  const im=_mountAnim[p];
+  return !!(im && im.complete && !im.naturalWidth); }
+
 function _mountClipCount(arch,clip,dir){
   const k=arch+'/'+clip+'/'+dir;
   if(_mountFrameN[k]!==undefined) return _mountFrameN[k];
   let n=0; while(n<24 && _mountFrame(arch,clip+'_'+dir+'_'+n)) n++;
-  // do NOT cache a zero: on the first frame every Image is still loading, and caching 0 here
-  // would pin the archetype to "no animation" for the rest of the session
-  if(n>0) _mountFrameN[k]=n;
+  // ONLY CACHE A COUNT THAT IS ACTUALLY FINAL. The loop stops at the first frame it cannot get,
+  // and "cannot get" covers two very different cases: the frame does not exist, or it exists and
+  // is still downloading. Caching the latter pins the clip at however many frames happened to have
+  // arrived — measured, the moth's south flap cached at 5 of 9 and stayed there for the session,
+  // so it looped a fifth of its wing-beat forever while all nine files sat on the server returning
+  // 200. The count is only settled once frame n is a confirmed miss.
+  //
+  // Not caching costs a handful of cheap map lookups per frame until the set lands, which is
+  // nothing next to silently truncating an animation on a slow load.
+  if(n>0 && _mountFrameMissing(arch,clip+'_'+dir+'_'+n)) _mountFrameN[k]=n;
   return n; }
 function _mountWalkCount(arch,dir){ return _mountClipCount(arch,'walk',dir); }
 
