@@ -714,6 +714,18 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 }
 /* fixed chrome -- never grows, scales with the frame */
 #vaultScr #shopTitle{ flex:0 0 auto; font-size:calc(var(--u)*3.6); margin-bottom:calc(var(--u)*0.5); }
+/* GEAR / SCROLLS tabs. Sized in --u like the rest of the panel so they scale with the frame
+   instead of pushing the whole thing back out through its border on a phone. */
+.vaultTabs{ flex:0 0 auto; display:flex; gap:calc(var(--u)*1.0); justify-content:center;
+  margin-bottom:calc(var(--u)*0.8); }
+.vTab{ flex:1 1 0; min-width:0; background:#1c1626; border:1px solid #4a3a2a; color:#8a8494;
+  font-family:inherit; font-size:calc(var(--u)*2.1); letter-spacing:.08em; border-radius:6px;
+  padding:calc(var(--u)*0.9) 0; cursor:pointer; }
+.vTab.on{ background:#2c2338; border-color:#c9a04a; color:#ffce7a; }
+/* the stat abbreviation under a scroll stack -- a scroll's whole identity is which stat it feeds,
+   so the cell has to say so; the sprite tint alone is not readable at 40px */
+.svAbbr{ position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:8px;
+  letter-spacing:.04em; pointer-events:none; text-shadow:0 1px 2px #000; }
 #vaultCount{ flex:0 0 auto; text-align:center; margin-bottom:calc(var(--u)*0.6); }
 #vaultCount .purse{ font-size:calc(var(--u)*2.7); padding:calc(var(--u)*0.7) calc(var(--u)*2.4); }
 #vaultScr>#shopCard>#shopInner>.mnote{ flex:0 0 auto; font-size:calc(var(--u)*2.0);

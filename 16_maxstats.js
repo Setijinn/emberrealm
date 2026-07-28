@@ -93,6 +93,11 @@ function applyScroll(rpg,st,n){ const ch=curChar(); if(!ch||!rpg) return 0; init
   while(applied<n && (rpg.scrolls[st]||0)>0 && rpg.train[st]<cap){ rpg.scrolls[st]--; rpg.train[st]++; applied++; }
   if(applied>0){ if(typeof recalcStats==='function') recalcStats();
     if(typeof saveRPG==='function') saveRPG(); if(typeof updateStatsBtn==='function') updateStatsBtn(); }
+  // AT THE CAP WITH SCROLLS STILL BANKED. This is the exact moment the player "attempts to consume
+  // at max", and before the registry existed it was a dead end: the scroll stayed in the bank
+  // forever and died with the hero. Overflow is silent about failure -- a full registry leaves the
+  // scroll in the bank rather than destroying it.
+  if(rpg.train[st]>=cap && (rpg.scrolls[st]||0)>0 && typeof svOverflow==='function') svOverflow(st);
   return applied; }
 
 function grantScroll(rpg,st,n){ if(!rpg) return; initTrain(rpg);
@@ -151,14 +156,20 @@ function _statsPaint(ov,ch){ const cls=ch.cls, P=rpg.prestige||0;
     const bonus=inv*(TRAIN_STEP[s]||0);
     const pct=cap>0?Math.round(inv/cap*100):0, full=inv>=cap;
     const canP=bank>0 && !full;
+    // at the cap with scrolls in hand the row offers to FILE them instead. The buttons used to be
+    // disabled here, which meant the one moment the overflow is for could never be reached.
+    const canStore=bank>0 && full;
     rows+='<div class="msRow">'
       +'<div class="msName" style="color:'+col+'">'+m.n+' <span class="msAbbr">'+m.s+'</span></div>'
       +'<div class="msVal">'+live+(bonus>0?' <span style="color:'+col+'">(+'+bonus+')</span>':'')+'</div>'
       +'<div class="msBarWrap"><div class="msBar" style="width:'+pct+'%;background:'+col+'"></div>'
         +'<span class="msBarTxt">'+inv+' / '+cap+(full?' ✓':'')+'</span></div>'
       +'<div class="msBank" style="opacity:'+(bank>0?1:.4)+'">📜 '+bank+'</div>'
-      +'<button class="msBtn" data-st="'+s+'" data-act="1"'+(canP?'':' disabled')+'>+1</button>'
-      +'<button class="msBtn" data-st="'+s+'" data-act="max"'+(canP?'':' disabled')+'>MAX</button>'
+      +(canStore
+        ? '<button class="msBtn" data-st="'+s+'" data-act="store">STORE</button>'
+          +'<button class="msBtn" data-st="'+s+'" data-act="store">▸</button>'
+        : '<button class="msBtn" data-st="'+s+'" data-act="1"'+(canP?'':' disabled')+'>+1</button>'
+          +'<button class="msBtn" data-st="'+s+'" data-act="max"'+(canP?'':' disabled')+'>MAX</button>')
       +'</div>';
   }
   const totalBank=scrollsBanked(rpg);
@@ -174,10 +185,15 @@ function _statsPaint(ov,ch){ const cls=ch.cls, P=rpg.prestige||0;
   const rowsEl=ov.querySelector('.msRows');
   rowsEl.onclick=function(e){ const b=e.target.closest('.msBtn'); if(!b||b.disabled) return;
     const st=b.getAttribute('data-st'), act=b.getAttribute('data-act');
+    if(act==='store'){ const n=(typeof svOverflow==='function')?svOverflow(st):0;
+      if(n>0){ navigator.vibrate&&navigator.vibrate(10); _statsPaint(ov,ch); } return; }
     const got=applyScroll(rpg, st, act==='max'?Infinity:1);
     if(got>0){ navigator.vibrate&&navigator.vibrate(10); _statsPaint(ov,ch); } };
   document.getElementById('msAll').onclick=function(){ let any=0;
     for(const s of STATS) any+=applyScroll(rpg,s,Infinity);
-    if(any>0){ navigator.vibrate&&navigator.vibrate(14); _statsPaint(ov,ch); } };
+    // whatever could not be invested because its stat is already full goes to the registry, so
+    // APPLY ALL never leaves dead weight in the bank
+    const filed=(typeof svOverflowAll==='function')?svOverflowAll():0;
+    if(any>0||filed>0){ navigator.vibrate&&navigator.vibrate(14); _statsPaint(ov,ch); } };
 }
 function _roman(n){ return ['','I','II','III','IV','V','VI','VII','VIII'][n]||(''+n); }

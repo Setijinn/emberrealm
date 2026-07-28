@@ -250,14 +250,17 @@
 <div class="scr" id="vaultScr" style="background:rgba(9,7,12,.92);"><div id="shopCard"><div id="shopInner">
  <div id="shopTitle">THE VAULT</div>
  <div id="vaultCount"></div>
- <div class="mnote">Stored gear outlives the hero who found it.</div>
+ <div class="vaultTabs">
+  <button class="vTab on" id="vTabGear">GEAR</button>
+  <button class="vTab" id="vTabScroll">SCROLLS</button>
+ </div>
  <div class="vaultCols">
   <div class="vaultCol">
    <div class="vaultHead" id="vaultHeadStored">STORED</div>
    <div id="vaultGrid" class="igrid"></div>
   </div>
   <div class="vaultCol">
-   <div class="vaultHead">SATCHEL <span id="vaultBagCount" class="mnote"></span></div>
+   <div class="vaultHead" id="vaultHeadBag">SATCHEL <span id="vaultBagCount" class="mnote"></span></div>
    <div id="vaultBag" class="igrid"></div>
   </div>
  </div>
