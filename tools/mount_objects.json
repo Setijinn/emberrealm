@@ -58,7 +58,13 @@
       "frost": "f46144df-4319-403d-a475-c1df5b9119c5",
       "knight": "4cfbe2ef-8029-446e-94fe-f1247bd7d658",
       "storm": "f2d1068f-9283-4808-9b50-032858332cc4",
-      "warlock": "c2f61dd1-dc29-4da4-bddf-c61d7de04654"
+      "warlock": "c2f61dd1-dc29-4da4-bddf-c61d7de04654",
+      "necro": "de03a5f6-6b5b-405a-85c3-6d57806e0665",
+      "bard": "2659e4ba-5fbe-4bd9-9c7b-6e23587d12ef",
+      "assassin": "a5a45979-8af2-4a64-a3bf-a30f48c42f53",
+      "hunter": "fc3ce27c-5561-43bf-ad12-67db9a0807bb",
+      "shaman": "ba31275d-be99-4d03-a57f-9c8514eaaf2c",
+      "monk": "8dae5af8-0d30-45e1-b8ad-f728bea88026"
     },
     "arch_wolf": {
       "generic": "3d49a888-514a-44ff-9d20-3ec80dc4443f"
