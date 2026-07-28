@@ -900,6 +900,72 @@ function paintStable(){
 //
 //  Ascensions fall through to their base class exactly like emberSprite already does, and a class
 //  with no ride art yet falls through to the standing sprite, so this can land one class at a time.
+// ============================================================
+//  ONE RIDER, SEVENTEEN CLASSES (user, 2026-07-28)
+// ------------------------------------------------------------
+//  Every class rides the SAME extracted knight, recoloured by a per-class gradient map. That is
+//  the whole class-identity system, and it is better than the alternative on every axis that
+//  matters:
+//
+//    * it costs NOTHING to generate. Baking 17 classes onto ~10 archetypes was ~170 composites and
+//      ~3,570 generations; this is one composite per archetype, so ~210.
+//    * it FIXES the contrast problem rather than working around it. Baked riders in dark armour
+//      vanished against a dark dragon; a gradient gives every class its own highlight tone, so
+//      rogue, necro and knight all read where before they were a smudge.
+//    * a new class is one row here, not eight directions x every archetype.
+//
+//  What it gives up is silhouette: a berserker and a cleric sit the same way. Given the game's
+//  standing rule that cosmetics are colour and never silhouette, that is consistent rather than a
+//  compromise -- and at the size a rider actually draws, colour is what reads anyway.
+//
+//  `d` shadow, `l` highlight. The pairs are chosen so the HIGHLIGHT carries the class's identity
+//  colour and the shadow stays near-black, which is what keeps a rider legible on any mount.
+const RIDER_COATS = {
+  knight:   {d:'#12141a', l:'#c2c8d4'},
+  paladin:  {d:'#2a1d05', l:'#ffdc86'},
+  dragoon:  {d:'#0a1626', l:'#7fb4e8'},
+  berserker:{d:'#210806', l:'#e8603c'},
+  pyro:     {d:'#220604', l:'#ff7a3a'},
+  frost:    {d:'#08131f', l:'#bfe8ff'},
+  storm:    {d:'#0a1024', l:'#9ec8ff'},
+  warlock:  {d:'#150a20', l:'#b46ae8'},
+  necro:    {d:'#0d1410', l:'#8fd48c'},
+  shaman:   {d:'#1a1206', l:'#c9a06a'},
+  cleric:   {d:'#241f14', l:'#fff4d0'},
+  rogue:    {d:'#0e0d12', l:'#7a7f8c'},
+  assassin: {d:'#140609', l:'#c0304a'},
+  monk:     {d:'#20140a', l:'#e0a860'},
+  bard:     {d:'#1a0e20', l:'#e08ad4'},
+  ranger:   {d:'#0c1508', l:'#7dc47a'},
+  hunter:   {d:'#150f08', l:'#c8a878'},
+};
+// THE ONE SILHOUETTE every class wears. Kept as a constant rather than spelled at each call site
+// so switching to per-class art later is a single edit.
+const RIDER_BASE_CLS = 'knight';
+
+// OFF FOR NOW (user, 2026-07-28): the rider draws in his own colours. The per-class gradient above
+// works and is measured, but it is the wrong layer to decide a rider's palette on, because the
+// real system is coming from above it —
+//
+//   A MOUNT SKIN WILL PAINT THE MOUNT AND THE RIDER TOGETHER, as one coordinated set, and with
+//   more nuance than a two-stop ramp. A Void skin should not merely push both toward purple; it
+//   should give the dragon its own treatment and the rider matching armour that reads as part of
+//   the same outfit — which means a multi-stop palette, per-material regions, probably its own
+//   art in places. Recolouring the rider by CLASS now would fight that, because a skin would then
+//   have to undo a decision it never made.
+//
+// So this stays declared and unused. Flip it to true and every class recolours immediately;
+// riderSkinFor() is where a real skin system replaces it.
+const RIDER_TINT_BY_CLASS = false;
+function riderCoatFor(cls){ return RIDER_COATS[cls] || RIDER_COATS[RIDER_BASE_CLS]; }
+
+// The seam a mount-skin system replaces. Today: nothing, the rider is drawn as authored. Later:
+// return {d,l,...} — or a richer descriptor — chosen by the SKIN the player has on their mount,
+// not by their class, so the pair reads as one outfit.
+function riderSkinFor(cls){
+  if(RIDER_TINT_BY_CLASS) return riderCoatFor(cls);
+  return null; }
+
 // TWO PLACES A RIDER LAYER CAN LIVE, and the mount-specific one wins:
 //   assets/riders/<arch>/<cls>/ride_<d>.png   extracted against THAT archetype
 //   assets/riders/<cls>/ride_<d>.png          the shared layer, extracted against a horse
@@ -922,15 +988,23 @@ function rideImg(cls,dir,arch){
 // the standing sprite — a seated humanoid IS near enough symmetric for that, unlike a quadruped.
 function riderSprite(look,aim){
   if(!mounted()) return null;
-  const base=(look&&look.cls)||'knight';
+  // ALWAYS the one silhouette; the class lives in the gradient, not in the art. A per-class layer
+  // is still honoured if one is ever dropped in, so this can be walked back per class without a
+  // code change.
+  const cls=(look&&look.cls)||RIDER_BASE_CLS;
   const dir=_mountDir(aim||0);
   const d=mountDef(player.mnt), arch=d?d.spr:null;
-  let im=rideImg(base,dir,arch);
-  if(im) return {img:im, flip:false};
+  // null today: the rider draws as authored. riderSkinFor is where a mount SKIN will eventually
+  // paint mount and rider as one set.
+  const coat=riderSkinFor(cls);
+  function paint(im,flip){ return {img:(coat?coatImg(im,{d:coat.d,l:coat.l,m:1}):im), flip:flip}; }
+  let im=rideImg(cls,dir,arch) || rideImg(RIDER_BASE_CLS,dir,arch);
+  if(im) return paint(im,false);
   // the 8-way set may only ship 4: fold the diagonals onto their nearest cardinal
   const fold={ne:'n', nw:'n', se:'s', sw:'s'}[dir];
-  if(fold){ im=rideImg(base,fold,arch); if(im) return {img:im, flip:false}; }
-  if(dir==='w'||dir==='nw'||dir==='sw'){ im=rideImg(base,'e',arch); if(im) return {img:im, flip:true}; }
+  if(fold){ im=rideImg(cls,fold,arch)||rideImg(RIDER_BASE_CLS,fold,arch); if(im) return paint(im,false); }
+  if(dir==='w'||dir==='nw'||dir==='sw'){
+    im=rideImg(cls,'e',arch)||rideImg(RIDER_BASE_CLS,'e',arch); if(im) return paint(im,true); }
   return null; }
 
 // ---- WHERE THE SADDLE ACTUALLY IS, MEASURED FROM THE SPRITE ----
