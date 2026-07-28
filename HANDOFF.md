@@ -147,6 +147,19 @@ it hands you the prestige caps while there are still levels left to earn.
 - `RELIC_COL` / `--relic` (#ffd24a) is the one gold for everything relic. The icon stamps **R**
   where ordinary items stamp their tier.
 
+### Serving it while you work
+- **`py tools/serve.py`** — one fixed port (10500), `no-store` on every response, and it stops any
+  previous instance of itself before binding. Re-run it as often as you like.
+- Do NOT go back to `python -m http.server` on a new port per edit. That ritual existed because
+  `http.server` stamps `Last-Modified` and answers `If-Modified-Since` with a 304, so an edited .js
+  kept coming from the browser's HTTP cache — but it leaked a process every time. One session found
+  **232 orphaned servers holding 3.2 GB**. `serve.py` fixes the caching instead of dodging it.
+- Stripping the `Last-Modified` *response* header is not sufficient on its own: `send_head`
+  compares against the file mtime and returns a bare 304 before any response header is written.
+  `serve.py` deletes the conditional *request* headers too. Verified both ways.
+- **This only covers the browser HTTP cache.** The service worker is cache-first and is a separate
+  layer, so you must still bump `CACHE` in `sw.js` on every commit.
+
 ### The world's zones
 - **14 territories**, laid down by `_territories()` in a FIXED order that `ZBOSS` and `ZONE_TIERS`
   are both indexed by: **0-3 starter island, 4-8 inner main, 9-13 grind rim.** Adding one shifts
