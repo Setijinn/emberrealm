@@ -1,0 +1,27 @@
+{
+  "_note": "One rider description per class, used verbatim in create_object_state so every archetype's composite for a given class is the same figure. Kept in the repo so a later batch matches an earlier one -- two differently-worded prompts produce two different knights, and they would be visibly different mounts apart.",
+  "_suffix": " rider seated on its back, legs astride, hands forward",
+  "classes": {
+    "knight":    "an armoured knight rider, dark plate armour, horned helm",
+    "paladin":   "a paladin rider, gilded plate armour, winged helm, tabard",
+    "dragoon":   "a dragoon rider, blue-and-steel scaled armour, tall crested helm, lance",
+    "berserker": "a berserker rider, bare arms, fur pauldrons, wild hair, twin axes",
+    "knightalt": "a warlord rider, blackened plate, spiked pauldrons",
+
+    "pyro":      "a robed pyromancer rider, deep red hooded robes, staff in one hand",
+    "frost":     "a frostweaver rider, pale blue robes, iced staff, hood",
+    "storm":     "a stormcaller rider, indigo robes, crackling staff, hood",
+    "warlock":   "a warlock rider, black-and-violet robes, skull motif, hood",
+    "necro":     "a necromancer rider, tattered grey-green robes, bone charms, hood",
+    "shaman":    "a shaman rider, earth-toned robes, feathered totem staff",
+    "cleric":    "a cleric rider, white-and-gold vestments, holy symbol, hood down",
+
+    "rogue":     "a hooded rogue rider, dark leather armour, short cloak, crouched low",
+    "assassin":  "an assassin rider, black leathers, face wrap, twin daggers, crouched low",
+    "monk":      "a monk rider, simple ochre robes, bare arms, wrapped fists",
+    "bard":      "a bard rider, colourful doublet, feathered cap, lute across the back",
+
+    "ranger":    "a ranger rider, green hooded cloak, longbow across the back",
+    "hunter":    "a hunter rider, brown leathers and fur, quiver, short bow"
+  }
+}

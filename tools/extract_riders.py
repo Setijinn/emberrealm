@@ -9,7 +9,7 @@ Output: assets/riders/<cls>/ride_<d>.png  for d in n ne e se s sw w nw
 
 Usage: extract_riders.py <cls> <composite_object_id> [base_object_id]
 """
-import io, os, sys, urllib.request, zipfile
+import io, os, sys, urllib.error, urllib.request, zipfile
 from PIL import Image, ImageChops, ImageFilter
 
 DEST = r"C:\Users\darkc\Desktop\EmberRealm\emberrealm-src\assets\riders"
@@ -20,10 +20,19 @@ THRESH = 28          # per-channel difference that counts as "this pixel changed
 MIN_NEIGHBOURS = 2   # a kept pixel needs this many kept neighbours, or it is speckle
 
 
+class NotReady(Exception):
+    """The object exists but its jobs have not finished. 423 Locked is PixelLab's way of saying so."""
+
+
 def zget(oid):
     req = urllib.request.Request("https://api.pixellab.ai/mcp/objects/%s/download" % oid,
                                  headers={"User-Agent": "emberrealm-qa"})
-    return zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(req, timeout=180).read()))
+    try:
+        return zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(req, timeout=180).read()))
+    except urllib.error.HTTPError as e:
+        if e.code in (423, 404, 409, 425):
+            raise NotReady("still rendering (HTTP %d)" % e.code)
+        raise
 
 
 def largest_cc(mask):
@@ -128,7 +137,10 @@ def main():
     cls = sys.argv[1]
     comp = sys.argv[2]
     base = sys.argv[3] if len(sys.argv) > 3 else BASE_DEFAULT
-    zc, zb = zget(comp), zget(base)
+    try:
+        zc, zb = zget(comp), zget(base)
+    except NotReady as e:
+        print("%-22s %s" % (cls, e)); return
     out = os.path.join(DEST, cls)
     os.makedirs(out, exist_ok=True)
     made = []

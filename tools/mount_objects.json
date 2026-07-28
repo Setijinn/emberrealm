@@ -51,7 +51,14 @@
       "pyro": "9128dcfe-36d8-4c25-b48c-ec23222c349b",
       "rogue": "9023807c-8c9b-4c47-86b5-359a2953ea70",
       "paladin": "1f083c18-8bf7-4f19-9875-f9dbc05ef917",
-      "ranger": "824fd93a-440d-4610-ba3e-271ab3d21b36"
+      "ranger": "824fd93a-440d-4610-ba3e-271ab3d21b36",
+      "berserker": "3d10e6aa-f726-4368-aa30-b16c542d1941",
+      "cleric": "92fed7d4-a842-4baf-a579-fe69999eb6d8",
+      "dragoon": "2989ab78-96fd-469a-b56b-de74011f26b5",
+      "frost": "f46144df-4319-403d-a475-c1df5b9119c5",
+      "knight": "4cfbe2ef-8029-446e-94fe-f1247bd7d658",
+      "storm": "f2d1068f-9283-4808-9b50-032858332cc4",
+      "warlock": "c2f61dd1-dc29-4da4-bddf-c61d7de04654"
     },
     "arch_wolf": {
       "generic": "3d49a888-514a-44ff-9d20-3ec80dc4443f"
