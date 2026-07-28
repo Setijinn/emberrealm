@@ -1053,9 +1053,13 @@ function drawPillar(pl){
 }
 function drawPortal(pt){
  const t=performance.now()/1000, col=pt.col||'#c07ad4', R=pt.big?36:20;
- // destination-themed portal art in the hub (smaller than the shared arch); shared arch elsewhere
+ // Destination-themed portal art. Every room's way out leads to the same place, so THE WAY HOME
+ // is one gate rather than five: the Vault, Guild, Arena, Wardrobe and Sanctuary all showed the
+ // generic blue rift, which read as a tear in reality standing in the middle of a meadow. A warm
+ // hearth-lit arch says where it goes without a label.
  const dkey=pt.to==='G'?'realm':pt.to==='COSMETICS'?'cos':pt.to==='VAULT'?'vault':pt.to==='GUILD'?'guild'
-          :pt.to==='ARENA'?'arena':pt.to==='PETS'?'pets':null;
+          :pt.to==='ARENA'?'arena':pt.to==='PETS'?'pets'
+          :(pt.to==='0,0'||pt.to==='_petback')?'home':null;
  const ded=(dkey&&typeof _hearth!=='undefined')?_hearth['portal_'+dkey]:null;
  const hasDed=!!(ded&&ded.complete&&ded.naturalWidth);
  const pimg=hasDed?ded:(typeof _hearth!=='undefined')?_hearth.portal:null;

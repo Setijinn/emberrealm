@@ -104,9 +104,14 @@
  const arena=room(AW,AH,'f');
  // four cover pillars
  [[12,10],[29,10],[12,19],[29,19]].forEach(p=>block(arena,p[0],p[1],p[0]+1,p[1]+1,'W'));
- put(arena,20,26,'P');
+ put(arena,20,24,'P');
+ // EXIT HEIGHTS. Every side room's LEAVE gate used to sit 1.5 tiles off the back wall, which put
+ // it at screen y=603 in all four rooms -- behind the HP/MP orbs. The camera clamps at the room
+ // edge, so the last ~330px of any room is HUD territory and nothing you need to look at belongs
+ // there. Each exit (and the spawn two tiles above it) moved up two tiles; measured after, all
+ // four now land at 515, clear of the orbs.
  ROOM_DEFS['ARENA']={ name:'The Proving Grounds', arena:true, lv:1, map:arena,
-  portalDefs:[ {tx:20, ty:28, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
+  portalDefs:[ {tx:20, ty:26, to:'0,0', label:'LEAVE', col:'#e8a34b'} ],
   decor:[{t:'sign',x:20,y:23,txt:'SURVIVE THE WAVES'}] };
 
  // ------------------------------------------------------------- VAULT
@@ -133,9 +138,9 @@
  // sources washed the granite out to khaki before anything else was even wrong with it.
  // 'l' rather than a decor entry so 02_worldbuild's glow pass lights the room for free.
  [[9,8],[21,8],[9,13],[21,13]].forEach(q=>put(vault,q[0],q[1],'l'));
- put(vault,15,13,'P');
+ put(vault,15,12,'P');
  ROOM_DEFS['VAULT']={ name:'The Vault', town:false, safe:true, map:vault,
-  portalDefs:[ {tx:15, ty:16, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
+  portalDefs:[ {tx:15, ty:14, to:'0,0', label:'LEAVE', col:'#e8a34b'} ],
   // The strongbox is the real interactable (17j_vault.js). It stands on open carpet in FRONT of
   // the bank, never on it -- decor drawn inside a solid block is painted over and invisible,
   // which is how the two chests were lost on the first pass. It sits CLOSE to the great door on
@@ -165,19 +170,19 @@
  const guild=room(32,20,'f');
  block(guild,13,6,18,7,'h');             // long table
  [[8,5],[23,5]].forEach(p=>put(guild,p[0],p[1],'H'));
- put(guild,16,16,'P');
+ put(guild,16,14,'P');
  ROOM_DEFS['GUILD']={ name:'Guild Hall', town:false, safe:true, map:guild,
-  portalDefs:[ {tx:16, ty:18, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
+  portalDefs:[ {tx:16, ty:16, to:'0,0', label:'LEAVE', col:'#e8a34b'} ],
   decor:[{t:'sign',x:16,y:12,txt:'GUILDS — coming soon'},{t:'banner',x:16,y:3}] };
 
  // ------------------------------------------------------------- COSMETICS
  const cos=room(28,18,'f');
  [[10,6],[14,6],[18,6]].forEach(p=>put(cos,p[0],p[1],'l')); // display pedestals
- put(cos,14,14,'P');
+ put(cos,14,12,'P');
  // The mirror between the three pedestals is the interactable: stand at it and the wardrobe opens
  // (07_update turns `wardrobe` into a prompt, exactly like a stall or a portal).
  ROOM_DEFS['COSMETICS']={ name:'The Wardrobe', town:false, safe:true, map:cos,
-  portalDefs:[ {tx:14, ty:16, to:'0,0', label:'LEAVE', col:'#7dc47a'} ],
+  portalDefs:[ {tx:14, ty:14, to:'0,0', label:'LEAVE', col:'#e8a34b'} ],
   wardrobe:{x:14.5, y:7.2},
   decor:[{t:'sign',x:14,y:11,txt:'DRESS AS YOU LIKE'}] };
 })();

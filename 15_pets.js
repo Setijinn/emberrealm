@@ -470,7 +470,13 @@ function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['P
   const room={ id:'PETS', name:'The Sanctuary', w:W,h:H, grid, petRoom:true, town:false, big:false,
     spawns:[], glows:[], pillars:[], px:ex, py:H-3,
     waterfall:{ cx:pcx, x0:cx-1.35, x1:cx+1.35, topY:3.5, pcx, pcy, prx, pry },
-    portals:[{x:(ex+0.5)*TILE, y:(H-1.5)*TILE, to:'_petback', col:'#8ee0a0', big:false}],
+    // The gate stands 5 tiles OFF the back wall, not in it. The camera clamps at the room edge,
+    // so anything inside the last ~330px of a room is shoved to the bottom of the screen where the
+    // HP/MP orbs live -- at (H-1.5) the gate rendered squarely behind them and you could not see
+    // the thing you were standing on. Room is 28 tall (1232px) against a 669px view, so the camera
+    // stops at y=563: a gate at row 23 lands at screen ~471, clear of the orbs, and the spawn at
+    // row 25 still puts you below it so you walk UP to leave.
+    portals:[{x:(ex+0.5)*TILE, y:(H-5+0.5)*TILE, to:'_petback', col:'#e8a34b', big:false}],
     petStations:[{x:13*TILE, y:11.6*TILE, kind:'incubator'}, {x:27*TILE, y:11.6*TILE, kind:'fusion'}],
     petDecor:D };
   rooms['PETS']=room; return room; }
