@@ -1553,9 +1553,22 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
 // 1->50 run moves x1.45, so the early game is untouched and the top is where the time goes.
 // XP_END_MUL is the dial; XP_END_FROM/RAMP decide where it starts and how fast it arrives.
 const XP_END_FROM=39, XP_END_RAMP=5, XP_END_MUL=2.2;
+// THE LAST FIVE LEVELS ARE EXPONENTIAL, and 50 is a SOFT cap (user).
+// The ramp above shapes 40-44. From 45 the requirement compounds instead: each of the final five
+// levels costs XP_EXP_BASE times the one before it, on top of everything else. That is what makes
+// 50 "soft" -- it is still the hard ceiling (LV_CAP is unchanged at 50), but the curve, not a
+// wall, is what stops you. Measured by reading the running game, not estimated:
+//   45->46  117,737      46->47  168,663      47->48  241,422
+//   48->49  345,303      49->50  493,517      -- the last five total 1,366,642 XP
+// against ~4,000 XP for a Lv49 boss, so the final level alone is ~123 boss kills, and the whole
+// 1->50 run is 2,121,284 XP where it was 835,939 before any of this.
+// XP_EXP_BASE is the one dial: 1.0 disables it, 1.5 roughly triples the last five again.
+const XP_EXP_FROM=45, XP_EXP_BASE=1.38;
 function xpEndMul(l){
   const t=Math.max(0,Math.min(1,(l-XP_END_FROM)/XP_END_RAMP));
-  return 1+(XP_END_MUL-1)*t;
+  let m=1+(XP_END_MUL-1)*t;
+  if(l>=XP_EXP_FROM) m*=Math.pow(XP_EXP_BASE,l-(XP_EXP_FROM-1));
+  return m;
 }
 function xpNeed(l){return Math.floor(60*Math.pow(l,1.7)*xpEndMul(l));}
 function eqAffArr(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.a:null; }
