@@ -2000,10 +2000,14 @@ function render(){
   // a narrow column the standing hero simply covers. riderSprite returns null for a class whose
   // ride art has not landed, and that path keeps the old clip so the game still looks right while
   // the set fills in one class at a time.
-  const _ride=(_lift>0 && typeof riderSprite==='function')
-    ? riderSprite(player.look||{cls:'knight'}, faceAng) : null;
+  // riderDrawOver owns its own scale and its own seat height per archetype — a rider must NOT be
+  // scaled by the mount's normalisation factor (those range 1.26-1.91, which grew him by half on
+  // a roc versus a wolf), and he must NOT be drawn at EMBER_SC either, which is the standing
+  // hero's scale against no mount at all.
+  const _ride=(_lift>0 && typeof riderDrawOver==='function')
+    ? riderDrawOver(player.x+lx, player.y+ly*0.5, faceAng, _skin) : false;
   if(_ride){
-    blit(_skin(_ride.img), player.x+lx, player.y-8-_lift+bob*0.4+ly*0.5, EMBER_SC, _ride.flip);
+    /* drawn by riderDrawOver */
   } else {
     // FALLBACK ONLY: sit him hip-deep and clip at the saddle so his legs vanish behind the animal.
     const _clip=(_lift>0 && typeof mountSaddleY==='function');

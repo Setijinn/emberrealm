@@ -137,9 +137,34 @@ const MOUNT_ARCH = {
   skywyrm:  {n:'sky wyrm',  spr:'arch_skywyrm',  air:1},
   // ---- THE DRAGONS. Endgame, and deliberately only two drawings: a dragon has to stay rare
   // enough to mean something, and eighteen dragon variants would make it wallpaper. ----
-  dragon:   {n:'dragon',    spr:'arch_dragon',   air:1},
-  infernal: {n:'infernal',  spr:'arch_infernal', air:1},
+  dragon:   {n:'dragon',    spr:'arch_dragon',   air:1, seat:0.62, seatX:0.00},
+  infernal: {n:'infernal',  spr:'arch_infernal', air:1, seat:0.62, seatX:0.00},
 };
+// WHERE THE RIDER SITS, PER ARCHETYPE. `seat` is the fraction of the animal's height up from its
+// feet, `seatX` a sideways nudge as a fraction of its width. Defaults live in MOUNT_SEAT/0, and
+// only the shapes that need arguing with are listed.
+//
+// A horse's back is a horse's back and the default was measured on one. The exotics are the whole
+// reason this exists: a MOTH is wings-wide and its body is a thin line down the middle, a SKY WYRM
+// has no back at all — it is a coil — and a ROC's saddle sits between the shoulders, forward of
+// where a quadruped's would be. The DRAGON is the loudest case: its shoulders are high and its
+// neck rises in front of the seat, so a rider placed at the horse default floats above the wing
+// line instead of sitting in the hollow behind the neck.
+const MOUNT_SEATS = {
+  dragon:   {seat:0.62},
+  infernal: {seat:0.62},
+  roc:      {seat:0.70},      // between the shoulders, high and forward
+  moth:     {seat:0.58},      // thin body, wings either side
+  skywyrm:  {seat:0.66},      // a coil, not a back
+  griffon:  {seat:0.60},
+  pegasus:  {seat:0.57},
+  wyvern:   {seat:0.60},
+  colossus: {seat:0.72},      // a platform on top of a block
+};
+function mountSeatOf(d){
+  const s=d&&MOUNT_SEATS[d.arch];
+  return {seat:(s&&s.seat!==undefined)?s.seat:MOUNT_SEAT,
+          seatX:(s&&s.seatX!==undefined)?s.seatX:0}; }
 // ---- the coats. A tint plus the word that names it. Colours are the game's existing families
 // (PET_CATS, MOBTINT) so a Frost mount reads frost the way everything else frost does. ----
 const MOUNT_COATS = {
@@ -831,6 +856,85 @@ function riderSprite(look,aim){
   if(fold){ im=rideImg(base,fold); if(im) return {img:im, flip:false}; }
   if(dir==='w'||dir==='nw'||dir==='sw'){ im=rideImg(base,'e'); if(im) return {img:im, flip:true}; }
   return null; }
+
+// ---- WHERE THE SADDLE ACTUALLY IS, MEASURED FROM THE SPRITE ----
+// Hand-tuned seat fractions do not survive contact with 20 archetypes x 8 directions. A moth seen
+// head-on is 67px of WING with a thin thorax down the middle; a dragon's shoulders are high and
+// its neck rises in front of them; a wolf's back is low and flat. One number per archetype cannot
+// describe all of that, and eight numbers per archetype is a table nobody will maintain.
+//
+// So it is measured: scan the CENTRAL SLICE of the animal's opaque box — the part that is its
+// BODY rather than its wings, antlers or tail — and take the topmost opaque row in that slice.
+// That is the top of its back in every one of these silhouettes, which is where a saddle goes.
+// Cached per image, because it is a full pixel readback.
+const _seatCache={};
+function mountSeatY(im){
+  if(!im||!im.naturalWidth&&!im.width) return null;
+  const key=im.src||('c'+(im.width+'x'+im.height));
+  if(_seatCache[key]!==undefined) return _seatCache[key];
+  let out=null;
+  try{
+    const w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const g=c.getContext('2d',{willReadFrequently:true});
+    g.imageSmoothingEnabled=false; g.drawImage(im,0,0);
+    const dat=g.getImageData(0,0,w,h).data;
+    // opaque box first
+    let x0=w,x1=-1,y0=h,y1=-1;
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ if(dat[(y*w+x)*4+3]>8){
+      if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+    if(x1<0){ _seatCache[key]=null; return null; }
+    // central slice: 26% of the width, centred. Wide enough to catch a body, narrow enough to
+    // miss a wingspan or a set of antlers.
+    const cx=(x0+x1)/2, half=Math.max(2,Math.round((x1-x0)*0.13));
+    const sx0=Math.max(x0,Math.round(cx-half)), sx1=Math.min(x1,Math.round(cx+half));
+    let top=null;
+    for(let y=y0;y<=y1&&top===null;y++)
+      for(let x=sx0;x<=sx1;x++) if(dat[(y*w+x)*4+3]>8){ top=y; break; }
+    out=(top===null)?null:{top:top, foot:y1, h:(y1-y0+1)};
+  }catch(err){ out=null; }               // a cross-origin image would throw; fall back to the table
+  _seatCache[key]=out; return out; }
+
+// THE RIDER IS A CONSTANT SIZE. He is a person, and a person does not grow when he changes horse.
+// The obvious-looking thing — scale him by the mount's own scale factor — is wrong, and wrong by a
+// lot: normalising each animal to MOUNT_DRAW_H means those factors range from 1.26 (wolf, a tall
+// 65px box) to 1.91 (roc, a wide 43px one), so a rider multiplied by them came out half again as
+// large on a bird as on a wolf. He gets his own target height and nothing else touches it.
+const RIDER_DRAW_H = 48;    // ~0.59 of MOUNT_DRAW_H, which is about a person against a horse
+
+// Draw the seated rider on top of the mount. Returns true if it drew, false to fall back.
+// x,y is the player's world anchor, the same one mountDrawUnder is given.
+function riderDrawOver(x,y,faceAng,skin){
+  if(!mounted() || typeof blit!=='function') return false;
+  const d=mountDef(player.mnt); if(!d) return false;
+  const rs=riderSprite(player.look||{cls:'knight'}, faceAng); if(!rs) return false;
+  const bb=(typeof _imgBBox==='function')?_imgBBox(rs.img):null;
+  const rh=(bb&&bb.h)?bb.h:(rs.img.height||64);
+  const sc=RIDER_DRAW_H/Math.max(1,rh);
+  // WHERE TO SIT HIM. Measured off the mount's own pixels when that works, and only falling back
+  // to the per-archetype table when it does not (a tainted canvas, or art still loading).
+  const st=mountSeatOf(d);
+  const feetY=y+MOUNT_FOOT;
+  let saddleY=feetY-MOUNT_DRAW_H*st.seat;
+  const mref=_mountFrame(d.spr,'idle_'+_mountDir(faceAng||0))
+          || _mountFrame(d.spr,'idle_'+_mountDir(faceAng||0)+'_0') || mountImg(d.spr);
+  const sm=mref?mountSeatY(mref):null;
+  if(sm && sm.h>0){
+    // SANITY-CLAMP THE MEASUREMENT, because the central slice does not always find a BACK. Facing
+    // north a horse's head and neck are dead centre, so the topmost central pixel is its ears and
+    // the rider ends up in the air above it; antlers and a raised wing do the same. A real saddle
+    // sits between 40% and 75% of the way up an animal, so a reading outside that band is not a
+    // back and the per-archetype table wins instead.
+    const frac=(sm.foot-sm.top)/sm.h;
+    if(frac>=0.40 && frac<=0.75) saddleY=feetY-MOUNT_DRAW_H*frac;
+  }
+  // his own feet land on the saddle: work back from where his box bottoms out in his canvas
+  const canvasH=rs.img.height||64;
+  const footInCanvas=bb?(bb.y+bb.h):canvasH;
+  const cy=saddleY+(canvasH*sc)/2-footInCanvas*sc;
+  const cx=x+(st.seatX||0)*MOUNT_DRAW_H;
+  blit(skin?skin(rs.img):rs.img, cx, cy, sc, rs.flip);
+  return true; }
 
 // ============================================================
 //  DRAWING THE RIDE
