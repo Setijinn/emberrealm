@@ -417,6 +417,10 @@ function castArmed(wx,wy){ if(!rpg||!inGame) return; const ch=curChar(); if(!ch)
   // statuses the world now puts on you would be a movement inconvenience and nothing more
   if(typeof playerCanAct==='function' && !playerCanAct()){
     texts.push({x:player.x,y:player.y-30,txt:playerHas('freeze')?'✳ frozen':'✳ stunned',col:'#d8f0fa',life:0.7}); return; }
+  // ...and so does being in the saddle. A mount that let you keep your abilities would be a pure
+  // upgrade, and the whole point of the ride is that it costs you your offence.
+  if(typeof mounted==='function' && mounted()){
+    texts.push({x:player.x,y:player.y-30,txt:'✳ mounted',col:'#e8c88a',life:0.7}); return; }
   if(abilCd(a.id)>0){ texts.push({x:player.x,y:player.y-30,txt:'◷ cooldown',col:'#c9c2b8',life:0.6}); navigator.vibrate&&navigator.vibrate(15); return; }
   if((player.mp||0)<a.mp){ texts.push({x:player.x,y:player.y-30,txt:'◇ low mana',col:'#7ab8d4',life:0.7}); navigator.vibrate&&navigator.vibrate(20); return; }
   player.mp-=a.mp; player.acd[a.id]=a.cd;

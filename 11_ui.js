@@ -1796,6 +1796,10 @@ function gainXP(x,g){ if(!rpg)return; rpg.xp+=x;   // g is ignored: kills pay xp
  while(rpg.lvl<LV_CAP && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
   recalcStats(); player.hp=player.maxhp;
+  // The stable is account-wide, so it remembers the highest level ANY hero reached rather than
+  // asking the one in front of it — a fresh alt on an account that has already crossed the bridge
+  // does not earn the mount twice. Same reasoning as the Vault's ungated withdrawal.
+  if(typeof mountNoteLevel==='function') mountNoteLevel(rpg.lvl);
   msg('LEVEL '+rpg.lvl,'the ember grows'); }
  saveRPG(); hudRPG(); }   // permadeath notice is bridge-crossing based now (hcCheck in update)
 // A Lv20+ hero has fallen for good: record the tombstone, end the run, show the eulogy.

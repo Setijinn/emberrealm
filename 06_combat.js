@@ -232,7 +232,12 @@ function aimPoint(e,spd,life){
 function fire(dt){
   player.fireT-=dt;
   if(player.fireT>0) return;
-  if(!playerCanAct()) return;              // frozen / stunned: the shot does not go off
+  // frozen / stunned: the shot does not go off. MOUNTED: neither does it — a mount carries you
+  // unarmed, and that trade is the only thing stopping "stay mounted" from being the correct play
+  // in every situation. playerCanAttack wraps playerCanAct rather than replacing it, because
+  // 07_update reads playerCanAct to decide whether you are frozen and zeroes your speed with it.
+  if(typeof playerCanAttack==='function'){ if(!playerCanAttack()) return; }
+  else if(!playerCanAct()) return;
   const wt=player.wt||WTYPE.sword;
   let ang=null;
   // Manual aim (PC opt-in, Settings toggle): fire straight toward the cursor with

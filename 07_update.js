@@ -273,6 +273,10 @@ function damagePlayer(raw){ let hit=raw*playerDmgTaken();   // cursed players ta
   if(hit>0) player.hp-=hit;
   if(player.vanishHurt) player.inv=Math.max(player.inv,1.1);
   if(typeof perkFire==='function') perkFire('hurt',{dmg:hit,x:player.x,y:player.y});
+  // A MOUNT IS THROWN BY DAMAGE, and this is the one place that sees all of it — touch, enemy
+  // shots, boss hazards and the client-side hazard paths in 14b_netsync.js every one route
+  // through damagePlayer, so the throw needs a single hook rather than a dozen call sites.
+  if(typeof mountTookDamage==='function') mountTookDamage(hit);
   return hit; }
 // ---- enemy behaviour AI (see EBEH / pickBehaviour in 03_entities) ----
 // Returns where the enemy WANTS to move this frame: {tx,ty target point, smul speed×, move}.
@@ -439,10 +443,14 @@ function update(dt){
   const m=stick.move;
   if(typeof tickPotions==='function') tickPotions(dt);   // potions trickle back; gold is gone
   if(typeof tickCritters==='function') tickCritters(dt);  // the Hearth flock (03b_critters.js)
+  if(typeof tickMounts==='function') tickMounts(dt);      // remount cooldown + the boss-fight throw
   tickPlayerStatuses(dt);                       // burn/poison/bleed/shock tick, chill/weak/curse apply
   const frozen=!playerCanAct();                 // freeze and stun cost you the frame entirely
+  // MOUNT SPEED rides in the existing chain rather than touching MOVE_SCALE, so it composes with
+  // chill and the dyn perks and never undoes the global slow for anything but the rider.
   const sp=player.spd*(typeof dev!=='undefined'?dev.spd:1)*(player.bSpdT>0?(player.bSpdM||1):1)
-    *((typeof dynSpd==='function')?dynSpd():1)*playerSpdMul()*(frozen?0:1)*MOVE_SCALE;
+    *((typeof dynSpd==='function')?dynSpd():1)*playerSpdMul()
+    *((typeof mountSpdMul==='function')?mountSpdMul():1)*(frozen?0:1)*MOVE_SCALE;
   player._moving=false; _pmove=true;
   // POSSESSED: the wisp has the stick. Your input does nothing for one second and you travel its
   // heading instead. Placed ahead of both input branches so touch and keyboard are equally denied,
@@ -1066,6 +1074,9 @@ function update(dt){
     if(_perma){ permaDeath(); return; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
+    // You do not wake up in the Hearth still in the saddle. Cleared WITHOUT the throw cooldown —
+    // dying is punishment enough, and the mount itself is on the user so it is never lost.
+    if(typeof dismount==='function') dismount('player');
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0;
     clearPlayerStatuses();
     const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE); spawnPet(); }
