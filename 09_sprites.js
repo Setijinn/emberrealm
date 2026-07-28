@@ -1995,20 +1995,28 @@ function render(){
   // the unmounted path is byte-for-byte what it was.
   const _lift=(typeof mountDrawUnder==='function')
     ? mountDrawUnder(player.x+lx, player.y+ly*0.5, bob, faceAng, moving, pn) : 0;
-  // THE RIDER'S LEGS GO BEHIND THE ANIMAL. mountDrawUnder sits him hip-deep in the saddle and
-  // publishes the saddle line; clipping his sprite there hides everything below it, which is
-  // where a rider's legs actually are. Without the clip he reads as standing on its back.
-  // A few px of slack so a little thigh still shows over the saddle rather than a clean cut.
-  const _clip=(_lift>0 && typeof mountSaddleY==='function');
-  if(_clip){ ctx.save(); ctx.beginPath();
-    ctx.rect(-1e5, -1e5, 2e5, (mountSaddleY()+7)+1e5); ctx.clip(); }
-  if(_es){
-    // real PixelLab art: 92px sprite, scaled down; already holds its weapon
-    blit(_skin(_es.img), player.x+lx, player.y-8-_lift+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
+  // A REAL SEATED SPRITE when one exists. This REPLACES the standing pose rather than hiding half
+  // of it: legs cut off is not the same as legs astride, and from the south the animal's body is
+  // a narrow column the standing hero simply covers. riderSprite returns null for a class whose
+  // ride art has not landed, and that path keeps the old clip so the game still looks right while
+  // the set fills in one class at a time.
+  const _ride=(_lift>0 && typeof riderSprite==='function')
+    ? riderSprite(player.look||{cls:'knight'}, faceAng) : null;
+  if(_ride){
+    blit(_skin(_ride.img), player.x+lx, player.y-8-_lift+bob*0.4+ly*0.5, EMBER_SC, _ride.flip);
   } else {
-    blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16-_lift+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
+    // FALLBACK ONLY: sit him hip-deep and clip at the saddle so his legs vanish behind the animal.
+    const _clip=(_lift>0 && typeof mountSaddleY==='function');
+    if(_clip){ ctx.save(); ctx.beginPath();
+      ctx.rect(-1e5, -1e5, 2e5, (mountSaddleY()+7)+1e5); ctx.clip(); }
+    if(_es){
+      // real PixelLab art: 92px sprite, scaled down; already holds its weapon
+      blit(_skin(_es.img), player.x+lx, player.y-8-_lift+bob*0.4+ly*0.5, EMBER_SC, _es.flip);
+    } else {
+      blit(heroSprite(player.look||{cls:'knight'},hframe), player.x+lx, player.y-16-_lift+bob*0.4+ly*0.5, 1.8, Math.cos(faceAng)<0);
+    }
+    if(_clip) ctx.restore();
   }
-  if(_clip) ctx.restore();
   // The gauntlet plays by the same rules as every other weapon: it draws in the hand like a sword
   // or a bow does. The old `wtype!=='fists'` exception existed because fists were not an item at
   // all — now that the monk carries a real weapon there is nothing to except.

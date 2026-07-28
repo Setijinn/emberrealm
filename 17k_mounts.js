@@ -799,6 +799,40 @@ function paintStable(){
     btn.textContent=(m&&activeMount()&&activeMount().id===m.id)?'UNSADDLE':'SADDLE IT'; } }
 
 // ============================================================
+//  THE SEATED RIDER (assets/<cls>/ride_<dir>.png)
+// ------------------------------------------------------------
+//  A REAL RIDING SPRITE, not the standing pose with its legs hidden. The clip was a stopgap and
+//  it never read as riding from the south, where the animal's body is a narrow column the hero
+//  simply covers — legs cut off is not the same as legs astride.
+//
+//  One seated pose per class per direction, drawn ON TOP of the mount. It is independent of the
+//  mount roster by construction: 17 classes x 8 directions, and it serves all 146 mounts. Baking
+//  rider and mount together would be 17 x 20 archetypes x 8 = 2,720 sets for the same result.
+//
+//  Ascensions fall through to their base class exactly like emberSprite already does, and a class
+//  with no ride art yet falls through to the standing sprite, so this can land one class at a time.
+const _rideArt={};
+function rideImg(cls,dir){
+  if(typeof window==='undefined'||!cls) return null;
+  const p='assets/'+cls+'/ride_'+dir+'.png';
+  if(_rideArt[p]===undefined){ const i=new Image(); i.src=p; _rideArt[p]=i; }
+  const im=_rideArt[p]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+
+// {img, flip} or null. West mirrors east when there is no west art, matching _emberDir's rule for
+// the standing sprite — a seated humanoid IS near enough symmetric for that, unlike a quadruped.
+function riderSprite(look,aim){
+  if(!mounted()) return null;
+  const base=(look&&look.cls)||'knight';
+  const dir=_mountDir(aim||0);
+  let im=rideImg(base,dir);
+  if(im) return {img:im, flip:false};
+  // the 8-way set may only ship 4: fold the diagonals onto their nearest cardinal
+  const fold={ne:'n', nw:'n', se:'s', sw:'s'}[dir];
+  if(fold){ im=rideImg(base,fold); if(im) return {img:im, flip:false}; }
+  if(dir==='w'||dir==='nw'||dir==='sw'){ im=rideImg(base,'e'); if(im) return {img:im, flip:true}; }
+  return null; }
+
+// ============================================================
 //  DRAWING THE RIDE
 // ------------------------------------------------------------
 //  Called from the hero's own draw in 09_sprites.js, immediately BEFORE the hero blit so the
