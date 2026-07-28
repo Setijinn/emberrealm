@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v433.
+Service worker is at emberrealm-v481.
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -34,7 +34,32 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v433 -> v477)
+WHAT SHIPPED MOST RECENTLY (v477 -> v481)
+---------------------------------------------------------------------------
+MOUNTS (17k_mounts.js, NEW) — ground mounts, the reward for reaching Lv20.
+- A RIDE COSTS YOU YOUR OFFENCE. No attacks, no abilities while mounted.
+  Without that trade a mount is a pure buff on a traversal tool and "stay
+  mounted" becomes correct everywhere. Three cheap exits: dismount on demand,
+  damage throws you (cumulative vs a % of maxhp, self-scaling), a live boss
+  fight throws you and keeps you off.
+- GETTING ON TAKES 1.5s and damage interrupts it. GETTING OFF IS INSTANT.
+- 78 MOUNTS on 12 archetype sprites x 14 coat tints — the MOB_ARCH/MOBTINT
+  trick. Every species has its OWN speed around its rarity baseline, and the
+  bands OVERLAP on purpose. `tough` trades speed for staying power.
+- Claimed at THE STABLE in the Hearth (Lv20, account-wide gate). Ridden from
+  the MOUNTS tab in the companion panel. V on PC; the quick button is
+  mobile-only.
+- Drops are MAIN-ISLAND ONLY and rare: boss 1.11% / elite 0.315% / trash
+  0.075% measured. They arrive in the CREATURE CARRIER.
+- THE CREATURE CARRIER: mounts and eggs drop in their own sack, always, and
+  always together. A deliberate exception to one-sack-per-kill — keep it
+  narrow. Pet food stays with the gear.
+- NKIND's kind field widened 3 bits -> 4 for 'mount'. Nothing renumbered.
+- ALL GROUND. Flying is planned for Lv40 and NOT built; the seam is declared
+  (MOUNT_FLY_LV / mountIsFlyer / mountFlyOk) and zero species carry `fly`.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v433 -> v477)
 ---------------------------------------------------------------------------
 THE VAULT (17j_vault.js, NEW) — account-wide storage in the Hearth's VAULT room.
 - 60 gear slots, paged 20 at a time, reached from a strongbox you walk up to.
@@ -330,9 +355,31 @@ STILL OPEN, IN NO PARTICULAR ORDER
   ceiling. LV_CAP is still 50 and there are no levels past it. If levels beyond
   50 at diminishing returns were the intent, that is a larger change -- zone
   levels, stat scaling and the ascension gate all key off the cap.
+- (done v481) Mounts. Ground only, Lv20, 78 species. See WHAT SHIPPED.
+- FLYING MOUNTS at Lv40+ (user). Not built. The seam is declared in
+  17k_mounts.js and nothing reads it yet. Needs: a collision exemption
+  (04_collision already has the shape in player.terrainGhost, gated on
+  _pmove), a decision on whether flight clears only water/chasm or
+  everything, and an answer to which enemies can reach a flyer at all.
+- THE CRAFTING ARC (user, 2026-07-27), designed but NOT built:
+    * the Lv1-20 island farms fusion MATERIALS that prepare you for Lv20+
+    * fusion's real depth is late-game materials from bosses only reachable
+      AFTER ASCENSION. That gate ALREADY EXISTS and already works — 11_ui.js
+      refuses any dungeon whose boss lacks gate:'none' with "Ascend to enter
+      the awakened depths", and a MISSING field defaults to locked, so only
+      the starter three are open. No new gating mechanism is needed.
+    * many craftable items, everything derived from TWO base items
+    * the juicy end: forging RELICS into T14 uniques. THIS DOES NOT BREAK THE
+      MAXT INVARIANT — MAXT governs ROLLABLE tiers, and T13 Riftforged already
+      lives above it at index 12 for exactly that reason. _nTiers() reads MAXT
+      so a 14th name does not disturb sprite mapping, and itemArtImg already
+      lets a relic's own art win before the tier-band maths. The one absolute:
+      a crafted T14 must NEVER enter a random draw.
 - Blacksmith fusion. Design work only so far; nothing built. See the hard rule.
 - Bounty board has no fog objective.
-- Lv1-20 zone progression on the starter island is thin.
+- Lv1-20 zone progression on the starter island is thin. The mount is now the
+  Lv20 reward that sits at the END of it; the island still produces nothing
+  permanent, which is what the fusion-materials plan above is meant to fix.
 - Per-class stat caps.
 - (done v444) The Vault. Account-wide storage, ungated. See DO THIS FIRST.
 - (done v432) The arena champion has THE CHALLENGE: it commits to a direction, a

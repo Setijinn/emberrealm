@@ -41,11 +41,20 @@ would re-map every existing tier onto the wrong sprite.
 and paid only on permanent death, scored from what the run accomplished. Bounties *bank* onto the
 run and pay out on death for exactly this reason.
 
-**Loot from a kill is always a sack.** One sack per kill; its art follows the best item inside it
+**Loot from a kill is always a sack**, and its art follows the best item inside it
 (`bagAt` → `bandOfTier(bagTopTier)`), so a relic makes it a reliquary. Progression reads through
-material and ornament, never through shape. The Emberwrought chest is the ONE exception, and it is
-not a drop — it is a placed event object that looks like nothing else precisely so it can never be
-mistaken for something a monster left behind.
+material and ornament, never through shape. The Emberwrought chest is not a drop — it is a placed
+event object that looks like nothing else precisely so it can never be mistaken for something a
+monster left behind.
+
+**One sack per kill, PLUS a creature carrier when one is owed** (user, 2026-07-27). Mounts and pet
+eggs drop in their own sack, always, and always *together* — one carrier however many creatures are
+in it. This is a deliberate, argued exception: eggs had been folded *into* the gear sack the day
+before for exactly the reason the rule exists, and the exception was taken anyway, so keep it
+narrow. Pet **food** stays in the gear sack — it drops on 5.5% of trash and 60% of bosses, and a
+carrier after most kills would make the carrier mean nothing. The carrier is band `-2` (the chest
+is `-1`), carries its own sprite, is always bound, and rides the existing per-connection filter
+rather than a new guarantee. `isCreatureItem()` is the predicate; adding a third kind is one line.
 
 **In co-op, bound loot never crosses another player's wire.** Soulbound rows are filtered *per
 connection* at send time rather than tagged and filtered client-side. One shared sack plus your own
@@ -59,6 +68,14 @@ role-based: `netSimulates()` is true for solo, for the host, and for a client wh
 **Enemy AI still runs only where `netSimulates()` says so.** Anything that damages the player from
 an enemy needs three parts: serialize in `netBroadcast`, deserialize in `netApplyWorld`, apply
 client-side in `netHazards` (all `14b_netsync.js`).
+
+**`NKIND`'s kind field is 4 bits now, not 3.** It was 3 bits and completely full — `egg` took the
+last slot — and `mount` needed a ninth, so the field was *widened* into bits 12–15 (16+ of the bag
+word were unused) rather than anything being renumbered. The renumbering ban still stands and
+always will: an index is packed into the co-op bag word, and moving one makes an older peer read
+every coin sack as a tonic. A peer on a pre-widening build reads a mount sack as a weapon sack,
+which is cosmetic only — `netUnpackBag` builds a **display-only ghost bag** and only the host's `G`
+grant ever carries real contents.
 
 **The enemy snapshot row is APPEND-ONLY and has no length validation.** Every optional trailing
 element must be null-guarded on read: an unguarded `a[n].map()` throws inside the PeerJS data
@@ -178,6 +195,40 @@ it hands you the prestige caps while there are still levels left to earn.
   movement *shape*. Both are needed or every creature walks the same straight line.
 - Shot count and cadence ramp with level (`eShotCount`, `eFireCd`). The flat damage floors in
   `makeEnemy` are the low-level difficulty dial.
+
+### Mounts (`17k_mounts.js`)
+**A mount is a ride, not a stat line: it carries you faster and it carries you UNARMED.** No
+attacks, no abilities. Without that trade a mount is a pure buff on a traversal tool, which makes
+"stay mounted" correct everywhere — the same shape as an immunity with no exit. There are three
+exits and all are cheap: dismount on demand (instant, no cooldown), damage throws you (cumulative
+while mounted vs a fraction of maxhp, so it self-scales and needs no second dial), and a live boss
+engagement throws you and keeps you off. **Getting ON takes 1.5s and damage interrupts it; getting
+OFF is instant, deliberately** — a dismount you had to channel would be the trap the exits prevent.
+
+**Mounts live on the USER**, like pets and the Vault, so they survive permadeath. Claimed at the
+**Stable** in the Hearth, which opens at Lv20 — the same beat as the bridge crossing and the onset
+of permadeath. The gate reads the highest level *any* character reached, so an alt does not re-earn
+it. Riding and swapping live in the **MOUNTS tab of the companion panel**, not the Stable, so you
+never walk back to town to get on a horse.
+
+**Archetypes carry the art; a species is an archetype in a COAT.** Twelve sprites, 14 coats, 78
+mounts — the same trick `MOB_ARCH`/`MOBTINT` uses for 252 creatures on 12 drawings. Every species
+carries its **own** speed around its rarity's baseline and the bands **overlap on purpose**, so a
+mount you like is never strictly obsoleted by the next rarity you pull. `tough` is the counterweight.
+
+**Draw it by its OPAQUE BOX** (`mountDrawUnder`) — the first pass scaled by canvas height, came out
+0.73× the hero and disappeared behind him. The rider's lift is derived from the same numbers that
+plant the animal's feet, so changing `MOUNT_DRAW_H` moves both together.
+
+**Drops are main-island only** (`onMainIsland` — the Lv20-50 zone) and very rare: boss 1.11%, elite
+0.315%, trash 0.075% measured. They arrive in the creature carrier, never the gear sack, and a
+mount goes to the Stable rather than the satchel, exactly as an egg goes to the incubator.
+
+**FLYING MOUNTS ARE NOT BUILT.** They are planned for Lv40. `MOUNT_FLY_LV`, `mountIsFlyer()` and
+`mountFlyOk()` are a declared seam that nothing reads yet, and **zero shipped species carry `fly`**
+— assert that stays true. Flight additionally needs a collision exemption (`04_collision.js`
+already has the shape in `player.terrainGhost`, gated on `_pmove`), a decision on whether it clears
+only water/chasm or everything, and an answer to which enemies can reach a flyer at all.
 
 ### The Vault (`17j_vault.js`) and the Scroll Registry
 Account-wide storage reached from the strongbox in the VAULT room. 60 gear slots paged 20 at a
