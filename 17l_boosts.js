@@ -1,16 +1,20 @@
 // ============================================================
 //  BOOST DRAUGHTS (17l_boosts.js)
 // ------------------------------------------------------------
-//  Three timed 2x consumables (user, 2026-07-28):
-//    HOARDER'S    2x how OFTEN loot drops   (quantity — more sacks)
-//    PROSPECTOR'S 2x FORTUNE                (quality — better tiers inside a sack)
-//    SCHOLAR'S    2x XP
+//  Three timed consumables (user, 2026-07-28):
+//    PROSPECTOR'S  a better chance at a RARE item   (rarity, not tier)
+//    HOARDER'S     a chance at DUPLICATED loot      (the same drop, twice)
+//    SCHOLAR'S     2x XP
 //
-//  "2x loot drop" and "2x loot rate" were asked for as two separate potions, and the two useful
-//  meanings of that are QUANTITY and QUALITY — so that is how they are split. Loot in this game
-//  already has exactly those two dials: the drop chance in rollPublicLoot/rollSoulbound decides
-//  whether a sack appears at all, and Fortune decides how good what is inside it is. If the intent
-//  was two quantity potions instead, BOOSTS.fort is the one row to change.
+//  The two loot draughts pull different levers on purpose, and neither is "more sacks":
+//  Prospector's re-rolls RARITY and keeps the better result, so what you find is better without
+//  any more of it appearing. Hoarder's leaves the roll alone and copies what came out. One makes a
+//  sack worth opening; the other makes it fuller.
+//
+//  RARITY, NOT TIER. rollRarity() is the 0-5 Common..Mythical ladder and is completely separate
+//  from the tier band, which is decided by where you are farming (zoneTierRow) and must stay that
+//  way — a potion that raised your TIER would let you drink your way into gear the zone does not
+//  owe you, which is the one thing the loot tables are built to prevent.
 //
 //  THEY DROP; THEY ARE NOT SOLD. Glory must never buy power, and a draught that doubles your XP
 //  or your loot is power however you frame it. They ride in the ordinary gear sack, which keeps
@@ -27,13 +31,37 @@
 // ============================================================
 
 const BOOST_DUR = 15*60*1000;      // 15 real minutes per draught
-const BOOST_MUL = 2;               // the "2x" in every name. One dial for all three.
+const BOOST_MUL = 2;               // the XP multiplier
+
+// RARITY RE-ROLL. Prospector's rolls rollRarity twice and keeps the better result. Chosen over
+// nudging the exponent or moving the cutoffs because it cannot break the ladder: the order stays
+// intact, Mythical stays the rarest slice, and nothing can overflow past it. The real-world effect
+// on "chance of Rare or better" is measured in QA rather than asserted here — an extra roll is
+// worth less than a flat doubling, and the honest number is the one worth writing down.
+const BOOST_RARE_ROLLS = 2;
+// DUPLICATION. Deliberately RARE, and rare by construction rather than by picking a small number:
+// an item duplicates only if BOOST_DUPE_ROLLS independent rolls ALL pass. Three at 0.40 is 6.4%,
+// so a duplicate is a moment rather than a rhythm, and the two dials move it very differently —
+// the probability tunes gently, the roll count tunes steeply. That is the point: a single 6.4%
+// constant would be one number nobody could reason about, whereas "it has to come up three times"
+// is a rule you can hold in your head.
+const BOOST_DUPE_ROLLS = 3;
+const BOOST_DUPE_P = 0.40;
+// FORTUNE DOES NOT TOUCH THIS (user, 2026-07-28). Fortune Coins raise your chance at a RARE item
+// and nothing else — they feed rollRarity's exponent, where they always have, and the Prospector's
+// Draught compounds with them there. Duplication is deliberately the one roll in the game Fortune
+// cannot buy: it is a flat, knowable 6.4% that a player with a hoard of coins and a player with
+// none experience identically, which is what keeps "how much loot" and "how good the loot" as two
+// separate axes instead of one stat quietly owning both.
+function _dupeHit(){
+  for(let i=0;i<BOOST_DUPE_ROLLS;i++) if(Math.random()>=BOOST_DUPE_P) return false;
+  return true; }
 
 const BOOSTS = {
-  loot: {id:'loot', name:"Hoarder's Draught",    icon:'🪙', col:'#e8b34b',
-         spr:'boost_loot', desc:'2x loot drops for 15 minutes'},
-  fort: {id:'fort', name:"Prospector's Draught", icon:'🍀', col:'#5cbf4a',
-         spr:'boost_fort', desc:'2x fortune for 15 minutes'},
+  dupe: {id:'dupe', name:"Hoarder's Draught",    icon:'🪙', col:'#e8b34b',
+         spr:'boost_loot', desc:'half your drops come doubled, 15 minutes'},
+  rare: {id:'rare', name:"Prospector's Draught", icon:'🍀', col:'#5cbf4a',
+         spr:'boost_fort', desc:'a better chance at rare items, 15 minutes'},
   xp:   {id:'xp',   name:"Scholar's Draught",    icon:'✦',  col:'#c07add',
          spr:'boost_xp',   desc:'2x experience for 15 minutes'},
 };
@@ -59,10 +87,34 @@ function boostLeft(id){ const b=boostStore(); if(!b) return 0;
 // The multiplier a system should apply. Always safe to call — 1 when nothing is running.
 function boostMul(id){ return boostActive(id) ? BOOST_MUL : 1; }
 
-// The three the rest of the game actually reads.
-function boostLootMul(){ return boostMul('loot'); }   // how often a sack drops
-function boostFortMul(){ return boostMul('fort'); }   // how good what is inside it is
-function boostXpMul(){   return boostMul('xp');   }   // experience
+// ---- the three hooks the rest of the game reads ----
+function boostXpMul(){ return boostMul('xp'); }
+
+// How many times rollRarity should roll and keep the best. 1 normally, BOOST_RARE_ROLLS while a
+// Prospector's is running.
+function boostRareRolls(){ return boostActive('rare') ? BOOST_RARE_ROLLS : 1; }
+
+// Duplicate the qualifying items of a freshly rolled sack. Returns a NEW array; the caller swaps
+// it in. Called once per sack rather than per item so the whole rule lives in one place.
+//
+// RELICS AND ONE-OFFS ARE NEVER DUPLICATED. A relic already carries its own duplicate rule and a
+// record of what you have found, so a second copy is thrown away on pickup anyway — copying it
+// would look like a jackpot and pay nothing. Coins are excluded for the same reason a loot potion
+// does not improve its own drop rate: Fortune Coins raise every future roll, and a draught that
+// minted them would compound into itself.
+function boostDupeItems(items){
+  if(!items || !items.length || !boostActive('dupe')) return items;
+  const out=[];
+  for(const it of items){
+    out.push(it);
+    if(!it || it.relic || it.k==='leg' || it.k==='coin' || it.k==='boost') continue;
+    if(_dupeHit()){
+      // a shallow copy is right: affixes are already rolled, and a duplicate should be the SAME
+      // item, not a second roll of one. Cloning the affix array keeps the two from sharing state.
+      const c=Object.assign({},it);
+      if(Array.isArray(it.aff)) c.aff=it.aff.map(a=>({s:a.s,v:a.v}));
+      out.push(c); } }
+  return out; }
 
 // ---- picking one up ----
 function boostGive(id,n){ const b=boostStore(), d=boostDef(id); if(!b||!d) return false;

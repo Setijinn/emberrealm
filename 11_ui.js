@@ -657,7 +657,7 @@ const AFFIX_PREFIX={ atk:'Vicious', def:'Sturdy', hp:'Vital', mp:'Arcane',
 // rarity can roll at ANY tier. Quality q in [0,1) is skewed toward 1 by tier+fortune
 // (higher exponent = better rolls) but the fixed ascending cutoffs keep the order
 // intact — Mythical is always the rarest slice, never overtaking Legendary.
-function rollRarity(t,fortune){
+function _rarityOnce(t,fortune){
  const e=1+(t|0)*0.045+(fortune||0)*0.03;
  const q=1-Math.pow(Math.random(),e);
  if(q>0.997) return 5;   // Mythical
@@ -666,6 +666,15 @@ function rollRarity(t,fortune){
  if(q>0.75)  return 2;   // Rare
  if(q>0.46)  return 1;   // Uncommon
  return 0; }
+// A Prospector's Draught (17l_boosts.js) rolls this more than once and keeps the BEST. Chosen over
+// shifting the cutoffs or the exponent because an extra roll cannot break the ladder -- the order
+// is untouched and nothing can overflow past Mythical. Tier is deliberately NOT affected: where
+// you farm decides your tier, and no potion may argue with that.
+function rollRarity(t,fortune){
+ const n=(typeof boostRareRolls==='function')?boostRareRolls():1;
+ let best=_rarityOnce(t,fortune);
+ for(let i=1;i<n;i++){ const r=_rarityOnce(t,fortune); if(r>best) best=r; }
+ return best; }
 function affixValue(k,t,rar){ const mag=(t-3)*(1+rar*0.4);
  if(k==='hp'||k==='mp') return Math.max(2,Math.round(mag*3+4));
  if(k==='atk'||k==='spd') return Math.max(1,Math.round(mag*1.5+2));
@@ -1040,20 +1049,14 @@ function rollPublicLoot(e,row,F,extra,cls){
    // opening: one slot roll averages 1.3 pieces, which is how a "bag" ended up meaning "an item".
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);  // a boss always pays out
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
-   // ...and a Hoarder's Draught buys a boss the extra rolls it cannot get from a doubled chance
-   const _bl=(typeof boostLootMul==='function')?boostLootMul():1;
-   for(let k=1;k<_bl;k++){
-     for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);
-     for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it); }
  } else {
-   // A Hoarder's Draught doubles how OFTEN a sack appears. On a boss, which always pays out, that
-   // cannot mean "twice as likely" -- it means an extra roll of the public table into the same
-   // sack, so the boost is worth the same to a boss killer as to anyone else without breaking
-   // one-sack-per-kill.
-   const gp=(PUB_GEAR[e.type]||0)*fmul*((typeof boostLootMul==='function')?boostLootMul():1);
+   const gp=(PUB_GEAR[e.type]||0)*fmul;
    if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
  }
- if(items.length) loots.push(bagAt(e,items));            // everything missed -> no sack at all
+ // A Hoarder's Draught copies what came out, at the moment the sack is assembled -- one place
+ // for the whole rule, covering gear and the extras (scrolls, food) alike.
+ const _its=(typeof boostDupeItems==='function')?boostDupeItems(items):items;
+ if(_its.length) loots.push(bagAt(e,_its));               // everything missed -> no sack at all
 }
 // One recipient's private roll. `who` is {id,fort}; id is undefined in solo, and bagAt's owner tag
 // is only applied when actually networked, so solo bags never carry the field.
@@ -1132,11 +1135,7 @@ function rollLoot(e){
  // keeps the rule intact: still exactly ONE sack, it is just a better one.
  const row=(e && e.elite && typeof zoneTierRowUp==='function') ? zoneTierRowUp(e.x,e.y)
                                                               : zoneTierRow(e.x,e.y);
- // A Prospector's Draught doubles FORTUNE, which is the quality dial -- it makes what is inside a
- // sack better, and does nothing to whether one appears. The Hoarder's Draught is the other half
- // and lives in rollPublicLoot/rollSoulbound, where the drop CHANCES are.
- const F=((typeof player!=='undefined'&&player.fortune)||0)
-        *((typeof boostFortMul==='function')?boostFortMul():1);
+ const F=(typeof player!=='undefined'&&player.fortune)||0;
  // Fortune Coin (bronze) — its own roll, can drop alongside gear. Rare on purpose: a coin boosts
  // EVERY future drop for as long as you carry it, so it compounds where gear does not. At the old
  // 4%/85% they were routine, which quietly made Fortune the cheapest stat in the game.
