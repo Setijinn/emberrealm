@@ -1,0 +1,27 @@
+/* Pixelify Sans, served from our own origin.
+   It used to come from fonts.googleapis.com, which the service worker can NEVER cache:
+   sw.js only stores responses with res.type === 'basic', and a cross-origin font is
+   'cors'. So an offline PWA silently fell back to monospace and every online session
+   paid a third-party round trip. Latin subset only -- the game has no cyrillic text, and
+   Google serves a byte-identical file for 500 and 700 (it is a variable font), so one 12KB
+   file backs both weights.
+   url() is relative to THIS FILE, not to index.html. Writing the document-relative path here
+   made the browser look for assets/font/assets/font/... -- both faces entered [error] state
+   while the woff2 itself still served a clean 200, so nothing looked wrong until the rendered
+   text was measured against the fallback. */
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(pixelifysans-500.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(pixelifysans-500.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

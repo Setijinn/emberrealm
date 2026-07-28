@@ -93,7 +93,11 @@ function _readBuild(){
   if(!self.caches) return;                       // insecure context — no Cache Storage at all
   caches.keys().then(ks=>{
     // Between a new SW's install and its activate BOTH caches exist, so take the highest.
-    const vs=ks.filter(n=>n.startsWith('emberrealm-v')).map(n=>parseInt(n.slice(12),10))
+    // sw.js now keeps TWO caches -- code and art -- versioned separately so a code bump stops
+    // evicting 38MB of art. The build a tester is on is the CODE one; the art version moves
+    // only when art does and would be a misleading thing to report. Old single-cache names
+    // (emberrealm-v###) are still matched so a client mid-upgrade reports something sane.
+    const vs=ks.map(n=>{ const m=/^emberrealm-(?:code-)?v(\d+)$/.exec(n); return m?parseInt(m[1],10):NaN; })
                .filter(n=>!isNaN(n)).sort((a,b)=>b-a);
     if(vs.length) BUILD='v'+vs[0];
     paintBuildTag();
