@@ -46,6 +46,34 @@ function ambientParts(dt){
 // Put a disengaged boss back exactly as it was found: full health, phase 0, no statuses, no
 // lingering mechanic state, and none of the adds or images it spawned. A partial reset would let
 // you chip a boss down over several trips, which is precisely what the arena lock is meant to stop.
+// SPAWN-POINT INDEX. Bucketed by a coarse tile grid and cached on the room, so the respawn pass
+// can ask for "everything within R of these heroes" instead of walking the whole table. Rebuilt
+// only if the room's spawn list is replaced (a regenerated dungeon gets a fresh array).
+const _SP_CELL=16;                       // tiles per bucket
+function _spawnGrid(R){
+  if(R._spG && R._spGsrc===R.spawns) return R._spG;
+  const g=new Map();
+  for(const sp of R.spawns){
+    const k=((sp.x/_SP_CELL)|0)+','+((sp.y/_SP_CELL)|0);
+    let a=g.get(k); if(!a){ a=[]; g.set(k,a); } a.push(sp);
+  }
+  R._spG=g; R._spGsrc=R.spawns; return g;
+}
+function _spawnsNear(R,anchors,rad){
+  if(!R||!R.spawns) return [];
+  if(!anchors||!anchors.length) return [];
+  const g=_spawnGrid(R), cellPx=_SP_CELL*TILE, out=[], seen=new Set();
+  const reach=Math.ceil((rad+cellPx)/cellPx);
+  for(const a of anchors){
+    const cx=((a.x/cellPx)|0), cy=((a.y/cellPx)|0);
+    for(let dy=-reach;dy<=reach;dy++) for(let dx=-reach;dx<=reach;dx++){
+      const k=(cx+dx)+','+(cy+dy);
+      if(seen.has(k)) continue; seen.add(k);
+      const arr=g.get(k); if(arr) for(const sp of arr) out.push(sp);
+    }
+  }
+  return out;
+}
 function bossReset(e){
   e.hp=e.maxhp;
   e.phase=0; e.phaseInv=0; e.dlgInv=0; e.phaseFlash=0; e.mechInv=0;
@@ -909,8 +937,15 @@ function update(dt){
     const _roamN=_anchors.map(()=>0);
     for(const e of enemies){ if(e.type!=='c'&&e.type!=='s') continue;
       const n=_nearIdx(e.x,e.y); if(n.d<1100) _roamN[n.i]++; }
-    for(const sp of curRoom.spawns){
-      if(enemies.some(e=>e.sref===sp)) continue;
+    // ONLY THE SPAWN POINTS THAT COULD POSSIBLY FIRE. This walked every spawn point in the room
+    // -- 7,490 of them on the overworld, not the ~700 the comment above claims -- and did an
+    // O(enemies) `some()` on each, twice a second: roughly 225,000 comparisons plus 7,490
+    // Math.hypot and 7,490 closures per pass. Every branch below needs d<800, so a point further
+    // than that from every hero cannot spawn anything and does not need looking at. The bucket
+    // index is built once per room and the live-sref set once per pass.
+    const _live=new Set(); for(const e of enemies) if(e.sref) _live.add(e.sref);
+    for(const sp of _spawnsNear(curRoom,_anchors,800)){
+      if(_live.has(sp)) continue;
       const roamer = (sp.t==='c'||sp.t==='s');
       const sx=(sp.x+.5)*TILE, sy=(sp.y+.5)*TILE;
       const n=_nearIdx(sx,sy), d=n.d;

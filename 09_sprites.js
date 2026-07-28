@@ -534,25 +534,21 @@ function drawEnemySprite(e,pn){
    ctx.beginPath(); ctx.arc(ex-sp2,ey,sp2*0.44,0,6.29); ctx.arc(ex+sp2,ey,sp2*0.44,0,6.29); ctx.fill();
    ctx.restore();
  };
- if(_night) ctx.save();
- if(_night) ctx.filter='brightness(0.62) saturate(0.75) contrast(1.15)';
  if(e.type==='c'){
-   if(_ai){ const t=tintedMob(_ai,bd); blit(t,e.x+_shud,e.y+_shud*0.6+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
+   if(_ai){ const t=tintedMob(_ai,bd,_night); blit(t,e.x+_shud,e.y+_shud*0.6+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
    else { const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.c:null,e,pn);
-   if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
+   if(fr){ const t=tintedMob(fr,bd,_night); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
    else { const im=(typeof _mobHound!=='undefined')?_mobHound:null;
-     if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
+     if(im&&im.naturalWidth){ const t=tintedMob(im,bd,_night); blit(t,e.x,e.y+Math.sin(pn*6+e.x)*1,(e.r*2.7)/t.width,flip); }
      else blit(sprHound,e.x,e.y+Math.sin(pn*6+e.x)*1,2.0,flip); } }
-   if(_night){ ctx.filter='none'; ctx.restore(); }
    _eyes(); _crown(); }
  else if(e.type==='s'){
-   if(_ai){ const t=tintedMob(_ai,bd); blit(t,e.x+_shud,e.y+_shud*0.6+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
+   if(_ai){ const t=tintedMob(_ai,bd,_night); blit(t,e.x+_shud,e.y+_shud*0.6+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
    else { const fr=_enemyFrame((typeof _mobAnim!=='undefined')?_mobAnim.s:null,e,pn);
-   if(fr){ const t=tintedMob(fr,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
+   if(fr){ const t=tintedMob(fr,bd,_night); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
    else { const im=(typeof _mobCultist!=='undefined')?_mobCultist:null;
-     if(im&&im.naturalWidth){ const t=tintedMob(im,bd); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
+     if(im&&im.naturalWidth){ const t=tintedMob(im,bd,_night); blit(t,e.x,e.y+Math.sin(pn*3+e.x)*1.5,(e.r*2.7)/t.width,flip); }
      else blit(sprCult,e.x,e.y+Math.sin(pn*3+e.x)*1.5,2.1,flip); } }
-   if(_night){ ctx.filter='none'; ctx.restore(); }
    _eyes(); _crown(); }
  else { // awakened dungeon bosses use their spectral sprite when it exists
    const _ba=(typeof bossArt==='function')?bossArt(e.ring):e.ring;   // art slot, NOT the boss id
@@ -652,11 +648,22 @@ function mobLabel(e){ if(e.spn) return e.spn;
  const t=MOBNAME[e.type]; if(!t) return ENAME[e.type]||'';
  const bd=enemyBand(e); return (bd>=0&&t[bd])||ENAME[e.type]||''; }
 const _mobTintCache=new Map();
-function tintedMob(im,bd){ const tint=(bd>=0)?MOBTINT[bd]:null; if(!tint) return im;
- const k=im.src+'|'+bd; let cv=_mobTintCache.get(k);
+// THE NIGHTMARE DARKENING IS BAKED IN HERE NOW, not applied as ctx.filter at draw time.
+// Canvas2D `filter` forces an offscreen layer plus a shader pass around every drawImage it
+// wraps, and it was set for EVERY enemy in EVERY dungeon -- precisely where the enemy count is
+// highest. This cache already keyed on (src, band); adding the night flag costs one extra
+// cached canvas per sprite and nothing per frame.
+function tintedMob(im,bd,night){
+ const tint=(bd>=0)?MOBTINT[bd]:null;
+ if(!tint && !night) return im;
+ const k=im.src+'|'+bd+(night?'|n':'');
+ let cv=_mobTintCache.get(k);
  if(!cv){ cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight;
-  const c=cv.getContext('2d'); c.imageSmoothingEnabled=false; c.drawImage(im,0,0);
-  c.globalCompositeOperation='source-atop'; c.fillStyle=tint; c.fillRect(0,0,cv.width,cv.height);
+  const c=cv.getContext('2d'); c.imageSmoothingEnabled=false;
+  if(night) c.filter='brightness(0.62) saturate(0.75) contrast(1.15)';   // same values the draw-time filter used
+  c.drawImage(im,0,0);
+  c.filter='none';
+  if(tint){ c.globalCompositeOperation='source-atop'; c.fillStyle=tint; c.fillRect(0,0,cv.width,cv.height); }
   _mobTintCache.set(k,cv); }
  return cv; }
 // ---------- hub / world decor ----------

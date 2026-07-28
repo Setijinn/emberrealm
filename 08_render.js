@@ -70,6 +70,27 @@ function vnoise(x,y,scale){
   const a=_vnR(x0,y0), b=_vnR(x0+1,y0), c=_vnR(x0,y0+1), d=_vnR(x0+1,y0+1), sx=_vnS(ux), sy=_vnS(uy);
   return (a*(1-sx)+b*sx)*(1-sy)+(c*(1-sx)+d*sx)*sy;
 }
+// The Vault's marble veining, rendered once for the whole room. Keyed on the room's identity and
+// size so re-entering reuses it and a different room can never read another's cache.
+let _vvCv=null, _vvKey='';
+function _vaultVeins(){
+  const R=curRoom; if(!R) return null;
+  const key=(R.key||'?')+':'+R.w+'x'+R.h;
+  if(_vvCv && _vvKey===key) return _vvCv;
+  const cv=document.createElement('canvas');
+  cv.width=R.w*TILE; cv.height=R.h*TILE;
+  const c=cv.getContext('2d');
+  for(let y=0;y<R.h;y++) for(let x=0;x<R.w;x++){
+    const ox=x*TILE, oy=y*TILE;
+    for(let vy=0;vy<TILE;vy+=2) for(let vx=0;vx<TILE;vx+=2){
+      const wx=x+vx/TILE, wy=y+vy/TILE;
+      const v=Math.abs(vnoise(wx*5.5,wy*5.5,2.0)-0.5);
+      if(v<0.018){ c.fillStyle='rgba(188,194,228,'+((0.018-v)*4.5).toFixed(3)+')';
+        c.fillRect(ox+vx,oy+vy,2,2); }
+    }
+  }
+  _vvCv=cv; _vvKey=key; return cv;
+}
 // ---- SEAMLESS PER-TILE SHADE ----
 // Every floor renderer in this file had its own copy of the same idea: hash the cell, bucket it,
 // and paint a flat wash across the whole tile. That is what drew the grid. Two things were wrong
@@ -556,12 +577,16 @@ function drawTileG(x,y){
     // marble because the veins are hairlines you notice on the second look: the frequency is more
     // than tripled so the features are small, the band is less than half as wide, and peak alpha
     // is 0.08 instead of 0.15.
-    for(let vy=0;vy<TILE;vy+=2) for(let vx=0;vx<TILE;vx+=2){
-      const wx=x+vx/TILE, wy=y+vy/TILE;
-      const v=Math.abs(vnoise(wx*5.5,wy*5.5,2.0)-0.5);
-      if(v<0.018){ ctx.fillStyle='rgba(188,194,228,'+((0.018-v)*4.5).toFixed(3)+')';
-        ctx.fillRect(tx+vx,ty+vy,2,2); }
-    }
+    // ONE STAMP, NOT 484 SAMPLES A TILE. This was a 22x22 inner loop -- 484 vnoise calls per
+    // floor tile, every frame, for a pattern that is a pure function of (x,y) and never changes.
+    // The Vault is 30x18 and nearly all of it is on screen, so it cost ~170,000 vnoise (and,
+    // before the closures were hoisted, ~340,000 allocations) per frame. The veining has to stay
+    // CONTINUOUS across slabs -- that is the whole reason it is sampled from noise instead of a
+    // per-tile hash -- so it cannot be a small set of stamps the way 09c_floordetail does it.
+    // Instead the whole layer is rendered once into a room-sized canvas and each tile blits its
+    // own slice: identical pixels, one drawImage. Built lazily behind the room transition.
+    const _vv=_vaultVeins();
+    if(_vv) ctx.drawImage(_vv, x*TILE, y*TILE, TILE, TILE, tx, ty, TILE, TILE);
     for(let i=0;i<5;i++){ const g3=hmix(x*13+i,y*17+i);
       ctx.fillStyle=(g3&1)?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.18)';
       ctx.fillRect(tx+(g3%TILE),ty+((g3>>>6)%TILE),1,1); }
