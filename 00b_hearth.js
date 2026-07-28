@@ -146,19 +146,21 @@
   // which is how the two chests were lost on the first pass. It sits CLOSE to the great door on
   // purpose: the camera follows the player, so a strongbox further down the aisle would push the
   // door off the top of the screen exactly when you are standing at the thing you came for.
-  strongbox:{tx:15, ty:8},
+  strongbox:{tx:15, ty:9},
   // ORDER IS DRAW ORDER. The great door goes first so everything else stands in front of it --
   // it is the backdrop the room is arranged around, not a prop in it.
-  // WHERE THE GREAT DOOR SITS, and why it is not on the back wall.
-  // The camera centres on the player and shows about seven tiles above them, and the STORE banner
-  // is drawn at a FIXED SCREEN position near the top rather than in the world. A door mounted on
-  // the actual back wall therefore has no good height: from the aisle it is off the top of the
-  // screen, and from the strongbox -- the one moment it should land -- the banner covers it.
-  // So the door stands almost level with the strongbox, flush under the bank of boxes above it.
-  // Its foot is hidden by the strongbox itself (decor is drawn in list order, door first), which
-  // reads exactly right: a small iron coffer standing in front of a great vault door.
-  decor:[{t:'v_door',x:15,y:8.4,w:100},
-         {t:'strongbox',x:15,y:8.5},
+  // WHERE THE GREAT DOOR SITS.
+  // It was placed almost level with the strongbox to keep its head clear of the STORE banner --
+  // which is drawn at a FIXED SCREEN position, not in the world, so it covers whatever is near the
+  // top of the view while you are interacting. That bought the wrong thing: measured, the coffer's
+  // lid ended up 32px INSIDE the door's lower panel and the two read as one welded object.
+  // The door now stands a tile and a half further back, set into the rack wall where a door
+  // belongs, with ~56px of clear floor between its foot and the top of the coffer.
+  // The cost is honest and small: while you are actually standing at the box the banner covers the
+  // arch's upper half. That is the one moment you are reading the panel rather than the room, and
+  // from anywhere else on the aisle -- which is every other second -- the door is fully visible.
+  decor:[{t:'v_door',x:15,y:7.3,w:94},
+         {t:'strongbox',x:15,y:9.4},
          {t:'sign',x:15,y:11.5,txt:'THE VAULT'},
          {t:'v_boxes', x:5.6,y:5.9},{t:'v_boxes', x:24.4,y:5.9},
          {t:'v_crates',x:4.2,y:8.2},{t:'v_crates',x:25.8,y:8.2},
