@@ -850,12 +850,23 @@ function paintStable(){
 //
 //  Ascensions fall through to their base class exactly like emberSprite already does, and a class
 //  with no ride art yet falls through to the standing sprite, so this can land one class at a time.
+// TWO PLACES A RIDER LAYER CAN LIVE, and the mount-specific one wins:
+//   assets/riders/<arch>/<cls>/ride_<d>.png   extracted against THAT archetype
+//   assets/riders/<cls>/ride_<d>.png          the shared layer, extracted against a horse
+//
+// The distinction is not cosmetic. Extraction always carries a few of the mount's own pixels along
+// with the rider, and those are invisible when the layer goes back onto the mount it came from and
+// obvious when it does not — a horse-extracted knight drops orange-brown flecks all over a dragon.
+// So the plain quadrupeds share one layer, and every visually distinct mount gets its own.
 const _rideArt={};
-function rideImg(cls,dir){
-  if(typeof window==='undefined'||!cls) return null;
-  const p='assets/'+cls+'/ride_'+dir+'.png';
-  if(_rideArt[p]===undefined){ const i=new Image(); i.src=p; _rideArt[p]=i; }
-  const im=_rideArt[p]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+function _rideAt(path){
+  if(typeof window==='undefined') return null;
+  if(_rideArt[path]===undefined){ const i=new Image(); i.src=path; _rideArt[path]=i; }
+  const im=_rideArt[path]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+function rideImg(cls,dir,arch){
+  if(!cls) return null;
+  if(arch){ const own=_rideAt('assets/riders/'+arch+'/'+cls+'/ride_'+dir+'.png'); if(own) return own; }
+  return _rideAt('assets/riders/'+cls+'/ride_'+dir+'.png'); }
 
 // {img, flip} or null. West mirrors east when there is no west art, matching _emberDir's rule for
 // the standing sprite — a seated humanoid IS near enough symmetric for that, unlike a quadruped.
@@ -863,12 +874,13 @@ function riderSprite(look,aim){
   if(!mounted()) return null;
   const base=(look&&look.cls)||'knight';
   const dir=_mountDir(aim||0);
-  let im=rideImg(base,dir);
+  const d=mountDef(player.mnt), arch=d?d.spr:null;
+  let im=rideImg(base,dir,arch);
   if(im) return {img:im, flip:false};
   // the 8-way set may only ship 4: fold the diagonals onto their nearest cardinal
   const fold={ne:'n', nw:'n', se:'s', sw:'s'}[dir];
-  if(fold){ im=rideImg(base,fold); if(im) return {img:im, flip:false}; }
-  if(dir==='w'||dir==='nw'||dir==='sw'){ im=rideImg(base,'e'); if(im) return {img:im, flip:true}; }
+  if(fold){ im=rideImg(base,fold,arch); if(im) return {img:im, flip:false}; }
+  if(dir==='w'||dir==='nw'||dir==='sw'){ im=rideImg(base,'e',arch); if(im) return {img:im, flip:true}; }
   return null; }
 
 // ---- WHERE THE SADDLE ACTUALLY IS, MEASURED FROM THE SPRITE ----
