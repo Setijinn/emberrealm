@@ -241,6 +241,11 @@ function perkDo(d,ctx,src){
       if(o.r){ if(typeof enemies!=='undefined') for(const t of enemies)
                  if(Math.hypot(t.x-x,t.y-y)<o.r) applyStatus(t,o.id,dur,val); }
       else if(e) applyStatus(e,o.id,dur,val); }
+    // THE VERB FOUR CAPSTONES WERE WRITTEN AGAINST. Shadowdance, Vanishing Act and Windwalk all
+    // say "untouchable for Ns" in their own description and perkDo had no way to grant it, so
+    // each delivered only its secondary buff. i-frames are RAISED, never lowered, so a shorter
+    // source cannot cut a longer one short.
+    if(d.inv){ player.inv=Math.max(player.inv||0,(d.inv.dur||d.inv)*r); }
     if(d.heal){ const amt=player.maxhp*(d.heal.pct||0.05)*r*(d.heal.perFoe?ctx.n||1:1);
       if(typeof healPlayer==='function') healPlayer(amt); else player.hp=Math.min(player.maxhp,player.hp+amt); }
     if(d.mana){ player.mp=Math.min(player.maxmp,(player.mp||0)+player.maxmp*(d.mana.pct||0.1)*r); }

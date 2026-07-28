@@ -332,6 +332,7 @@ function eFire(e,ang,spd=200){
   const pk='e:'+(e.name?('B_'+e.name):(e.type+'_'+Math.floor((e.lv||1)/12)));
   eShots.push({x:e.x,y:e.y,px:e.x,py:e.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
     r:e.psize||6,life:3,bd:(e.bd||8)*statusDmgOut(e),col:e.pcol||null,core:e.pcore||null,shape:e.pshape||null,pk:pk,
+    owner:e,             // who fired it: on-hurt perks need a target to punish
     inf:e.inf||null});   // the caster's affliction rides the bolt
 }
 function boom(x,y,col,n=10){

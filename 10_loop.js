@@ -29,7 +29,12 @@ window.addEventListener('error',function(ev){ showErr(ev.error||ev.message); });
 function loop(now){ const dt=Math.min(0.05,(now-last)/1000); last=now;
   checkSize();
   if(W>H&&inGame){
-    try{ update(dt); }catch(e){ showErr(e); }
+    // THE WORLD PAUSES BEHIND A PANEL. It used to keep simulating: you could die to a boss
+    // mechanic you could not see while respeccing, or park in a menu and regenerate a 60s
+    // ultimate for free. Rendering continues so the game is still visible behind a partly
+    // transparent overlay -- only time stops.
+    const _paused=(typeof uiPanelOpen==='function') && uiPanelOpen();
+    if(!_paused){ try{ update(dt); }catch(e){ showErr(e); } }
     // A THROW MUST NOT POISON THE NEXT FRAME. render() opens a save() and ~30 helpers push their
   // own; nothing unwinds them on the way out, so after one fault the world transform stayed
   // applied to the HUD and every subsequent frame added another unmatched save() -- an unbounded

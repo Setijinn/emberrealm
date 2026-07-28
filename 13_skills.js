@@ -200,7 +200,7 @@ const CLASS_TREE = {
     eff:{fort:6}, trig:{on:'kill',do:{res:{n:8}}}},
    {id:'ro_s5',name:'Shadowdance',desc:'Keystone: a finisher makes you untouchable for 1.2s and refunds 1.5s of cooldown',
     cost:3,max:1,req:['ro_s2','ro_s3'],ifOwn:'ro_a5',
-    trig:{on:'proc',filter:{tag:'finisher'},do:{buff:{f:'bSpd',m:1.5,dur:2.5},cdCut:{s:1.5}}}},
+    trig:{on:'proc',filter:{tag:'finisher'},do:{inv:{dur:1.2},buff:{f:'bSpd',m:1.5,dur:2.5},cdCut:{s:1.5}}}},
   ]},
   {key:'bloodletter',name:'Bloodletter',color:'#6aae7a',nodes:[
    {id:'ro_b1',name:'Flurry',desc:'+6% attack speed per rank',cost:1,max:2,req:[],eff:{rof:0.06}},
@@ -248,7 +248,7 @@ const CLASS_TREE = {
    {id:'as_e2',name:'Toughened',desc:'+8% max HP per rank',cost:2,max:2,req:['as_e1'],eff:{hpPct:0.08}},
    {id:'as_e3',name:'Slippery',desc:'take 8% less damage per rank',cost:2,max:2,req:['as_e1'],eff:{dr:0.08}},
    {id:'as_e4',name:'Vanishing Act',desc:'A kill hides you — untouchable 0.8s and +40% speed for 2s (2s)',cost:3,max:1,req:['as_e2'],
-    trig:{on:'kill',icd:2,do:{buff:{f:'bSpd',m:1.4,dur:2,col:'#8a5ac0'},shield:{pct:0.06}}}},
+    trig:{on:'kill',icd:2,do:{inv:{dur:0.8},buff:{f:'bSpd',m:1.4,dur:2,col:'#8a5ac0'},shield:{pct:0.06}}}},
    {id:'as_e5',name:'Phantom',desc:'Keystone: take 12% less damage; for 3s after a kill you strike 20% harder',
     cost:3,max:1,req:['as_e3','as_e4'],eff:{dr:0.12},
     cond:{when:'recentKill',eff:{atkPct:0.20}}},
@@ -532,7 +532,7 @@ const CLASS_TREE = {
     eff:{regen:2}, mod:{kind:'dash',do:{status:{r:100,id:'stun',dur:0.4},res:{n:14}}}},
    {id:'mo_w5',name:'Windwalk',desc:'Keystone: +12% move, +8% attack speed; a hundred-hands burst makes you untouchable 1s',
     cost:3,max:1,req:['mo_w3','mo_w4'],ifOwn:'mo_f5',eff:{spd:0.12,rof:0.08},
-    trig:{on:'proc',filter:{tag:'chi'},do:{shield:{pct:0.10},buff:{f:'bSpd',m:1.5,dur:3}}}},
+    trig:{on:'proc',filter:{tag:'chi'},do:{inv:{dur:1.0},shield:{pct:0.10},buff:{f:'bSpd',m:1.5,dur:3}}}},
   ]},
   {key:'ki',name:'Inner Ki',color:'#d4b96a',nodes:[
    {id:'mo_k1',name:'Meditation',desc:'+5 WIS per rank',cost:1,max:3,req:[],eff:{wis:5}},

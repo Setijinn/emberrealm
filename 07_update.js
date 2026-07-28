@@ -315,7 +315,13 @@ function damagePlayer(raw){
   if((player.shield||0)>0){ const ab=Math.min(player.shield,hit); player.shield-=ab; hit-=ab; }
   if(hit>0) player.hp-=hit;
   if(player.vanishHurt) player.inv=Math.max(player.inv,1.1);
-  if(typeof perkFire==='function') perkFire('hurt',{dmg:hit,x:player.x,y:player.y});
+  // PASS THE ATTACKER. Three nodes -- Defiant Stand, Warmth, Vigor -- are on:'hurt' with a status
+  // payload and no radius, and perkDo's only no-radius path is `else if(e) applyStatus(e,...)`.
+  // With no `e` in the context that branch could never run, so all three read "foes that strike
+  // you are Stunned/Weakened" and did nothing at all. damagePlayer does not know who hit it, so
+  // the two call sites that DO know now record it and it is handed on here.
+  if(typeof perkFire==='function') perkFire('hurt',{dmg:hit,x:player.x,y:player.y,e:player._lastHitBy||null});
+  player._lastHitBy=null;
   // A MOUNT IS THROWN BY DAMAGE, and this is the one place that sees all of it — touch, enemy
   // shots, boss hazards and the client-side hazard paths in 14b_netsync.js every one route
   // through damagePlayer, so the throw needs a single hook rather than a dozen call sites.
@@ -609,7 +615,7 @@ function update(dt){
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt); }
       if(dd<e.r+player.r+POSS_GRAB && typeof possessPlayer==='function') possessPlayer(e);
       if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
-      if(dd<e.r+player.r && player.inv<=0){ const hit=damagePlayer(e.touch*statusDmgOut(e));
+      if(dd<e.r+player.r && player.inv<=0){ player._lastHitBy=e; const hit=damagePlayer(e.touch*statusDmgOut(e));
         if(e.inf) playerStatus(e.inf.id,e.inf.dur,0);        // what this creature leaves on you
         player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
         const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
@@ -866,6 +872,7 @@ function update(dt){
     if(!_netCl){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
       if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; } }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
+      player._lastHitBy=(s.owner||null);   // whoever fired the shot, when the shot knows
       damagePlayer(s.bd||8);
       // the shot carries whatever its caster inflicts — a Sawgrass Spitter's bolt poisons you the
       // same way your poison bolts poison it. Stamped at eFire from the species.

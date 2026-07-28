@@ -72,8 +72,15 @@ const P = {
    abilFx('blast',c.x,c.y,col); },
  dash:(dist,inv,col)=>(c)=>{ const a=c.aim, ox=player.x, oy=player.y;
    const nx=player.x+Math.cos(a)*dist, ny=player.y+Math.sin(a)*dist;
-   if(!solid(nx,ny)){player.x=nx;player.y=ny;}
-   let iv=inv; if(player.dashInv) iv=Math.max(iv,0.6);          // Windranger / Windwalker
+   // SWEPT, NOT ENDPOINT-ONLY. Testing just the destination let a dash pass clean through any
+   // wall thinner than its own distance. los() is the swept test 06_combat already uses for
+   // shots; a dash is the same question asked of a body.
+   if(!solid(nx,ny) && (typeof los!=='function' || los(ox,oy,nx,ny))){ player.x=nx; player.y=ny; }
+   // dashInv ADDS to the dash's own window rather than flooring it at 0.6. Both ascensions that
+   // grant it (Windranger, Windwalker) come with dashes that already pass inv:1, and the third
+   // dash in range passes 0.7 -- so the floor was a no-op and two of the 51 capstones did
+   // literally nothing, while both describe themselves as "dash through untouchable".
+   let iv=inv; if(player.dashInv) iv=inv+0.8;                   // Windranger / Windwalker
    player.inv=Math.max(player.inv,iv);
    // afterimage smear along the dash line
    if(typeof emitP==='function') for(let t=0;t<=1;t+=0.12)
@@ -522,13 +529,22 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
 // ----- hover tooltip for the ability buttons (PC only, during play) -----
 // Shows the armed ability's name, cost/cooldown and description when the mouse
 // rests over one of the 3 slots — but only while actually playing (no menu open).
-function _abilMenuOpen(){
-  const ids=['menuScr','charScr','classScr','devScr','setScr','loginScr',
-             'invScr','loadScr','shopScr','aucScr','bntScr','dmdScr','wrdScr','skillScr','mapScr','coopScr'];
-  for(const id of ids){ const el=document.getElementById(id);
+// IS A FULL-SCREEN PANEL UP? This existed only to suppress an ability tooltip, but it is the
+// answer the whole game needed: update() ran regardless, so with the skill tree, vault, map,
+// stable, wardrobe or inventory open the world kept simulating behind an opaque overlay --
+// enemies chased and hit you, boss mechanics resolved, DoTs ticked, auto-attack fired, and the
+// ultimate recharged. Respeccing mid-arena was a free death and camping in a menu was free ult
+// regeneration. Promoted to the shared predicate (uiPanelOpen) and given the entries the four
+// divergent copies of this list were each missing.
+const UI_PANEL_IDS=['menuScr','charScr','classScr','devScr','setScr','loginScr','fallenScr',
+  'hcScr','deathScr','invScr','loadScr','shopScr','aucScr','bntScr','dmdScr','wrdScr',
+  'skillScr','mapScr','coopScr','statsScr','bagScr','vaultScr','stableScr','ftScr'];
+function uiPanelOpen(){
+  for(const id of UI_PANEL_IDS){ const el=document.getElementById(id);
     if(el && getComputedStyle(el).display!=='none') return true; }
   return false;
 }
+function _abilMenuOpen(){ return uiPanelOpen(); }
 function drawAbilTooltip(){
   if(!inGame||!rpg) return;
   if(typeof inputMode==='undefined'||inputMode!=='pc') return;   // hover is a mouse concept

@@ -51,7 +51,12 @@ function mechDmg(e,mul){
   const cap=(typeof player!=='undefined'&&player.maxhp)?player.maxhp*0.26:9999;
   return Math.min(cap, base);
 }
-function mkState(e){ if(!e.mk) e.mk={haz:[],beam:null,wall:null,mark:null,ring:null,t:0,t2:0,n:0,ph:-1}; return e.mk; }
+// t and t2 are NOT pre-seeded. mechEvery cold-starts a timer by testing `=== undefined`, and
+// setting them to 0 here skipped that: both fired on the very first engaged frame, so ow11 swung
+// its scythe, ow5 burrowed and the arena issued its challenge before the player had read
+// anything -- while t3 and every other key, being genuinely undefined, correctly waited a full
+// period. Inconsistent openings from a one-character difference.
+function mkState(e){ if(!e.mk) e.mk={haz:[],beam:null,wall:null,mark:null,ring:null,n:0,ph:-1}; return e.mk; }
 function _pl(){ return (typeof player!=='undefined')?player:null; }
 function _hurt(amount){ if(typeof damagePlayer==='function') damagePlayer(amount); }
 

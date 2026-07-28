@@ -84,7 +84,11 @@ _F('ow1',{ phases:[0.60,0.28], titles:['','THE FOG THICKENS','NOTHING TO SEE'],
     if(mechEvery(e,'t',4.2-ph*0.6,dt)){
       _sig(e,'fade');
       const p=_pxy(), a=Math.random()*6.283, d=TILE*(3.0+Math.random()*2.0);
-      e.x=p.x+Math.cos(a)*d; e.y=p.y+Math.sin(a)*d;
+      // land on ground it can move off again (see the ow7 note): a body inside a wall has no
+      // legal move in any direction, so the chase and the anchor walk can never recover it
+      { let _nx=p.x+Math.cos(a)*d, _ny=p.y+Math.sin(a)*d;
+        if(typeof safeSpot==='function'){ const _sp=safeSpot(curRoom,_nx,_ny); _nx=_sp.x; _ny=_sp.y; }
+        e.x=_nx; e.y=_ny; }
       M.tell=0.9*P.tele;
     }
     if(M.tell>0){ M.tell-=dt; if(M.tell<=0){ _sig(e,'lunge');
@@ -129,7 +133,11 @@ _F('dn1',{ phases:[0.70,0.40,0.15], titles:['','THE FOG THICKENS','FALSE LIGHTS'
         M.lights.splice(i,1); } }
     if(mechEvery(e,'t',3.4,dt)){ _sig(e,'fade');
       const p=_pxy(), a=Math.random()*6.283, d=TILE*(2.6+Math.random()*2.2);
-      e.x=p.x+Math.cos(a)*d; e.y=p.y+Math.sin(a)*d; }
+      // land on ground it can move off again (see the ow7 note): a body inside a wall has no
+      // legal move in any direction, so the chase and the anchor walk can never recover it
+      { let _nx=p.x+Math.cos(a)*d, _ny=p.y+Math.sin(a)*d;
+        if(typeof safeSpot==='function'){ const _sp=safeSpot(curRoom,_nx,_ny); _nx=_sp.x; _ny=_sp.y; }
+        e.x=_nx; e.y=_ny; } }
     // THE FOG ITSELF IS THE THREAT. Every point of damage in this fight was an aimed bolt, and a
     // player who keeps moving is never hit by one: the whole four-phase Lv48 fight measured under
     // 4% of a hero's bar per second, the softest in the game. The fog closes now -- stay near
@@ -190,8 +198,13 @@ _F('dn2',{ phases:[0.72,0.45,0.18], anchor:[false,false,false,true],
     else { M.wet=(M.wet||0)+dt;
       if(M.wet>0.5){ M.wet=0; _hurt(mechDmg(e,0.30));
         if(typeof playerStatus==='function') playerStatus('chill',1.4,0); } }
-    if(M.isles.length===0 && ph<3){ // re-seed rather than softlock
-      const n=Math.max(2,5-ph);
+    // THE LAST PHASE NEEDED THIS MOST. `ph<3` excluded phase 3 -- and the islands sink BECAUSE
+    // you stand on them, so once the last one went the else branch above ticked mechDmg(0.30)
+    // plus chill every 0.5s forever, while the boss was anchor-immune 9s out of every 16.5s.
+    // That is not a hard phase, it is a coin flip on whether your DPS beats an undodgeable
+    // drain. One island in the final phase keeps it brutal and keeps it a fight.
+    if(M.isles.length===0){
+      const n=Math.max(1,5-ph);
       for(let i=0;i<n;i++){ const a=Math.random()*6.283, d=TILE*(2.2+Math.random()*1.6);
         M.isles.push({x:e.x+Math.cos(a)*d,y:e.y+Math.sin(a)*d,r:TILE*1.25,life:99}); } }
     if(mechEvery(e,'t',2.6,dt)){ _sig(e,'surge');
@@ -386,15 +399,23 @@ _F('ow5',{ phases:[0.64,0.32],
   tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
     const P=bossPace(e);
     if(M.under>0){ M.under-=dt; e.hidden=true; e.mechInv=1;
-      if(M.under<=0){ // surfaces under you, telegraphed
-        const p=_pxy(); e.x=p.x; e.y=p.y; e.hidden=false; e.mechInv=0;
+      if(M.under<=0){ // surfaces where it MARKED, which is the whole point of marking
+        // This re-centred the blast on the player at the instant it resolved, with tele:0.0 --
+        // hazTick flips tele->live on the first frame and damages on the second, so about 16ms
+        // of warning. Meanwhile the dashed ring the player was reading sat where they had been
+        // standing 1.5s earlier and the draw painted a third mound under their feet: three
+        // contradictory tells and an unavoidable hit. It now erupts AT the marked spot, which
+        // is what the ring promised, and dn5:439 already does it this way with tele:0.45.
+        const at=M.mark||_pxy();
+        e.x=at.x; e.y=at.y; e.hidden=false; e.mechInv=0;
         _sig(e,'erupt');
-        hazAdd(e,e.x,e.y,{r:TILE*1.6,tele:0.0,live:0.5,dmg:1.15,col:'#ff7a3a'});
+        hazAdd(e,e.x,e.y,{r:TILE*1.6,tele:0.30*P.tele,live:0.5,dmg:1.15,col:'#ff7a3a'});
         if(typeof addShake==='function') addShake(12);
         if(typeof eFire==='function') for(let i=0;i<10+ph*4;i++) eFire(e,(i/(10+ph*4))*6.283,205*P.speed); }
       return; }
     if(mechEvery(e,'t',5.2-ph*0.7,dt)){ _sig(e,'burrow'); M.under=1.5*P.tele;
       const p=_pxy();
+      M.mark={x:p.x,y:p.y};                       // remembered, so the eruption honours the tell
       hazAdd(e,p.x,p.y,{r:TILE*1.6,tele:M.under,live:0.01,dmg:0,col:'#ff7a3a'}); }
     // it leaves scars where it travels
     if(mechEvery(e,'t2',2.4,dt)){
@@ -535,8 +556,13 @@ _F('dn6',{ phases:[0.70,0.42,0.16],
     if(M.ghosts.length>34) M.ghosts.shift();
     if(mechEvery(e,'t',4.0,dt)){ _sig(e,'scatter'); e.mechInv=1; M.gone=0.8*P.tele; }
     if(M.gone>0){ M.gone-=dt; if(M.gone<=0){ e.mechInv=0;
+      // A BODY EMBEDDED IN A WALL HAS NO LEGAL MOVE. moveCircle only ACCEPTS a destination whose
+      // sample ring is clear, so a blind teleport into masonry freezes the boss there for good --
+      // still firing, but the anchor walk, the chase and the tether can never extract it.
       const p=_pxy(), a=Math.random()*6.283, d=TILE*2.6;
-      e.x=p.x+Math.cos(a)*d; e.y=p.y+Math.sin(a)*d; } }
+      let nx=p.x+Math.cos(a)*d, ny=p.y+Math.sin(a)*d;
+      if(typeof safeSpot==='function'){ const sp=safeSpot(curRoom,nx,ny); nx=sp.x; ny=sp.y; }
+      e.x=nx; e.y=ny; } }
   },
   trigger(e,ph){ _sig(e,'scatter'); },
   draw(e){ mechDrawCommon(e);
@@ -551,9 +577,17 @@ _F('dn6',{ phases:[0.70,0.42,0.16],
 _F('ow7',{ phases:[0.66,0.33], anchor:[false,true,false],
   titles:['','IT BRANDS YOU','BURN'],
   tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
+    // PLACED ON GROUND YOU CAN REACH. These were dropped on the first engaged tick at whatever
+    // spot the boss happened to be chasing you to, with no solid() test and no arena clamp --
+    // engage near a wall or the doorway and one to three of the four landed inside masonry.
+    // They are the mark's ONLY cleanse and they are created once, so that persisted for the
+    // whole fight. mechAdds already calls safeSpot for exactly this reason; this now does too.
     if(!M.braz){ M.braz=[]; const n=4;
+      const C=(typeof bossCentre==='function')?bossCentre(e):{x:e.x,y:e.y};
       for(let i=0;i<n;i++){ const a=(i/n)*6.283+0.5, d=TILE*3.4;
-        M.braz.push({x:e.x+Math.cos(a)*d,y:e.y+Math.sin(a)*d,cd:0}); } }
+        let bx=C.x+Math.cos(a)*d, by=C.y+Math.sin(a)*d;
+        if(typeof safeSpot==='function'){ const sp=safeSpot(curRoom,bx,by); bx=sp.x; by=sp.y; }
+        M.braz.push({x:bx,y:by,cd:0}); } }
     for(const b of M.braz) if(b.cd>0) b.cd-=dt;
     // standing in a lit brazier circle cleanses the brand and puts that brazier out for a while
     markTick(e,dt,()=>{ const p=_pxy();
@@ -643,7 +677,12 @@ _F('dn8',{ phases:[0.78,0.55,0.32,0.12], anchor:[true,true,true,true,true],
     // The ring now closes TIGHTER and burns HARDER and MORE OFTEN each phase, which is what the
     // titles have been promising all along.
     if(M.ring2===undefined) M.ring2=TILE*9;
-    const minR=TILE*(1.6-ph*0.22);          // it squeezes you into less ground every phase
+    // FLOOR IT AT SOMETHING YOU CAN STAND IN. At phase 4 this was TILE*0.72 = 32px -- smaller
+    // than the boss's own radius (~50px at Lv50) and barely twice the player's, so "safe ground"
+    // meant standing exactly on top of it. The burn interval is simultaneously 0.17s at
+    // mechDmg(1.09), which the 26% cap turns into a quarter of your bar every sixth of a second.
+    // The squeeze is the mechanic; being physically unable to occupy the safe zone is not.
+    const minR=Math.max(TILE*1.15, TILE*(1.6-ph*0.22)) + (e.r||0);
     M.ring2-=dt*(16+ph*4)*P.speed;
     if(M.ring2<minR){ M.ring2=TILE*9; _sig(e,'roar');
       if(typeof addShake==='function') addShake(12); }
@@ -902,7 +941,12 @@ _F('dn12',{ phases:[0.68,0.40,0.15], anchor:[false,false,false,true],
       if(s) hazAdd(e,s.x,s.y,{r:TILE*1.05,tele:0.30,live:4,dmg:0.50,col:'#b3a894',inflict:{id:'stun',dur:0.6}});
       M.si++;
       // the count speeds up as it goes, and the anchored phase runs it at double
-      M.step=(0.46 - ph*0.06) * P.tele * (ph>=3?0.5:1);
+      // P.CYCLE, NOT P.TELE. This is "time between events", which is what cycle means; tele is
+      // the telegraph dial (17h:29-31 says which is which). With tele AND a 0.5x anchor bonus
+      // it hit 0.068s a stone at Lv50 -- all twelve down in 0.8s, which is not a sequence you
+      // stay ahead of, it is a simultaneous stun ring. The whole fight's draw is built on
+      // "the NEXT one is lit"; below about a fifth of a second that read does not exist.
+      M.step=Math.max(0.18, (0.46 - ph*0.06) * P.cycle * (ph>=3?0.7:1));
       if(M.si>=M.seq.length){ M.seq=[]; M.si=0; }
     } },
   trigger(e,ph){ _sig(e, ph>=3?'plant':'roar'); },
