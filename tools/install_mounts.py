@@ -34,9 +34,12 @@ DIRMAP = {
 # whether or not you are moving -- so the frames belong to the idle clip, and the renderer then
 # prefers an animated idle over the static rotation. Checked BEFORE the locomotion list because
 # "flapping wings" would otherwise be caught by nothing and "gliding forward" by neither.
+# MATCH STEMS, NOT WORDS. This list has now been wrong twice for the same reason: "loping" did not
+# match the slug "lope", and "stride" does not match "striding" -- a longer form never contains a
+# shorter one's suffix. Every entry here is cut back to the part that survives -ing, -s and -ed.
 ANIM_PREFIX = {"idle": ("idle", ("flap", "wing", "hover", "beat", "idle")),
-               "walk": ("walk", ("walk", "trot", "gallop", "lope", "run", "stride",
-                                 "pad", "march", "fly", "soar", "glide"))}
+               "walk": ("walk", ("walk", "trot", "gallop", "lope", "run", "strid",
+                                 "pad", "march", "fly", "flying", "soar", "glid", "canter", "prowl"))}
 ANIM_ORDER = ["idle", "walk"]      # first match wins; order is the tie-break
 
 

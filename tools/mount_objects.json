@@ -14,7 +14,7 @@
     "arch_lizard": "2a154123-98ad-4739-80b7-132a530a3245",
     "arch_colossus": "77efa2ce-125b-4a41-917a-e38f608079da",
     "arch_griffon": "03a758ea-cef5-448b-a6af-7ab283fea34b",
-    "arch_wyvern": "b427a373-9518-40b1-93d5-13f854dc0b07",
+    "arch_wyvern": "06ac19b5-37be-4510-93e6-f862ae4ebb52",
     "arch_pegasus": "b294f34b-552c-471c-8115-a57a692fb8c4",
     "arch_roc": "09cf4b58-2901-4eb2-a141-2c2c0b4408af",
     "arch_moth": "4f2f7198-bfbd-4088-a6d5-249b563d76dd",
@@ -90,7 +90,7 @@
       "knight": "bc389832-11e3-45da-ad40-8f1830ed7e61"
     },
     "arch_wyvern": {
-      "knight": "ae027af5-1946-4350-9753-1385b59c4dc4"
+      "knight": "f66b061e-5566-4f8a-bcab-13b01a19ee34"
     },
     "arch_griffon": {
       "knight": "8844fad4-3018-4f67-8e4a-d98f742d38be"
@@ -106,5 +106,9 @@
     }
   },
   "_riders_note": "Rider composites, keyed archetype -> class. Extracted against their OWN archetype (extract_riders.py <cls> <composite> <base>), which is what makes leftover fragments invisible: stray pixels are that mount's pixels going back onto that mount. The eight plain quadrupeds share the horse-extracted layer; only visually distinct mounts need their own.",
-  "_rider_plan": "ONE rider silhouette (knight) for all 17 classes; class identity is deferred to the SKIN system, not baked. Only visually distinct mounts need their own extraction -- the seven plain quadrupeds (destrier, mule, stag, elk, boar, ram, cat) share the horse layer, because extraction fragments only show when a layer moves to a differently-coloured animal."
+  "_rider_plan": "ONE rider silhouette (knight) for all 17 classes; class identity is deferred to the SKIN system, not baked. Only visually distinct mounts need their own extraction -- the seven plain quadrupeds (destrier, mule, stag, elk, boar, ram, cat) share the horse layer, because extraction fragments only show when a layer moves to a differently-coloured animal.",
+  "_retired": {
+    "arch_wyvern_v1": "b427a373-9518-40b1-93d5-13f854dc0b07"
+  },
+  "_wyvern_note": "Regenerated: the first 8-direction wyvern measured 24 colours and 0.58 value spread -- the flattest and lowest-contrast archetype of the twenty -- and read as an axe from three angles. The retry named the colour (violet/charcoal) and the anatomy (two hind legs, ribbed bat wings, horned head) and got 36 colours / 0.67."
 }
