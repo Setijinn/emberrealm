@@ -260,7 +260,18 @@ function fire(dt){
     let best=null, bd=1e9;
     const _mode=(typeof targetMode==='function')?targetMode():'near';
     for(const e of enemies){
-      if(e.node) continue;                                   // objective nodes are not targets
+      // TWO DIFFERENT THINGS ARE CALLED A NODE, and skipping both made four fights unwinnable.
+      // A DUNGEON OBJECTIVE node (genDungeon's {t:'N'} regrow/ambush spawns) is scenery you
+      // solve, and auto-aim should ignore it -- that is what this line was for. But a fight's
+      // GATE node (mechAdds' knots and conduits, which carry a mechTag) is the only way to drop
+      // the boss's ward: with the ward up and nothing else alive in the arena, `best` stayed
+      // null, fire() hit its `if(ang===null) return` and the player could not shoot AT ALL.
+      // The ward never dropped, so the boss was immune forever. On PC you could switch to
+      // manual aim in Settings and never notice; on touch, auto-aim is the only mode there is.
+      if(e.node && !e.mechTag) continue;                      // objective nodes are not targets
+      // ...and a gate node ranks LAST among real targets, so it never steals a shot from a
+      // creature that is actually attacking you -- it only wins when nothing else is left.
+      const _isGate=!!(e.node && e.mechTag);
       if(Math.hypot(e.x-player.x,e.y-player.y)>wRange) continue;
       if(!los(player.x,player.y,e.x,e.y)) continue;
       // every mode scores LOWER = better, so one comparison serves them all
@@ -269,6 +280,7 @@ function fire(dt){
       else if(_mode==='low')  score=(e.hp||0);               // finish the wounded
       else if(_mode==='boss') score=(e.boss?0:1e6)+Math.hypot(e.x-ref.x,e.y-ref.y);
       else                    score=Math.hypot(e.x-ref.x,e.y-ref.y);
+      if(_isGate) score+=1e5;                                // last resort, never a priority
       if(score<bd){ bd=score; best=e; }
     }
     // lead the target: aim where it WILL be when the shot arrives, not where it is now

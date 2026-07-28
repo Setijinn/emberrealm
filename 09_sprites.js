@@ -656,7 +656,13 @@ const _mobTintCache=new Map();
 function tintedMob(im,bd,night){
  const tint=(bd>=0)?MOBTINT[bd]:null;
  if(!tint && !night) return im;
- const k=im.src+'|'+bd+(night?'|n':'');
+ // A SOURCE THAT HAS NOT DECODED YET HAS naturalWidth 0, and building from it produces a 0x0
+ // canvas -- which then gets CACHED, so that creature stays invisible for the rest of the
+ // session even after its image lands. Every other image read in this file guards with the
+ // same complete && naturalWidth pair; this one did not, and adding the night flag widened the
+ // path to untinted mobs as well. Hand the raw image back and try again next frame.
+ if(!im.naturalWidth || !im.naturalHeight) return im;
+ const k=(im.src||'')+'|'+bd+(night?'|n':'');
  let cv=_mobTintCache.get(k);
  if(!cv){ cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight;
   const c=cv.getContext('2d'); c.imageSmoothingEnabled=false;

@@ -471,7 +471,11 @@ function _embAbilRow(id,lvl,locked,unlockRar){
     +'<span class="embAbDs">'+a.desc+(a.cd?' · '+a.cd+'s':' · passive')+'</span></div>'; }
 
 let _petSel=null, _petTab='pet', _petFuseA=null, _petFeedTier=null;
-function closePets(){ const ov=document.getElementById('petScr'); if(ov) ov.style.display='none'; _petFuseA=null; }
+function closePets(){ const ov=document.getElementById('petScr'); if(ov) ov.style.display='none';
+  _petFuseA=null;
+  // drop the station latch on the way out, so the next open is a display panel even if the
+  // caller passes no tab (belt and braces with the guard in openPets)
+  if(_petTab==='incubator'||_petTab==='fusion') _petTab='pet'; }
 function _slotUnlockRar(i){ return i===0?0:i===1?1:3; }          // which rarity unlocks ability slot i
 function _petAbilRows(p){ let s=''; for(let i=0;i<3;i++){ const unlocked=i<petSlots(p.rar), id=p.kit[i], uu=id?petUtil(id):null;
     if(unlocked&&uu) s+='<div style="font-size:10px;color:#cfc8bd;margin:2px 0;">'+uu.icon+' <b>'+uu.name+'</b> <span style="color:#8a8494;">— '+uu.desc+'</span></div>';
@@ -481,7 +485,16 @@ const _PBTN='background:#2a2233;border:1px solid #5a4d6c;color:#e8dff2;border-ra
 const _PBTNG='background:#3a2a12;border:1px solid #c9a04a;color:#ffd07a;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:pointer;';
 const _PBTND='background:#1a1622;border:1px solid #332b40;color:#5a5464;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:default;';
 function _petKitIcons(kit){ return (kit||[]).map(id=>{ const u=petUtil(id); return u?('<span title="'+u.name+': '+u.desc+'">'+u.icon+'</span>'):''; }).join(' '); }
-function openPets(tab){ const u=petStore(); if(!u) return; if(tab) _petTab=tab;
+// THE POCKET PANEL IS ALWAYS A PET/MOUNT DISPLAY. openPets(tab) is called with a tab by the
+// Incubator and the Fusion Altar -- you walked to a machine, so you get that machine and no tab
+// strip. openPets() with NO argument is the HUD button, and it kept whatever _petTab the last
+// station left behind: after one visit to the Incubator, every later press of the pet button
+// rendered a station body with the tab strip suppressed, so COMPANION, FEED and MOUNTS became
+// unreachable for the rest of the session and away from the altar the fusion tab just read
+// "The Altar is cold". No argument now means the browsable panel, always.
+function openPets(tab){ const u=petStore(); if(!u) return;
+  if(tab) _petTab=tab;
+  else if(_petTab==='incubator'||_petTab==='fusion') _petTab='pet';   // never open a station by default
   let ov=document.getElementById('petScr');
   if(!ov){ ov=document.createElement('div'); ov.id='petScr';
     ov.style.cssText='position:fixed;inset:0;background:rgba(6,5,9,.86);z-index:60;display:flex;align-items:center;justify-content:center;padding:12px;';
