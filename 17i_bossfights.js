@@ -836,6 +836,80 @@ _F('dn11',{ phases:[0.70,0.42,0.16], anchor:[false,false,true,true],
     ctx.restore(); } });
 
 // ===================================================================================
+// 12  THE CAIRNWRIGHT — THE TALLY.  It is laying out a row, and you are standing in it.
+// Both forms are about a LINE OF STONES that goes off. Outside, the row is a straight furrow
+// through the boss aimed at you, and the answer is to step off the line — one read, one move.
+// Inside, the Tally Keeper stops aiming and starts COUNTING: it sets the whole row down at once
+// and then works along it in the order it cut them, so you are not dodging a line, you are
+// staying ahead of a sequence. Same family, one element twisted, one added.
+// Only base BOSS_ANIM beats are used here (slam/wind/roar/plant) — a signature beat with no
+// duration registered in BOSS_SIG sits frozen at p=0, which is the trap 17f warns about.
+// ===================================================================================
+_F('ow12',{ phases:[0.62,0.30],
+  titles:['','ANOTHER ROW','THE YARD IS FULL'],
+  tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
+    const P=bossPace(e);
+    if(M.cut>0){ M.cut-=dt;
+      if(M.cut<=0){                                  // the row goes down, then goes off
+        for(let r=0;r<M.rows.length;r++){ const a=M.rows[r];
+          for(let i=-5;i<=5;i++){ if(!i) continue;
+            const rr=TILE*0.95*i;
+            hazAdd(e, e.x+Math.cos(a)*rr, e.y+Math.sin(a)*rr,
+              {r:TILE*0.62,tele:0.34,live:5,dmg:0.42,col:'#b3a894',inflict:{id:'stun',dur:0.5}}); } }
+        if(typeof addShake==='function') addShake(9);
+        M.rows=[];
+      } }
+    else if(mechEvery(e,'t',3.2,dt)){ _sig(e,'slam');
+      const p=_pxy(), a0=Math.atan2(p.y-e.y,p.x-e.x);
+      M.rows=[]; for(let r=0;r<=ph;r++) M.rows.push(a0 + r*(Math.PI/(ph+1)));   // 1 row, then a cross, then a star
+      M.cut=0.62*P.tele; }
+  },
+  trigger(e,ph){ _sig(e,'roar'); },
+  draw(e){ mechDrawCommon(e);
+    const M=e.mk; if(!M||!(M.cut>0)||!M.rows) return;
+    // chalk the row before the stones land — the whole fight is reading this line
+    ctx.save(); ctx.globalAlpha=0.34+0.22*Math.sin(performance.now()/50);
+    ctx.strokeStyle='#e8dcc0'; ctx.lineWidth=3; ctx.setLineDash([7,6]);
+    for(const a of M.rows){ const L=TILE*5.2;
+      ctx.beginPath(); ctx.moveTo(e.x-Math.cos(a)*L, e.y-Math.sin(a)*L);
+      ctx.lineTo(e.x+Math.cos(a)*L, e.y+Math.sin(a)*L); ctx.stroke(); }
+    ctx.restore(); } });
+
+// Dungeon (THE TALLY KEEPER): it sets the whole row down at once and then counts along it. The
+// stone it is about to reach is lit, so the fight is legible — but the count does not wait, and
+// in the last phase it plants and runs the row twice as fast, which is when the arena gets small.
+_F('dn12',{ phases:[0.68,0.40,0.15], anchor:[false,false,false,true],
+  titles:['','THE COUNT','TWO TO A ROW','THE TALLY CLOSES'],
+  tick(e,dt,ph,eng){ const M=mkState(e); mechTickCommon(e,dt); if(!eng) return;
+    const P=bossPace(e);
+    if(!M.seq||!M.seq.length){
+      if(mechEvery(e,'t',3.6,dt)){ _sig(e,'slam');
+        const n=6+ph*2, a0=Math.random()*6.283, rad=TILE*(2.4+Math.random()*1.6);
+        M.seq=[]; for(let i=0;i<n;i++){ const a=a0+(i/n)*6.283;
+          M.seq.push({x:e.x+Math.cos(a)*rad, y:e.y+Math.sin(a)*rad}); }
+        M.si=0; M.step=0; }
+      return; }
+    M.step-=dt;
+    if(M.step<=0){
+      const s=M.seq[M.si];
+      if(s) hazAdd(e,s.x,s.y,{r:TILE*1.05,tele:0.30,live:4,dmg:0.50,col:'#b3a894',inflict:{id:'stun',dur:0.6}});
+      M.si++;
+      // the count speeds up as it goes, and the anchored phase runs it at double
+      M.step=(0.46 - ph*0.06) * P.tele * (ph>=3?0.5:1);
+      if(M.si>=M.seq.length){ M.seq=[]; M.si=0; }
+    } },
+  trigger(e,ph){ _sig(e, ph>=3?'plant':'roar'); },
+  draw(e){ mechDrawCommon(e);
+    const M=e.mk; if(!M||!M.seq||!M.seq.length) return;
+    ctx.save();
+    // every stone still to come, faint; the NEXT one lit — that is the whole read
+    for(let i=M.si;i<M.seq.length;i++){ const s=M.seq[i], next=(i===M.si);
+      ctx.globalAlpha=next?(0.55+0.3*Math.sin(performance.now()/40)):0.16;
+      ctx.fillStyle=next?'#ffe9b0':'#cfc4ad';
+      ctx.beginPath(); ctx.arc(s.x,s.y,TILE*(next?0.85:0.55),0,6.283); ctx.fill(); }
+    ctx.restore(); } });
+
+// ===================================================================================
 // THE ARENA CHAMPION — the 25th. A wave mode's boss should test what the waves taught you, so
 // it has no puzzle: it is a pressure check that reads the arena's own escalation.
 // ===================================================================================
