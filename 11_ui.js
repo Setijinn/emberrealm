@@ -299,8 +299,16 @@ function paintBagPanel(){
 }
 // Pull one piece out of the open bag. `wear` equips it straight away and sends the displaced
 // piece to the satchel instead; otherwise it just goes to the satchel.
+// A REMOTE SACK IS THE HOST'S, AND ONLY THE HOST MAY EMPTY IT. openBagPanel guards the GHOST
+// case, but for a client's OWN soulbound sack the host sends the real contents -- so the ghost
+// test passed and these three awarded locally, spliced the bag, and never sent a 'P'. The host
+// still held it, so the next 12Hz snapshot re-created it WITH ITS CONTENTS: take-all, wait
+// 83ms, repeat, forever. Every take now goes through the same request/grant handshake the
+// ghost path already used.
+function _bagIsRemote(lb){ return !!(lb && lb.remote); }
 function bagTakeOne(i,wear){
   const lb=bagOpen; if(!lb) return;
+  if(_bagIsRemote(lb)){ claimBag(lb); return; }
   const its=bagItems(lb), it=its[i]; if(!it) return;
   const ch=curChar(); if(!ch||!rpg) return; if(!ch.inv) ch.inv=[];
   if(wear && canEquip(it,ch)){
@@ -321,6 +329,7 @@ function bagTakeOne(i,wear){
 // because each call splices the array underneath us.
 function bagEquipBest(){
   const lb=bagOpen; if(!lb) return;
+  if(_bagIsRemote(lb)){ claimBag(lb); return; }
   const ch=curChar(); if(!ch||!rpg) return;
   const its=bagItems(lb);
   const wear=[];
@@ -332,6 +341,7 @@ function bagEquipBest(){
 }
 function bagTakeAll(){
   const lb=bagOpen; if(!lb) return;
+  if(_bagIsRemote(lb)){ claimBag(lb); return; }
   const its=bagItems(lb), left=[];
   for(const it of its) if(!awardItem(it,lb.x,lb.y)) left.push(it);
   lb.items=left; lb.item=left[0]||null;

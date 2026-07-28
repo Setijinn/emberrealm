@@ -426,14 +426,21 @@ function netUnpackMech(e,a){
 }
 // Evaluate the wire's hazards against THIS machine's player. The host resolves its own; every
 // client resolves its own; nobody resolves anybody else's.
+// THE HOST'S CEILING APPLIES TO EVERYONE. Host-side every hazard resolves through mechDmg,
+// which applies P.dmg AND Math.min(player.maxhp*0.26, ...) -- "a mechanic can never one-shot
+// you" as arithmetic rather than as a convention. This path hard-coded its own multipliers and
+// had no cap at all, so a client took a different number from the same hazard AND could be
+// one-shot by a hostile or buggy snapshot.
+function _netCap(v){ const c=(typeof player!=='undefined'&&player.maxhp)?player.maxhp*0.26:9999;
+  return Math.min(c, Math.max(0, v||0)); }
 function netMechHurt(e,dt){
   const M=e&&e.mk; if(!M||!M.remote||typeof player==='undefined') return;
-  const bd=(e.bd||10);
+  const bd=Math.max(0,Math.min(e.bd||10,400));
   for(const h of M.haz){
     if(h.ph!=='live') continue;
     h.ct-=dt; if(h.ct>0) continue;
     if(Math.hypot(player.x-h.x,player.y-h.y)<h.r){
-      h.ct=0.4; damagePlayer(bd*0.55);
+      h.ct=0.4; damagePlayer(_netCap(bd*0.55));
       if(typeof boom==='function') boom(player.x,player.y,h.col,4); }
   }
   // safe ground resolves ONCE, exactly like the host's version
@@ -450,12 +457,12 @@ function netMechHurt(e,dt){
     if(d<=B.len){ let ang=Math.atan2(dy,dx)-B.ang;
       while(ang>Math.PI) ang-=6.283; while(ang<-Math.PI) ang+=6.283;
       B.ct-=dt;
-      if(Math.abs(ang)<B.w/2 && B.ct<=0){ B.ct=0.5; damagePlayer(bd*0.5); } } }
+      if(Math.abs(ang)<B.w/2 && B.ct<=0){ B.ct=0.5; damagePlayer(_netCap(bd*0.5)); } } }
   // off the safe ground: the same slow drowning/burning tick the host applies to itself
   if(M.safe&&M.safe.length){
     const on=M.safe.some(s=>Math.hypot(player.x-s.x,player.y-s.y)<s.r);
     M.wet=(M.wet||0)+dt;
-    if(!on && M.wet>0.5){ M.wet=0; damagePlayer(bd*0.40);
+    if(!on && M.wet>0.5){ M.wet=0; damagePlayer(_netCap(bd*0.40));
       if(typeof playerStatus==='function') playerStatus('chill',1.6,0); }
   }
   if(M.beams){ M.hit=(M.hit||0)-dt;

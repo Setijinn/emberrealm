@@ -2644,6 +2644,18 @@ function roomLvAt(sp){
   for(const rg of curRoom.regions){ if(sp.x>=rg.x1&&sp.x<rg.x2&&sp.y>=rg.y1&&sp.y<rg.y2) return rg.lv; } }
  return (curRoom&&curRoom.lv)?curRoom.lv:1; }
 
+// ROOM IDENTITY FOR THE NETWORK, which is not the same thing as the rooms[] index. All twelve
+// dungeons are stored at rooms['DUN'] and therefore all reported key 'DUN', so the net layer
+// believed a player in the Saltworks and a player in Marrow Chapel were in the same room: the
+// host's enemies materialised inside your unrelated layout, netSimulates handed simulation to a
+// host who was somewhere else entirely, and coopNearPeers made someone 520px away IN A DIFFERENT
+// DUNGEON eligible for your soulbound and relic rolls. Kept separate from `key` so rooms[] and
+// the curRoom.key==='VAULT' render tests are untouched.
+function netRoomKey(R){ const r=R||(typeof curRoom!=='undefined'?curRoom:null); if(!r) return '?';
+  const k=r.key||'?';
+  if(r.dungeon && r.bossRing!==undefined) return k+':'+r.bossRing;
+  if(r.id && !r.key) return String(r.id);          // buildPetRoom sets id and no key
+  return k; }
 function enterRoom(key, px, py){
   curRoom=rooms[key];
   player.x=px; player.y=py;

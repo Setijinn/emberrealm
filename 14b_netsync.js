@@ -17,9 +17,20 @@
 // and report the damage to the host, which owns the real health. That is client prediction with
 // server reconciliation, scoped to what actually matters in a co-op PvE game.
 //
-// Trust model: friends playing together. The host accepts reported damage without validation.
-// This is deliberate -- anti-cheat costs latency and complexity that a private co-op game does not
-// need, and there is nothing to gain by cheating in someone else's session.
+// TRUST MODEL. This used to read "friends playing together... nothing to gain by cheating in
+// someone else's session", which described a deployment this game does not ship: 14_coop.js
+// auto-joins a PUBLIC room with strangers by default and retries every three seconds. Every
+// "deliberate, harmless" trust decision was therefore reasoned against the wrong threat model,
+// and the holes it left were real -- item injection, HP writes that end a permadeath run, and a
+// missing dmg field that turned a boss immortal for the whole party.
+//
+// What is trusted now, and only this:
+//   * The HOST is the authority on the world. A client accepts 'W' and 'G' and nothing else.
+//   * A CLIENT is the authority on its own INPUT, not on outcomes. The host accepts 'H'/'A'/'P'
+//     but treats every value in them as untrusted: finite, in range, and a known id or it is
+//     dropped.
+// A peer can still over-report its own damage. That is the one accepted risk, it costs a
+// stranger nothing but their own session's pacing, and validating it properly needs a server.
 
 const NET_HZ = 12;                  // world snapshots per second
 const NET_LERP = 0.28;              // how hard a client pulls entities toward the latest snapshot
@@ -35,7 +46,7 @@ function netHostInMyRoom(){
   if(typeof coop==='undefined'||!coop||!coop.peers) return false;
   const h=coop.peers['H']; if(!h) return false;
   if(performance.now()-(h.ts||0)>4000) return false;
-  const rk=(typeof curRoom!=='undefined'&&curRoom&&curRoom.key)||'?';
+  const rk=netRoomKey();
   return (h.rm||'?')===rk;
 }
 // The one predicate the rest of the game asks: "should I be simulating the shared world?"
@@ -61,7 +72,7 @@ function netSimulates(){
 function netSimAnchors(){
   const out=[{x:player.x, y:player.y}];
   if(typeof coop==='undefined' || !coop || !coop.on || !coop.host || !coop.peers) return out;
-  const rk=(typeof curRoom!=='undefined'&&curRoom&&curRoom.key)||'?', me=netSelfId();
+  const rk=netRoomKey(), me=netSelfId();
   const now=performance.now();
   for(const k in coop.peers){ const p=coop.peers[k];
     if(!p || k===me) continue;
@@ -210,7 +221,7 @@ function netBroadcast(){
       (ltOwn[b.own]=ltOwn[b.own]||[]).push(row); }
     // my own bound sacks are never broadcast: I render them straight out of `loots`
   }
-  const m={t:'W', rm:(curRoom.key||'?'), seq:++_netSeq, ents:ents, sh:sh, lt:ltPub};
+  const m={t:'W', rm:netRoomKey(), seq:++_netSeq, ents:ents, sh:sh, lt:ltPub};
   // one object, `lt` swapped between sends — BinaryPack encodes synchronously inside c.send()
   for(const c of coop.conns){ if(!c.open) continue;
     const mine=ltOwn[c.peer];
@@ -256,7 +267,7 @@ function netUnpackBag(f){
 // ---- client: adopt the host's world ----
 function netApplyWorld(m){
   if(!netIsClient() || !curRoom) return;
-  if(m.rm !== (curRoom.key||'?')) return;        // host is somewhere else; keep our own room quiet
+  if(m.rm !== netRoomKey()) return;             // host is somewhere else; keep our own room quiet
   if(!netEnts) netEnts={};
   const seen={};
   for(const a of m.ents){
@@ -278,7 +289,9 @@ function netApplyWorld(m){
     // without this a peer's elite renders as an ordinary creature that happens to be huge:
     // no ring, no chevrons, no gold name, and the one warning the player gets is missing
     e.elite=(f&256)?1:0;
-    if(a[16]) e.bd=a[16];
+    // e.bd feeds every client-side hazard resolve below. Unclamped, one snapshot with bd=1e9
+    // killed every client in the room instantly -- and above Lv20 that is permaDeath().
+    if(a[16]) e.bd=Math.max(0, Math.min(+a[16]||0, 400));
     if(a[11]) e.name=a[11];
     // statuses: rebuilt each snapshot so an expiry on the host clears here too
     e.st={}; if(a[12]) for(const s of a[12]) e.st[s[0]]={t:s[1],val:0};
@@ -333,13 +346,13 @@ function netHazards(dt){
       if(p.ph!=='live') continue;
       p.dcd=(p.dcd||0)-dt; if(p.dcd>0) continue;
       if(Math.hypot(player.x-p.x,player.y-p.y) < p.r*0.92){
-        p.dcd=0.35; damagePlayer((e.bd||10)*0.55);
+        p.dcd=0.35; damagePlayer(Math.min(player.maxhp*0.26,(Math.min(e.bd||10,400))*0.55));
         if(typeof boom==='function') boom(player.x,player.y,'#c04a3d',4); } }
     const b=e.bloom;
     if(b && b.ph==='live' && !b._done){
       b._done=1;                                    // resolves once, like the host's version
       const safe=(b.safes||[]).some(s=>Math.hypot(player.x-s.x,player.y-s.y)<=b.sr);
-      if(!safe){ damagePlayer(typeof bossPunishDmg==='function'?bossPunishDmg(e):(e.bd||10)*2);
+      if(!safe){ damagePlayer(Math.min(player.maxhp*0.30, typeof bossPunishDmg==='function'?bossPunishDmg(e):(Math.min(e.bd||10,400))*2));
         player.inv=Math.max(player.inv||0,0.35); }
       else if(typeof texts!=='undefined')
         texts.push({x:player.x,y:player.y-30,txt:'SAFE!',col:'#8fd48c',life:0.9}); }
@@ -351,7 +364,13 @@ function netReportStatus(e,id,dur,val){
   if(!netIsClient() || !e || !e.nid) return;
   _netSend({t:'A', nid:e.nid, sid:id, dur:dur, val:val});
 }
+// Only ids the STATUS table actually knows. An unknown id created a permanent entry that
+// tickStatuses never matched and netBroadcast faithfully re-serialised forever, and '__proto__'
+// wrote straight through the prototype. Duration and magnitude are bounded to the largest values
+// any real effect in the game uses.
 function netHostApplyStatus(m){
+  if(typeof STATUS==='undefined' || !Object.prototype.hasOwnProperty.call(STATUS, m&&m.sid)) return;
+  m={nid:m.nid, sid:m.sid, dur:_netNum(m.dur,12), val:_netNum(m.val,9999)};
   if(!netIsHost() || typeof applyStatus!=='function') return;
   for(const e of enemies){ if(e.nid===m.nid){ applyStatus(e,m.sid,m.dur,m.val); return; } }
 }
@@ -362,11 +381,18 @@ function netReportHit(e,dmg,crit){
   if(!netIsClient() || !e || !e.nid) return;
   _netSend({t:'H', nid:e.nid, dmg:Math.round(dmg), crit:crit?1:0});
 }
+// A REPORTED NUMBER IS NOT A NUMBER UNTIL IT IS CHECKED. `{t:'H', nid:5}` with no dmg set
+// e.hp = NaN, which made the enemy immortal for EVERY player, forever, and then broadcast NaN
+// back out on the next snapshot. A negative healed it past maxhp. This is the malformed-packet
+// case, not the cheating one -- it needs no threat model to be worth closing.
+function _netNum(v,max){ const n=+v; return (Number.isFinite(n)&&n>0)?Math.min(n,max):0; }
 function netHostTakeHit(m){
   if(!netIsHost()) return;
   for(const e of enemies){ if(e.nid===m.nid){
     if(typeof bossImmune==='function' && bossImmune(e)) return;
-    e.hp-=m.dmg; e.flash=0.15;
+    const dmg=_netNum(m.dmg, (e.maxhp||1000));   // a single hit can never exceed the target's own pool
+  if(!dmg) return;
+  e.hp-=dmg; e.flash=0.15;
     if(typeof texts!=='undefined') texts.push({x:e.x,y:e.y-e.r,txt:Math.round(m.dmg),
       col:m.crit?'#ffd23d':'#c9d2da',life:0.5});
     return; } }
@@ -390,7 +416,7 @@ function netHostPickup(m,fromId){
 // hitches for two seconds must not lose a T12 for it.
 function netReapBound(dt){
   if(!netIsHost()) return;                                     // solo + clients: one boolean, out
-  const now=performance.now(), rk=(curRoom&&curRoom.key)||'?', me=netSelfId();
+  const now=performance.now(), rk=netRoomKey(), me=netSelfId();
   for(let i=loots.length-1;i>=0;i--){ const b=loots[i];
     if(!b.own || b.own===me) continue;
     const p=coop.peers[b.own];
@@ -401,13 +427,35 @@ function netReapBound(dt){
     else b._away=0; }
 }
 // Route an inbound message. 14_coop.js calls this for anything that is not a presence packet.
+// EVERY MESSAGE HAS A DIRECTION, AND IT IS NOW ENFORCED.
+//   'W' world snapshot  host -> client   (the host has no use for one and must never apply one)
+//   'G' loot grant      host -> client   (a grant is only legitimate from the authority)
+//   'H' hit report      client -> host
+//   'A' status report   client -> host
+//   'P' pickup request  client -> host
+// The role test is the whole check: non-presence traffic is never relayed peer-to-peer (14_coop.js
+// only forwards `t:'s'`), so on a client every message came from the host by construction. Without
+// it, any peer could send {t:'G', to:'H', items:[...]} and mint gear straight into the host's
+// satchel -- the only test was that `to` matched, and the host's id is the constant 'H'.
+//
+// The try/catch is not paranoia either: netApplyWorld iterates m.ents/m.sh/m.lt unguarded, so one
+// malformed packet threw out of the PeerJS data handler -- and then did it again on the next
+// packet, and the next, for the rest of the session.
 function netOnMessage(d, fromId){
   if(!d||!d.t) return false;
-  if(d.t==='W'){ netApplyWorld(d); return true; }
-  if(d.t==='H'){ netHostTakeHit(d); return true; }
-  if(d.t==='A'){ netHostApplyStatus(d); return true; }
-  if(d.t==='P'){ netHostPickup(d, fromId); return true; }
+  try{ return _netDispatch(d, fromId); }
+  catch(err){ try{ console.warn('netsync: dropped a bad packet ('+d.t+'): '+(err&&err.message||err)); }catch(_){}
+    return true; }
+}
+function _netDispatch(d, fromId){
+  const asClient=(typeof netIsClient==='function')&&netIsClient();
+  const asHost  =(typeof netIsHost==='function')&&netIsHost();
+  if(d.t==='W'){ if(!asClient) return true; netApplyWorld(d); return true; }
+  if(d.t==='H'){ if(!asHost) return true; netHostTakeHit(d); return true; }
+  if(d.t==='A'){ if(!asHost) return true; netHostApplyStatus(d); return true; }
+  if(d.t==='P'){ if(!asHost) return true; netHostPickup(d, fromId); return true; }
   if(d.t==='G'){
+    if(!asClient) return true;                 // only the authority grants loot
     if(d.to!==netSelfId()) return true;
     // drop the local ghost NOW rather than waiting up to 83ms for the next snapshot's cull, or the
     // bag lingers under your feet and re-arms the prompt you just answered

@@ -116,7 +116,7 @@ setInterval(function(){
     // fo: my Fortune. The HOST rolls everyone's soulbound loot, so without this only the host's
     // Fortune would ever count -- your coins and Prosperous rolls would do nothing in co-op.
     fo:Math.round(player.fortune||0),
-    atk:player.atkT>0?1:0, rm:curRoom.key||'?'};
+    atk:player.atkT>0?1:0, rm:netRoomKey()};
   if(coop.host) m.id='H';
   for(const c of coop.conns){ if(c.open){ try{c.send(m);}catch(e){} } }
 },120);
@@ -124,7 +124,7 @@ setInterval(function(){
 function drawCoopPeers(pn){
   if(!coop.on) return; const now=performance.now();
   for(const id in coop.peers){ const p=coop.peers[id];
-    if(now-p.ts>2500 || p.rm!==(curRoom.key||'?')) continue;
+    if(now-p.ts>2500 || p.rm!==netRoomKey()) continue;
     if(typeof shadow==='function') shadow(p.x,p.y+12,15);
     const es=(typeof emberSprite==='function')
       ? emberSprite({cls:p.cls||'knight'}, {aim:p.aim||0, moving:!!p.mv, attacking:!!p.atk, atkPhase:0, clock:pn+(id.charCodeAt(0)%7)})
@@ -146,7 +146,7 @@ function coopCount(){ const now=performance.now();
 // scaling wants the count, soulbound loot wants the actual list so it can roll for each of them.
 function coopNearPeers(x,y,rad,maxAge){
   const out=[]; if(!coop.on) return out;
-  const now=performance.now(), rk=(curRoom&&curRoom.key)||'?', R=rad||1100, A=maxAge||3000;
+  const now=performance.now(), rk=netRoomKey(), R=rad||1100, A=maxAge||3000;
   for(const id in coop.peers){ const p=coop.peers[id];
     if(!p || p.rm!==rk || now-(p.ts||0)>A) continue;
     if(Math.hypot((p.x||0)-x,(p.y||0)-y)<R) out.push(p); }

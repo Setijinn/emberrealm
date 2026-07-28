@@ -76,7 +76,7 @@ function bossArenaHasPlayer(A){
   // peers live on coop.peers (there is no global `coopPeers`), and each entry carries the room it
   // is in plus a timestamp -- a stale or different-room peer must not hold the arena open
   const ps=(typeof coop!=='undefined'&&coop&&coop.on)?coop.peers:null;
-  if(ps){ const now=performance.now(), rk=(curRoom&&curRoom.key)||'?';
+  if(ps){ const now=performance.now(), rk=netRoomKey();
     for(const k in ps){ const p=ps[k];
       if(!p||p.rm!==rk||now-p.ts>2500) continue;
       if(p.x>A.x0&&p.x<A.x1&&p.y>A.y0&&p.y<A.y1) return true; } }
