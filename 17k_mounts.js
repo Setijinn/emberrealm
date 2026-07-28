@@ -181,22 +181,69 @@ function mountSeatOf(d){
           seatX:(s&&s.seatX!==undefined)?s.seatX:0}; }
 // ---- the coats. A tint plus the word that names it. Colours are the game's existing families
 // (PET_CATS, MOBTINT) so a Frost mount reads frost the way everything else frost does. ----
+// A COAT IS A TWO-TONE GRADIENT MAP, not a wash (user, 2026-07-28).
+//
+// A flat tint paints every pixel toward one hue at a fixed alpha, which is cheap and looks it: the
+// animal's own shading gets flattened and 146 mounts read as one drawing under coloured cellophane.
+// A gradient map instead keeps the sprite's OWN luminance and re-paints it between two colours, so
+// the shadows go one way and the highlights the other -- black in the creases, purple on the ridges
+// -- and every fold the artist put in survives. Same cost at runtime, and it is cached.
+//
+// `d` is the shadow colour, `l` the highlight, `m` how far to push from the original (1 = a total
+// repaint, lower keeps some of the animal's own colour showing through).
+// `col` is retained because the UI reads it for chip borders and text.
 const MOUNT_COATS = {
-  plain:  {n:'Field',    col:null,      a:0},
-  ash:    {n:'Ashen',    col:'#8a8078', a:0.34},
-  ember:  {n:'Ember',    col:'#ff7a3d', a:0.32},
-  frost:  {n:'Frost',    col:'#a9e0ff', a:0.32},
-  storm:  {n:'Storm',    col:'#6ab8ff', a:0.30},
-  tide:   {n:'Tide',     col:'#4aa6d6', a:0.30},
-  verdant:{n:'Moss',     col:'#5cbf4a', a:0.28},
-  stone:  {n:'Stone',    col:'#9a938a', a:0.34},
-  sand:   {n:'Dune',     col:'#d8b26a', a:0.30},
-  bog:    {n:'Peat',     col:'#6a7a4a', a:0.32},
-  spirit: {n:'Spirit',   col:'#d6a6ff', a:0.30},
-  void:   {n:'Void',     col:'#b23ce0', a:0.34},
-  dawn:   {n:'Dawn',     col:'#ffd07a', a:0.28},
-  blood:  {n:'Blood',    col:'#c0392b', a:0.30},
+  plain:  {n:'Field',   col:null,      d:null,      l:null,      m:0},
+  ash:    {n:'Ashen',   col:'#8a8078', d:'#15130f', l:'#b8ada0', m:0.92},
+  ember:  {n:'Ember',   col:'#ff7a3d', d:'#1a0a06', l:'#ff8a3a', m:1.00},
+  frost:  {n:'Frost',   col:'#a9e0ff', d:'#08131f', l:'#cfeeff', m:1.00},
+  storm:  {n:'Storm',   col:'#6ab8ff', d:'#0a1024', l:'#8fd0ff', m:1.00},
+  tide:   {n:'Tide',    col:'#4aa6d6', d:'#05131c', l:'#6fc6e8', m:1.00},
+  verdant:{n:'Moss',    col:'#5cbf4a', d:'#0b1a0a', l:'#86d86a', m:0.96},
+  stone:  {n:'Stone',   col:'#9a938a', d:'#17161a', l:'#c2bbb0', m:0.90},
+  sand:   {n:'Dune',    col:'#d8b26a', d:'#241a0c', l:'#f0cf8e', m:0.96},
+  bog:    {n:'Peat',    col:'#6a7a4a', d:'#0d1408', l:'#93a468', m:0.96},
+  spirit: {n:'Spirit',  col:'#d6a6ff', d:'#140d22', l:'#e6c8ff', m:1.00},
+  void:   {n:'Void',    col:'#b23ce0', d:'#120a1c', l:'#b46ae8', m:1.00},
+  dawn:   {n:'Dawn',    col:'#ffd07a', d:'#2a1806', l:'#ffe6ad', m:0.96},
+  blood:  {n:'Blood',   col:'#c0392b', d:'#1a0505', l:'#e05a48', m:1.00},
 };
+
+// ---- the gradient map itself. Cached on (src, coat) exactly like _tintImg, because it is a full
+// per-pixel pass and a mount is redrawn every frame. ----
+const _coatCache={};
+function coatImg(im, coat){
+  if(!im||!coat||!coat.d) return im;
+  const key=(im.src||'x')+'|'+coat.d+'|'+coat.l+'|'+coat.m;
+  const hit=_coatCache[key]; if(hit) return hit;
+  let out=im;
+  try{
+    const w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const g=c.getContext('2d',{willReadFrequently:true});
+    g.imageSmoothingEnabled=false; g.drawImage(im,0,0);
+    const id=g.getImageData(0,0,w,h), p=id.data;
+    const dr=parseInt(coat.d.slice(1,3),16), dg=parseInt(coat.d.slice(3,5),16), db=parseInt(coat.d.slice(5,7),16);
+    const lr=parseInt(coat.l.slice(1,3),16), lg=parseInt(coat.l.slice(3,5),16), lb=parseInt(coat.l.slice(5,7),16);
+    const m=(coat.m===undefined)?1:coat.m;
+    // STRETCH THE RAMP OVER THE SPRITE'S REAL RANGE. Using 0-255 flat would waste most of the
+    // gradient on tones the art never uses, and a dark sprite would come out uniformly dark.
+    let vmin=255, vmax=0;
+    for(let i=0;i<p.length;i+=4){ if(p[i+3]<=8) continue;
+      const v=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+      if(v<vmin)vmin=v; if(v>vmax)vmax=v; }
+    const span=Math.max(1,vmax-vmin);
+    for(let i=0;i<p.length;i+=4){ if(p[i+3]<=8) continue;
+      let t=((0.299*p[i]+0.587*p[i+1]+0.114*p[i+2])-vmin)/span;
+      t=0.06+t*0.90;                                  // keep a little headroom at both ends
+      const nr=dr+(lr-dr)*t, ng=dg+(lg-dg)*t, nb=db+(lb-db)*t;
+      p[i]  =p[i]  +(nr-p[i])  *m;
+      p[i+1]=p[i+1]+(ng-p[i+1])*m;
+      p[i+2]=p[i+2]+(nb-p[i+2])*m; }
+    g.putImageData(id,0,0);
+    out=c;
+  }catch(err){ out=im; }        // a tainted canvas would throw; the untinted sprite is a fine fallback
+  _coatCache[key]=out; return out; }
 // [id, name, rarity, arch, coat, speed, tough?]
 // Names are mostly <coat> <archetype>, with bespoke ones where a species has earned it.
 const _MOUNTS = [
@@ -381,7 +428,7 @@ function _mkMount(r,fly){
   const arch=MOUNT_ARCH[r[3]]||MOUNT_ARCH.horse, coat=MOUNT_COATS[r[4]]||MOUNT_COATS.plain;
   const m={id:r[0], name:r[1], rar:r[2], arch:r[3], coat:r[4], spd:r[5],
            tough:(r[6]!==undefined?r[6]:undefined),
-           spr:arch.spr, tint:coat.col, tintA:coat.a};
+           spr:arch.spr, tint:coat.col, tintA:coat.a, coatDef:coat};
   if(fly) m.fly=1;
   return m; }
 const MOUNT_DB = _MOUNTS.map(function(r){ return _mkMount(r,0); })
@@ -736,6 +783,9 @@ function mountBaseImg(d,st){
 function mountArtFor(m,st){
   const d=(typeof m==='string')?mountDef(m):m; if(!d) return null;
   const im=mountBaseImg(d,st); if(!im) return null;
+  // THE COAT IS A GRADIENT MAP. _tintImg's flat wash is kept only as the fallback for a coat that
+  // has no two-tone pair defined -- every shipped coat has one.
+  if(d.coatDef && d.coatDef.d) return coatImg(im, d.coatDef);
   if(!d.tint || typeof _tintImg!=='function') return im;
   return _tintImg(im, d.tint, d.tintA||0.3, 0); }
 
@@ -927,6 +977,20 @@ function mountSeatY(im){
 // 65px box) to 1.91 (roc, a wide 43px one), so a rider multiplied by them came out half again as
 // large on a bird as on a wolf. He gets his own target height and nothing else touches it.
 const RIDER_DRAW_H = 48;    // ~0.59 of MOUNT_DRAW_H, which is about a person against a horse
+
+// ---- BECOME THE MOUNT, or ride it. ----
+// A design fork, kept as one switch because the whole rider pipeline hangs off it.
+//   false  the hero is drawn seated on the animal (rider layers, seats, extraction)
+//   true   the hero is NOT drawn at all -- you ARE the animal while mounted
+//
+// Turning into the mount deletes every hard problem the rider has: no seat to calibrate, no layer
+// to extract, no dark-on-dark contrast, no per-class art. It costs the two things a rider buys --
+// you cannot see who anyone is in co-op, and the art has SADDLES on it, which read as an empty
+// horse rather than as a transformed hero.
+// Cosmetics survive either way: a dye or a cloth is a source-atop paint on whatever layer is the
+// player, so in transform mode it tints the ANIMAL and your Voidtouched dragon is still yours.
+let MOUNT_TRANSFORM = false;
+function mountTransformed(){ return MOUNT_TRANSFORM && mounted(); }
 
 // Draw the seated rider on top of the mount. Returns true if it drew, false to fall back.
 // x,y is the player's world anchor, the same one mountDrawUnder is given.

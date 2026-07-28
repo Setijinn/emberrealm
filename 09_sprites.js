@@ -2004,10 +2004,13 @@ function render(){
   // scaled by the mount's normalisation factor (those range 1.26-1.91, which grew him by half on
   // a roc versus a wolf), and he must NOT be drawn at EMBER_SC either, which is the standing
   // hero's scale against no mount at all.
-  const _ride=(_lift>0 && typeof riderDrawOver==='function')
-    ? riderDrawOver(player.x+lx, player.y+ly*0.5, faceAng, _skin) : false;
+  // TRANSFORM MODE: the hero is not drawn at all -- mountDrawUnder already drew what you ARE.
+  const _xform=(typeof mountTransformed==='function') && mountTransformed();
+  const _ride=_xform ? true
+    : ((_lift>0 && typeof riderDrawOver==='function')
+        ? riderDrawOver(player.x+lx, player.y+ly*0.5, faceAng, _skin) : false);
   if(_ride){
-    /* drawn by riderDrawOver */
+    /* drawn by riderDrawOver, or nothing to draw because you are the mount */
   } else {
     // FALLBACK ONLY: sit him hip-deep and clip at the saddle so his legs vanish behind the animal.
     const _clip=(_lift>0 && typeof mountSaddleY==='function');
