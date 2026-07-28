@@ -385,7 +385,7 @@ function _devPlay(nm){
 
 // --------------------------------- ENEMIES ---------------------------------------
 DEV_PANE.mobs=function(B){
-  B.appendChild(_dvNote('Reads MOBSPEC directly — 54 species across 9 bands, including the 18 that only exist inside dungeons.'));
+  B.appendChild(_dvNote('Reads MOBSPEC directly — 61 species across 10 bands, including the ones that only exist inside dungeons.'));
   for(let bd=0;bd<MOBSPEC.length;bd++){
     B.appendChild(_dvHd('BAND '+bd+(typeof RING_NAMES!=='undefined'&&RING_NAMES[bd]?('  ·  '+RING_NAMES[bd]):'')));
     const g=_dvGrid();
