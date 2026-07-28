@@ -147,9 +147,48 @@ it hands you the prestige caps while there are still levels left to earn.
 - `RELIC_COL` / `--relic` (#ffd24a) is the one gold for everything relic. The icon stamps **R**
   where ordinary items stamp their tier.
 
+### The world's zones
+- **14 territories**, laid down by `_territories()` in a FIXED order that `ZBOSS` and `ZONE_TIERS`
+  are both indexed by: **0-3 starter island, 4-8 inner main, 9-13 grind rim.** Adding one shifts
+  every later index — including the raw numbers in `17e_relics.js` (`RELIC_ZONE_MIN`,
+  `RELIC_ZONE_RIM`), which read a clump index and would silently pay relics out of the wrong band.
+- Every zone is a warped-Voronoi province with irregular borders. The starter island's four are
+  no different from the main island's ten; the two islands just partition over their own seeds so
+  neither bleeds into the other.
+- **The starter island is a west-to-east march.** `rings.starter` is the LANDING on the west shore
+  — it is the level-ramp origin AND the arrival point (`usePortal('G')`), deliberately one value so
+  spawn and Lv1 cannot drift apart. It used to be the island's MIDDLE, which is what made three
+  zones that each spanned Lv1-20: they radiated from the spawn as wedges.
+- **The province owns the level, not a radius.** Each starter province holds exactly five levels and
+  `grvLvAtR` reads the band off the province a tile belongs to. Inside a province the five levels
+  are cut by AREA (a per-province reach histogram split at its own quintiles), because a province is
+  widest through its middle and an even distance split starves its first and last levels.
+- Seeds were measured, not guessed, on four counts: area share, monotonic distance from the landing,
+  contiguity, and **no skips — only CONSECUTIVE provinces may share a border.** That last one is
+  what stops a Lv5 player walking out of the first zone straight into Lv11 ground.
+- `STARTER_ZONES` / `STARTER_BANDS` / `STARTER_SEED` are declared beside `ZBOSS` near the top of
+  `03_entities.js`, NOT next to `_territories` 2000 lines down: `stampLairs()` runs at load and a
+  `const` further down the file is still in its temporal dead zone.
+- **`rings.names` is BAND-indexed, not zone-indexed** (`11_ui.js` reads `names[pl.band]` for fast
+  travel; `02_worldbuild.js` appends the grind name gated on `length===8`). The four starter names
+  live in their own `rings.starterZones`; do not add a ninth entry to `names`.
+- Terrain bands are a SEPARATE index space that tops out at 8, and `MOBNAME`/`MOBTINT` share one
+  array between bands 0-8 and boss art slots 9+. A terrain band 9 would therefore collide with boss
+  art slot 9, and `GBANDCOL[9]` is indexed unguarded on the pre-decode path (a hard TypeError, not a
+  fallback). The fourth starter zone borrows band 6 instead.
+
 ### Bosses
-- Twelve identities in `GBOSS`; a boss's index is its **`ring`** everywhere in the code (a legacy
+- Thirteen identities in `GBOSS`; a boss's index is its **`ring`** everywhere in the code (a legacy
   name — it is a boss id, not a terrain band).
+- **`gate:'none'` marks a starter-island boss** — walk-in dungeon, den elder rather than dream form,
+  dungeon level stepped off its own tile. `isStarterBoss()` reads it. This used to be
+  `LAIR_RAD[ring]!==undefined`, an art-placement table doing duty as an identity test.
+- Art borrowing is PER ASSET KIND: `BOSS_SLOT` (sprite/anim/den), `TILE_SLOT` (dunset),
+  `DEC_SLOT` (ldec), `LAIR_TILE` (arena walls/floor). `bossArtSlots()` walks `0..BOSS_SLOT_N` at
+  LOAD and requests every distinct slot, so a new boss must either ship its art or carry a borrow
+  entry — a missing file 404s every session against a cache-first service worker.
+- `DSHAPE[ring]` is dereferenced immediately (`st.rmax`): a missing entry is a TypeError.
+  `DDEPTH[ring]` falls back to `||ring`, so a missing entry silently builds an enormous dungeon.
 - A fight is keyed by identity AND form: `ow<ring>` / `dn<ring>` / `arena`, registered in
   `BOSS_MECH`. Both forms of a boss share a family; the dungeon form twists one element.
 - **Per-fight phase counts** (`bossPhases`), 1–4 breaks. The boss bar reads the same list.
