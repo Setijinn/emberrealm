@@ -211,10 +211,19 @@ function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return
 // Boss identity used to BE the theme band, which pinned the deepest-lore bosses to the starter
 // island (the Grovewarden — the root-lord that anchored the rift — was a Lv4 fight). Identity is
 // now CLUMP-indexed while terrain stays BAND-indexed: `grvBandAt` remains the sole authority for
-// tilesets/tone/trees/boulders/map colour, and ZBOSS says who rules each of the 13 territories.
-// _territories() lays clumps down in a fixed order: 0-2 starter, 3-7 inner main, 8-12 grind rim.
-//   -1 = no boss. Clump 10 is The Molten Heart — the rift's own province, held for the final boss.
-const ZBOSS=[9,10,11, 0,1,2,3,4, 6,5,-1,7,8];
+// tilesets/tone/trees/boulders/map colour, and ZBOSS says who rules each of the 14 territories.
+// _territories() lays clumps down in a fixed order: 0-3 starter, 4-8 inner main, 9-13 grind rim.
+//   -1 = no boss. Clump 11 is The Molten Heart — the rift's own province, held for the final boss.
+// Starter clump 2 (The Cairnworks, Lv11-15) is the new fourth zone; boss 12 takes it in phase 2.
+const ZBOSS=[9,10,-1,11, 0,1,2,3,4, 6,5,-1,7,8];
+// The starter island's four five-level bands, and the TERRAIN band each one wears. Declared up
+// here beside ZBOSS, not next to _territories 2000 lines below, because stampLairs() runs at load
+// (line ~523) and calls _territories() -- a `const` further down the file is still in its temporal
+// dead zone at that point and throws, which takes the whole of 03_entities.js with it.
+// Bands are not 0/1/2/3: terrain bands are a separate index space that tops out at 8 and carries
+// its own tilesets. The fourth zone borrows band 6, Stonebrow's grey stone and scree, which reads
+// as the rocky spine you climb between the shingle and the marsh.
+const STARTER_ZONES=4, STARTER_BANDS=[0,1,6,2];   // sand / shingle / stone rise / marsh
 const BOSS_ZONE=[]; for(let i=0;i<ZBOSS.length;i++) if(ZBOSS[i]>=0) BOSS_ZONE[ZBOSS[i]]=i;
 // boss id at a tile (ocean/bridge/unclaimed -> -1). THE spawner key; never assume it equals a band.
 function zoneBossAt(tx,ty){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
@@ -276,13 +285,18 @@ function lairSizeFor(b,lv){
 let _lairsStamped=false;
 // Lair NUDGE angles (radians). The anchor is the clump's own centroid; this only pushes the lair
 // off-centre so it doesn't sit under the zone label drawn at that same centroid on the map screen.
-const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 9:1.8,10:-1.8,11:0.3};
-// Starter lairs need an explicit RADIUS, not a centroid. The three starter clumps are wedges
-// radiating from the spawn, so each spans the whole Lv1-20 range and their centroids all sit at
-// much the same distance — three bosses at Lv8/11/9 in no order. This walks them out along their
-// own wedge instead, as a fraction of starter.r, giving ~Lv4 / Lv10 / Lv17 to match the zones'
-// stated ranges (Landing Sands 1-8, Gullwind Shore 8-14, Sawgrass Flats 14-20).
-const LAIR_RAD={9:0.34,10:0.62,11:0.88};
+// Starter angles are NEGATIVE on purpose. The starter clumps are now level bands running NW->SE
+// along the island, so their centroids sit near the south coast; a positive nudge walks the
+// footprint straight into the sea. Swept against the 5-point inZone test: -0.90 gives all three
+// 4/4 arms on land and <=2% obstruction, while 0.30/0.90/1.20 put the chapel 36-87% underwater,
+// which forces the shrink ladder and can drag the lair out of its own zone entirely.
+const LAIR_NUDGE={0:1.8,1:-1.8,2:0.3, 3:0.9,4:-0.8,5:0.65,6:-0.5,7:0.45,8:-0.3, 9:-0.9,10:-0.9,11:-0.9};
+// Is this one of the starter island's plain-place bosses? `gate:'none'` is the real flag -- it is
+// already what lets you walk into the dungeon without ascending (11_ui.js) and what marks the boss
+// a den elder rather than a dream form (makeEnemy). This used to be `LAIR_RAD[ring]!==undefined`,
+// an art-placement table doing duty as an identity test, which meant adding a starter boss without
+// a radius entry silently gave it a Lv40 dungeon and the awakened buff.
+function isStarterBoss(r){ return !!(typeof GBOSS!=='undefined' && GBOSS[r] && GBOSS[r].gate==='none'); }
 // ---- ARENA ARCHITECTURE, one per boss ----
 // (user: "make all the borders of all the boss areas not as consistent and make them represent
 // something, like a structure"). Every lair used to carve the SAME wobbling ellipse with the same
@@ -315,9 +329,9 @@ const LAIR_ARCH={
 function lairAnchor(RG,T,z,b){
  const t=(T&&z>=0)?T[z]:null; if(!t||!t.n) return null;
  const cx=t.sx/t.n, cy=t.sy/t.n;
- if(LAIR_RAD[b]!==undefined && RG.starter){                     // radial walk-out along its wedge
-   const S=RG.starter, a=Math.atan2(cy-S.cy,cx-S.cx), f=LAIR_RAD[b];
-   return {x:S.cx+Math.cos(a)*S.r*f, y:S.cy+Math.sin(a)*S.r*f}; }
+ // No starter special case any more. The four starter clumps are genuine level bands, so their
+ // centroids already land at ~Lv3 / Lv7 / Lv12 / Lv17, each inside its own zone -- the generic
+ // centroid+nudge path below is correct for every boss in the game.
  const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
  return {x:cx+Math.cos(ang)*nud, y:cy+Math.sin(ang)*nud}; }
 function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return; _lairsStamped=true; R.lairs={};
@@ -623,10 +637,10 @@ function genDungeon(ring){
  // curve), so there's no parallel level table to keep in sync — and no names[8] to fall off.
  const _t=bossClump(ring), _n=rooms['G'].rings.names[ring]||{lv:1};
  let lv;
- if(LAIR_RAD[ring]!==undefined){
-   // Starter dungeons step past THIS BOSS, not the island's peak. The three starter clumps are
-   // wedges spanning all of Lv1-20, so their lvmax is 20 for every one of them — a Lv4 boss would
-   // otherwise drop a Lv25 dungeon nobody at that level could enter.
+ if(isStarterBoss(ring)){
+   // Starter dungeons step past THIS BOSS, not the island's peak. Belt and braces now that the
+   // clumps are real five-level bands (lvmax is 5/10/15/20, not 20 across the board): stepping off
+   // the boss's own tile keeps a Lv4 den from dropping a dungeon its owner's killers can't enter.
    const L=grvLairXY(ring), RGs=rooms['G'].rings;
    lv=Math.max(3,Math.min(LV_CAP-26,Math.round(grvLvAtR(RGs,L.x/TILE,L.y/TILE))+4));
  } else lv=Math.min(LV_CAP+10,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+5);
@@ -2350,25 +2364,41 @@ function _onStarter(R,tx,ty){ return tx<(R.bridge.x0+R.bridge.x1)*0.5; }
 function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
  if(_onBridge(RG,tx,ty)) return 20;
  if(_onStarter(RG,tx,ty)){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r);
-   // EASED starter ramp (f^1.7, not linear): the inner ~40% around the spawn stays Lv1-4 so a
-   // brand-new Lv1 hero isn't immediately swarmed by Lv10+ foes it can't dent, and only the far
-   // edge / bridge approach reaches the Lv20 gate. (Linear made the whole starter island too steep.)
-   return Math.max(1,Math.min(20,Math.round(1+Math.pow(f,1.7)*19))); }
+   // The starter ramp runs WEST->EAST: rings.starter is the LANDING on the west shore, not the
+   // middle of the island, and it is also the arrival point (usePortal 'G'), so f=0 is exactly
+   // where you stand when you first walk out. Danger climbs as you head for the bridge.
+   // It used to be centred at (200,360) -- the island's middle -- which is what made all three
+   // zones span Lv1-20: they radiated from spawn as wedges, so every one of them started at Lv1.
+   // EXPONENT is data (rings.lvExp), not a constant. 1.7 was tuned for a centre-out layout where
+   // land area grows as r^2; on a directional march it front-loads the low levels badly. 1.30
+   // splits the island 16/27/31/25% across the four zones -- early bands tighter, later bands
+   // larger, which is the right shape because later levels take longer to clear.
+   return Math.max(1,Math.min(20,Math.round(1+Math.pow(f,RG.lvExp||1.3)*19))); }
  const gR=RG.grindR||0.8, f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax);
  if(f>=gR) return 50;                                   // flat Lv50 grind ring
  return Math.max(20,Math.min(50,Math.round(20+(f/gR)*29))); }
 function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return (curRoom&&curRoom.lv)||1;
  return grvLvAtR(R,tx,ty); }
 // ----- Clumped zones (territories) -----
-// The named zones are ORGANIC CLUMPS, not concentric rings: ~13 seeds (3 starter + 5 inner main +
-// 5 grind) partition the land into Voronoi provinces with a wavy warp so borders are irregular.
-// Seeds are placed inner->outer, so each clump's THEME-BAND (tileset/tone) still trends green->red
-// while difficulty (grvLvAt above) climbs smoothly outward. Built once per world, cached on rings.
+// 14 clumps: 4 starter + 5 inner main + 5 grind. Order is FIXED and load-bearing --
+// 0-3 starter, 4-8 inner main, 9-13 grind rim -- because ZBOSS and ZONE_TIERS are indexed by it.
+//
+// The main island's zones are ORGANIC CLUMPS: Voronoi provinces around 10 seeds with a wavy warp
+// so borders are irregular. The STARTER ISLAND is not. Its four zones are cut straight off the
+// level curve -- zone = (lv-1)/5 -- so each one is exactly five levels wide and the two can never
+// drift apart. They used to be Voronoi too, over three seeds all placed within ~20 tiles of the
+// spawn, which made them angular wedges that each spanned the whole Lv1-20 range: the map read
+// "Lv1-20" three times over. Deriving zone from level is what fixes that, permanently.
 function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; if(RG._terr) return RG._terr;
- const S=RG.starter, C=RG.core, Rm=RG.rmax, nm=RG.names, gr=RG.grind||[], T=[];
+ const C=RG.core, Rm=RG.rmax, nm=RG.names, sz=RG.starterZones||[], gr=RG.grind||[], T=[];
  const add=(cx,cy,name,band,gi)=>{ T.push({cx,cy,name,band,gi:(gi==null?-1:gi),lvmin:99,lvmax:0,sx:0,sy:0,n:0}); };
- add(S.cx-7,S.cy+3, nm[0].n,0); add(S.cx+3,S.cy-15,nm[1].n,1); add(S.cx+17,S.cy+12,nm[2].n,2);   // starter clumps
+ // Starter seeds are never used for partitioning (see the derived branch below) -- they are the
+ // representative points ringInfoAt falls back to for off-land tiles, so they are the measured
+ // centroids of the four bands: a clean NW->SE march from the landing to the bridge.
+ const sSeed=[[87,292],[160,344],[232,368],[289,414]];
+ for(let i=0;i<STARTER_ZONES;i++) add(sSeed[i][0],sSeed[i][1],(sz[i]&&sz[i].n)||('Zone '+i),STARTER_BANDS[i]);
  const iAng=[0.5,-0.7,0.95,-0.35,0.35];                                                            // main inner (bands 3-7)
+ // nm is BAND-indexed, not clump-indexed: nm[3+i] stays 3+i even though these are now clumps 4-8.
  for(let i=0;i<5;i++){ const b=3+i, f=(b-2.4)/6; add(Math.round(C.cx+Math.cos(iAng[i])*Rm*f),Math.round(C.cy+Math.sin(iAng[i])*Rm*f),nm[3+i].n,b); }
  const gAng=[-0.8,-0.35,0.05,0.45,0.85];                                                           // grind clumps (band 8)
  for(let i=0;i<gr.length;i++){ add(Math.round(C.cx+Math.cos(gAng[i])*Rm*0.9),Math.round(C.cy+Math.sin(gAng[i])*Rm*0.9),gr[i],8,i); }
@@ -2376,9 +2406,19 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
  for(let ty=0;ty<H;ty++){ const row=grid[ty], zr=new Int8Array(W); zg[ty]=zr;
    for(let tx=0;tx<W;tx++){ const ch=row&&row[tx];
      if(ch==null||ch==='w'||ch==='b'){ zr[tx]=-1; continue; }
-     const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
-     let bi=0,bd=1e18; for(let i=0;i<T.length;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
-     zr[tx]=bi; const t=T[bi], lv=grvLvAtR(RG,tx,ty);
+     const lv=grvLvAtR(RG,tx,ty);
+     let bi;
+     if(_onStarter(RG,tx,ty)) bi=Math.max(0,Math.min(STARTER_ZONES-1,Math.floor((lv-1)/5)));
+     else {
+       // Nearest seed among the MAIN clumps only. Unrestricted, this loop also considered the
+       // starter seeds and handed 653 tiles of the starter island's east spill to The Verdant Belt
+       // -- Lv20 ground paying a main-island loot table, owned by a boss whose lair sat 130 tiles
+       // away, so nothing ever spawned there. The two islands partition separately now.
+       const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
+       let bd=1e18; bi=STARTER_ZONES;
+       for(let i=STARTER_ZONES;i<T.length;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
+     }
+     zr[tx]=bi; const t=T[bi];
      if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; t.sx+=tx; t.sy+=ty; t.n++; } }
  RG._zg=zg; RG._terr=T; return T; }
 // tx/ty arrive as FLOAT tile coords from every entity-position caller (px/TILE), so they MUST be
@@ -2392,7 +2432,9 @@ function grvBandAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) r
  const T=_territories(R), zi=zoneAt(tx,ty);
  if(zi>=0) return T[zi].band;
  if(_onBridge(RG,tx,ty)) return 3;                       // bridge/water: theme unused, approximate radially
- if(_onStarter(RG,tx,ty)){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
+ // Off-land starter tiles (coast, shallows): mirror the on-land rule -- band from the LEVEL, via
+ // the same STARTER_BANDS table, so a beach tile never themes differently from the sand behind it.
+ if(_onStarter(RG,tx,ty)) return STARTER_BANDS[Math.max(0,Math.min(STARTER_ZONES-1,Math.floor((grvLvAtR(RG,tx,ty)-1)/5)))];
  const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
 // zone identity: the clump's name + its actual level range (min..max of the smooth curve within it).
 // Off-land tiles (bridge/coast) have no territory, so fall back to the NEAREST clump — never the

@@ -222,9 +222,13 @@ function activeRelicSet(){
 }
 
 // ---------- drops ----------
-// Dungeons only, Lv40+ only. BOSS_ZONE maps a boss to the territory it rules; territories 6-7 are
-// the Lv39-50 band and 8-12 are the Lv50 rim, which is the whole gate.
-const RELIC_ZONE_MIN=6;          // below this the dungeon drops no relic at all
+// Dungeons only, Lv40+ only. BOSS_ZONE maps a boss to the territory it rules; territories 7-8 are
+// the Lv39-50 band and 9-13 are the Lv50 rim, which is the whole gate.
+// These are RAW CLUMP INDICES, so they moved when the starter island went from 3 zones to 4 --
+// every main-island territory shifted up by one. Nothing here reads a level, so a stale constant
+// would not throw; it would just quietly start paying relics out of Deep Timber.
+const RELIC_ZONE_MIN=7;          // below this the dungeon drops no relic at all
+const RELIC_ZONE_RIM=9;          // clump 9+ is the Lv50 grind rim
 const RELIC_P_LV40=0.0025;       // Shattered Vault, Windward Roost
 const RELIC_P_LV50=0.01;         // Cinder Crypt, Scorch Barrows, Ashen Keep, Core Sanctum
 // ---------- INSANE DROP ----------
@@ -258,5 +262,5 @@ function relicZoneOf(ring){
 function relicChanceFor(ring){
   const z=relicZoneOf(ring);
   if(z<RELIC_ZONE_MIN) return 0;
-  return z>=8 ? RELIC_P_LV50 : RELIC_P_LV40;
+  return z>=RELIC_ZONE_RIM ? RELIC_P_LV50 : RELIC_P_LV40;
 }

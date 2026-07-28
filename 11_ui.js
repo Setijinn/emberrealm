@@ -521,8 +521,9 @@ function tierCol(t){ return t>=12?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?
 // LOOT TIERS BY AREA (user, 2026-07-26)
 // ------------------------------------------------------------
 // Tier is the only power axis, so tier is what the world gates. Where you farm decides what you
-// can get; the level of the thing you killed no longer does. Keyed by CLUMP index 0-12, which is
-// what zoneAt() returns and is stable per world position.
+// can get; the level of the thing you killed no longer does. Keyed by CLUMP index 0-13, which is
+// what zoneAt() returns and is stable per world position. 0-3 are the starter island's four
+// five-level bands, 4-8 the inner main island, 9-13 the Lv50 grind rim.
 //
 //   pub  weighted tiers for the PUBLIC channel, capped at T8 -- any player in the area may take it
 //   sb   weighted tiers for the SOULBOUND channel, T9+, rolled per player and lootable only by them
@@ -532,22 +533,25 @@ function tierCol(t){ return t>=12?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?
 // never has a hard wall, and the low zones deliberately stay generous -- gear should not be scarce
 // at the start, only at the top.
 const ZONE_TIERS=[
- /* 0  The Landing Sands  Lv1-8   */ {pub:[[0,65],[1,35]],            sb:null,                      sbP:0,      gear:1.80},
- /* 1  Gullwind Shore     Lv8-14  */ {pub:[[1,60],[2,40]],            sb:null,                      sbP:0,      gear:1.80},
- /* 2  Sawgrass Flats     Lv14-20 */ {pub:[[2,60],[3,40]],            sb:null,                      sbP:0,      gear:1.80},
- /* 3  The Verdant Belt   Lv20-26 */ {pub:[[3,55],[4,45]],            sb:null,                      sbP:0,      gear:1.55},
- /* 4  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0,      gear:1.55},
- /* 5  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015, gear:1.30},
- /* 6  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030, gear:1.30},
+ // The starter island's four bands walk the ladder one tier per zone, T1 through T5. Splitting
+ // Lv1-20 into four zones instead of three added a rung, so the seams are gentler than before.
+ /* 0  The Landing Sands  Lv1-5   */ {pub:[[0,70],[1,30]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 1  Gullwind Shore     Lv6-10  */ {pub:[[1,65],[2,35]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 2  The Cairnworks     Lv11-15 */ {pub:[[2,60],[3,40]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 3  Sawgrass Flats     Lv16-20 */ {pub:[[3,60],[4,40]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 4  The Verdant Belt   Lv20-26 */ {pub:[[3,55],[4,45]],            sb:null,                      sbP:0,      gear:1.55},
+ /* 5  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0,      gear:1.55},
+ /* 6  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015, gear:1.30},
+ /* 7  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030, gear:1.30},
  // Cinderwatch is the calibration point: a Lv45 hero should be able to stand in a full T12 set.
  // At a 5% T12 weight that took a 118-boss median to complete — the right shape but one notch too
  // slow, so T12 is worth a quarter of this zone's bound drops. The grind ring still leads it.
- /* 7  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045, gear:1.10},
- /* 8  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 9  Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 10 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 11 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 12 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 8  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045, gear:1.10},
+ /* 9  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 10 Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 11 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 12 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 13 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
 ];
 const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0,gear:1.10};   // ocean / bridge / anything unmapped
 const PUB_TMAX=7;          // public gear caps at T8 (0-based 7). Everything above is soulbound.
@@ -1262,25 +1266,15 @@ const MAP_OCEAN='#16303f', MAP_BRIDGE='#6e4d31';
 const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e'];
 function mapLayout(G){ const s=(MAP_W-2*MAP_PAD)/G.w, gridH=G.h*s;
   return {s, ox:MAP_PAD, oy:MAP_TOP, gridH, H:Math.round(MAP_TOP+gridH+MAP_BOT)}; }
-// band + corruption straight from the room's rings metadata (no curRoom dependency — the map can
-// be open while you stand in a dungeon). Mirrors grvBandAt / corruptAt.
-function _mBand(RG,tx,ty){ if(!RG||!RG.radial) return 0;
-  const B=RG.bridge; if(tx>=B.x0&&tx<=B.x1&&Math.abs(ty-B.cy)<=(B.w>>1)) return 2;
-  if(tx<B.x0){ const f=Math.min(1,Math.hypot(tx-RG.starter.cx,ty-RG.starter.cy)/RG.starter.r); return Math.max(0,Math.min(2,Math.floor(f*3))); }
-  const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
+// corruption straight from the room's rings metadata (no curRoom dependency -- the map can be open
+// while you stand in a dungeon). Mirrors corruptAt.
 function _mCorrupt(RG,tx,ty){ if(!RG||!RG.portal) return 0;
   const dd=Math.hypot(tx-RG.portal.x,ty-RG.portal.y); return Math.max(0,Math.min(1,1-dd/70)); }
-// zone id: bands 0-7 are the radial rings; band 8 (the grind ring) is split into angular sectors
-// (id 8 + sector) \u2014 mirrors ringInfoAt so the map matches the region banner.
-function _mZone(RG,tx,ty){ const b=_mBand(RG,tx,ty); if(b<8) return b;
-  const a=Math.atan2(ty-RG.core.cy,tx-RG.core.cx), n=(RG.grind&&RG.grind.length)||5;
-  return 8+Math.max(0,Math.min(n-1,Math.floor(((a+Math.PI)/(2*Math.PI))*n))); }
-function _mZoneName(RG,z){ if(z<8) return (RG.names[z]&&RG.names[z].n)||''; return (RG.grind&&RG.grind[z-8])||''; }
-// a representative label point (world tiles) for the radial bands (rings \u2014 a centroid would fall
-// in the ring's hole, so place at mid-radius on a staggered angle); grind sectors use a centroid.
-function _mBandLabelPos(RG,z){
-  if(z<3){ const midf=(z+0.5)/3, ang=-1.15+z*0.7; return [RG.starter.cx+Math.cos(ang)*RG.starter.r*midf, RG.starter.cy+Math.sin(ang)*RG.starter.r*midf]; }
-  const midf=((z-3)+0.5)/6, ang=(z%2?0.30:-0.30); return [RG.core.cx+Math.cos(ang)*RG.rmax*midf, RG.core.cy+Math.sin(ang)*RG.rmax*midf]; }
+// _mBand / _mZone / _mZoneName / _mBandLabelPos lived here and were DELETED, not updated. They were
+// a second, drifting copy of the band and zone rules -- still hardcoding three starter zones split
+// at f*3, and a grind rim beginning at band 8 -- and nothing had called any of them since mapTerrain
+// started reading T[zi].band and the clump centroid straight off _territories(). Updating a dead
+// duplicate of a rule is how the map comes to disagree with the world.
 // subtle per-sector tints so the 5 Lv50 grind "states" read distinctly on the red rim
 const _GRIND_TINT=['rgba(255,175,60,0.13)','rgba(255,110,45,0.13)','rgba(205,55,150,0.15)','rgba(255,80,55,0.13)','rgba(235,150,55,0.13)'];
 // terrain + zone borders + labels are static \u2014 render once into an offscreen canvas and blit it,
