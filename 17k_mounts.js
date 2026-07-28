@@ -82,19 +82,33 @@ const MOUNT_CAST = 1.5;
 //  which is the one lever that makes a slow mount worth choosing.
 // ============================================================
 
-// FLIGHT IS COMING AT Lv40 (user, 2026-07-27) and is NOT built. This is the seam, declared now so
-// the shape is already right when it lands: a flying species sets `fly:1`, and everything that
-// gates on the ground rules reads mountIsFlyer()/mountFlyOk() rather than testing a species id.
-// What flight will additionally need, none of which exists yet:
-//   - a collision exemption, which 04_collision.js already has the shape for (player.terrainGhost,
-//     gated on _pmove so it only ever applies to the player's own movement)
-//   - a decision about whether water/chasm tiles are the ONLY thing it clears, or everything
-//   - the targeting question: which enemies can reach a flyer at all
+// ============================================================
+//  FLIGHT (Lv40+, user 2026-07-28)
+// ------------------------------------------------------------
+//  A FLYING MOUNT IS PURE TRAVERSAL. Nothing can reach you and you can reach nothing: no enemy
+//  damages a flyer, and the mounted attack lockout already means you cannot hit back. The user
+//  chose the strongest, simplest form of the rule on purpose, and it is self-balancing precisely
+//  BECAUSE it is total — untouchable is only broken if you can also act, and you cannot.
+//  ("We may change this later" — if it ever softens, `flyUntouchable()` is the one seam to widen,
+//  and an `air:1` archetype flag on bird/wisp/swarm is the obvious shape for who gets through.)
+//
+//  IT CLEARS WATER, AND WATER ONLY. Not walls, not lair walls, not locked gates — 'W' is the VOID
+//  inside a dungeon and 'X'/'D' are how the world gates its own content. See 04_collision.js.
+//
+//  THE ONE HAZARD FLIGHT INTRODUCES IS LANDING. It is the only state in the game that can put the
+//  player somewhere they cannot stand, so every dismount goes through mountLand() — see there.
 const MOUNT_FLY_LV = 40;
 function mountIsFlyer(m){ const d=mountDef(m); return !!(d&&d.fly); }
+// Has this ACCOUNT earned flight? Same account-wide reading as the Lv20 stable gate: the highest
+// level any character reached, so an alt does not have to climb to 40 again.
 function mountFlyOk(){ const u=mountStore(); if(!u) return false;
   const cur=(typeof rpg!=='undefined'&&rpg&&rpg.lvl)?rpg.lvl:0;
   return Math.max(u.mountLv|0, cur|0) >= MOUNT_FLY_LV; }
+// Is the player in the air RIGHT NOW? Read by collision, by the damage gate and by the renderer.
+function playerIsFlying(){ return mounted() && mountIsFlyer(player.mnt); }
+// The single seam for "who can touch a flyer". Today: nobody. Widening this is how the rule
+// softens later, and it is deliberately a function rather than a constant for that reason.
+function flyUntouchable(){ return playerIsFlying(); }
 
 // ---- the twelve drawings. spr = assets/mounts/<spr>.png ----
 const MOUNT_ARCH = {
@@ -110,6 +124,14 @@ const MOUNT_ARCH = {
   drake:    {n:'drake',     spr:'arch_drake'},      // wingless ground drake
   lizard:   {n:'lizard',    spr:'arch_lizard'},
   colossus: {n:'colossus',  spr:'arch_colossus'},   // walking stone construct
+  // ---- the six WINGED archetypes. Only species with fly:1 use these, and the art is drawn
+  // wings-spread mid-beat because a flyer is never shown standing. ----
+  griffon:  {n:'griffon',   spr:'arch_griffon',  air:1},
+  wyvern:   {n:'wyvern',    spr:'arch_wyvern',   air:1},
+  pegasus:  {n:'pegasus',   spr:'arch_pegasus',  air:1},
+  roc:      {n:'roc',       spr:'arch_roc',      air:1},
+  moth:     {n:'moth',      spr:'arch_moth',     air:1},
+  skywyrm:  {n:'sky wyrm',  spr:'arch_skywyrm',  air:1},
 };
 // ---- the coats. A tint plus the word that names it. Colours are the game's existing families
 // (PET_CATS, MOBTINT) so a Frost mount reads frost the way everything else frost does. ----
@@ -216,11 +238,81 @@ const _MOUNTS = [
   ['bloodmane','Bloodmane',         4,'cat',     'blood',  1.84],
   ['frostsov', 'Winter Sovereign',  4,'destrier','frost',  1.75, 0.33],
 ];
-const MOUNT_DB = _MOUNTS.map(function(r){
+// ---- THE FLYERS (Lv40+). A separate table only so the ground roster above stays readable and
+// so "is anything flying?" is answerable by looking at one place.
+//
+// They sit at Rare and above because flight is the endgame reward, and their SPEEDS deliberately
+// overlap the top of the ground roster rather than exceeding it. A flyer's prize is that nothing
+// can touch it and water is not a wall — handing it the speed crown as well would retire every
+// ground mount in the game the moment you turned 40, and there are 78 of those.
+//
+// [id, name, rarity, arch, coat, speed, tough?] — the trailing `1` marks it a flyer.
+const _FLYERS = [
+  // ---- RARE (2): the light flyers. Moths and the smaller wings. 1.46-1.58 ----
+  ['mothdawn', 'Dawn Skiff',        2,'moth',   'dawn',    1.50],
+  ['mothpale', 'Pale Moth',         2,'moth',   'spirit',  1.52],
+  ['mothember','Cinder Moth',       2,'moth',   'ember',   1.54],
+  ['mothgreen','Orchard Moth',      2,'moth',   'verdant', 1.48],
+  ['mothvoid', 'Riftwing Moth',     2,'moth',   'void',    1.56],
+  ['mothfrost','Hoarfrost Moth',    2,'moth',   'frost',   1.51, 0.26],
+  ['mothstorm','Static Moth',       2,'moth',   'storm',   1.57],
+  ['mothbog',  'Fen Moth',          2,'moth',   'bog',     1.46, 0.28],
+  ['grifstone','Grey Griffon',      2,'griffon','stone',   1.55, 0.27],
+  ['grifsand', 'Dune Griffon',      2,'griffon','sand',    1.58],
+  ['rocstone', 'Crag Roc',          2,'roc',    'stone',   1.53, 0.29],
+  ['rocsand',  'Dune Roc',          2,'roc',    'sand',    1.57],
+  ['pegplain', 'White Pegasus',     2,'pegasus','plain',   1.56],
+  ['wyrmtide', 'Reef Wyrm',         2,'skywyrm','tide',    1.54],
+  // ---- EPIC (3): 1.55-1.70 ----
+  ['grifstorm','Storm Griffon',     3,'griffon','storm',   1.66],
+  ['grifash',  'Ashen Griffon',     3,'griffon','ash',     1.62],
+  ['griffrost','Rime Griffon',      3,'griffon','frost',   1.60, 0.30],
+  ['grifgreen','Wood Griffon',      3,'griffon','verdant', 1.63],
+  ['rocfrost', 'Rime Roc',          3,'roc',    'frost',   1.63, 0.30],
+  ['rocash',   'Ashfall Roc',       3,'roc',    'ash',     1.61],
+  ['roctide',  'Gale Roc',          3,'roc',    'tide',    1.65],
+  ['rocvoid',  'Rift Roc',          3,'roc',    'void',    1.68],
+  ['wyvash',   'Ashen Wyvern',      3,'wyvern', 'ash',     1.67],
+  ['wyvbog',   'Mire Wyvern',       3,'wyvern', 'bog',     1.58, 0.31],
+  ['wyvember', 'Ember Wyvern',      3,'wyvern', 'ember',   1.69],
+  ['wyvfrost', 'Glacier Wyvern',    3,'wyvern', 'frost',   1.62, 0.30],
+  ['wyvstorm', 'Tempest Wyvern',    3,'wyvern', 'storm',   1.70],
+  ['wyvtide',  'Brine Wyvern',      3,'wyvern', 'tide',    1.64],
+  ['pegmoor',  'Moorland Pegasus',  3,'pegasus','verdant', 1.64],
+  ['pegtide',  'Tidewing',          3,'pegasus','tide',    1.65],
+  ['pegfrost', 'Snowmane Pegasus',  3,'pegasus','frost',   1.61, 0.29],
+  ['pegspirit','Pale Pegasus',      3,'pegasus','spirit',  1.67],
+  ['pegstorm', 'Galemane',          3,'pegasus','storm',   1.69],
+  ['wyrmgreen','Green Sky Wyrm',    3,'skywyrm','verdant', 1.68],
+  ['wyrmspir', 'Spirit Wyrm',       3,'skywyrm','spirit',  1.66],
+  ['wyrmash',  'Ash Wyrm',          3,'skywyrm','ash',     1.59],
+  // ---- LEGENDARY (4): 1.68-1.84 ----
+  ['grifdawn', 'Dawn Griffon',      4,'griffon','dawn',    1.74],
+  ['grifblood','Bloodfeather',      4,'griffon','blood',   1.79],
+  ['wyvblood', 'Blood Wyvern',      4,'wyvern', 'blood',   1.78],
+  ['wyvvoid',  'Rift Wyvern',       4,'wyvern', 'void',    1.80],
+  ['pegdawn',  'Dawnwing',          4,'pegasus','dawn',    1.76],
+  ['pegember', 'Emberwing Pegasus', 4,'pegasus','ember',   1.73],
+  ['rocstorm', 'Thunder Roc',       4,'roc',    'storm',   1.75, 0.32],
+  ['rocdawn',  'The Sun Eagle',     4,'roc',    'dawn',    1.72, 0.33],
+  ['wyrmvoid', 'The Long Dark',     4,'skywyrm','void',    1.82],
+  ['wyrmdawn', 'The First Light',   4,'skywyrm','dawn',    1.79, 0.31],
+  ['wyrmblood','The Red Coil',      4,'skywyrm','blood',   1.83],
+  ['wyrmstorm','The Sky Serpent',   4,'skywyrm','storm',   1.81],
+  ['mothspir', 'The Lantern Moth',  4,'moth',   'spirit',  1.70, 0.34],
+  ['grifvoid', 'Voidfeather',       4,'griffon','void',    1.84],
+  ['pegvoid',  'The Pale Rider',    4,'pegasus','void',    1.77],
+  ['wyvdawn',  'Dawnscale',         4,'wyvern', 'dawn',    1.71, 0.33],
+];
+function _mkMount(r,fly){
   const arch=MOUNT_ARCH[r[3]]||MOUNT_ARCH.horse, coat=MOUNT_COATS[r[4]]||MOUNT_COATS.plain;
-  return {id:r[0], name:r[1], rar:r[2], arch:r[3], coat:r[4], spd:r[5],
-          tough:(r[6]!==undefined?r[6]:undefined),
-          spr:arch.spr, tint:coat.col, tintA:coat.a}; });
+  const m={id:r[0], name:r[1], rar:r[2], arch:r[3], coat:r[4], spd:r[5],
+           tough:(r[6]!==undefined?r[6]:undefined),
+           spr:arch.spr, tint:coat.col, tintA:coat.a};
+  if(fly) m.fly=1;
+  return m; }
+const MOUNT_DB = _MOUNTS.map(function(r){ return _mkMount(r,0); })
+       .concat(_FLYERS.map(function(r){ return _mkMount(r,1); }));
 const _MOUNT_BY_ID={}; for(const m of MOUNT_DB) _MOUNT_BY_ID[m.id]=m;
 function mountDef(id){ return _MOUNT_BY_ID[id]||null; }
 // THE STARTER. Handed over at the Stable the first time any character reaches Lv20.
@@ -309,6 +401,10 @@ function mountUp(id){
   if(mounted()) return false;
   if((player.mntCast||0)>0) return false;                 // already climbing
   if((player.mntCd||0)>0) return false;
+  // a flyer you own but have not earned the sky for stays in the stable
+  if(d.fly && !mountFlyOk()){
+    if(typeof msg==='function') msg('NOT YET','flight is earned at level '+MOUNT_FLY_LV);
+    return false; }
   if(!mountAllowedHere()){ if(typeof msg==='function') msg('NOT HERE','you cannot mount in a fight'); return false; }
   player.mntCast=MOUNT_CAST; player.mntCastId=d.id;
   if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:'MOUNTING…',col:mountRarCol(d.rar),life:0.7});
@@ -330,11 +426,43 @@ function _mountSeat(id){
   if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:d.name.toUpperCase(),col:mountRarCol(d.rar),life:0.8});
   return true; }
 
+// ---- LANDING IS AUTOMATIC, AND OVER WATER YOU SIMPLY STAY UP (user, 2026-07-28). ----
+// Taking off and setting down are not things the player manages: mounting a flyer takes off,
+// dismounting lands. There is no "land here" action and no landing you can get wrong.
+//
+// If there is nowhere to put your feet, YOU REMAIN IN THE AIR. Not teleported to the nearest
+// shore, not refused with an error — the dismount simply does not happen and you keep flying.
+// That is the honest answer: the hero has no business standing in the sea, and moving him
+// somewhere he did not fly to would be a worse surprise than staying airborne. There is no way to
+// get stuck, because the mount that put you over the water can always carry you off it.
+//
+// This works BECAUSE the collision exemption is gated on `_pmove`: standable() is never called
+// from inside the player's own moveCircle, so it always sees the REAL terrain even while the
+// rider is airborne. Without that gate it would report the middle of the sea as fine to stand on.
+function mountCanLandHere(){
+  if(typeof standable!=='function') return true;
+  return standable(player.x, player.y, (player&&player.r)||14); }
+
+// Clear the saddle with NO landing logic at all. For the cases where the player is about to be
+// somewhere else entirely anyway — death, a room change — so a refused landing can never leave a
+// dead hero mounted in the Hearth.
+function mountClear(){
+  if(typeof player==='undefined'||!player) return;
+  player.mnt=null; player.mntDmg=0; player.mntCast=0; player.mntCastId=null; player.mntCd=0; }
+
 // reason: 'player' | 'thrown' | 'boss'. Only a THROW starts the remount cooldown — getting off on
 // purpose costs you nothing, which is what keeps the ride a choice rather than a commitment.
 function dismount(reason){
   // a cast in flight is cancelled by anything that would dismount you, including your own input
   if(!mounted()){ return mountCancel(reason==='player'); }
+  // A FLYER OVER UNLANDABLE GROUND STAYS UP, whatever the reason. Even a forced dismount — a
+  // fight starting, a throw — cannot put a hero down in open water, and it does not need to:
+  // nothing can reach him up there and he can reach nothing, so hovering is a harmless state to
+  // be left in. Use mountClear() for the paths that are relocating him anyway (death).
+  if(playerIsFlying() && !mountCanLandHere()){
+    if(reason==='player' && typeof texts!=='undefined')
+      texts.push({x:player.x,y:player.y-44,txt:'NOWHERE TO LAND',col:'#9ad4ef',life:0.9});
+    return false; }
   const d=mountDef(player.mnt);
   player.mnt=null; player.mntDmg=0; player.mntCast=0; player.mntCastId=null;
   if(reason==='thrown'||reason==='boss'){
@@ -396,12 +524,16 @@ const MOUNT_DROP_RAR = [0.52, 0.28, 0.13, 0.055, 0.015];        // Common..Legen
 function _mountPickRar(){ const r=Math.random(); let a=0;
   for(let i=0;i<MOUNT_DROP_RAR.length;i++){ a+=MOUNT_DROP_RAR[i]; if(r<a) return i; }
   return 0; }
-// closest species of that rarity, preferring one not already stabled
+// closest species of that rarity, preferring one not already stabled.
+// FLYERS ARE OUT OF THE POOL UNTIL THE ACCOUNT HAS EARNED THE SKY. Dropping one at Lv25 would hand
+// over a mount the stable refuses to saddle, which reads as a bug however correct the refusal is.
 function _mountOfRar(rar,unowned){
-  let pool=MOUNT_DB.filter(m=>m.rar===rar);
+  const canFly=(typeof mountFlyOk==='function')?mountFlyOk():false;
+  const all=canFly?MOUNT_DB:MOUNT_DB.filter(m=>!m.fly);
+  let pool=all.filter(m=>m.rar===rar);
   if(!pool.length){ // no species at that exact rarity — walk outward rather than dropping nothing
-    let best=null,bd=99; for(const m of MOUNT_DB){ const d=Math.abs(m.rar-rar); if(d<bd){bd=d;best=m;} }
-    pool=best?MOUNT_DB.filter(m=>m.rar===best.rar):[]; }
+    let best=null,bd=99; for(const m of all){ const d=Math.abs(m.rar-rar); if(d<bd){bd=d;best=m;} }
+    pool=best?all.filter(m=>m.rar===best.rar):[]; }
   if(unowned){ const fresh=pool.filter(m=>!mountOwns(m.id)); if(fresh.length) pool=fresh; }
   return pool.length?pool[Math.floor(Math.random()*pool.length)]:null; }
 
@@ -578,6 +710,21 @@ const MOUNT_SEAT = 0.55;
 // ground a touch rather than floating at the exact anchor.
 const MOUNT_FOOT = 6;
 
+// ALTITUDE. How far a flyer floats above where it actually is. Everything that matters — the
+// collision test, the camera, the prompt ranges — keeps using the real position; only the drawing
+// moves, so being in the air never desyncs where the game thinks you are from where you look.
+const MOUNT_FLY_H = 30;
+// The shadow is what SELLS it. Without one a raised sprite just reads as a bigger sprite standing
+// further back; with one, the gap between the shadow and the feet IS the altitude, and it is drawn
+// at the true ground position so it doubles as an honest marker of where you really are.
+function _mountShadow(x,y,w){
+  if(typeof ctx==='undefined') return;
+  ctx.save();
+  ctx.globalAlpha=0.30;
+  ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(x, y+6, w*0.42, w*0.16, 0, 0, 6.2832); ctx.fill();
+  ctx.restore(); }
+
 function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   if(!mounted() || typeof blit!=='function') return 0;
   const d=mountDef(player.mnt); if(!d) return 0;
@@ -590,13 +737,20 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   const bb=(typeof _imgBBox==='function'&&base)?_imgBBox(base):null;
   const realH=(bb&&bb.h)?bb.h:(art.height||64);
   const sc=MOUNT_DRAW_H/Math.max(1,realH);
-  const gait=moving?Math.sin((clock||0)*13+1.1)*1.6:Math.sin((clock||0)*3)*0.5;
+  const fly=!!d.fly;
+  // A FLYER HOVERS; A WALKER TROTS. Slower, deeper, and it never stops — a wing-beat sway that
+  // keeps going while you stand still is most of what says "this thing is not on the ground".
+  const gait = fly ? Math.sin((clock||0)*4.2)*2.6
+             : (moving?Math.sin((clock||0)*13+1.1)*1.6:Math.sin((clock||0)*3)*0.5);
+  const alt = fly ? MOUNT_FLY_H : 0;
   const flip=Math.cos(faceAng)<0;
   // blit CENTRES on the point it is given, so to plant the animal's FEET we have to work back
   // from where its opaque box ends inside its own canvas.
   const canvasH=art.height||64;
   const footInCanvas=bb?(bb.y+bb.h):canvasH;               // px from canvas top down to its feet
-  const centreY = y + MOUNT_FOOT + (canvasH*sc)/2 - footInCanvas*sc + gait*0.4;
+  const centreY = y + MOUNT_FOOT + (canvasH*sc)/2 - footInCanvas*sc + gait*0.4 - alt;
+  // shadow first, at the TRUE ground position, so the gap under the mount is the altitude
+  if(fly) _mountShadow(x, y, (bb?bb.w:64)*sc);
   blit(art, x, centreY, sc, flip);
   // Lift the rider so his feet land on the saddle rather than on the floor beside it. Derived from
   // the same numbers that placed the animal, so changing MOUNT_DRAW_H moves both together.
@@ -605,7 +759,8 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   //   hero feet drawn = y - 8 - lift + heroDrawnHeight/2      (09_sprites blits him centred)
   const HERO_HALF=31;                                       // 74px opaque box at EMBER_SC 0.85, halved
   const saddle = MOUNT_FOOT - MOUNT_DRAW_H*MOUNT_SEAT;
-  return (23 - saddle) - (31-HERO_HALF) + gait*0.4; }
+  // the rider goes up with the mount, so altitude is added to the lift rather than handled twice
+  return (23 - saddle) - (31-HERO_HALF) + gait*0.4 + alt; }
 
 // ============================================================
 //  THE MOUNTS TAB — inside the companion panel (user, 2026-07-27)
@@ -634,15 +789,21 @@ function _petTabMounts(u){
   let h='';
   if(a){
     const spd=Math.round((mountSpdOf(a.id)-1)*100), tough=Math.round(mountToughOf(a.id)*100);
-    const up=mounted();
+    const up=mounted(), isFly=!!a.fly, canFly=mountFlyOk();
     h+='<div class="embHero">'
       +'<img class="embHeroImg" data-mount-img="'+a.id+'" src="assets/mounts/'+a.spr+'.png">'
       +'<div class="embHeroTx">'
         +'<div class="embHeroNm" style="color:'+mountRarCol(a.rar)+'">'+a.name+'</div>'
         +'<div class="embDim"><b style="color:'+mountRarCol(a.rar)+'">'+mountRarName(a.rar)+'</b>'
-          +' · '+(up?'<span style="color:#ffe08a">in the saddle</span>':'stabled')+'</div>'
+          +' · '+(isFly?'<span style="color:#9ad4ef">FLYING</span> · ':'')
+          +(up?'<span style="color:#ffe08a">in the saddle</span>':'stabled')+'</div>'
         +'<div class="embLv">+'+spd+'% <span class="embDim">move speed</span></div>'
-        +'<div class="embDim">thrown after '+tough+'% of your health in damage</div>'
+        // a flyer's rules are genuinely different, so it says so instead of showing a throw
+        // threshold that can never be reached
+        +(isFly
+          ? '<div class="embDim">crosses water · nothing can reach you</div>'
+            +'<div class="embDim">'+(canFly?'':'<b style="color:#e2604c">grounded until level '+MOUNT_FLY_LV+'</b>')+'</div>'
+          : '<div class="embDim">thrown after '+tough+'% of your health in damage</div>')
         +'<div class="embDim">a mount carries you unarmed — no attacks, no abilities</div>'
       +'</div></div>'
       +'<div class="embBtns" style="margin:8px 0;">'
@@ -654,7 +815,8 @@ function _petTabMounts(u){
     h+='<div class="embChip'+(on?' on':'')+'" data-mount="'+m.id+'">'
       +'<img data-mount-img="'+m.id+'" src="assets/mounts/'+m.spr+'.png">'
       +'<div class="embChipNm" style="color:'+mountRarCol(m.rar)+'">'+m.name+'</div>'
-      +'<div class="embDim">+'+Math.round((mountSpdOf(m.id)-1)*100)+'%</div></div>'; }
+      +'<div class="embDim">'+(m.fly?'<span style="color:#9ad4ef">✦</span> ':'')
+        +'+'+Math.round((mountSpdOf(m.id)-1)*100)+'%</div></div>'; }
   return h+'</div>'; }
 
 // ---- the HUD toggle. Shown only once there is something to ride, so a hero who has never seen

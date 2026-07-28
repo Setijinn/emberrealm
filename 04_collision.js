@@ -12,10 +12,19 @@ function solid(px,py){
   if(c==='t'||c==='k'){
     // Pathwarden capstone: the PLAYER moves through trees and rocks
     if(typeof _pmove!=='undefined'&&_pmove&&player.terrainGhost) return false;
+    // ...and so does a rider in the air, for the obvious reason
+    if(typeof _pmove!=='undefined'&&_pmove&&typeof playerIsFlying==='function'&&playerIsFlying()) return false;
     const o=featOffset(gx,gy);
     const bx=(gx+0.5)*TILE+o[0], by=(gy+1)*TILE-6+o[1];
     const ax=px-bx, ay=py-(by-(c==='t'?13:6)), rr=(c==='t'?7:11);
     return ax*ax+ay*ay < rr*rr; }
+  // FLIGHT CLEARS WATER, AND WATER ONLY (user, 2026-07-28). Not walls, not lair walls, not locked
+  // gates: 'W' is the VOID inside a dungeon, and 'X'/'D' are how the world gates its own content,
+  // so a flyer that cleared them could leave the map or skip a boss door. Gated on `_pmove` like
+  // the Pathwarden exemption above, so it only ever applies to the PLAYER's own movement — enemies,
+  // spawns and dropped loot keep testing the real terrain and never path into the sea.
+  if(c==='w' && typeof _pmove!=='undefined' && _pmove
+     && typeof playerIsFlying==='function' && playerIsFlying()) return false;
   return 'WhlHwXD'.indexOf(c)>=0;  // walls / structures / water / lair walls / locked gates: full tile
 }
 // Is there room to STAND at this world point, given a body radius?

@@ -265,7 +265,16 @@ function healPlayer(amt){ if(!amt||amt<=0) return;
       try{ aoe(player.x,player.y,90,Math.round(Math.min(over*2,player.maxhp*0.45)),'#c0392b'); }
       finally{ _inBloodNova=false; } } } }
 // damage to the player through Juggernaut (less while moving), shields, Nightblade (vanish)
-function damagePlayer(raw){ let hit=raw*playerDmgTaken();   // cursed players take more, same as foes
+function damagePlayer(raw){
+  // NOTHING REACHES A FLYER (user, 2026-07-28). One gate, here, because every source of damage in
+  // the game already funnels through this function — contact, enemy shots, boss hazards, the
+  // client-side hazard paths in 14b_netsync and the status ticks. Returning 0 rather than skipping
+  // the call keeps every caller's arithmetic honest.
+  // It is only balanced because it is TOTAL: the mounted attack lockout means an untouchable rider
+  // can do nothing at all, so this buys traversal and never a free kill. Widen flyUntouchable()
+  // if that ever needs to soften.
+  if(typeof flyUntouchable==='function' && flyUntouchable()) return 0;
+  let hit=raw*playerDmgTaken();   // cursed players take more, same as foes
   if(player.moveDr&&player._moving) hit*=(1-player.moveDr);
   if(typeof dynDr==='function') hit*=(1-dynDr());          // conditional perks (below X% HP, ...)
   hit=Math.max(1,Math.round(hit));
@@ -1080,9 +1089,11 @@ function update(dt){
     if(_perma){ permaDeath(); return; }
     msg('YOU FELL','the hearth calls you home');
     player.hp=player.maxhp; player.mp=player.maxmp; player.inv=1.5;
-    // You do not wake up in the Hearth still in the saddle. Cleared WITHOUT the throw cooldown —
-    // dying is punishment enough, and the mount itself is on the user so it is never lost.
-    if(typeof dismount==='function') dismount('player');
+    // You do not wake up in the Hearth still in the saddle. mountClear rather than dismount,
+    // because a flyer over water REFUSES to dismount by design and the hero is being relocated to
+    // the Hearth regardless — a refused landing must never leave a dead man mounted.
+    if(typeof mountClear==='function') mountClear();
+    else if(typeof dismount==='function') dismount('player');
     res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0;
     clearPlayerStatuses();
     const r0=rooms['0,0']; enterRoom('0,0',(r0.px+.5)*TILE,(r0.py+.5)*TILE); spawnPet(); }
