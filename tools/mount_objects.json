@@ -1,0 +1,45 @@
+{
+  "_note": "PixelLab 8-direction object ids for every mount archetype. Objects auto-delete after 8 hours, so download before then. 20 generations each, billed on completion. A v3 8-direction animation costs 8 generations total (measured), not per direction.",
+  "archetypes": {
+    "arch_horse": "781257a0-1fff-4dff-a134-8ef549db12fa",
+    "arch_destrier": "09cd36e9-b080-4b58-91b5-52d5e5f139f2",
+    "arch_mule": "fc8baf9d-d957-4e27-8a12-d3174c24cb38",
+    "arch_stag": "965bf77c-3a51-4580-9456-b1348a594984",
+    "arch_elk": "0cf59b81-edce-4f76-9644-2358dccfdd91",
+    "arch_wolf": "d7bf5814-5e8e-4974-98e4-9349d8262ea4",
+    "arch_boar": "b3cd45cf-2fa0-4333-a8ba-3a20a698ab56",
+    "arch_ram": "7970d0c3-0f00-4a01-971a-df3e63c0bd50",
+    "arch_cat": "ae29867c-50b5-44cb-914b-4182a8ff712d",
+    "arch_drake": "7af62dd0-2754-425e-b217-0e797e1503e3",
+    "arch_lizard": "2a154123-98ad-4739-80b7-132a530a3245",
+    "arch_colossus": "77efa2ce-125b-4a41-917a-e38f608079da",
+    "arch_griffon": "03a758ea-cef5-448b-a6af-7ab283fea34b",
+    "arch_wyvern": "b427a373-9518-40b1-93d5-13f854dc0b07",
+    "arch_pegasus": "b294f34b-552c-471c-8115-a57a692fb8c4",
+    "arch_roc": "09cf4b58-2901-4eb2-a141-2c2c0b4408af",
+    "arch_moth": "4f2f7198-bfbd-4088-a6d5-249b563d76dd",
+    "arch_skywyrm": "8824bab2-3c81-495c-803a-2a99d02945c0",
+    "arch_dragon": "e71dea78-9c17-46ae-8ea0-7e2b52ff1702",
+    "arch_infernal": "e58b4522-91eb-4e40-86c3-3f600fe93171"
+  },
+  "flying": [
+    "arch_griffon",
+    "arch_wyvern",
+    "arch_pegasus",
+    "arch_roc",
+    "arch_moth",
+    "arch_skywyrm",
+    "arch_dragon",
+    "arch_infernal"
+  ],
+  "calibration": {
+    "arch_horse": "ac803b63-9326-4a8b-b08b-06419ba5f027",
+    "arch_wolf": "3d49a888-514a-44ff-9d20-3ec80dc4443f",
+    "arch_dragon": "4cfbe2ef-8029-446e-94fe-f1247bd7d658",
+    "arch_moth": "a8b96797-a4b5-406a-96c9-4f0544f3e4e1",
+    "arch_roc": "4d61616d-12f3-411c-ad3c-7f5e144774f7",
+    "arch_skywyrm": "41d1b6cd-7edf-446f-84d2-b5c2caf7d896",
+    "arch_pegasus": "163bb227-26e2-44ac-bc9c-c4e7c8ae0bd7"
+  },
+  "_calib_note": "Rider composites generated purely to MEASURE each archetype's seat height per direction (calibrate_seats.py). The rider art itself comes from the horse composites; these only supply the number."
+}
