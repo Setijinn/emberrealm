@@ -773,14 +773,18 @@ function unlockNode(cls,rpg,id){ const n=nodeById(cls,id); if(!n||!nodeUnlockabl
 function spentPoints(cls,rpg){ const t=treeOf(cls); if(!t)return 0; let s=0;
   for(const b of t.branches) for(const n of b.nodes) s+=nodeRank(rpg,n.id)*n.cost; return s; }
 function respec(cls,rpg){ xpTreeInit(rpg); rpg.perkPts+=spentPoints(cls,rpg); rpg.tree={}; }  // keeps ascension
-// Ascension is the reward for MAXING EVERY STAT at the level cap (Lv50). The max-stat grind
-// (16_maxstats.js) is the gate; if that module is absent, fall back to the old Lv40+points gate.
+// Ascension is the reward for MAXING EVERY STAT, and it opens at Lv45 rather than at the cap
+// (user). Ascending five levels early is deliberate: it hands you the prestige caps while there
+// are still levels left to earn, so the last stretch is spent training INTO a raised ceiling
+// instead of arriving at the cap with nothing further to climb. The max-stat grind
+// (16_maxstats.js) is the real gate; if that module is absent, fall back to the old points gate.
+const ASCEND_LV=45;
 function ascendReady(cls,rpg){ if(rpg.ascension) return false;
-  if(typeof allStatsMaxed==='function') return rpg.lvl>=50 && allStatsMaxed(cls,rpg);
+  if(typeof allStatsMaxed==='function') return rpg.lvl>=ASCEND_LV && allStatsMaxed(cls,rpg);
   return rpg.lvl>=40 && spentPoints(cls,rpg)>=14; }
 // short reason shown on a locked ASCEND button
 function ascendReq(cls,rpg){ if(typeof allStatsMaxed!=='function') return 'Lv40 + 14 pts';
-  if(rpg.lvl<50) return 'Reach Lv 50';
+  if(rpg.lvl<ASCEND_LV) return 'Reach Lv '+ASCEND_LV;
   const n=(typeof statsMaxedCount==='function')?statsMaxedCount(cls,rpg):0;
   return 'Max all stats ('+n+'/10)'; }
 function doAscend(cls,rpg,ascId){ const t=treeOf(cls); if(!t||rpg.ascension) return false;

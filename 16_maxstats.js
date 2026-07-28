@@ -1,8 +1,8 @@
 // ===================================================================================
 // 16_maxstats.js — MAX-STAT TRAINING (roadmap #7... err #2)
 // Per-stat SCROLLS permanently raise a stat toward a CLASS-DEPENDENT cap. Maxing ALL
-// ten stats (at Lv50) is the new ASCENSION gate; ascending opens a PRESTIGE band of
-// higher caps so the scroll grind continues, and unlocks the Awakened Dungeons.
+// ten stats (at Lv45, see ASCEND_LV in 13_skills.js) is the ASCENSION gate; ascending opens a
+// PRESTIGE band of higher caps so the scroll grind continues, and unlocks the Awakened Dungeons.
 //
 // Model (persisted on rpg, so it survives per-character but NOT the account — it's a
 // hero's own hard-won training, lost with the hero like everything else on death):
@@ -116,10 +116,18 @@ function rollScrollStat(){ const ch=curChar();
 
 // drop hook, called from rollLoot(e): returns a scroll item or null. The max-stat grind is
 // endgame, so scrolls only start dropping in the mid zones and pour in the Lv50 ring.
+//
+// WHY THE RATE AND NOT THE CAPS. Doubling the time to max a stat can be done two ways, and they
+// are not equivalent: raising trainCap makes the grind longer AND raises the permanent power
+// ceiling, because every scroll invested is a flat TRAIN_STEP of stats forever. TRAIN_BASE was
+// deliberately cut from 12 to 6 to set that budget -- "permanent training should polish a finished
+// character, not build a second one on top". Halving the DROP RATE doubles the grind and leaves
+// the ceiling exactly where that decision put it.
 function scrollDropFor(e){ if(!e) return null; const lv=e.lv||1; if(lv<22) return null;
   const F=(typeof player!=='undefined'&&player.fortune)||0;
-  let ch = (e.type==='B') ? 0.10+Math.min(0.34,(lv-20)*0.007)
-                          : 0.010+Math.min(0.020,(lv-20)*0.0005);
+  // HALVED (user: endgame grind ~2x). Rate, not caps -- see the note above scrollDropFor.
+  let ch = (e.type==='B') ? 0.05+Math.min(0.17,(lv-20)*0.0035)
+                          : 0.005+Math.min(0.010,(lv-20)*0.00025);
   ch*=1+F*0.006;
   return (Math.random()<ch) ? {k:'scroll',st:rollScrollStat()} : null; }
 
@@ -145,7 +153,8 @@ function _statsPaint(ov,ch){ const cls=ch.cls, P=rpg.prestige||0;
   // status line
   let status;
   if(ascended){ status='<span style="color:#e6c76a">✦ ASCENDED'+(P>0?' · Prestige '+_roman(P):'')+'</span> — caps raised, keep training'; }
-  else if(rpg.lvl<50){ status='<b>Ascension</b> needs <span style="color:#ffc94d">Lv 50</span> &amp; all stats maxed · <span style="color:#8fd48c">'+maxed+'/'+STATS.length+' maxed</span>'; }
+  else if(rpg.lvl<((typeof ASCEND_LV!=='undefined')?ASCEND_LV:45)){ const _al=(typeof ASCEND_LV!=='undefined')?ASCEND_LV:45;
+    status='<b>Ascension</b> needs <span style="color:#ffc94d">Lv '+_al+'</span> &amp; all stats maxed · <span style="color:#8fd48c">'+maxed+'/'+STATS.length+' maxed</span>'; }
   else if(all){ status='<span style="color:#8fd48c">✦ READY TO ASCEND</span> — open the Skill Tree 🌟 and pick your form'; }
   else { status='<b>Ascension:</b> max every stat · <span style="color:#8fd48c">'+maxed+'/'+STATS.length+' maxed</span>'; }
 

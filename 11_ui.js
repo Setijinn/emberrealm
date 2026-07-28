@@ -1544,7 +1544,20 @@ function loadRPG(){ const ch=curChar(); if(!ch){rpg=null;return;} rpg=ch.rpg;
  if(typeof initTrain==='function') initTrain(rpg); }   // max-stat scrolls/training (16_maxstats.js)
 // Steepened for the Lv50 cap so reaching max is a real grind (the outer grind zones), not a
 // sprint. Tunable — cumulative to 50 ≈ what the old 1.5 curve needed to reach the 60s.
-function xpNeed(l){return Math.floor(60*Math.pow(l,1.7));}
+// THE ENDGAME RAMP (user: make the endgame more of a grind, ~2x).
+// The curve was a single smooth power law, so the last ten levels were no harder per level than
+// the first ten -- the run had no shape at the top. A multiplier ramps from 1x at Lv39 to 2.2x by
+// Lv44 and holds, which leaves levels 1-39 EXACTLY as they were and doubles the climb where the
+// grind is supposed to live.
+// Tuned by arithmetic, not by feel: 40->50 goes 381,446 -> 759,708 XP, a measured x1.99. The whole
+// 1->50 run moves x1.45, so the early game is untouched and the top is where the time goes.
+// XP_END_MUL is the dial; XP_END_FROM/RAMP decide where it starts and how fast it arrives.
+const XP_END_FROM=39, XP_END_RAMP=5, XP_END_MUL=2.2;
+function xpEndMul(l){
+  const t=Math.max(0,Math.min(1,(l-XP_END_FROM)/XP_END_RAMP));
+  return 1+(XP_END_MUL-1)*t;
+}
+function xpNeed(l){return Math.floor(60*Math.pow(l,1.7)*xpEndMul(l));}
 function eqAffArr(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.a:null; }
 function eqRar(slot){ const e=rpg&&rpg.eqAff&&rpg.eqAff[slot]; return e?e.r:0; }
 // Global scale on the derived HP/MP pools — trims the big numbers without touching
