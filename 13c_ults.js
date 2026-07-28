@@ -70,7 +70,7 @@ const U={
     for(let i=0;i<N;i++) allies.push({x:player.x,y:player.y,
       dmg:Math.round(c.dmg*(dm||ULT_T.sumDmg)*ULT_T.sumScale*c.AP),life:life||ULT_T.sumLife,cd:0,spr:spr||'skel'});
     if(typeof abilFx==='function') abilFx('summon',player.x,player.y); },
-  empower:(field,mult,dur,col)=>(c)=>{ player[field+'T']=dur||ULT_T.buffDur; player[field+'M']=mult||ULT_T.buff;
+  empower:(field,mult,dur,col)=>(c)=>{ applyTimedBuff(field, mult||ULT_T.buff, dur||ULT_T.buffDur);
     if(typeof abilFx==='function') abilFx('buff',player.x,player.y,col||'#ffd07a'); },
   ward:(pct,inv)=>(c)=>{ player.shield=(player.shield||0)+player.maxhp*(pct||ULT_T.wardPct);
     if(inv) player.inv=Math.max(player.inv,inv);
@@ -248,6 +248,12 @@ function ultCd(){ return (player.acd&&player.acd.__ult)||0; }
 function ultReady(){ return !!ultFor() && ultCd()<=0; }
 function castUlt(){
   const u=ultFor(); if(!u||!inGame) return false;
+  // THE SAME TWO GATES fire() and castArmed() respect, with the same reasoning. Being frozen is
+  // meant to cost you your abilities too, not just your shots -- and the whole balance premise of
+  // a mount is that riding costs you your offence. This checked neither, so you could fire a 9x
+  // nova while frozen solid, or from the saddle of an untouchable flyer.
+  if(typeof playerCanAct==='function' && !playerCanAct()) return false;
+  if(typeof mounted==='function' && mounted()) return false;
   if(ultCd()>0){ texts.push({x:player.x,y:player.y-30,txt:'◷ '+Math.ceil(ultCd())+'s',col:'#c9c2b8',life:0.7}); return false; }
   if(!player.acd) player.acd={};
   player.acd.__ult=u.cd;

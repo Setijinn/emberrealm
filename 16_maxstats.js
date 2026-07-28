@@ -63,9 +63,15 @@ function _buildAff(){
 }
 function statAffinity(cls,st){ if(!_affTab) _buildAff(); return (_affTab[cls]&&_affTab[cls][st])||1; }
 
+// TRAIN_BASE*affinity spans 2.7 to 11.4 (affinity is clamped to 0.45-1.9), so a floor of 6 erased
+// EVERY affinity below 1.0 -- a caster's DEF cap and a Knight's WIS cap both landed on exactly 6,
+// identical to an average stat -- and the ceiling of 26 was unreachable by a factor of two. The
+// stated design is "a class trains its signature stats far and its weak stats little"; only the
+// first half of that existed. Floor of 3 keeps a weak stat trainable but clearly worse, and the
+// ceiling now sits just above what the formula can actually produce.
 function trainCapBase(cls,st){
   if(FLAT_CAP[st]!==undefined) return FLAT_CAP[st];
-  return Math.max(6,Math.min(26,Math.round(TRAIN_BASE*statAffinity(cls,st))));
+  return Math.max(3,Math.min(12,Math.round(TRAIN_BASE*statAffinity(cls,st))));
 }
 function trainCap(cls,st,prestige){ prestige=prestige||0;
   return Math.round(trainCapBase(cls,st)*(1+PRESTIGE_CAP_MUL*prestige)); }

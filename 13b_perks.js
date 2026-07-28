@@ -251,7 +251,7 @@ function perkDo(d,ctx,src){
     // cooldowns on kill/crit would otherwise keep a 60s ultimate permanently available.
     if(d.cdCut&&player.acd){ const s=(d.cdCut.s||0.5)*r;
       for(const k in player.acd) if(k.charAt(0)!=='_'&&player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-s); }
-    if(d.buff){ const o=d.buff; player[o.f+'T']=o.dur||3; player[o.f+'M']=o.m||1.3;
+    if(d.buff){ const o=d.buff; applyTimedBuff(o.f, o.m||1.3, o.dur||3);
       if(typeof abilFx==='function') abilFx('buff',player.x,player.y,o.col||'#ffd07a'); }
     if(d.stack) perkStack(d.stack.id,(d.stack.n||1),d.stack.max||10,d.stack.dur||5);
     if(d.knock&&typeof enemies!=='undefined'){ const o=d.knock, rad=o.r||110, push=o.v||60;

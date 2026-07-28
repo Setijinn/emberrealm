@@ -775,13 +775,18 @@ function update(dt){
       if(player.chainHit&&!s.forked){ let cn=null,cd2=1e9;
         for(const e2 of enemies){ if(e2===e) continue;
           const d3=Math.hypot(e2.x-e.x,e2.y-e.y); if(d3<170&&d3<cd2){cd2=d3;cn=e2;} }
-        if(cn){ const cdm=Math.round(dmg*player.chainHit); cn.hp-=cdm; cn.flash=0.12;
-          texts.push({x:cn.x,y:cn.y-cn.r,txt:cdm,col:'#9ad4ef',life:0.5});
+      // THROUGH THE FUNNEL. These three wrote e.hp directly, so they skipped enemy armour,
+      // curse scaling, execute, shatter, lifesteal, the on-hit perk triggers, netReportHit --
+      // and bossImmune. tickStatuses was explicitly fixed for exactly this ("a burn stack kept
+      // eating a boss straight through phase transitions"); these were missed. silent:true
+      // keeps each one's own floating number, which is nicer than the generic one.
+        if(cn){ const cdm=dealDamage(cn, Math.round(dmg*player.chainHit), {silent:true});
+          if(cdm>0) texts.push({x:cn.x,y:cn.y-cn.r,txt:cdm,col:'#9ad4ef',life:0.5});
           fx.push({t:'bolt',pts:[{x:e.x,y:e.y},{x:cn.x,y:cn.y}],life:0.25,col:'#9ad4ef'}); } }
       if(player.splash) aoe(e.x,e.y,60,Math.round(dmg*player.splash),'#ff9c50');
-      if(s.crit&&player.critBolt){ const bd3=Math.round(dmg*player.critBolt); e.hp-=bd3;
-        fx.push({t:'bolt',pts:[{x:e.x,y:e.y-120},{x:e.x,y:e.y}],life:0.3,col:'#9ad4ef'});
-        texts.push({x:e.x,y:e.y-e.r-14,txt:bd3,col:'#9ad4ef',life:0.6}); }
+      if(s.crit&&player.critBolt){ const bd3=dealDamage(e, Math.round(dmg*player.critBolt), {silent:true});
+        if(bd3>0){ fx.push({t:'bolt',pts:[{x:e.x,y:e.y-120},{x:e.x,y:e.y}],life:0.3,col:'#9ad4ef'});
+          texts.push({x:e.x,y:e.y-e.r-14,txt:bd3,col:'#9ad4ef',life:0.6}); } }
       if(s.crit&&player.critDashCd&&player.acd){    // __-prefixed keys (the ultimate) are exempt
         for(const k in player.acd) if(k.charAt(0)!=='_'&&player.acd[k]>0) player.acd[k]=Math.max(0,player.acd[k]-0.6); }
       if(player.fork&&!s.forked){ const ba=Math.atan2(s.vy,s.vx), sp3=Math.hypot(s.vx,s.vy);
@@ -1108,14 +1113,20 @@ function update(dt){
           dealDamage(e,z.dmg||Math.round(12*(z.ap||1)),{zone:true,silent:true,col:z.col});
           if(z.fire) applyStatus(e,'burn',2,6*(z.ap||1));
           if(z.poison) applyStatus(e,'poison',3,Math.max(2,Math.round((z.dmg||12*(z.ap||1))*0.4))); } }
-        if(Math.hypot(player.x-z.x,player.y-z.y)<z.r) player.hp=Math.min(player.maxhp,player.hp+5); } }
+        // Standing in your own Wall of Fire used to heal you 5hp a tick -- undocumented, on every
+        // DAMAGING zone rather than the healing ones, and written straight to player.hp so it
+        // could never feed overshield. It reads as a leftover from when zones were Consecrate
+        // only. Healing belongs to healOnly zones, which have their own branch above.
+      } }
     if(z.life<=0) zones.splice(i,1); }
   if(player.spiritT>0){ player.spiritT-=dt;
     for(let i=0;i<8;i++){ const a=performance.now()/300+i*Math.PI/4;
       const ox=player.x+Math.cos(a)*62, oy=player.y+Math.sin(a)*62;
       for(const e of enemies){ if((e.spiritCd||0)<=0 && Math.hypot(e.x-ox,e.y-oy)<e.r+8){
-        const sd=Math.round(14*(player.spiritAP||1)); e.hp-=sd; e.flash=0.1; e.spiritCd=0.4;
-        texts.push({x:e.x,y:e.y-e.r,txt:sd,col:'#7ab8d4',life:0.4}); } } }
+        // same funnel: a Spirit Ring used to melt a boss straight through its clone puzzle
+        const sd=dealDamage(e, Math.round(14*(player.spiritAP||1)), {ally:true,silent:true});
+        e.spiritCd=0.4;
+        if(sd>0) texts.push({x:e.x,y:e.y-e.r,txt:sd,col:'#7ab8d4',life:0.4}); } } }
     for(const e of enemies){ if(e.spiritCd>0)e.spiritCd-=dt; } }
   for(let i=fx.length-1;i>=0;i--){ fx[i].life-=dt; if(fx[i].life<=0)fx.splice(i,1); }
 

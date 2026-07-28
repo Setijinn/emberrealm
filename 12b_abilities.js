@@ -48,6 +48,13 @@ function abilFx(kind,x,y,col,ang){
 // Every primitive stamps a KIND on the closure it returns; A() copies it onto the ability
 // def, so perks can target a whole family of abilities ({kind:'dash'}) rather than one id.
 function K(kind,fn){ fn.kind=kind; return fn; }
+// THE one way to grant a timed multiplier. Duration and magnitude are raised independently and
+// neither can be lowered by a later, weaker source -- a 6s 1.5x landing on a 7s 2.0x leaves 7s
+// 2.0x, not 6s 1.5x. All three writers (P.buff, U.empower, perkDo) route through it.
+function applyTimedBuff(fld,mult,dur){
+  player[fld+'T']=Math.max(player[fld+'T']||0, dur||0);
+  player[fld+'M']=Math.max(player[fld+'M']||1, mult||1);
+}
 const P = {
  // st (optional, last arg on the projectile primitives) rides ON the shot and lands when it
  // connects, so an ability that throws something brands what it actually HIT rather than
@@ -86,9 +93,23 @@ const P = {
      cd:0,spr:spr,st:player._sumSt||null}); abilFx('summon',player.x,player.y); },
  heal:(pct)=>(c)=>{ player.hp=Math.min(player.maxhp,player.hp+player.maxhp*pct); abilFx('heal',player.x,player.y);
    texts.push({x:player.x,y:player.y-28,txt:'+'+Math.round(player.maxhp*pct),col:'#8fd48c',life:0.8}); },
- buff:(fld,mult,dur,inv)=>(c)=>{ player[fld+'T']=dur; player[fld+'M']=mult; if(inv)player.inv=Math.max(player.inv,inv); abilFx('buff',player.x,player.y,'#ffd07a'); },
+ // A WEAKER BUFF MUST NEVER CANCEL A STRONGER ONE. All three writers (here, U.empower, perkDo)
+ // assigned outright, so casting a 1.25x Warpath three seconds after a 2.0x ultimate downgraded
+ // the ult AND re-clocked it -- on a 55-65s cooldown, that is the whole payoff gone to a passive
+ // that fires on every cast. 15_pets.js:430 already had the right shape; this is it, shared.
+ buff:(fld,mult,dur,inv)=>(c)=>{ applyTimedBuff(fld,mult,dur); if(inv)player.inv=Math.max(player.inv,inv); abilFx('buff',player.x,player.y,'#ffd07a'); },
  invuln:(dur)=>(c)=>{ player.inv=Math.max(player.inv,dur); abilFx('invuln',player.x,player.y); },
- zone:(rad,life,col)=>(c)=>{ zones.push({x:c.x,y:c.y,r:rad,life:life,tick:0,ap:c.AP}); fx.push({t:'ring',x:c.x,y:c.y,r:rad,life:0.35,col:col}); },
+ // A ZONE SCALES WITH THE CAST THAT MADE IT. This never wrote dmg, so 07_update fell to its
+ // 12*(ap) default: 24 damage per second at EVERY level, across eight abilities in seven classes.
+ // Consecrate was a competent Lv5 ability and literal noise at Lv50.
+ // TUNED AGAINST THE ULTIMATE, not picked. Zones tick twice a second, and ULT_T.rainDps is 0.42
+ // per tick for an ultimate on a 55-65s cooldown -- 13c_ults explains why that is well below 1.
+ // An ABILITY zone on a ~8s cooldown has to sit clearly under that: 0.18 gives it roughly 43% of
+ // the ult's damage per tick. My first pass used 0.45, which put an ordinary ability ABOVE the
+ // ultimate it is supposed to lose to.
+ zone:(rad,life,col)=>(c)=>{ zones.push({x:c.x,y:c.y,r:rad,life:life,tick:0,ap:c.AP,
+     dmg:Math.max(6,Math.round(c.dmg*0.18*c.AP))});
+   fx.push({t:'ring',x:c.x,y:c.y,r:rad,life:0.35,col:col}); },
  drain:(rad,dm,col,healPer)=>(c)=>{ let n=0;
    for(const e of enemies){ if(Math.hypot(e.x-player.x,e.y-player.y)<rad){ dealDamage(e,c.dmg*dm*c.AP,{ability:true,silent:true}); n++; } }
    player.hp=Math.min(player.maxhp,player.hp+n*healPer*c.AP); fx.push({t:'ring',x:player.x,y:player.y,r:rad,life:0.35,col:col}); abilFx('drain',player.x,player.y,col); },
