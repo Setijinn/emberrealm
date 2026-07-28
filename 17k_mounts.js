@@ -95,8 +95,11 @@ const MOUNT_CAST = 1.5;
 //  IT CLEARS WATER, AND WATER ONLY. Not walls, not lair walls, not locked gates — 'W' is the VOID
 //  inside a dungeon and 'X'/'D' are how the world gates its own content. See 04_collision.js.
 //
-//  THE ONE HAZARD FLIGHT INTRODUCES IS LANDING. It is the only state in the game that can put the
-//  player somewhere they cannot stand, so every dismount goes through mountLand() — see there.
+//  THERE IS NO AUTO-LANDING (user, 2026-07-28). Getting off puts you down exactly where you are,
+//  or not at all: if the ground beneath you will not hold a hero, the dismount simply does not
+//  happen and you keep flying. Nothing searches for a nearby shore and nothing moves you — an
+//  earlier pass did, and being teleported to ground you did not fly to is a worse surprise than
+//  staying up. mountCanLandHere() is the whole rule.
 const MOUNT_FLY_LV = 40;
 function mountIsFlyer(m){ const d=mountDef(m); return !!(d&&d.fly); }
 // Has this ACCOUNT earned flight? Same account-wide reading as the Lv20 stable gate: the highest
@@ -607,17 +610,29 @@ function _mountFrame(arch,name){
   if(_mountAnim[p]===undefined){ const i=new Image(); i.src=p; _mountAnim[p]=i; }
   const im=_mountAnim[p]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 
-// How many walk frames an archetype actually has. Probed once by walking up from 0 until a frame
-// is missing, then cached — a set that ships 9 and a set that ships 4 both just work.
+// How many frames of a given clip an archetype actually has. Probed once by walking up from 0
+// until a frame is missing, then cached — a set that ships 9 and a set that ships 4 both work.
 const _mountFrameN={};
-function _mountWalkCount(arch,dir){
-  const k=arch+'/'+dir;
+function _mountClipCount(arch,clip,dir){
+  const k=arch+'/'+clip+'/'+dir;
   if(_mountFrameN[k]!==undefined) return _mountFrameN[k];
-  let n=0; while(n<24 && _mountFrame(arch,'walk_'+dir+'_'+n)) n++;
+  let n=0; while(n<24 && _mountFrame(arch,clip+'_'+dir+'_'+n)) n++;
   // do NOT cache a zero: on the first frame every Image is still loading, and caching 0 here
   // would pin the archetype to "no animation" for the rest of the session
   if(n>0) _mountFrameN[k]=n;
   return n; }
+function _mountWalkCount(arch,dir){ return _mountClipCount(arch,'walk',dir); }
+
+// A FLYER IS NEVER STILL (user, 2026-07-28). Its resting state is wings open, beating up and
+// down — a bird that freezes in mid-air the moment you stop reads as a cardboard cut-out pinned
+// to the sky, and the hover bob alone cannot sell it. So `idle` is a CLIP for anything that flies,
+// not a single frame, and it plays whether or not you are moving.
+//
+// Ground mounts keep a static idle on purpose: a horse standing still IS still, and a permanent
+// trot-in-place would be worse than a pose. The animated path is used when the frames exist and
+// the flat one when they do not, so the same code serves both without a flag.
+const MOUNT_IDLE_FPS = 7;     // wing-beats are slower than a gait; this is a flap, not a flutter
+const MOUNT_WALK_FPS = 10;
 
 // The frame to draw right now. Returns null when this archetype has no directional art at all,
 // which is the caller's signal to fall back to the flat sprite.
@@ -627,8 +642,12 @@ function mountFrameFor(d,aim,moving,clock){
   // filename -- d.arch is the short key ('horse') and points at nothing on disk
   const arch=d.spr, dir=_mountDir(aim||0);
   if(moving){ const n=_mountWalkCount(arch,dir);
-    if(n>0){ const i=Math.floor((clock||0)*10)%n;
+    if(n>0){ const i=Math.floor((clock||0)*MOUNT_WALK_FPS)%n;
       const f=_mountFrame(arch,'walk_'+dir+'_'+i); if(f) return f; } }
+  // animated idle (the flyers' wing-beat) wins over the static pose when it exists
+  const ni=_mountClipCount(arch,'idle',dir);
+  if(ni>0){ const i=Math.floor((clock||0)*MOUNT_IDLE_FPS)%ni;
+    const f=_mountFrame(arch,'idle_'+dir+'_'+i); if(f) return f; }
   return _mountFrame(arch,'idle_'+dir); }
 // A SPECIES IS AN ARCHETYPE IN A COAT. The archetype owns the drawing; the coat is a tint, cached
 // by _tintImg on (src,col,alpha) so seventy-eight mounts cost twelve images and one canvas each
@@ -803,8 +822,11 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   // to the same height as a tucked one and the animal would visibly pulse as it walked. The idle
   // pose for the current direction is the anchor: same silhouette proportions, constant across the
   // whole cycle. Falls through to the flat sprite for archetypes with no directional art yet.
-  const ref=(typeof mountFrameFor==='function'
-              ? _mountFrame(d.spr,'idle_'+_mountDir(faceAng||0)) : null) || mountImg(d.spr);
+  // A flyer has no STATIC idle -- its resting pose is a clip -- so the reference falls through to
+  // frame 0 of that clip. Still one fixed image per direction, which is the whole requirement:
+  // the scale must not change between frames or the animal pulses as its wings beat.
+  const _rd=_mountDir(faceAng||0);
+  const ref=_mountFrame(d.spr,'idle_'+_rd) || _mountFrame(d.spr,'idle_'+_rd+'_0') || mountImg(d.spr);
   const bb=(typeof _imgBBox==='function'&&ref)?_imgBBox(ref):null;
   const realH=(bb&&bb.h)?bb.h:(art.height||64);
   const sc=MOUNT_DRAW_H/Math.max(1,realH);
