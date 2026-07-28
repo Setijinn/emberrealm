@@ -170,7 +170,17 @@ function drawFloorDetail(fam,tx,ty,x,y,alpha){
   ctx.restore();
 }
 // Which family a grid char belongs to, so callers do not each invent their own mapping.
+// THE OVERWORLD CASE BELONGS HERE. This function's own header says callers must not "each invent
+// their own mapping", and then 08_render did exactly that inline -- because floorFamily had no
+// idea the wild* families existed and answered 'grass' (the Hearth's dark mossy blades) and
+// 'stone' for a dry khaki world. That stayed invisible only while the generic stamp was being
+// drawn before the art and painted over; the moment the draw order was fixed it showed up as
+// pale bars all over the terrain. The wild families are checked FIRST, because a radial room is
+// the overworld no matter which char is under you.
 function floorFamily(c,room){
+  if(room&&room.rings&&!room.dungeon&&!room.town){
+    return (c==='g')?'wildgrass':(c==='r')?'wildrock':(c==='e')?'wildash':'wilddirt';
+  }
   if(c==='g') return 'grass';
   if(room&&room.dungeon) return 'crypt';
   if(room&&room.band==='boss') return 'crypt';

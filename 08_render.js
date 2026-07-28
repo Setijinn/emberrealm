@@ -985,15 +985,10 @@ function drawTileG(x,y){
       ctx.fillStyle=(v>0)?'rgba(255,246,220,'+(v*0.016).toFixed(3)+')'
                          :'rgba(0,0,0,'+((-v)*0.022).toFixed(3)+')';
       ctx.fillRect(tx,ty,TILE,TILE);
-      if(typeof drawFloorDetail==='function'){
-        // 'wildgrass', not the Hearth's 'grass': light blades for a dry khaki ground rather than
-        // dark ones for mossy green. Carried at a real strength now that the marks belong to the
-        // palette -- the earlier mud came from the wrong stamps, not from too much of them.
-        // every walkable terrain char in the realm gets its own tuned family, at a strength that
-        // actually reads -- 'g' is a small minority of the ground out here
-        const fam=(c==='g')?'wildgrass':(c==='r')?'wildrock':(c==='e')?'wildash':'wilddirt';
-        drawFloorDetail(fam,tx,ty,x,y,0.85);
-      }
+      // The wild* stamp used to be applied here AND generically at the end of this function,
+      // which meant the overworld took two passes -- this correct one and a wrong one using the
+      // Hearth's grass/stone families. floorFamily answers for the overworld now, so the single
+      // call at the end of drawTileG covers it and this duplicate is gone.
     }
     // terrain features layered on the band tint
     if(c==='d'){ if(h2(x*3,y*5)>0.7){ ctx.fillStyle='rgba(90,70,40,0.30)'; ctx.fillRect(tx+(x*13)%30+4,ty+(y*17)%30+4,3,3); } }
