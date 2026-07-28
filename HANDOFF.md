@@ -73,6 +73,36 @@ them whenever co-op ends.
 
 **Permadeath is the bridge**, not a level number.
 
+**The Vault is account-wide and UNGATED, by explicit decision.** It hangs off `users[curUser]`,
+not off a character, so it survives the hero who filled it and any hero may withdraw anything at
+any level — `canEquip` has no level gate, so a fresh Lv1 can wear a T12. That was raised before it
+was built and chosen anyway. Permadeath still ends the run and still takes everything the hero was
+*carrying*; it no longer takes what they banked. If it ever needs walking back, the gate belongs in
+`vaultCanWithdraw(it,ch)` and nowhere else — it exists for exactly that and today always says yes.
+
+**The Scroll Registry follows the same rule** and for the same reason: a hero who cannot use a
+scroll passes it to one who can. Counts per stat, not slots. A full registry *refuses* rather than
+destroying — the scroll stays in the character's bank.
+
+**Food is the only thing that grows a pet.** Kills give a pet nothing. If you ever want pets to
+grow another way, that is a design change and not a bug to fix.
+
+**Fusion is a place.** `petFuse` refuses unless the player is standing at the Fusion Altar in the
+Sanctuary. Incubation is wall-clock time by rarity, not kills.
+
+**A safe room is not a dungeon.** The rim vignette has three cases, not two: town gets the warm
+tint, `safe`/`petRoom` get a gentle neutral 0.20, everything else gets the dungeon 0.42. Every side
+room used to fall to the dungeon side and get its edges crushed.
+
+**`MOVE_SCALE` (01_constants.js) scales LOCOMOTION ONLY.** Not projectile speeds, telegraph timers,
+fire cadence, dash distances or knockback impulses — those are not movement speed and slowing them
+would silently re-tune every boss window in the game. It rides on `eSpdMul()`, which covers every
+enemy and boss in one place; the two summon sites set speed flat and need it explicitly.
+
+**Ascension opens at `ASCEND_LV` (45), not at the cap.** One constant in `13_skills.js`; the gate,
+the locked button and the attributes status line all read from it. Ascending early is deliberate —
+it hands you the prestige caps while there are still levels left to earn.
+
 ---
 
 ## Subsystem map
@@ -149,6 +179,24 @@ them whenever co-op ends.
 - Shot count and cadence ramp with level (`eShotCount`, `eFireCd`). The flat damage floors in
   `makeEnemy` are the low-level difficulty dial.
 
+### The Vault (`17j_vault.js`) and the Scroll Registry
+Account-wide storage reached from the strongbox in the VAULT room. 60 gear slots paged 20 at a
+time, plus a SCROLLS tab holding surplus stat scrolls as a per-stat tally. `applyScroll`
+(`16_maxstats.js`) files the overflow automatically the moment a stat is at its cap with scrolls
+still banked — that is the "attempted to consume at max" moment. The Attributes screen shows STORE
+instead of a disabled +1/MAX on a full row, because that was the one moment the overflow is for and
+the buttons used to be dead there.
+
+### Pets (`15_pets.js`)
+Rebuilt around three rules: **food is the only growth**, **fusion is a place**, **incubation is a
+clock**. Five food tiers on the shared rarity ladder (1/3/8/20/50 feed power) drop from anything
+you kill, tier weighted by level and by what died. A pet carries ONE level (`lvl`) and a `fed`
+remainder; the old `abilLvl` is migration-only. `petFuseKit` interleaves the parents' kits — it
+must not concatenate, because a parent carries three abilities and a child has three slots, so
+concatenating silently drops the second parent entirely.
+The Incubator and Fusion Altar screens use the shared `equip_panel.png` plate (`.embCard` in
+style.css), aspect-locked with percentage padding exactly like the vault panel.
+
 ### The four stalls
 | stall | role |
 |---|---|
@@ -203,6 +251,39 @@ self-clearing (`if(u.x.p!==period) reset`).
   240–800px from a hero; `devTeleport('G')` lands somewhere with none in range, so the spawner
   correctly does nothing and it looks like a bug.
 - **An ascension's capstone only applies when the character's class owns that ascension.**
+
+---
+
+### Traps added this session
+
+**A DUPLICATE function declaration silently wins, and the parse check cannot see it.** Removing
+`petFeed` left the old `petFeedNeed` behind; being declared later in the file it overrode the new
+one, and feeding gave more than twice what the table said. Every file parsed. Only running the
+numbers against a hand-computed ladder exposed it. After deleting a function, grep for anything
+declared *beside* it.
+
+**A stretched frame's border is a PERCENTAGE inset.** `equip_panel.png` is 448x600 painted at
+`background-size:100% 100%`, so its usable field sits at ~16.5% top / 18% bottom / 16% sides of
+whatever box it is given, while `#shopInner` pads a fixed 46/40/44px. Those agree at exactly one
+card size. `scrollHeight <= clientHeight` will report "fits" while content sits visibly outside the
+border — measure against the art's real field instead.
+
+**The last ~330px of any room belongs to the HUD.** The camera clamps at the room edge, so anything
+there is pushed under the orbs no matter where the player stands. Every side room's exit sat 1.5
+tiles off the back wall and rendered at screen y=603, behind them. The vault door learned the same
+lesson against the STORE banner, which is drawn at a fixed SCREEN position rather than in the world.
+
+**PixelLab `create_map_object` always composes an OBJECT on transparency**, however hard the prompt
+asks for a full-bleed texture — measured 67% opaque with a 0%-opaque border on two separate grass
+attempts, and the previews hide it. `create_image` is not implemented on this server. For a ground
+tile, crop to the largest fully-opaque square and stamp it with random orientations.
+
+**Two independently generated textures will not tone-match.** The two grass tiles came out with
+means of (41,86,14) and (66,143,49) and read as a quilt. Gain-match the second to the first.
+
+**Verify the server is actually serving before navigating.** `py -m http.server ... && echo serving`
+after a failed command prints the echo and starts nothing — I spent several probes debugging an
+empty page. Fetch the URL and check the byte count.
 
 ---
 

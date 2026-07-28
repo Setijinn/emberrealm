@@ -34,7 +34,65 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v339 -> v369)
+WHAT SHIPPED MOST RECENTLY (v433 -> v477)
+---------------------------------------------------------------------------
+THE VAULT (17j_vault.js, NEW) — account-wide storage in the Hearth's VAULT room.
+- 60 gear slots, paged 20 at a time, reached from a strongbox you walk up to.
+- ACCOUNT-WIDE AND UNGATED BY EXPLICIT DECISION. A fresh Lv1 can withdraw a dead
+  hero's T12 and wear it (canEquip has no level gate). Raised before building,
+  chosen anyway. vaultCanWithdraw() is the single seam if it ever needs a gate.
+- SCROLLS tab: surplus stat scrolls, per-stat counts. applyScroll files the
+  overflow automatically when a stat is capped with scrolls still banked, and the
+  Attributes screen shows STORE instead of a dead +1/MAX on a full row.
+- The room was reworked twice: scroll racks (front elevations on a 2x3-tile unit,
+  anchored to a GLOBAL grid), a medieval iron-bound door, statues, lecterns, a
+  crimson runner, and pixel art for the safe, chests and sign.
+
+PETS REBUILT (15_pets.js) — three rules.
+- FOOD IS THE ONLY GROWTH. Kills give a pet nothing. Five tiers on the shared
+  rarity ladder: 1 / 3 / 8 / 20 / 50 feed power. Common to cap = 171 power,
+  Legendary to 30 = 1,421. Feeding a capped pet is refused, not wasted.
+- ONE LEVEL. `lvl` (kills) and `abilLvl` (feeding) collapsed into `lvl` + a `fed`
+  remainder; old pets keep the better of the two.
+- FUSION IS A PLACE — petFuse refuses away from the Sanctuary's Altar.
+- INCUBATION IS A CLOCK — Common 8m / Uncommon 25m / Rare 1h of real time. The
+  Incubator lists every ability a hatchling could carry and what fusion unlocks.
+- Both station screens use the shared equip_panel plate (.embCard).
+
+THE SANCTUARY took the COSMETICS portal, with its own PixelLab arch. The wardrobe
+mirror moved into the Hearth so cosmetics (and every diamond ever spent) stayed
+reachable — the COSMETICS room def is still there, now unused.
+
+ENDGAME GRIND (user-chosen: levels 40-50 + the scroll grind, ~2x).
+- xpNeed: 1-39 byte-for-byte unchanged; a ramp to 2.2x by Lv44; then the last
+  five levels COMPOUND at 1.38x each. 49->50 is 493,517 XP (~124 boss kills).
+  Whole run 2,121,284 XP where it was 835,939. XP_EXP_BASE is the one dial.
+- Scroll drops HALVED at the RATE, not the caps — raising trainCap would raise
+  the permanent power ceiling with it, and TRAIN_BASE was deliberately set to 6.
+- ASCENSION AT Lv45 (ASCEND_LV), not the cap, so you train into raised prestige
+  caps while levels remain.
+
+COMBAT / FEEL
+- MOVE_SCALE = 0.80 in 01_constants.js: LOCOMOTION ONLY, hero and hostiles alike.
+  Hero 198 -> 158 px/s. Rides on eSpdMul so it covers every enemy and boss.
+- WISP POSSESSION: the 42 wisp species take the STICK for one second and tow you
+  along their heading. You keep your attacks; 5s lockout; i-frames refuse it.
+- Safe rooms stopped getting the dungeon vignette (three cases now, not two).
+  Vault floor edges roughly doubled in brightness as a result.
+- Zone and boss banners got cooldowns (90s / 120s). Walking a region border used
+  to re-announce on every crossing, forever.
+- Lights shine from the TOP of the post: glowSrc() places the emitter at the
+  measured flame position (lamp 0.77, candelabra 0.82, brazier 0.55 of sprite
+  height). The hearth lamp's light moved 103px.
+
+AUDITS RUN, no defects found: all 17 class skill trees at the Lv50 cap (every
+keystone reachable, ascension gates correctly, respec exact, no eff key silently
+dropped, all 187 ability refs resolve); all 6 mob behaviours; all 9 statuses on
+both sides. Three status findings were REPORTED AND LEFT ALONE as balance calls —
+see STILL OPEN.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v339 -> v369)
 ---------------------------------------------------------------------------
 COMBAT / CONTENT
 - The Monk has a real weapon: 'fists' retired in place (legacy:1), 'gauntlet' added
@@ -190,6 +248,16 @@ UI / WORLD
 ---------------------------------------------------------------------------
 CO-OP (v370-v375) -- done, with two things stated plainly
 ---------------------------------------------------------------------------
+VERIFIED WITH TWO REAL CLIENTS (v433), not one tab pretending: two browser
+contexts, one holding the EMBER SERVER, a real WebRTC link over the PeerJS
+broker. All five checks passed --
+  1. host elsewhere: the client's room populates itself (netSimulates true)
+  2. host walks in: handover is clean, zero stale locals
+  3. e.bd crosses the wire (clients used to eat flat bd=10 damage)
+  4. boss hazards render AND hurt on the client
+  5. coopSolo() with shadows, a boss and 143 shots live: no crash, no NaN
+The test found one bug only two clients could find -- see netDropLocal below.
+
 - HANDING THE ROOM OVER IS AN EDGE, AND BOTH DIRECTIONS NEED CLEANING. netSimulates()
   flipping true->false (the host walked into your room) must drop the world the
   client already built, or you fight BOTH its locals and the host's shadows of the
@@ -227,33 +295,41 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 ---------------------------------------------------------------------------
 DO THIS FIRST
 ---------------------------------------------------------------------------
-Nothing is blocked. The Vault (v444) and the two-client co-op verification below
-are both DONE.
+Nothing is blocked. Serve on a FRESH PORT and verify it actually responds before
+you navigate — an `&& echo serving` after a failed command lies.
 
-THE VAULT IS OPEN (v444, 17j_vault.js). The Hearth room that read "STASH - coming
-soon" is now a working stash: 60 slots, paged 20 at a time, a strongbox you walk
-up to at VAULT tile 14,10.
-  IT IS ACCOUNT-WIDE AND UNGATED, BY THE USER'S EXPLICIT DECISION. The store hangs
-  off users[curUser], not off a character. A fresh Lv1 can withdraw a dead hero's
-  T12 and wear it, because canEquip has no level gate. That was raised before it
-  was built and chosen anyway. Permadeath still ends the run and still takes
-  everything the hero was CARRYING; it no longer takes what they banked.
-  IF THAT EVER NEEDS WALKING BACK, the gate goes in vaultCanWithdraw(it,ch) and
-  nowhere else. It exists for exactly that and today always returns true.
+THREE STATUS-EFFECT FINDINGS, measured and deliberately NOT fixed (balance calls,
+one-line each — ask before changing):
+  1. DoT refresh takes best-of-both. applyStatus does s.t=max(t) and s.v=max(v)
+     INDEPENDENTLY, so a 500dps/1s burn refreshed by a 10dps/8s burn gives 500dps
+     for 8s. Reachable: burn value is dmg*burnHit/3 and ult burns are
+     valPct*c.dmg*c.AP, so values genuinely differ by source.
+  2. chill/slowT desync under boss immunity. tickStatuses freezes status timers
+     while a boss is immune but e.slowT and e.stunT decrement unconditionally in
+     the enemy loop — measured 2s of drift after 2s of immunity. slowF() and
+     player.shatter both read slowT, so the pip outlives the real effect.
+  3. "A lingering tick never lands the killing blow" is framerate-dependent. The
+     guard is `if(hp<1&&hp>0) hp=1`, which only catches the (0,1) band; dt is
+     clamped at 0.05 and a single burn tick at maxhp 1000 is 1.1 HP, so it steps
+     straight over. At 20fps it kills.
 
-CO-OP IS VERIFIED WITH TWO REAL CLIENTS (v433). Two browser contexts, one holding
-the EMBER SERVER, a real WebRTC link over the PeerJS broker. All five checks pass:
-  1. host elsewhere — client's room populates itself (7 local, netSimulates true)
-  2. host walks in — handover is clean, zero stale locals
-  3. e.bd crosses the wire (158 on host AND client; clients used to eat flat bd=10)
-  4. boss hazards render AND hurt on the client (20 hazards, 699 dmg over 5 hits)
-  5. coopSolo() with 7 shadows + a boss + 143 shots live — no crash, no NaN,
-     shadows purged, room repopulated
-The test found one real bug that only two clients could find; see netDropLocal.
+SMALL AND KNOWN: the Fusion Altar's companion chips clip their rarity labels at
+the bottom of the scroll area. Functional, untidy.
 
 ---------------------------------------------------------------------------
 STILL OPEN, IN NO PARTICULAR ORDER
 ---------------------------------------------------------------------------
+- (done v477) Pets rebuilt: food-only growth, fusion at the Altar, timed
+  incubation, equipped-pet ability panel. See WHAT SHIPPED.
+- (done v474) Endgame grind: exponential last five levels, ascension at Lv45.
+- (done v470) The Scroll Registry.
+- (done v455) The Sanctuary has a hub portal; the wardrobe mirror moved to the
+  Hearth. The COSMETICS room def is still present but unreachable -- delete it or
+  give it a purpose.
+- (open) "soft cap at 50" was implemented as the CURVE making 50 a practical
+  ceiling. LV_CAP is still 50 and there are no levels past it. If levels beyond
+  50 at diminishing returns were the intent, that is a larger change -- zone
+  levels, stat scaling and the ascension gate all key off the cap.
 - Blacksmith fusion. Design work only so far; nothing built. See the hard rule.
 - Bounty board has no fog objective.
 - Lv1-20 zone progression on the starter island is thin.
