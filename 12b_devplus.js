@@ -518,6 +518,78 @@ DEV_PANE.bal=function(B){
     const ks=[]; for(let r=0;r<GBOSS.length;r++) ks.push('ow'+r,'dn'+r); ks.push('arena');
     const have=ks.filter(k=>BOSS_MECH[k]);
     devLog(have.length+'/'+ks.length+' fights registered'+(have.length?': '+have.join(' '):' — all on the legacy path')); }));
+  // THE KILLABILITY SWEEP. `anchor` once shipped as an unbounded per-phase state and made twelve of
+  // fifteen fights literally unfinishable; dn5 pinned mechInv for phases whose only exit was HP it
+  // forbade you from taking. That class of bug is invisible in a normal playtest -- you assume you
+  // are underlevelled -- so it gets a button. Drives every registered fight on a simulated clock at
+  // fixed DPS and asserts the one rule that matters: THERE MUST BE AN EXIT THE PLAYER CAN REACH.
+  //
+  // Two gate types, two yardsticks, and conflating them gives false alarms:
+  //   anchor clock  immunity is TIMED, so a streak may not exceed ANCHOR_WIN (+ pace headroom)
+  //   ward + adds   immunity lasts until the adds die (anchorNoInv=1, wardInv). The streak is
+  //                 player-DPS-dependent by design; what must hold is that killing the adds drops
+  //                 the ward. Judging these by ANCHOR_WIN flags dn0 and ow8 every time.
+  g.appendChild(_dvBtn('Killability sweep (all fights)',()=>{
+    const DT=1/20, MAXT=600, TTK=60, CAP=ANCHOR_WIN*1.35;
+    const ks=[]; for(let r=0;r<GBOSS.length;r++) ks.push('ow'+r,'dn'+r); ks.push('arena');
+    // the sim clobbers combat state, so take it all back afterwards
+    const save={en:enemies.slice(), bar:(typeof bossBar!=='undefined')?bossBar:null,
+                px:player.x, py:player.y, phv:player.hp, room:curRoom};
+    if(curRoom&&curRoom.dungeon&&rooms['G']) curRoom=rooms['G'];
+    const fails=[];
+    let worstAnchor=0, worstWard=0;
+    for(const key of ks){
+      const m=/^(ow|dn)(\d+)$/.exec(key), ring=m?+m[2]:-1, isDn=m?m[1]==='dn':false;
+      let e=null; try{ e=makeEnemy({t:'B',x:200,y:360,ring:ring}); }catch(err){}
+      if(!e){ fails.push(key+': could not spawn'); continue; }
+      e.ring=(ring<0?undefined:ring);
+      const GB=(ring>=0)?GBOSS[ring]:null;
+      e.awk=isDn&&!!GB&&GB.gate!=='none'; e.den=isDn&&!!GB&&GB.gate==='none';
+      if(bossMechKey(e)!==key){ fails.push(key+': key resolved to '+bossMechKey(e)); continue; }
+      e.x=10000; e.y=10000; const R=520;
+      e.arena={x0:e.x-R,y0:e.y-R,x1:e.x+R,y1:e.y+R};
+      e.phase=0; e.mk=null; e.anchorPh=undefined;
+      player.x=e.x+TILE*4; player.y=e.y+TILE*4;
+      bossBar=e; e.woke=true; e.dormant=false;
+      enemies.length=0; enemies.push(e);
+      const dps=e.maxhp/TTK;
+      let t=0,streak=0,worst=0,killT=null,warded=false,err=null;
+      try{
+        while(t<MAXT){
+          player.hp=player.maxhp; player.inv=0;
+          bossMechTick(e,DT);
+          const np=bossPhaseFor(e);
+          if(np>e.phase){ e.phase=np; if(typeof bossEnterPhase==='function') bossEnterPhase(e,np); }
+          if(e.phaseInv>0) e.phaseInv-=DT;
+          if(e.dlgInv>0) e.dlgInv-=DT;
+          if(typeof bossAnchorStep==='function') bossAnchorStep(e,DT);
+          if(e.wardInv) warded=true;
+          if(bossImmune(e)){
+            streak+=DT; if(streak>worst) worst=streak;
+            // a player hits what it can: put the damage into the adds that gate the ward
+            const ad=enemies.find(a=>a!==e&&a.owner===e&&a.hp>0);
+            if(ad){ ad.hp-=dps*DT; if(ad.hp<=0) ad.hp=0; }
+          } else { streak=0; e.hp-=dps*DT; }
+          t+=DT;
+          if(e.hp<=0){ killT=t; break; }
+        }
+      }catch(ex){ err=ex.message; }
+      // report the two gate types apart. Lumping them made the summary read
+      // "worst anchor streak 30.9s (cap 12.2s)" on a clean run, because dn0's WARD streak was
+      // being labelled an anchor streak and compared against a cap it is not judged by.
+      if(warded){ if(worst>worstWard) worstWard=worst; }
+      else if(worst>worstAnchor) worstAnchor=worst;
+      if(err) fails.push(key+': threw '+err);
+      else if(killT===null) fails.push(key+': UNKILLABLE (still alive after '+MAXT+'s)');
+      else if(!warded && worst>CAP) fails.push(key+': anchor streak '+worst.toFixed(1)+'s > '+CAP.toFixed(1)+'s');
+    }
+    enemies.length=0; for(const x of save.en) enemies.push(x);
+    bossBar=save.bar; player.x=save.px; player.y=save.py; player.hp=save.phv; curRoom=save.room;
+    devLog(fails.length ? (fails.length+'/'+ks.length+' FAILED — '+fails.join(' · '))
+                        : (ks.length+'/'+ks.length+' pass · all killable · worst anchor streak '
+                           +worstAnchor.toFixed(1)+'s of '+CAP.toFixed(1)+'s cap · worst ward streak '
+                           +worstWard.toFixed(1)+'s (uncapped by design — adds gate it)'));
+  }));
   B.appendChild(g);
 };
 

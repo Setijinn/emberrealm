@@ -234,8 +234,16 @@ it hands you the prestige caps while there are still levels left to earn.
   **Rule for any new immunity: there must be an exit the player can reach.** `anchor` shipped as an
   unbounded per-phase state and made twelve of fifteen fights unkillable; dn5 pinned `mechInv` for
   phases 0-2 whose only exit was HP it forbade you from taking, so it could never be fought at all.
-  Sweep test: spawn every fight, drive it to 0 with fixed DPS, assert `kill != NEVER` and that the
-  longest immune streak is <= `ANCHOR_WIN`.
+  Sweep test: **dev panel -> BALANCE -> "Killability sweep"**. Drives all 27 registered fights on a
+  simulated clock at fixed DPS and asserts the one rule that matters -- there is an exit the player
+  can reach. Runs in ~200ms and restores combat state afterwards.
+  **Two gate types, two yardsticks.** An anchor-clock fight's immunity is timed, so its streak must
+  stay under `ANCHOR_WIN` plus pace headroom. A ward fight (`anchorNoInv=1` + `wardInv`, gated on
+  killing conduits/knots) is uncapped by design -- what must hold is that the ward drops when the
+  adds die. Judging ward fights by `ANCHOR_WIN` flags dn0 and ow8 on every clean run; the sweep
+  reports the two separately for exactly that reason. The harness must also put damage into the
+  adds while the boss is warded, or every ward fight reads as unkillable.
+  Last run: 27/27 pass, worst anchor streak 8.6s of a 12.2s cap.
 - **Difficulty scales through one dial**, `bossPace(e)`. No mechanic may hard-code a timing.
 - Everything a fight puts on the field lives on **`e.mk`** — one object per boss, so `bossReset`
   clears a fight completely and the netcode has one place to look.
