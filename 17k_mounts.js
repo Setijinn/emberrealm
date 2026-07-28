@@ -150,15 +150,29 @@ const MOUNT_ARCH = {
 // where a quadruped's would be. The DRAGON is the loudest case: its shoulders are high and its
 // neck rises in front of the seat, so a rider placed at the horse default floats above the wing
 // line instead of sitting in the hollow behind the neck.
+// MEASURED, NOT GUESSED (calibrate_seats.py). For each archetype PixelLab was asked to add a
+// rider, the riderless source was subtracted, and the rider's own lower edge was measured against
+// the animal's feet. The median of the eight directions is the seat: a saddle does not move when
+// the animal turns, so those are eight samples of one number, and the median discards the two or
+// three that regeneration speckle always contaminates.
+//
+// The numbers immediately explain why hand-guessing failed. A quadruped seats high (wolf 0.68,
+// horse 0.64) because its opaque box IS its body. A flyer seats LOW (roc 0.29, pegasus 0.34)
+// because its box is dominated by WINGSPAN, so the body sits far down inside it — and the 0.57-0.70
+// values guessed here before put riders in the air above the wing line, which is exactly what the
+// preview showed.
 const MOUNT_SEATS = {
-  dragon:   {seat:0.62},
-  infernal: {seat:0.62},
-  roc:      {seat:0.70},      // between the shoulders, high and forward
-  moth:     {seat:0.58},      // thin body, wings either side
-  skywyrm:  {seat:0.66},      // a coil, not a back
-  griffon:  {seat:0.60},
-  pegasus:  {seat:0.57},
-  wyvern:   {seat:0.60},
+  horse:    {seat:0.64},
+  wolf:     {seat:0.68},
+  dragon:   {seat:0.60},
+  infernal: {seat:0.60},      // same build as dragon; shares its calibration
+  moth:     {seat:0.46},
+  roc:      {seat:0.29},
+  skywyrm:  {seat:0.30},
+  pegasus:  {seat:0.34},
+  // not yet calibrated — these keep sensible defaults until their composites land
+  griffon:  {seat:0.36},
+  wyvern:   {seat:0.40},
   colossus: {seat:0.72},      // a platform on top of a block
 };
 function mountSeatOf(d){
