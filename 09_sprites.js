@@ -1375,6 +1375,10 @@ function drawLairs(){
     }
     // corner decorations (bones, mushrooms, lava pools, braziers…)
     const dec=(typeof _lairDec!=='undefined')?_lairDec[ba]:null;
+    // SAME GATE THE STAGING ABOVE USES. The decor and the centrepiece sat outside it, so with 13
+    // lairs at 7 decos each this drew ~91 decos plus 13 shadowed centrepieces every frame, nearly
+    // all of them thousands of pixels off-screen.
+    if(Math.abs(player.x-L.cx)<L.rx+900 && Math.abs(player.y-L.cy)<L.ry+900){
     if(dec) for(const d of L.decos){ const im=dec[d.i]; if(im&&im.naturalWidth){
       const w=TILE*1.1, h=w*im.height/im.width; ctx.drawImage(im, d.x-w/2, d.y-h*0.72, w, h); } }
     // den centrepiece (the exterior lair art, reused as an interior back-wall feature)
@@ -1382,6 +1386,7 @@ function drawLairs(){
     if(cp&&cp.naturalWidth){ const w=TILE*3.1, h=w*cp.height/cp.width;
       ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.beginPath(); ctx.ellipse(L.sprite.x,L.sprite.y+8,w*0.30,w*0.10,0,0,6.29); ctx.fill();
       ctx.drawImage(cp, L.sprite.x-w/2, L.sprite.y+12-h, w, h); }
+    }
   }
 }
 // The infection portal — the corrupting rift landmark on the far shore (lore only, no
@@ -1555,6 +1560,10 @@ function drawBridge(){
 function drawWorldFeatures(){
   const R=curRoom; if(!R||!R.rings||!R.rings.radial||R.dungeon||R.town) return;
   const P=R.rings.portal; if(!P) return;
+  // CULL LIKE ITS NEIGHBOUR DOES. drawBridge, immediately above, gates on distance; this did
+  // not, so on a 1160x720-tile map it built ~9 radial gradients, 8 object literals and a sort
+  // every frame from anywhere -- drawing at coordinates that could be 40,000px off-screen.
+  if(Math.hypot(player.x-(P.x+0.5)*TILE, player.y-(P.y+0.5)*TILE) > 2200) return;
   if(typeof _portalImg==='undefined'||!_portalImg||!_portalImg.complete||!_portalImg.naturalWidth) return;
   ctx.imageSmoothingEnabled=false;
   const px=P.x*TILE, py=P.y*TILE, t=performance.now()/1000;

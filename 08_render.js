@@ -59,10 +59,15 @@ function pxH(px,py,len,col,dens){ ctx.fillStyle=col; const d=(dens===undefined?0
 // Smooth value noise in ~[0,1], feature size `scale` tiles. Smoothstep-interpolated hash
 // lattice -> ORGANIC blobs with curved edges, not the hard 4x4 squares a block hash makes.
 // Used to place secondary-terrain patches so they look like natural pools, not tiles.
+// The lattice sample and the smoothstep were arrow functions built fresh on EVERY call. Ordinary
+// overworld ground calls vnoise about nine times per tile, so at 350-750 visible tiles that was
+// 7-15k short-lived function objects per frame -- a GC sawtooth on a 60Hz loop, for two pure
+// expressions. Hoisted; the maths is byte-for-byte the same.
+function _vnR(a,b){ return (hmix(a,b)&1023)/1023; }
+function _vnS(t){ return t*t*(3-2*t); }
 function vnoise(x,y,scale){
   const fx=x/scale, fy=y/scale, x0=Math.floor(fx), y0=Math.floor(fy), ux=fx-x0, uy=fy-y0;
-  const r=(a,b)=>(hmix(a,b)&1023)/1023, s=t=>t*t*(3-2*t);
-  const a=r(x0,y0), b=r(x0+1,y0), c=r(x0,y0+1), d=r(x0+1,y0+1), sx=s(ux), sy=s(uy);
+  const a=_vnR(x0,y0), b=_vnR(x0+1,y0), c=_vnR(x0,y0+1), d=_vnR(x0+1,y0+1), sx=_vnS(ux), sy=_vnS(uy);
   return (a*(1-sx)+b*sx)*(1-sy)+(c*(1-sx)+d*sx)*sy;
 }
 // ---- SEAMLESS PER-TILE SHADE ----
@@ -644,8 +649,12 @@ function drawTileG(x,y){
     ctx.fillRect(tx+(r1*30)%TILE,ty+(r1*57)%TILE,3,3); }
   // 8-BIT DETAIL on every remaining walkable surface -- the overworld, the groves, the dungeons.
   // Family comes from the grid char and the room, so a crypt pits and a field grains.
-  if(typeof drawFloorDetail==='function' && 'WhlHwXDtk'.indexOf(c)<0){
-    drawFloorDetail(floorFamily(c,curRoom),tx,ty,x,y,0.9); }
+  // DRAWN AFTER THE ART, at the end of this function. It used to sit here, above the whole
+  // if(c==='W')... chain -- and every branch below paints an OPAQUE full-tile base over it, so
+  // the stamp was invisible in the overworld, in every boss arena and on 'f' floors, while still
+  // costing a save/translate/scale/drawImage/restore on 350-750 tiles a frame. The town branch
+  // always had it in the right place; this is the generic path catching up.
+  const _fdOK=(typeof drawFloorDetail==='function' && 'WhlHwXDtk'.indexOf(c)<0);
   if(c==='W'){
     const wimg=(t&&typeof _hearth!=='undefined')?_hearth.wall:null;
     if(wimg&&wimg.complete&&wimg.naturalWidth){
@@ -1012,6 +1021,11 @@ function drawTileG(x,y){
     const fh=hmix(x*7,y*3); ctx.fillStyle='rgba(0,0,0,.22)';   // specks, not a square outline
     ctx.fillRect(tx+5+(fh%14),ty+7+((fh>>4)%12),2,1); ctx.fillRect(tx+22+((fh>>8)%14),ty+24+((fh>>12)%12),1,2);
   }
+  // ...and NOW the 8-bit grit, on top of whatever base this tile turned out to have. Every
+  // return above this point is inside a nested helper (wat/ab/wl), not an exit from drawTileG,
+  // so every branch that reaches the art chain reaches this too. Props (trees, boulders) are a
+  // separate pass in 09_sprites and still draw over it, which is the order that was intended.
+  if(_fdOK) drawFloorDetail(floorFamily(c,curRoom),tx,ty,x,y,0.9);
 }
 function shadow(x,y,r){ ctx.fillStyle='rgba(0,0,0,.35)';
  ctx.beginPath(); ctx.ellipse(x,y,r,r*0.45,0,0,6.29); ctx.fill(); }

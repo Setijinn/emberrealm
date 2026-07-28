@@ -124,6 +124,13 @@ function miniTerrain(R){
 // paid for should still be there tomorrow.
 const FOG_REVEAL_TILES = 22;
 let _fogCv=null, _fogCtx=null, _fogKey=null, _fogDirty=0, _fogSaveT=0;
+// COVERAGE, MIRRORED IN A TYPED ARRAY. fogSeen used to answer by reading the fog canvas --
+// getImageData(x,y,1,1) -- and drawMinimap calls it once per boss, lair, portal, loot bag, enemy
+// and objective node, every frame. That is 20-40 synchronous canvas readbacks per frame, each one
+// flushing the 2D pipeline and forcing a GPU->CPU sync: the most reliable way there is to cap a
+// canvas game's frame rate. The array holds the same remaining-alpha value the canvas does, using
+// the identical destination-out arithmetic, so the two cannot disagree.
+let _fogA=null, _fogAW=0, _fogAH=0;
 
 function _fogSlot(R){
   const ch=(typeof curChar==='function')?curChar():null;
@@ -141,7 +148,9 @@ function fogInit(R){
   if(_fogCv && _fogKey===key) return;
   const cv=miniTerrain(R);
   _fogCv=document.createElement('canvas'); _fogCv.width=cv.width; _fogCv.height=cv.height;
-  _fogCtx=_fogCv.getContext('2d');
+  _fogCtx=_fogCv.getContext('2d',{willReadFrequently:true});
+  _fogAW=_fogCv.width; _fogAH=_fogCv.height;
+  _fogA=new Uint8Array(_fogAW*_fogAH); _fogA.fill(_fogUsed(R)?255:0);   // 255 = fully fogged
   if(_fogUsed(R)){ _fogCtx.fillStyle=(R.dungeon?'#06050c':'#05050a'); _fogCtx.fillRect(0,0,_fogCv.width,_fogCv.height); }
   _fogKey=key;
   if(!_fogPersist(R)) return;
@@ -149,7 +158,12 @@ function fogInit(R){
     if(st){ const im=new Image();
       im.onload=()=>{ if(_fogCtx){ _fogCtx.globalCompositeOperation='copy';
         _fogCtx.drawImage(im,0,0,_fogCv.width,_fogCv.height);
-        _fogCtx.globalCompositeOperation='source-over'; } };
+        _fogCtx.globalCompositeOperation='source-over';
+        // Seed the array from the restored image. ONE readback, at load, for a saved map that was
+        // revealed across earlier sessions -- not one per entity per frame.
+        try{ const d=_fogCtx.getImageData(0,0,_fogAW,_fogAH).data;
+          for(let i=0,n=_fogAW*_fogAH;i<n;i++) _fogA[i]=d[i*4+3]; }catch(e){}
+      } };
       im.src=st; } }catch(e){}
 }
 function fogReveal(R,dt){
@@ -167,6 +181,20 @@ function fogReveal(R,dt){
   _fogCtx.fillStyle=g;
   _fogCtx.beginPath(); _fogCtx.arc(px,py,r,0,6.29); _fogCtx.fill();
   _fogCtx.restore();
+  // The same erase, applied to the array. destination-out with alpha a leaves (1-a) of what was
+  // there, and the gradient runs 1 at 0.45r to 0 at r -- so this is the canvas's own arithmetic,
+  // not an approximation of it. Bounded by the disc, ~29x29 cells on the overworld.
+  if(_fogA){
+    const x0=Math.max(0,Math.floor(px-r)), x1=Math.min(_fogAW-1,Math.ceil(px+r));
+    const y0=Math.max(0,Math.floor(py-r)), y1=Math.min(_fogAH-1,Math.ceil(py+r));
+    const inner=r*0.45, span=Math.max(0.001,r-inner);
+    for(let y=y0;y<=y1;y++){ const row=y*_fogAW, dy=y-py;
+      for(let x=x0;x<=x1;x++){ const dx=x-px, d=Math.sqrt(dx*dx+dy*dy);
+        if(d>=r) continue;
+        const a=d<=inner?1:(r-d)/span;
+        const i=row+x, left=_fogA[i]*(1-a);
+        if(left<_fogA[i]) _fogA[i]=left; } }
+  }
   if(!_fogPersist(R)) return;
   _fogDirty=1;
   _fogSaveT-=dt||0.016;
@@ -175,11 +203,11 @@ function fogReveal(R,dt){
   }
 }
 function fogSeen(R,wx,wy){
-  if(!_fogCtx || !_fogUsed(R)) return true;
+  if(!_fogA || !_fogUsed(R)) return true;
   const s=_miniCache.s;
   const x=Math.round((wx/TILE)*s), y=Math.round((wy/TILE)*s);
-  if(x<0||y<0||x>=_fogCv.width||y>=_fogCv.height) return false;
-  try{ return _fogCtx.getImageData(x,y,1,1).data[3] < 130; }catch(e){ return true; }
+  if(x<0||y<0||x>=_fogAW||y>=_fogAH) return false;
+  return _fogA[y*_fogAW+x] < 130;      // same threshold the readback used
 }
 
 function miniRect(){

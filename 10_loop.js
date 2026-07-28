@@ -30,6 +30,15 @@ function loop(now){ const dt=Math.min(0.05,(now-last)/1000); last=now;
   checkSize();
   if(W>H&&inGame){
     try{ update(dt); }catch(e){ showErr(e); }
-    try{ render(); }catch(e){ showErr(e); }
+    // A THROW MUST NOT POISON THE NEXT FRAME. render() opens a save() and ~30 helpers push their
+  // own; nothing unwinds them on the way out, so after one fault the world transform stayed
+  // applied to the HUD and every subsequent frame added another unmatched save() -- an unbounded
+  // stack for the rest of the session. The error banner is built for faults that REPEAT, which is
+  // exactly when this compounds. Put the context back to the base state 01_constants established.
+  try{ render(); }catch(e){
+    try{ ctx.setTransform(DPR,0,0,DPR,0,0); ctx.globalAlpha=1;
+      ctx.globalCompositeOperation='source-over'; ctx.filter='none';
+      ctx.setLineDash([]); ctx.shadowBlur=0; }catch(_){}
+    showErr(e); }
   }
   requestAnimationFrame(loop); }

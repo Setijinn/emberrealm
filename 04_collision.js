@@ -53,11 +53,20 @@ function nearestStandable(px,py,r,maxRings){
   }
   return null;
 }
+// THE SAMPLE RING IS A FUNCTION OF e.r AND NOTHING ELSE. This rebuilt an array of eight arrays
+// plus two closures on every call -- and it is called for the player, every enemy, every ally and
+// every pet, every frame. At ~40 enemies that was roughly 33,000 allocations a second in the
+// hottest loop in the game. Same eight points, same axis-separated order, no allocation.
+const _MC_OFF=[1,0, -1,0, 0,1, 0,-1, 0.7,0.7, -0.7,0.7, 0.7,-0.7, -0.7,-0.7];
+function _mcBlocked(px,py,r){
+  for(let i=0;i<16;i+=2) if(solid(px+_MC_OFF[i]*r, py+_MC_OFF[i+1]*r)) return true;
+  return false;
+}
 function moveCircle(e,dx,dy){
   // axis-separated with corner sampling
-  const pts=[[e.r,0],[-e.r,0],[0,e.r],[0,-e.r],[e.r*.7,e.r*.7],[-e.r*.7,e.r*.7],[e.r*.7,-e.r*.7],[-e.r*.7,-e.r*.7]];
-  let nx=e.x+dx;
-  if(!pts.some(p=>solid(nx+p[0],e.y+p[1]))) e.x=nx;
-  let ny=e.y+dy;
-  if(!pts.some(p=>solid(e.x+p[0],ny+p[1]))) e.y=ny;
+  const r=e.r;
+  const nx=e.x+dx;
+  if(!_mcBlocked(nx,e.y,r)) e.x=nx;
+  const ny=e.y+dy;
+  if(!_mcBlocked(e.x,ny,r)) e.y=ny;
 }
