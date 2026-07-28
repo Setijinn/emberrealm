@@ -58,14 +58,92 @@ const PET_UTIL = [
 ];
 function petUtil(id){ return PET_UTIL.find(u=>u.id===id)||null; }
 
+// ===================================================================================
+// PET FOOD (user: "pets don't level any other way other than feeding food items to them.
+// Which we will create a variety of food levels with feed power differences that tag along
+// with rarity").
+//
+// Five tiers on the SAME rarity ladder the pets and eggs use, so a Legendary feed reads as
+// Legendary everywhere in the game. Feed power climbs much faster than the tier index -- a
+// steady 1-3-8-20-50 -- because the whole point is that finding a good one MATTERS. Fifty
+// Scrap Feed and one Ember Fruit are the same nourishment, and the second is a lot more fun.
+const PET_FOOD = [
+  {r:0, n:'Scrap Feed',    icon:'🌾', pow:1},
+  {r:1, n:'Hearty Mash',   icon:'🥣', pow:3},
+  {r:2, n:'Gilded Ration', icon:'🍖', pow:8},
+  {r:3, n:'Ambrosia',      icon:'🍯', pow:20},
+  {r:4, n:'Ember Fruit',   icon:'🔥', pow:50},
+];
+function petFoodDef(t){ return PET_FOOD[Math.max(0,Math.min(4,t|0))]; }
+function petFoodName(it){ const d=petFoodDef(it&&it.t); return d.n; }
+function petFoodPow(it){ const d=petFoodDef(it&&it.t); return d.pow*((it&&it.n)||1); }
+
+// Which tier this kill pays out. The weights start heavily on the low tiers and are pushed
+// upward by level and by what died -- a Lv50 boss is the only thing that drops Ember Fruit with
+// any regularity, and a Lv3 crab essentially never will.
+function petFoodTier(e){
+  const lv=(e&&e.lv)||1;
+  // The first pass pushed the curve so hard that a Lv50 boss dropped Ember Fruit 32% of the time
+  // and even Lv50 TRASH gave it 21% -- the ladder inverted and the top tier stopped being a prize.
+  // Gentler lift and a much gentler exponent: a Lv50 boss now lands ~8% Ember Fruit, a Lv5 crab
+  // ~1%, and the common tiers stay common everywhere.
+  const lift=Math.min(2.4,(lv/50)*1.5 + (e&&e.type==='B'?1.0:(e&&e.elite?0.55:0)));
+  const w=[60,26,10,3,1].map((v,i)=>v*Math.pow(1+lift,i*0.55));
+  let tot=0; for(const v of w) tot+=v;
+  let r=Math.random()*tot;
+  for(let i=0;i<w.length;i++){ if(r<w[i]) return i; r-=w[i]; }
+  return 0;
+}
+// Drop hook, called from rollLoot's `extra` list beside the scrolls and eggs. Food is the ONLY
+// way a pet grows now, so it has to be part of ordinary play rather than a boss-only prize --
+// but the TIER is where the rarity lives, not the frequency.
+// The pantry lives on the ACCOUNT beside the pets, because the pets do -- a hero who finds a
+// Legendary feed and dies should not take it with them when the pet it was for belongs to
+// everyone. Stored as a count per tier; food has no identity beyond its tier.
+function petFoodAdd(t,n){ const u=petStore(); if(!u) return 0;
+  t=Math.max(0,Math.min(4,t|0)); u.food[t]=(u.food[t]||0)+(n||1); savePets(); return u.food[t]; }
+function petFoodCount(t){ const u=petStore(); return (u&&u.food&&u.food[t])||0; }
+function petFoodTotal(){ const u=petStore(); if(!u) return 0; let n=0; for(let i=0;i<5;i++) n+=u.food[i]||0; return n; }
+// Feed n of tier t to a pet. Refuses rather than wasting it when the pet is already at its cap:
+// food is the only growth currency in the game now and burning it for nothing would be cruel.
+function petFeedTier(uid,t,n){
+  const u=petStore(); if(!u) return 0;
+  const p=u.pets.find(x=>x.uid===uid); if(!p) return 0;
+  if((p.lvl||1)>=petMaxLvl(p)){ if(typeof msg==='function') msg('ALREADY FULL GROWN',p.name+' is at its cap — fuse it to go further'); return 0; }
+  t=Math.max(0,Math.min(4,t|0)); n=Math.max(1,n||1);
+  const have=u.food[t]||0; if(have<=0) return 0;
+  const use=Math.min(n,have);
+  u.food[t]=have-use;
+  const d=petFoodDef(t);
+  petFeedPower(p, d.pow*use);
+  savePets(); return use; }
+function petFoodDropFor(e){
+  if(!e || e.node) return null;
+  const p = (e.type==='B') ? 0.60 : e.elite ? 0.24 : (e.type==='s' ? 0.075 : 0.055);
+  if(Math.random()>=p) return null;
+  return {k:'food', t:petFoodTier(e), n:1};
+}
+
 // ---- collection storage on the USER (survives character death) ----
 function petStore(){ const u=(typeof users!=='undefined'&&curUser)?users[curUser]:null; if(!u) return null;
   if(!Array.isArray(u.pets)) u.pets=[];        // hatched pet instances
   if(!Array.isArray(u.eggs)) u.eggs=[];        // unhatched eggs
+  // an egg from before the timer existed carried {need,prog}; convert what it had already earned
+  // into elapsed time so nobody's part-incubated egg restarts from zero
+  for(const eg of u.eggs){ if(eg.t0===undefined){
+    const s=(typeof eggSecsFor==='function')?eggSecsFor(eg.cond):480;
+    const done=(eg.need&&eg.prog)?Math.min(1,eg.prog/eg.need):0;
+    eg.secs=s; eg.t0=Date.now()-Math.round(done*s*1000); delete eg.need; delete eg.prog; } }
   if(u.activePet===undefined) u.activePet=null;// uid of the equipped pet
   if(u.petSeq===undefined) u.petSeq=1;         // uid counter
+  if(!Array.isArray(u.food)) u.food=[0,0,0,0,0];   // pantry: a count per food tier
   for(const p of u.pets){                       // migrate older pets to the new model
     if(p.abilLvl===undefined) p.abilLvl=1; if(p.feedXp===undefined) p.feedXp=0;
+    // ONE LEVEL NOW. A pet used to carry two: `lvl` from kills and `abilLvl` from feeding, which
+    // meant its power came from two sources and neither reading told you where it stood. Feeding
+    // is the only source, so there is only one number -- an existing pet keeps the better of the
+    // two it had, so nothing anyone already grew is taken away.
+    if(p.fed===undefined){ p.lvl=Math.max(p.lvl||1,p.abilLvl||1); p.fed=0; }
     if(!p.size || p.size<6) p.size=petSizeFor(p.rar||0);          // old size was a 1.0-1.56 fraction; now on-screen px
     if(!Array.isArray(p.kit) || p.kit.length<3){ const extra=PET_UTIL.map(x=>x.id).filter(id=>!(p.kit||[]).includes(id)); p.kit=(p.kit||[]).concat(extra).slice(0,3); } }
   return u; }
@@ -124,30 +202,81 @@ function drawEggDrops(){ if(!petEggDrops.length||typeof ctx==='undefined') retur
     ctx.restore(); } }
 
 // ---- pickup: add an egg to the collection (called when a {k:'egg'} bag is collected) ----
+// INCUBATION IS TIME NOW, AND THE RARER THE EGG THE LONGER IT SITS (user).
+// It used to be a kill counter, which made a rare egg just "more of the same fighting" and let
+// you burn all three at once on a good run. Real elapsed seconds mean the incubator is somewhere
+// you come BACK to, the rarest eggs are genuinely worth waiting for, and the wait costs you
+// nothing but patience -- it ticks whether the game is open or not.
+const EGG_SECS=[8*60, 25*60, 60*60];      // Common 8m · Uncommon 25m · Rare 1h
+function eggSecsFor(cond){ return EGG_SECS[Math.max(0,Math.min(2,cond|0))]||EGG_SECS[0]; }
+function eggElapsed(eg){ if(!eg) return 0;
+  if(eg.t0===undefined) return 0;
+  return Math.max(0,(Date.now()-eg.t0)/1000); }
+function eggLeft(eg){ return Math.max(0, (eg.secs||eggSecsFor(eg.cond)) - eggElapsed(eg)); }
+function eggReady(eg){ return eggLeft(eg)<=0; }
+function eggPct(eg){ const s=eg.secs||eggSecsFor(eg.cond); return Math.max(0,Math.min(1,eggElapsed(eg)/s)); }
+function eggClock(sec){ sec=Math.max(0,Math.ceil(sec));
+  const h=(sec/3600)|0, m=((sec%3600)/60)|0, s=sec%60;
+  return h? (h+'h '+m+'m') : m? (m+'m '+s+'s') : (s+'s'); }
 function giveEgg(cond,cat){ const u=petStore(); if(!u) return;
-  const need=[24,44,72][cond]||24;             // incubation = kills (rarer condition -> longer)
-  u.eggs.push({cond, cat, need, prog:0});
+  u.eggs.push({cond, cat, t0:Date.now(), secs:eggSecsFor(cond)});
   savePets();
-  if(typeof msg==='function') msg('🥚 '+(PET_CATS[cat]?PET_CATS[cat].name:'')+' Egg', PET_RAR_NAME[cond]+' condition · incubating'); }
+  if(typeof msg==='function') msg('🥚 '+(PET_CATS[cat]?PET_CATS[cat].name:'')+' Egg',
+    PET_RAR_NAME[cond]+' · incubating for '+eggClock(eggSecsFor(cond))); }
 
 // per-kill: incubate eggs + level the active pet. (Phase 4)
-function petOnKill(e){ const u=petStore(); if(!u) return; let changed=false;
-  for(const eg of u.eggs){ if(eg.prog<eg.need){ eg.prog++; if(eg.prog>=eg.need){ changed=true;
-    if(typeof msg==='function') msg('🥚 An egg is ready to open!', (PET_CATS[eg.cat]?PET_CATS[eg.cat].name:'')+' · '+PET_RAR_NAME[eg.cond]); } } }
-  if(changed) savePets();
-  const xp = e&&e.type==='B'?36 : e&&e.type==='s'?4 : 3;    // bosses feed the active pet far more
-  petGainXp(xp); }
-// ---- Phase 4: leveling / fuse / evolve ----
+// A KILL NO LONGER LEVELS A PET (user: "pets don't level any other way other than feeding food
+// items to them"). It used to hand the active pet 3-36 XP per corpse, which meant a pet grew as
+// a side effect of playing at all and food was decoration. Killing things still FEEDS the
+// pipeline -- it is where food and eggs drop -- but the growth itself is now a decision you make
+// at the pet, with something you found.
+// Eggs no longer tick here either: they run on wall-clock time (see giveEgg), so this hook only
+// has to notice the moment one comes due and say so once.
+function petOnKill(e){ const u=petStore(); if(!u) return;
+  for(const eg of u.eggs){ if(!eg._done && eggReady(eg)){ eg._done=1;
+    if(typeof msg==='function') msg('🥚 An egg is ready!',
+      (PET_CATS[eg.cat]?PET_CATS[eg.cat].name:'')+' · '+PET_RAR_NAME[eg.cond]+' — open it at the Incubator'); } } }
+// ---- leveling: FOOD ONLY ----
 function petMaxLvl(p){ return 10 + (p.rar||0)*5; }            // Common 10 ... Legendary 30
-function petXpNeed(lvl){ return Math.floor(18*Math.pow(lvl,1.5)); }
-function petGainXp(amt){ const p=activePet(); if(!p||!amt) return; const mx=petMaxLvl(p); if(p.lvl>=mx) return;
-  p.xp=(p.xp||0)+amt; let up=false;
-  while(p.lvl<mx && p.xp>=petXpNeed(p.lvl)){ p.xp-=petXpNeed(p.lvl); p.lvl++; up=true; }
-  if(up){ savePets(); if(typeof msg==='function') msg(p.name+' → Lv '+p.lvl, p.lvl>=mx?'max level — ready to evolve!':''); } }
+// Feed power for the NEXT level. Sized against the food table: taking a Common from 1 to its
+// cap of 10 costs 171 power -- 171 Scrap Feed, or 9 Ambrosia. A Legendary to 30 costs 1,421,
+// which is ~29 Ember Fruit. The curve is deliberately shallow and long rather than steep: the
+// grind should be "how much did you find", not "how many did you save up for one level".
+function petFeedNeed(lvl){ return 4+(lvl||1)*3; }
+// Total power still owed to reach the cap -- the panel shows this, because "how far to go" is
+// the only number that matters once food is the only input.
+function petFeedRemaining(p){ if(!p) return 0; const mx=petMaxLvl(p); let t=0;
+  for(let l=(p.lvl||1); l<mx; l++) t+=petFeedNeed(l);
+  return Math.max(0,t-(p.fed||0)); }
+// Pour `pow` feed power into a pet. Returns levels gained.
+function petFeedPower(p,pow){
+  if(!p||!(pow>0)) return 0; const mx=petMaxLvl(p); if((p.lvl||1)>=mx) return 0;
+  p.fed=(p.fed||0)+pow; let up=0;
+  while((p.lvl||1)<mx && p.fed>=petFeedNeed(p.lvl||1)){ p.fed-=petFeedNeed(p.lvl||1); p.lvl=(p.lvl||1)+1; up++; }
+  if((p.lvl||1)>=mx) p.fed=0;                       // at the cap there is nothing left to bank
+  if(up){ savePets();
+    if(typeof msg==='function') msg('🍖 '+p.name+' → Lv '+p.lvl,
+      (p.lvl>=mx)?'fully grown — ready to fuse':'abilities strengthen'); }
+  else savePets();
+  return up; }
 // FUSION = the EVOLUTION process (at the Fusion Terminal): 2 pets of the SAME tier -> one of the
 // NEXT tier, with a 50/50 chance of taking either parent's CATEGORY. Both parents are consumed.
+// THE FUSION TERMINAL (user: "create a physical terminal the player has to interact with to
+// fuse pets"). The altar already stood in the Sanctuary but fusing worked from the menu anywhere,
+// so the building was scenery. It is the machine now: petFuse refuses unless you are standing at
+// it, and the panel says where to go rather than offering a button that will not work.
+function atPetStation(kind){
+  if(typeof curRoom==='undefined'||!curRoom||!curRoom.petRoom||!curRoom.petStations) return false;
+  if(typeof player==='undefined') return false;
+  for(const st of curRoom.petStations)
+    if(st.kind===kind && Math.hypot(st.x-player.x,st.y-player.y)<58) return true;
+  return false; }
+function atFusionTerminal(){ return atPetStation('fusion'); }
+function atIncubator(){ return atPetStation('incubator'); }
 function petCanFuse(a,b){ return !!(a&&b&&a.uid!==b.uid&&a.rar===b.rar&&a.rar<4); }
 function petFuse(aUid,bUid){ const u=petStore(); if(!u) return null;
+  if(!atFusionTerminal()){ if(typeof msg==='function')
+    msg('NOT HERE','the Fusion Altar is in the Sanctuary'); return null; }
   const a=u.pets.find(p=>p.uid===aUid), b=u.pets.find(p=>p.uid===bUid); if(!petCanFuse(a,b)) return null;
   const nr=a.rar+1;
   // 50/50 which parent's category — but the result must be a GENUINE next-tier creature. Prefer the
@@ -159,19 +288,12 @@ function petFuse(aUid,bUid){ const u=petStore(); if(!u) return null;
   if(!choices) choices=PET_DB.filter(p=>p.rar===nr);
   const def=choices[(Math.random()*choices.length)|0];
   const pet={ uid:u.petSeq++, spr:def.spr, name:def.name, cat:def.cat, rar:nr,
-    lvl:1, xp:0, abilLvl:Math.max(a.abilLvl||1,b.abilLvl||1), feedXp:0, kit:rollKit(), size:petSizeFor(nr) };
+    lvl:1, fed:0, kit:petFuseKit(a,b), size:petSizeFor(nr) };
   u.pets=u.pets.filter(p=>p.uid!==aUid&&p.uid!==bUid); u.pets.push(pet);
   if(u.activePet===aUid||u.activePet===bUid) u.activePet=pet.uid;
   savePets(); if(typeof spawnActivePet==='function'&&u.activePet===pet.uid) spawnActivePet();
   if(typeof msg==='function') msg('✨ EVOLVED!', PET_RAR_NAME[nr]+' '+def.name+' — '+(PET_CATS[def.cat]?PET_CATS[def.cat].name:'')); return pet; }
-// FEEDING: give a pet an item -> ability XP -> raises its ability level (abilLvl), which powers all its abilities.
-const PET_ABIL_MAX=12;
-function petFeedNeed(lvl){ return 2+(lvl||1); }
-function petFeed(uid,n){ const u=petStore(); const p=u&&u.pets.find(x=>x.uid===uid); if(!p) return false;
-  if((p.abilLvl||1)>=PET_ABIL_MAX) return false;
-  p.feedXp=(p.feedXp||0)+(n||1); let up=false;
-  while((p.abilLvl||1)<PET_ABIL_MAX && p.feedXp>=petFeedNeed(p.abilLvl||1)){ p.feedXp-=petFeedNeed(p.abilLvl||1); p.abilLvl=(p.abilLvl||1)+1; up=true; }
-  savePets(); if(up&&typeof msg==='function') msg('🍖 '+p.name,'abilities → Lv '+p.abilLvl); return true; }
+// FEEDING now lives in petFeedPower / petFeedTier -- see the food table above.
 
 // ---- the OPEN roll: weighted rarity within the egg's band; rarest is hardest ----
 // Common egg -> {0,1,2}, Uncommon -> {1,2,3}, Rare -> {2,3,4}. Weights favour the floor.
@@ -192,14 +314,38 @@ function rollKit(){ const pool=PET_UTIL.slice(), kit=[];
   for(let i=0;i<3 && pool.length;i++){ const idx=(Math.random()*pool.length)|0; kit.push(pool[idx].id); pool.splice(idx,1); }
   return kit; }
 function petSlots(rar){ return [1,2,2,3,3][rar]||1; }             // abilities unlocked by rarity (Common 1 → Legendary 3)
+
+// WHAT A FUSION CAN UNLOCK, and why it is worth showing before you commit.
+// A fused pet used to roll a completely fresh kit, so fusing was a coin toss that could throw
+// away the two abilities you had grown attached to. The child now INHERITS from its parents:
+// their combined abilities come first, in order, and only if the pair between them offer fewer
+// than three does it roll the remainder. That makes the outcome legible -- the incubator and the
+// altar can both show you exactly which abilities are in play before anything is consumed.
+function petFuseKit(a,b){
+  // INTERLEAVED, not concatenated. Taking all of A and then all of B looks like it blends them
+  // until you notice A carries three abilities and the child only has three slots -- B contributed
+  // nothing and "inherits both parents" was false in the code and in the text on screen. Drawing
+  // alternately guarantees each parent is represented before either gets a second slot.
+  const ka=(a&&a.kit||[]).slice(), kb=(b&&b.kit||[]).slice();
+  const seen={}, kit=[];
+  const take=arr=>{ while(arr.length){ const id=arr.shift(); if(id&&!seen[id]){ seen[id]=1; kit.push(id); return; } } };
+  while(kit.length<3 && (ka.length||kb.length)){
+    if(ka.length) take(ka);
+    if(kit.length<3 && kb.length) take(kb); }
+  const pool=PET_UTIL.map(x=>x.id).filter(id=>!seen[id]);
+  while(kit.length<3 && pool.length) kit.push(pool.splice((Math.random()*pool.length)|0,1)[0]);
+  return kit.slice(0,3); }
+// The pool an egg of this category could hatch into -- every ability any pet can carry, which is
+// what the incubator lists as "potential".
+function petAbilPool(){ return PET_UTIL.slice(); }
 function petSizeFor(rar){ return [30,39,48,58,67][rar]||30; }     // on-screen px; Legendary ~ a bit bigger than the player (~54)
 
 // ---- hatch an egg (index into u.eggs) -> a new pet instance in u.pets ----
 function hatchEgg(idx){ const u=petStore(); if(!u||idx<0||idx>=u.eggs.length) return null;
-  const eg=u.eggs[idx]; if(eg.prog<eg.need) return null;              // not finished incubating
+  const eg=u.eggs[idx]; if(!eggReady(eg)) return null;                // still incubating
   const rar=openRollRarity(eg.cond), def=pickPet(eg.cat,rar);
   const pet={ uid:u.petSeq++, spr:def.spr, name:def.name, cat:def.cat, rar:def.rar,
-    lvl:1, xp:0, abilLvl:1, feedXp:0, kit:rollKit(), size:petSizeFor(def.rar) };
+    lvl:1, fed:0, kit:rollKit(), size:petSizeFor(def.rar) };
   u.pets.push(pet); u.eggs.splice(idx,1);
   if(u.activePet==null) u.activePet=pet.uid;                          // auto-equip your first pet
   savePets();
@@ -234,7 +380,9 @@ if(typeof window!=='undefined' && typeof _img==='function'){
 // weapon damage — its abilities are support (heal/mana/shield/haste) + light control (shock/stun/
 // chill/spark). Strength scales with rarity + level via petPower().
 let petEnt = null;
-function petPower(p){ return 1 + (p.rar||0)*0.35 + ((p.lvl||1)-1)*0.05 + ((p.abilLvl||1)-1)*0.14; }   // fed ability level drives strength
+// One level, one curve. The old formula added `lvl` (kills) and `abilLvl` (feeding) separately;
+// with feeding the only input there is one number to read and one to balance against.
+function petPower(p){ return 1 + (p.rar||0)*0.35 + ((p.lvl||1)-1)*0.13; }
 function spawnActivePet(){ const p=activePet();
   if(!p){ petEnt=null; return; }
   petEnt={ def:p, x:(typeof player!=='undefined'?player.x-24:0), y:(typeof player!=='undefined'?player.y+14:0), face:1, cds:{}, t:0 };
@@ -243,7 +391,7 @@ function spawnActivePet(){ const p=activePet();
 // passive Fortune (folded into recalcStats via the hook in 11_ui)
 function petBonusFortune(){ const p=activePet(); if(!p||!p.kit) return 0;
   if(p.kit.slice(0,petSlots(p.rar)).indexOf('fortune')<0) return 0;   // only if the Fortune slot is unlocked
-  return Math.round(8 + p.rar*7 + (p.abilLvl-1)*2); }
+  return Math.round(8 + p.rar*7 + ((p.lvl||1)-1)*2); }
 // tiny sparkle burst for pet fx (uses the particle system when present)
 function petSpark(x,y,col,n){ if(typeof emitP!=='function') return; n=n||6;
   for(let i=0;i<n;i++){ const a=Math.random()*6.283, s=20+Math.random()*40;
@@ -294,33 +442,41 @@ function petAct(p,id,pow){
     default: return false;   // regen/fortune are passive
   }
 }
-// ================= Phase 3: the Pets collection UI (tabbed) =================
-let _petSel=null, _petTab='collection', _petFuseA=null;
+// ================= the Pets UI =================
+// THE EMBERREALM SHELL (user: "make sure the ui for the incubator and terminal have the ember
+// realm feel"). The pet panels were a purple menu bolted onto a game whose every other surface is
+// carved wood, brass and amber. They now sit in the SAME ornate plate the vault and the shop use
+// -- equip_panel.png, aspect-locked with percentage padding so it holds its frame on a phone --
+// with Pixelify Sans and the brass palette. Consistency IS the feel: a new frame invented for
+// these two screens would have read as a different game no matter how nice it looked.
+const EMB_GOLD='#ffce7a', EMB_BRASS='#c9a04a', EMB_DIM='#8a8494', EMB_INK='#17141d';
+function _embShell(title,sub,body,foot){
+  return '<div class="embCard"><div class="embInner">'
+    +'<div class="embTitle">'+title+'</div>'
+    +(sub?'<div class="embSub">'+sub+'</div>':'')
+    +'<div class="embBody">'+body+'</div>'
+    +'<div class="embFoot">'+(foot||'')+'</div>'
+    +'</div></div>'; }
+function _embBtn(id,label,kind){ const c=kind==='go'?'embBtn go':kind==='off'?'embBtn off':'embBtn';
+  return '<button class="'+c+'" id="'+id+'"'+(kind==='off'?' disabled':'')+'>'+label+'</button>'; }
+// one ability row, with the level it actually operates at
+function _embAbilRow(id,lvl,locked,unlockRar){
+  const a=petUtil(id);
+  if(locked||!a) return '<div class="embAbil lock"><span class="embAbIc">🔒</span>'
+    +'<span class="embAbNm">Sealed</span><span class="embAbDs">unlocks at '
+    +'<b style="color:'+PET_RAR_COL[unlockRar]+'">'+PET_RAR_NAME[unlockRar]+'</b></span></div>';
+  return '<div class="embAbil"><span class="embAbIc">'+a.icon+'</span>'
+    +'<span class="embAbNm">'+a.name+'</span>'
+    +'<span class="embAbLv">Lv '+lvl+'</span>'
+    +'<span class="embAbDs">'+a.desc+(a.cd?' · '+a.cd+'s':' · passive')+'</span></div>'; }
+
+let _petSel=null, _petTab='pet', _petFuseA=null, _petFeedTier=null;
 function closePets(){ const ov=document.getElementById('petScr'); if(ov) ov.style.display='none'; _petFuseA=null; }
 function _slotUnlockRar(i){ return i===0?0:i===1?1:3; }          // which rarity unlocks ability slot i
 function _petAbilRows(p){ let s=''; for(let i=0;i<3;i++){ const unlocked=i<petSlots(p.rar), id=p.kit[i], uu=id?petUtil(id):null;
     if(unlocked&&uu) s+='<div style="font-size:10px;color:#cfc8bd;margin:2px 0;">'+uu.icon+' <b>'+uu.name+'</b> <span style="color:#8a8494;">— '+uu.desc+'</span></div>';
     else s+='<div style="font-size:10px;color:#5a5464;margin:2px 0;">🔒 slot '+(i+1)+' — unlocks at <span style="color:'+PET_RAR_COL[_slotUnlockRar(i)]+'">'+PET_RAR_NAME[_slotUnlockRar(i)]+'</span></div>'; }
   return s; }
-function _petCardHTML(p,u,extra){ const active=p.uid===u.activePet, sel=p.uid===_petSel, cat=PET_CATS[p.cat]||{name:'?',col:'#fff'};
-  const bord=sel?'#ffffff':active?'#ffc94d':'#332b40';
-  return '<div class="petCard" data-uid="'+p.uid+'" style="background:'+(sel?'#2a2136':active?'#241a2e':'#1a1622')+';border:2px solid '+bord+';border-radius:10px;padding:8px;text-align:center;cursor:pointer;position:relative;'+(extra||'')+'">'
-    +(active?'<div style="position:absolute;top:3px;right:6px;font-size:8px;color:#ffc94d;">ACTIVE</div>':'')
-    +'<img src="assets/pets/'+p.spr+'.png" style="width:50px;height:50px;image-rendering:pixelated;">'
-    +'<div style="font-size:11px;color:'+PET_RAR_COL[p.rar]+';font-weight:bold;">'+p.name+'</div>'
-    +'<div style="font-size:9px;color:#8a8494;">'+cat.emoji+' '+PET_RAR_NAME[p.rar]+'</div>'
-    +'<div style="font-size:9px;color:#7a94a6;">abil Lv '+(p.abilLvl||1)+' · '+petSlots(p.rar)+'/3 slots</div></div>'; }
-function _eggRows(u){ let h='<div style="font:bold 12px monospace;color:#c9a04a;margin:2px 0 6px;letter-spacing:.1em;">🥚 EGGS ('+u.eggs.length+')</div>';
-  if(!u.eggs.length) return h+'<div style="font-size:11px;color:#6a6472;margin-bottom:10px;">No eggs yet — defeat bosses to find them.</div>';
-  h+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">';
-  u.eggs.forEach((eg,i)=>{ const cat=PET_CATS[eg.cat]||{name:'?',col:'#fff'}, ready=eg.prog>=eg.need, pct=Math.min(100,Math.round(100*eg.prog/eg.need));
-    h+='<div style="display:flex;align-items:center;gap:10px;background:#1c1826;border:1px solid #332b40;border-radius:9px;padding:7px 9px;">'
-      +'<img src="assets/pets/egg_'+eg.cat+'.png" style="width:34px;height:34px;image-rendering:pixelated;">'
-      +'<div style="flex:1;min-width:0;"><div style="font-size:12px;color:'+cat.col+';">'+cat.emoji+' '+cat.name+' Egg <span style="color:'+PET_RAR_COL[eg.cond]+';">· '+PET_RAR_NAME[eg.cond]+'</span></div>'
-      +(ready?'<div style="font-size:10px;color:#ffd07a;">ready to open!</div>'
-            :'<div style="height:6px;background:#0d0b12;border-radius:4px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:'+pct+'%;background:'+cat.col+';"></div></div><div style="font-size:9px;color:#8a8494;margin-top:2px;">incubating '+eg.prog+' / '+eg.need+' kills</div>')
-      +'</div>'+(ready?'<button class="petOpen" data-i="'+i+'" style="'+_PBTNG+'">OPEN</button>':'')+'</div>'; });
-  return h+'</div>'; }
 const _PBTN='background:#2a2233;border:1px solid #5a4d6c;color:#e8dff2;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:pointer;';
 const _PBTNG='background:#3a2a12;border:1px solid #c9a04a;color:#ffd07a;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:pointer;';
 const _PBTND='background:#1a1622;border:1px solid #332b40;color:#5a5464;border-radius:8px;padding:6px 11px;font:bold 11px monospace;cursor:default;';
@@ -332,87 +488,187 @@ function openPets(tab){ const u=petStore(); if(!u) return; if(tab) _petTab=tab;
     document.body.appendChild(ov); }
   ov.style.display='flex'; _petPaint(ov,u);
 }
-function _petTabCollection(u){ let h=_eggRows(u);
-  h+='<div style="font:bold 12px monospace;color:#c9a04a;margin:2px 0 6px;letter-spacing:.1em;">COLLECTION ('+u.pets.length+')</div>';
-  if(!u.pets.length) h+='<div style="font-size:11px;color:#6a6472;">No pets yet. Open an egg to hatch your first companion.</div>';
-  else { h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">';
-    for(const p of u.pets.slice().sort((a,b)=>b.rar-a.rar)) h+=_petCardHTML(p,u); h+='</div>'; }
-  const sp=u.pets.find(p=>p.uid===_petSel);
-  if(sp){ const an=petFeedNeed(sp.abilLvl||1), apct=Math.min(100,Math.round(100*(sp.feedXp||0)/an));
-    h+='<div style="margin-top:12px;background:#1c1826;border:1px solid #4a3d5c;border-radius:10px;padding:10px;">'
-      +'<div style="font-size:12px;color:'+PET_RAR_COL[sp.rar]+';font-weight:bold;">'+sp.name+' <span style="color:#8a8494;font-weight:normal;">· '+(PET_CATS[sp.cat]?PET_CATS[sp.cat].name:'')+' '+PET_RAR_NAME[sp.rar]+' · Lv '+sp.lvl+'</span></div>'
-      +'<div style="font-size:10px;color:#7ec0e0;margin:5px 0 2px;">Ability Level '+(sp.abilLvl||1)+' / '+PET_ABIL_MAX+' <span style="color:#8a8494;">— feed items in the 🍖 Feed tab</span></div>'
-      +'<div style="height:6px;background:#0d0b12;border-radius:4px;overflow:hidden;margin-bottom:8px;"><div style="height:100%;width:'+apct+'%;background:#4aa6ff;"></div></div>'
-      +'<div style="margin-bottom:9px;">'+_petAbilRows(sp)+'</div>'
-      +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-      +'<button id="petEquip" style="'+_PBTN+'">'+(sp.uid===u.activePet?'UNEQUIP':'EQUIP')+'</button>'
-      +(sp.rar<4?'<button id="petEvolveFuse" style="'+_PBTNG+'">✨ EVOLVE (fuse)</button>':'<button style="'+_PBTND+'">✨ MAX RARITY</button>')
-      +'</div></div>';
-  } else h+='<div style="font-size:10px;color:#6a6472;margin-top:8px;">Tap a pet to inspect &amp; equip it.</div>';
+// THE PET TAB (user: "only display the abilities and their levels of the equipped pet").
+// It used to be a grid of every pet you own with a detail card underneath -- you had to find and
+// tap your own companion to read what it did. The equipped pet IS the subject now: it fills the
+// panel, its abilities are listed with the level each one operates at, and the collection is a
+// strip along the bottom for swapping rather than the main event.
+function _petTabEquipped(u){
+  const p=activePet();
+  if(!p) return '<div class="embEmpty">No companion equipped.<br><span class="embDim">'
+    +'Hatch an egg at the Incubator, then pick one from the strip below.</span></div>'
+    +_petSwapStrip(u);
+  const mx=petMaxLvl(p), cap=(p.lvl||1)>=mx;
+  const need=petFeedNeed(p.lvl||1), pct=cap?100:Math.min(100,Math.round(100*((p.fed||0)/need)));
+  const slots=petSlots(p.rar);
+  let rows=''; for(let i=0;i<3;i++) rows+=_embAbilRow(p.kit[i], p.lvl||1, i>=slots, _slotUnlockRar(i));
+  return '<div class="embHero">'
+      +'<img class="embHeroImg" src="assets/pets/'+p.spr+'.png">'
+      +'<div class="embHeroTx">'
+        +'<div class="embHeroNm" style="color:'+PET_RAR_COL[p.rar]+'">'+p.name+'</div>'
+        +'<div class="embDim">'+(PET_CATS[p.cat]?PET_CATS[p.cat].emoji+' '+PET_CATS[p.cat].name:'')
+          +' · <b style="color:'+PET_RAR_COL[p.rar]+'">'+PET_RAR_NAME[p.rar]+'</b></div>'
+        +'<div class="embLv">Lv '+(p.lvl||1)+' <span class="embDim">/ '+mx+'</span></div>'
+        +'<div class="embBar"><div class="embBarFill" style="width:'+pct+'%"></div></div>'
+        +'<div class="embDim">'+(cap?'fully grown — fuse it at the Altar to go further'
+            :((p.fed||0)+' / '+need+' feed · '+petFeedRemaining(p)+' to reach Lv '+mx))+'</div>'
+      +'</div></div>'
+    +'<div class="embSect">ABILITIES <span class="embDim">— all operate at the pet’s level</span></div>'
+    +rows
+    +_petSwapStrip(u); }
+function _petSwapStrip(u){
+  if(!u.pets.length) return '';
+  let h='<div class="embSect">YOUR COMPANIONS ('+u.pets.length+')</div><div class="embStrip">';
+  for(const p of u.pets.slice().sort((a,b)=>b.rar-a.rar||b.lvl-a.lvl)){
+    const on=p.uid===u.activePet;
+    h+='<div class="embChip'+(on?' on':'')+'" data-uid="'+p.uid+'">'
+      +'<img src="assets/pets/'+p.spr+'.png">'
+      +'<div class="embChipNm" style="color:'+PET_RAR_COL[p.rar]+'">'+p.name+'</div>'
+      +'<div class="embDim">Lv '+(p.lvl||1)+'</div></div>'; }
+  return h+'</div>'; }
+
+// ---------------- THE INCUBATOR ----------------
+// Shows the wait as a CLOCK, because it is one now, and lists every ability the hatchling could
+// carry plus what fusing it later could unlock -- the user asked for that specifically, and it is
+// the only place the ability pool is visible before you have committed to anything.
+function _petTabIncubator(u){
+  let h='<div class="embMachine"><img src="assets/pets/incubator_ui.png"></div>';
+  if(!u.eggs.length) h+='<div class="embEmpty">The cradle is empty.<br><span class="embDim">'
+    +'Eggs come from bosses and elites out in the realm.</span></div>';
+  else { h+='<div class="embSect">IN THE CRADLE ('+u.eggs.length+')</div>';
+    u.eggs.forEach((eg,i)=>{ const cat=PET_CATS[eg.cat]||{name:'?',col:'#fff',emoji:''};
+      const rdy=eggReady(eg), pct=Math.round(eggPct(eg)*100);
+      h+='<div class="embEgg">'
+        +'<img src="assets/pets/egg_'+eg.cat+'.png">'
+        +'<div class="embEggTx"><div style="color:'+cat.col+'">'+cat.emoji+' '+cat.name+' Egg'
+          +' <span style="color:'+PET_RAR_COL[eg.cond]+'">· '+PET_RAR_NAME[eg.cond]+'</span></div>'
+        +(rdy?'<div class="embRdy">READY TO OPEN</div>'
+             :'<div class="embBar sm"><div class="embBarFill" style="width:'+pct+'%"></div></div>'
+              +'<div class="embDim">'+eggClock(eggLeft(eg))+' remaining · '+eggClock(eg.secs||eggSecsFor(eg.cond))+' total</div>')
+        +'</div>'
+        +(rdy?_embBtn('petOpen'+i,'OPEN','go'):'')+'</div>'; }); }
+  // the ability pool: what any hatchling can roll, and what fusion can carry forward
+  h+='<div class="embSect">POTENTIAL ABILITIES <span class="embDim">— any hatchling may carry three of these</span></div>'
+    +'<div class="embPool">';
+  for(const a of petAbilPool())
+    h+='<div class="embPoolIt" title="'+a.desc+'"><span>'+a.icon+'</span><b>'+a.name+'</b></div>';
+  h+='</div>'
+    +'<div class="embNote">A hatchling opens with <b>'+petSlots(0)+'</b> ability unsealed; rarer '
+    +'creatures open with more, up to <b>3</b> at Epic. <b>Fusing</b> at the Altar carries BOTH '
+    +'parents’ abilities into the child and unseals another slot with the new tier — which is '
+    +'how a sealed ability is unlocked.</div>';
   return h; }
-function _petTabFeed(u){ let h='<div style="font-size:11px;color:#8a8494;margin-bottom:10px;">Feed satchel items to a pet to level up its abilities. Better items feed more.</div>';
-  if(!u.pets.length) return h+'<div style="font-size:11px;color:#6a6472;">No pets yet.</div>';
-  h+='<div style="font:bold 11px monospace;color:#c9a04a;margin:2px 0 6px;">PICK A PET</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:12px;">';
-  for(const p of u.pets.slice().sort((a,b)=>b.rar-a.rar)) h+=_petCardHTML(p,u); h+='</div>';
-  const sp=u.pets.find(p=>p.uid===_petSel);
-  if(!sp) return h+'<div style="font-size:10px;color:#6a6472;">Select a pet above to feed it.</div>';
-  const an=petFeedNeed(sp.abilLvl||1), apct=Math.min(100,Math.round(100*(sp.feedXp||0)/an));
-  h+='<div style="background:#1c1826;border:1px solid #4a3d5c;border-radius:10px;padding:10px;">'
-    +'<div style="font-size:12px;color:'+PET_RAR_COL[sp.rar]+';font-weight:bold;">Feeding '+sp.name+'</div>'
-    +'<div style="font-size:10px;color:#7ec0e0;margin:5px 0 2px;">Ability Level '+(sp.abilLvl||1)+' / '+PET_ABIL_MAX+'</div>'
-    +'<div style="height:6px;background:#0d0b12;border-radius:4px;overflow:hidden;margin-bottom:9px;"><div style="height:100%;width:'+apct+'%;background:#4aa6ff;"></div></div>';
-  const ch=(typeof curChar==='function')?curChar():null, inv=(ch&&ch.inv)||[];
-  const feed=inv.map((it,i)=>({it,i})).filter(o=>o.it&&o.it.k!=='coin');
-  if((sp.abilLvl||1)>=PET_ABIL_MAX) h+='<div style="font-size:10px;color:#ffd07a;">Abilities are maxed!</div>';
-  else if(!feed.length) h+='<div style="font-size:10px;color:#6a6472;">Your satchel is empty — nothing to feed.</div>';
-  else { h+='<div style="font-size:10px;color:#9a93a6;margin-bottom:5px;">Tap an item to feed it:</div><div style="display:flex;flex-wrap:wrap;gap:5px;">';
-    for(const o of feed){ const nm=(typeof itemName==='function')?itemName(o.it):'item', col=(typeof itemRarCol==='function')?itemRarCol(o.it):'#cfc8bd';
-      h+='<button class="petFeedItem" data-i="'+o.i+'" style="background:#241a2e;border:1px solid '+col+';color:'+col+';border-radius:7px;padding:5px 8px;font:10px monospace;cursor:pointer;">'+nm+'</button>'; }
-    h+='</div>'; }
-  return h+'</div>'; }
-function _petTabFuse(u){ let h='<div style="font-size:11px;color:#8a8494;margin-bottom:10px;">FUSE 2 pets of the <b>same tier</b> → one of the <b>next tier</b>, with a 50/50 chance of taking either parent\'s type. Both are consumed. This is how pets EVOLVE.</div>';
-  if(u.pets.length<2) return h+'<div style="font-size:11px;color:#6a6472;">You need at least 2 pets of the same tier.</div>';
-  const a=_petFuseA!=null?u.pets.find(p=>p.uid===_petFuseA):null;
-  h+='<div style="font-size:11px;color:#ffd07a;margin-bottom:6px;">'+(a?('Picked <b>'+a.name+'</b> ('+PET_RAR_NAME[a.rar]+'). Now tap another <b>'+PET_RAR_NAME[a.rar]+'</b> pet to fuse — or tap it again to cancel.'):'Tap the FIRST pet to fuse.')+'</div>';
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">';
-  for(const p of u.pets.slice().sort((x,y)=>y.rar-x.rar)){ const dim=a&&p.uid!==a.uid&&p.rar!==a.rar, picked=a&&p.uid===a.uid;
-    h+=_petCardHTML(p,u,(dim?'opacity:.32;':'')+(picked?'border-color:#ff9a5a !important;':'')); }
-  return h+'</div>'; }
-function _petFeedFromInv(u,invIdx){ const sp=u.pets.find(p=>p.uid===_petSel); if(!sp) return;
-  const ch=(typeof curChar==='function')?curChar():null; if(!ch||!ch.inv||!ch.inv[invIdx]) return;
-  const it=ch.inv[invIdx], xp=1+((it.rar||0))+Math.floor((it.t||0)/3);
-  ch.inv.splice(invIdx,1); if(typeof saveRPG==='function') saveRPG();
-  petFeed(sp.uid, xp); }
+
+// ---------------- THE FUSION ALTAR ----------------
+function _petTabFusion(u){
+  const here=atFusionTerminal();
+  let h='<div class="embMachine"><img src="assets/pets/fusion_ui.png"></div>';
+  if(!here) return h+'<div class="embEmpty">The Altar is cold.<br><span class="embDim">'
+    +'Fusion happens at the Fusion Altar in the Sanctuary — walk to it and interact.</span></div>';
+  const a=u.pets.find(p=>p.uid===_petFuseA);
+  h+='<div class="embNote">Two companions of the <b>same rarity</b> become one of the next tier. '
+    +'Both are consumed. The child inherits <b>both</b> their abilities and unseals a slot.</div>';
+  h+='<div class="embSect">'+(a?'CHOOSE THE SECOND':'CHOOSE THE FIRST')+'</div><div class="embStrip">';
+  for(const p of u.pets.slice().sort((x,y)=>y.rar-x.rar)){
+    const usable = a ? petCanFuse(a,p) : p.rar<4;
+    h+='<div class="embChip'+(p.uid===_petFuseA?' on':'')+(usable?'':' dim')+'" data-fuse="'+p.uid+'">'
+      +'<img src="assets/pets/'+p.spr+'.png">'
+      +'<div class="embChipNm" style="color:'+PET_RAR_COL[p.rar]+'">'+p.name+'</div>'
+      +'<div class="embDim">'+PET_RAR_NAME[p.rar]+' · Lv '+(p.lvl||1)+'</div></div>'; }
+  h+='</div>';
+  if(a){ const kit=petFuseKit(a,a);
+    h+='<div class="embSect">'+a.name+' WILL PASS ON</div>';
+    for(const id of (a.kit||[])) h+=_embAbilRow(id,a.lvl||1,false,0);
+    h+='<div class="embFuseAct">'+_embBtn('petFuseClear','CHANGE')+'</div>'; }
+  return h; }
+
+function _petTabFeed(u){
+  const p=activePet();
+  if(!p) return '<div class="embEmpty">No companion equipped.<br><span class="embDim">'
+    +'Equip one on the COMPANION tab, then feed it here.</span></div>';
+  const mx=petMaxLvl(p), cap=(p.lvl||1)>=mx;
+  const need=petFeedNeed(p.lvl||1), pct=cap?100:Math.min(100,Math.round(100*((p.fed||0)/need)));
+  let h='<div class="embHero">'
+    +'<img class="embHeroImg" src="assets/pets/'+p.spr+'.png">'
+    +'<div class="embHeroTx">'
+      +'<div class="embHeroNm" style="color:'+PET_RAR_COL[p.rar]+'">'+p.name+'</div>'
+      +'<div class="embLv">Lv '+(p.lvl||1)+' <span class="embDim">/ '+mx+'</span></div>'
+      +'<div class="embBar"><div class="embBarFill" style="width:'+pct+'%"></div></div>'
+      +'<div class="embDim">'+(cap?'fully grown — fuse it at the Altar':petFeedRemaining(p)+' feed power to reach Lv '+mx)+'</div>'
+    +'</div></div>';
+  h+='<div class="embSect">THE PANTRY <span class="embDim">— rarer food feeds far more</span></div>';
+  let any=0;
+  for(let t=4;t>=0;t--){ const c=petFoodCount(t); if(!c) continue; any++;
+    const d=petFoodDef(t);
+    h+='<div class="embFoodRow">'
+      +'<span class="embFoodIc">'+d.icon+'</span>'
+      +'<span class="embFoodNm" style="color:'+PET_RAR_COL[t]+'">'+d.n+'</span>'
+      +'<span class="embDim">+'+d.pow+' each · x'+c+'</span>'
+      +'<span class="embFoodBtns">'
+        +'<button class="embBtn embFood" data-t="'+t+'" data-n="1"'+(cap?' disabled':'')+'>FEED 1</button>'
+        +'<button class="embBtn go embFood" data-t="'+t+'" data-n="'+c+'"'+(cap?' disabled':'')+'>ALL</button>'
+      +'</span></div>'; }
+  if(!any) h+='<div class="embEmpty">The pantry is bare.<br><span class="embDim">'
+    +'Food drops from anything you kill — the better the kill, the better the tier.</span></div>';
+  h+='<div class="embNote">Companions no longer gain anything from kills. <b>Food is the only '
+    +'thing that grows them</b>, and a pet at its cap must be <b>fused</b> at the Altar to go further.</div>';
+  return h; }
+
 function _petPaint(ov,u){
   ov.innerHTML='';
   const card=document.createElement('div');
-  card.style.cssText='background:#15121b;border:1px solid #4a3d5c;border-radius:14px;max-width:620px;width:100%;max-height:92vh;overflow-y:auto;padding:16px;font-family:monospace;';
-  let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-    +'<div style="font:bold 17px monospace;color:#ffd07a;letter-spacing:.08em;">🐾 PETS</div>'
-    +'<button id="petClose" style="background:#2a1f16;border:1px solid #7a4a1e;color:#ffd07a;border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer;">✕</button></div>';
-  if(u.pets.length) h+='<button id="petSanctuary" style="'+_PBTNG+'width:100%;padding:8px;margin-bottom:10px;">🏡 VISIT THE SANCTUARY — watch your '+u.pets.length+' pet'+(u.pets.length===1?'':'s')+' roam</button>';
-  h+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
-  for(const [k,lbl] of [['collection','🐾 Collection'],['feed','🍖 Feed'],['fuse','🔗 Fuse']])
-    h+='<button class="petTab" data-tab="'+k+'" style="flex:1;padding:7px;border-radius:8px;font:bold 11px monospace;cursor:pointer;border:1px solid '+(_petTab===k?'#c9a04a':'#332b40')+';background:'+(_petTab===k?'#3a2a12':'#1a1622')+';color:'+(_petTab===k?'#ffd07a':'#8a8494')+';">'+lbl+'</button>';
-  h+='</div>';
-  h+= _petTab==='feed'?_petTabFeed(u) : _petTab==='fuse'?_petTabFuse(u) : _petTabCollection(u);
-  card.innerHTML=h; ov.appendChild(card);
+  card.className='embWrap';
+  const STATION = (_petTab==='incubator'||_petTab==='fusion');
+  const title = _petTab==='incubator' ? 'THE INCUBATOR'
+              : _petTab==='fusion'    ? 'THE FUSION ALTAR'
+              : _petTab==='feed'      ? 'THE FEEDING TROUGH' : 'YOUR COMPANION';
+  const sub   = _petTab==='incubator' ? 'warm the egg, and wait'
+              : _petTab==='fusion'    ? 'two become one, and carry both'
+              : _petTab==='feed'      ? 'food is the only thing that makes them grow' : '';
+  const body  = _petTab==='incubator' ? _petTabIncubator(u)
+              : _petTab==='fusion'    ? _petTabFusion(u)
+              : _petTab==='feed'      ? _petTabFeed(u) : _petTabEquipped(u);
+  // The station screens are ONE THING each -- you walked to a machine to use that machine, so
+  // they do not offer a tab strip back to the others. The pocket panel does.
+  let tabs='';
+  if(!STATION){ tabs='<div class="embTabs">';
+    for(const [k,lbl] of [['pet','COMPANION'],['feed','FEED']])
+      tabs+='<button class="embTab'+(_petTab===k?' on':'')+'" data-tab="'+k+'">'+lbl+'</button>';
+    tabs+='</div>'; }
+  const foot='<div class="embBtns">'
+    +(u.pets.length&&!STATION?_embBtn('petSanctuary','VISIT THE SANCTUARY'):'')
+    +_embBtn('petClose','CLOSE')+'</div>';
+  card.innerHTML=_embShell(title,sub,tabs+body,foot);
+  ov.appendChild(card);
   const rp=()=>_petPaint(ov,u);
-  document.getElementById('petClose').onclick=closePets;
-  { const s=document.getElementById('petSanctuary'); if(s) s.onclick=()=>{ if(typeof enterPetRoom==='function') enterPetRoom(); }; }
-  card.querySelectorAll('.petTab').forEach(b=>b.onclick=()=>{ _petTab=b.getAttribute('data-tab'); _petFuseA=null; rp(); });
-  card.querySelectorAll('.petOpen').forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const i=+b.getAttribute('data-i'); const pet=hatchEgg(i); if(pet){ _petSel=pet.uid; if(u.activePet===pet.uid&&typeof spawnActivePet==='function') spawnActivePet(); } rp(); });
-  card.querySelectorAll('.petCard').forEach(c=>c.onclick=()=>{ const uid=+c.getAttribute('data-uid');
-    if(_petTab==='fuse'){ if(_petFuseA==null) _petFuseA=uid;
-      else if(_petFuseA===uid) _petFuseA=null;
-      else { const a=u.pets.find(p=>p.uid===_petFuseA), b=u.pets.find(p=>p.uid===uid);
-        if(petCanFuse(a,b)){ const np=petFuse(_petFuseA,uid); _petFuseA=null; _petSel=np?np.uid:_petSel; } }
-      rp(); return; }
-    _petSel=uid; rp(); });
-  card.querySelectorAll('.petFeedItem').forEach(b=>b.onclick=()=>{ _petFeedFromInv(u,+b.getAttribute('data-i')); rp(); });
-  { const eq=document.getElementById('petEquip'); if(eq) eq.onclick=()=>{ setActivePet(u.activePet===_petSel?null:_petSel); if(typeof spawnActivePet==='function') spawnActivePet(); rp(); }; }
-  { const ef=document.getElementById('petEvolveFuse'); if(ef) ef.onclick=()=>{ _petTab='fuse'; _petFuseA=_petSel; rp(); }; }
+  const on=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  on('petClose',closePets);
+  on('petSanctuary',()=>{ if(typeof enterPetRoom==='function') enterPetRoom(); });
+  card.querySelectorAll('.embTab').forEach(b=>b.onclick=()=>{ _petTab=b.getAttribute('data-tab'); _petFuseA=null; rp(); });
+  // hatch
+  u.eggs.forEach((eg,i)=>on('petOpen'+i,()=>{ const pet=hatchEgg(i);
+    if(pet){ _petSel=pet.uid; if(u.activePet===pet.uid&&typeof spawnActivePet==='function') spawnActivePet(); } rp(); }));
+  // equip by tapping a companion chip
+  card.querySelectorAll('.embChip[data-uid]').forEach(c=>c.onclick=()=>{
+    const uid=+c.getAttribute('data-uid');
+    setActivePet(u.activePet===uid?null:uid);
+    if(typeof spawnActivePet==='function') spawnActivePet(); rp(); });
+  // fusion: first pick arms, second pick fuses
+  card.querySelectorAll('.embChip[data-fuse]').forEach(c=>c.onclick=()=>{
+    const uid=+c.getAttribute('data-fuse');
+    if(_petFuseA==null){ const p=u.pets.find(x=>x.uid===uid); if(p&&p.rar<4) _petFuseA=uid; }
+    else if(_petFuseA===uid) _petFuseA=null;
+    else { const a=u.pets.find(p=>p.uid===_petFuseA), b=u.pets.find(p=>p.uid===uid);
+      if(petCanFuse(a,b)){ const np=petFuse(_petFuseA,uid); _petFuseA=null; if(np) _petSel=np.uid; } }
+    rp(); });
+  on('petFuseClear',()=>{ _petFuseA=null; rp(); });
+  // feeding
+  card.querySelectorAll('.embFood').forEach(b=>b.onclick=()=>{
+    const t=+b.getAttribute('data-t'), n=+b.getAttribute('data-n')||1;
+    const p=activePet(); if(!p){ if(typeof msg==='function') msg('NO COMPANION','equip a pet first'); return; }
+    petFeedTier(p.uid,t,n); rp(); });
 }
+
 function drawPet(){ if(!petEnt||!petEnt.def||typeof ctx==='undefined') return;
   if(curRoom&&curRoom.petRoom) return;                         // suppressed in the Sanctuary (all pets wander there)
   const p=petEnt.def;

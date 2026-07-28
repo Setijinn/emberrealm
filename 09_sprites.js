@@ -183,6 +183,22 @@ function petSprite(p){ return p==='wolf'?sprWolf:p==='skel'?sprSkel:sprWisp; }
 // Draw an item's icon into a 2d context box (cw x ch), centered. Prefers the real
 // PixelLab tier-band art (fractional fit); falls back to the procedural sprite (pixel
 // floor-scale). Used by equipment slots, the satchel grid, and shop rows.
+// Pet food, drawn rather than generated: a bowl whose contents take the tier's rarity colour, so
+// a Legendary feed reads as Legendary at a glance in a 44px cell.
+const _foodSpr={};
+function foodSpr(t){
+  t=Math.max(0,Math.min(4,t|0));
+  if(_foodSpr[t]) return _foodSpr[t];
+  const c=document.createElement('canvas'); c.width=16; c.height=16;
+  const g=c.getContext('2d');
+  const col=(typeof PET_RAR_COL!=='undefined')?PET_RAR_COL[t]:'#e6c76a';
+  g.fillStyle='#4a3520'; g.fillRect(3,9,10,4);            // bowl
+  g.fillStyle='#6b4d2c'; g.fillRect(2,8,12,2);
+  g.fillStyle=col;       g.fillRect(4,6,8,3);             // the feed itself
+  g.fillStyle='#ffffff'; g.globalAlpha=0.35; g.fillRect(5,6,3,1); g.globalAlpha=1;
+  if(t>=3){ g.fillStyle=col; g.fillRect(6,4,1,2); g.fillRect(9,3,1,3); }   // it steams, up high
+  _foodSpr[t]=c; return c;
+}
 function drawItemIcon(g,it,cw,ch,noTier){ if(!it) return; g.imageSmoothingEnabled=false;
  // an egg uses its category's own art, which lives in the pet module rather than the item atlas
  if(it.k==='egg' && typeof _eggImg!=='undefined'){ const ei=_eggImg[it.cat];
@@ -205,7 +221,7 @@ function drawItemIcon(g,it,cw,ch,noTier){ if(!it) return; g.imageSmoothingEnable
 const _TIER_CORNERS=[[1,1],[0,1],[1,0],[0,0]];   // BR, BL, TR, TL — preference order on a tie
 function drawItemTier(g,it,cw,ch){
   if(!it || it.t===undefined || it.t===null) return;
-  if(it.k==='pot'||it.k==='coin'||it.k==='scroll'||it.k==='egg') return;   // these have no tier ladder
+  if(it.k==='pot'||it.k==='coin'||it.k==='scroll'||it.k==='egg'||it.k==='food') return;   // no tier ladder
   // A relic stamps R, not T13. It is read in the same corner, in the same place, by the same
   // glance that reads a tier — which is the point: one mark per item, and R means "above the
   // ladder" without asking anyone to remember what the thirteenth number was.
@@ -248,6 +264,7 @@ function itemSprite(it){ if(!it) return null;
  if(it.k==='arm') return armorSpr(it.mt,it.t);
  if(it.k==='helm') return helmSpr(it.mt,it.t);
  if(it.k==='ring') return ringSpr(it.st,it.t);
+ if(it.k==='food') return foodSpr(it.t||0);
  if(it.k==='scroll') return scrollSpr(it.st);
  return null; }
 // procedural per-stat scroll icon: a rolled parchment with a stat-coloured wax seal + rune.

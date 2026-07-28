@@ -56,7 +56,7 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
   if(p.kind==='petpick'){ if(typeof setActivePet==='function') setActivePet(p.wuid); if(typeof spawnActivePet==='function') spawnActivePet();
     const _pn=(typeof activePet==='function'&&activePet())?activePet().name:'Pet'; if(typeof msg==='function') msg('🐾 '+_pn,'now your follower');
     navigator.vibrate&&navigator.vibrate(20); return; }
-  if(p.kind==='petstation'){ if(typeof openPets==='function') openPets(p.st.kind==='incubator'?'collection':'fuse'); navigator.vibrate&&navigator.vibrate(20); return; }
+  if(p.kind==='petstation'){ if(typeof openPets==='function') openPets(p.st.kind==='incubator'?'incubator':'fusion'); navigator.vibrate&&navigator.vibrate(20); return; }
   if(p.kind==='npc'){ const np=p.np, ls=np.lines||[];
     // walks his lines, then holds on the last — rendered with the boss death-quote treatment
     const i=Math.min(np.said,ls.length-1); np.said=Math.min(np.said+1,ls.length);
@@ -123,7 +123,7 @@ const BAG_VERDICT={
 };
 function bagVerdict(it,ch){
   if(!it||!ch) return 'other';
-  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot'||it.k==='egg') return 'other';
+  if(it.k==='leg'||it.k==='coin'||it.k==='scroll'||it.k==='pot'||it.k==='egg'||it.k==='food') return 'other';
   if(!canEquip(it,ch)) return 'noclass';
   const cur=equippedItemFor(it.k,ch);
   if(!cur) return 'upgrade';                       // an empty slot is always worth filling
@@ -674,7 +674,7 @@ function rollAffixes(it,fortune){ it.rar=rollRarity(it.t,fortune); it.aff=[];
  return it; }
 function affStats(aff){ const s=newStats(); if(aff) for(const a of aff) s[a.s]=(s[a.s]||0)+a.v; return s; }
 // full stat block an item contributes (base + its own affixes)
-function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll'||it.k==='egg') return newStats();
+function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll'||it.k==='egg'||it.k==='food') return newStats();
  if(it.k==='coin') return newStats();   // coins boost via the carried total, not per-item
  let base;
  if(it.k==='wpn') base=gearBaseStats('wpn',it.t);
@@ -701,6 +701,8 @@ function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
  if(it.k==='egg'){ const C=(typeof PET_CATS!=='undefined')?PET_CATS[it.cat]:null;
   const r=(typeof PET_RAR_NAME!=='undefined')?PET_RAR_NAME[it.cond||0]:'';
   return (C?C.name:'Pet')+' Egg'+(r?' \u00b7 '+r:''); }
+ if(it.k==='food'){ const d=(typeof petFoodDef==='function')?petFoodDef(it.t):null;
+  return d?(d.icon+' '+d.n):'Pet Food'; }
  if(it.k==='scroll')return (typeof scrollName==='function')?scrollName(it.st):'Scroll';
  if(it.k==='leg'){ const L=legById(it.id); return '★ '+(L?L.n:'Relic'); }
  // a relic wears its own name -- it is one specific object, not a roll off a table
@@ -711,7 +713,7 @@ function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
 function itemRarCol(it){ if(it&&(it.k==='leg'||it.relic)) return tierCol(RELIC_T);  // relics have their own colour
  return (it&&it.rar)?RAR_COL[it.rar]:tierCol(it?it.t:0); }
 // a relic is equipped from the loadout screen (it owns the wpnL/armL slot), not from a bag row
-function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg'||it.k==='egg')return false;
+function canEquip(it,ch){ if(!it||it.k==='pot'||it.k==='leg'||it.k==='egg'||it.k==='food')return false;
  if(it.k==='wpn')return CWEAP[ch.cls]===it.wt;
  if(it.k==='arm'||it.k==='helm')return CARMOR[ch.cls]===it.mt;
  return it.k==='ring'; }
@@ -728,6 +730,7 @@ const GLORY_KIND={wpn:1.0, arm:1.0, helm:0.78, ring:0.82};
 const GLORY_SPREAD=0.5;                       // a listing may sit +/- 50% of neutral
 function itemGlory(it){
   if(!it) return 0;
+  if(it.k==='food')   return 8+((it.t||0)*14);
   if(it.k==='egg')    return 30;
   if(it.k==='pot')    return 6;
   if(it.k==='scroll') return 45;
@@ -917,6 +920,11 @@ function awardItem(it,x,y){
   if(it.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG();
     texts.push({x:px,y:py-14,txt:'+Tonic',col:'#7dc47a',life:1}); return true; }
   // an egg goes straight to the incubator: it is not gear and must never eat a satchel slot
+  if(it.k==='food'){ if(typeof petFoodAdd==='function') petFoodAdd(it.t||0,it.n||1);
+    const d=(typeof petFoodDef==='function')?petFoodDef(it.t):null;
+    texts.push({x:px,y:py-14,txt:(d?d.icon+' '+d.n:'Pet Food'),
+      col:(typeof PET_RAR_COL!=='undefined')?PET_RAR_COL[it.t||0]:'#e6c76a',life:1.4});
+    return true; }
   if(it.k==='egg'){ if(typeof giveEgg==='function') giveEgg(it.cond||0,it.cat);
     texts.push({x:px,y:py-14,txt:'+Pet Egg',col:'#ffd07a',life:1.6}); return true; }
   // the OLD relic form (k:'leg'), kept only so a sack minted before relics became real items still
@@ -966,6 +974,7 @@ function takeLoot(item){
   if(item.k==='coin'){ if(typeof addCoin==='function') addCoin(); if(typeof recalcStats==='function') recalcStats(); }
   else if(item.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG(); }
   else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
+  else if(item.k==='food'){ if(typeof petFoodAdd==='function') petFoodAdd(item.t||0,item.n||1); }
   else if(ch.inv.length<20) ch.inv.push(item);
   if(typeof texts!=='undefined'&&typeof player!=='undefined')
     texts.push({x:player.x,y:player.y-30,txt:(typeof itemName==='function')?itemName(item):'loot',
@@ -1091,6 +1100,7 @@ function rollLoot(e){
  // object with its own drift timer, which quietly broke one-sack-per-kill: a boss left a sack
  // AND an egg, which is the carpeted floor that rule exists to prevent.
  if(typeof eggDropFor==='function'){ const eg=eggDropFor(e); if(eg) extra.push(eg); }
+ if(typeof petFoodDropFor==='function'){ const fd=petFoodDropFor(e); if(fd) extra.push(fd); }  // pet food
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
  // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
  // bandOfTier(bagTopTier) already decides, so a relic in the sack makes it a reliquary by itself.
