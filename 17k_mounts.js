@@ -161,19 +161,28 @@ const MOUNT_ARCH = {
 // because its box is dominated by WINGSPAN, so the body sits far down inside it — and the 0.57-0.70
 // values guessed here before put riders in the air above the wing line, which is exactly what the
 // preview showed.
+// ALL THIRTEEN MEASURED. Nothing here is a guess any more, and the guesses that were replaced were
+// not close: colossus was set to 0.72 on the reasoning that a rider sits on top of a block, and it
+// measures 0.38 — which is precisely why it floated a body-height above the thing. Guessing a seat
+// from what an animal LOOKS like keeps failing because the number is a fraction of the opaque BOX,
+// and how much of that box is body varies wildly between a horse and a bird.
 const MOUNT_SEATS = {
   horse:    {seat:0.64},
   wolf:     {seat:0.68},
   dragon:   {seat:0.60},
-  infernal: {seat:0.60},      // same build as dragon; shares its calibration
+  infernal: {seat:0.53},      // NOT the dragon's 0.60 — a different silhouette measures differently
+  lizard:   {seat:0.45},
+  wyvern:   {seat:0.48},
   moth:     {seat:0.46},
-  roc:      {seat:0.29},
-  skywyrm:  {seat:0.30},
+  drake:    {seat:0.42},
+  griffon:  {seat:0.38},
+  colossus: {seat:0.38},      // guessed 0.72; measured 0.38
   pegasus:  {seat:0.34},
-  // not yet calibrated — these keep sensible defaults until their composites land
-  griffon:  {seat:0.36},
-  wyvern:   {seat:0.40},
-  colossus: {seat:0.72},      // a platform on top of a block
+  skywyrm:  {seat:0.30},
+  roc:      {seat:0.29},
+  // the seven plain quadrupeds share the horse's seat as well as its rider layer
+  destrier: {seat:0.64}, mule: {seat:0.64}, stag: {seat:0.64}, elk: {seat:0.64},
+  boar:     {seat:0.64}, ram:  {seat:0.64}, cat:  {seat:0.64},
 };
 function mountSeatOf(d){
   const s=d&&MOUNT_SEATS[d.arch];
