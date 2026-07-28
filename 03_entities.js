@@ -3,6 +3,20 @@ const player={x:0,y:0,r:14,hp:100,maxhp:100,spd:180,dmg:12,fireRate:0.22,fireT:0
 let curRoom=null, enemies=[], pShots=[], eShots=[], particles=[], embers=[];
 let rpg=null, texts=[], respawnT=1, shopNear=false, loots=[];
 let allies=[], zones=[], fx=[], res=0, lastShotT=99, abT=0, portalLock=false, curRegionN='';
+// WHEN A PLACE IS ALLOWED TO ANNOUNCE ITSELF AGAIN.
+// The zone banner fired on any change of region and remembered only the LAST one, so a boundary
+// re-announced on every crossing -- measured, walking back and forth across one line produced a
+// banner every single time, alternating two names forever. Fighting along a border did the same.
+// A name is worth saying when you ARRIVE somewhere, not every time you step over a line you are
+// standing on, so each region gets a cooldown of its own.
+const ZONE_RENOTE=90000, BOSS_RENOTE=120000;
+let _zoneNoted={}, _bossNoted={};
+function zoneMayNote(n){ const t=Date.now();
+  if(t-(_zoneNoted[n]||0) < ZONE_RENOTE) return false;
+  _zoneNoted[n]=t; return true; }
+function bossMayNote(n){ const t=Date.now();
+  if(t-(_bossNoted[n]||0) < BOSS_RENOTE) return false;
+  _bossNoted[n]=t; return true; }
 let portalPrompt=null;   // {kind,x,y,label,...} nearest interactable portal/pillar (USE-gated)
 // LOOT IS ITS OWN PROMPT, not a competitor for the one above. They used to share a single slot, so
 // standing on a sack beside a portal offered you exactly one of them and the button did whichever
@@ -539,8 +553,13 @@ function spawnRingBoss(b){
                 x1:(_L.px+_L.tw)*TILE+pad, y1:(_L.py+_L.th)*TILE+pad};
     boss.woke=false; }
   enemies.push(boss);
-  msg('\u2620 '+GB.n,GB.title);
-  setTimeout(function(){ if(enemies.indexOf(boss)>=0) msg(GB.n,GB.desc); },1700);
+  // TWO banners per spawn -- the sighting, and the flavour line 1.7s later -- and a boss
+  // respawns 60s after it dies, so a den you keep walking past announced itself over and
+  // over in pairs. Both go behind ONE cooldown: seeing it again is worth a line, seeing it
+  // every minute is not.
+  const _bossNoteOk = (typeof bossMayNote!=='function') || bossMayNote(GB.n);
+  if(_bossNoteOk) msg('\u2620 '+GB.n,GB.title);
+  setTimeout(function(){ if(enemies.indexOf(boss)>=0 && _bossNoteOk) msg(GB.n,GB.desc); },1700);
   return;
  }
 }
@@ -2417,7 +2436,7 @@ function enterRoom(key, px, py){
   for(const al of allies){al.x=player.x;al.y=player.y;}
   if(typeof spawnCritters==='function') spawnCritters(curRoom);   // the Hearth flock
   buildRoomCache();
-  curRegionN='';
+  curRegionN=''; _zoneNoted={}; _bossNoted={};
   const rnow=Date.now();
   if(!curRoom.big){ for(const sp of curRoom.spawns){ if(!sp.dead||sp.dead<=rnow) enemies.push(makeEnemy(sp)); } }
   document.getElementById('roomTxt').textContent=curRoom.name;

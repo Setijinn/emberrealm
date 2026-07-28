@@ -901,7 +901,11 @@ function update(dt){
     if(curRoom.big){ for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i];
       if(e.sref && !e.boss && _near(e.x,e.y)>1100) enemies.splice(i,1); } }
     if(curRoom.regions||curRoom.rings){ const rg=regionAtPx(player.x,player.y);
-      if(rg && rg.n!==curRegionN){ curRegionN=rg.n; msg(rg.n,'a hunting ground for Lv '+rg.lv+(rg.lv2?'–'+rg.lv2:'')); } }
+      // curRegionN still tracks where you ARE (the HUD zone label reads it); the BANNER is the
+      // part that needed a cooldown, so crossing a boundary still updates the label silently.
+      if(rg && rg.n!==curRegionN){ curRegionN=rg.n;
+        if(typeof zoneMayNote!=='function' || zoneMayNote(rg.n))
+          msg(rg.n,'a hunting ground for Lv '+rg.lv+(rg.lv2?'–'+rg.lv2:'')); } }
     // permadeath notice fires the instant you first cross the bridge onto the main island
     if(curRoom.rings && typeof hcCheck==='function') hcCheck();
   }
