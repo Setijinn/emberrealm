@@ -2440,7 +2440,8 @@ function enterRoom(key, px, py){
   const rnow=Date.now();
   if(!curRoom.big){ for(const sp of curRoom.spawns){ if(!sp.dead||sp.dead<=rnow) enemies.push(makeEnemy(sp)); } }
   document.getElementById('roomTxt').textContent=curRoom.name;
-  msg(curRoom.name, curRoom.town?'the hearth never dies':(curRoom.band?'a hunting ground for Lv '+curRoom.band:''));
+  // entering a room is the most frequent banner in the game and the least newsworthy of them
+  msg(curRoom.name, curRoom.town?'the hearth never dies':(curRoom.band?'a hunting ground for Lv '+curRoom.band:''), 'quiet');
 }
 // The banner used to CLOBBER: innerHTML= plus one shared clearTimeout, so two calls inside the same
 // second meant only the second was ever read. That is not a hypothetical -- boss phase barks were
@@ -2448,26 +2449,33 @@ function enterRoom(key, px, py){
 // the workaround was to not write the second one. It queues now: a banner gets its full time on
 // screen and the next one waits its turn. A repeat of the line already showing is dropped rather
 // than queued, so a per-frame caller cannot build a backlog.
-const MSG_HOLD=1500, MSG_GAP=180;
+// HOLD TIMES. A banner that snaps on and off reads as a FLASH; one that fades reads as a notice,
+// even at the same duration. The gap between lines matters as much as the hold -- back-to-back
+// banners with no breath between them are what made a busy moment strobe.
+const MSG_HOLD=1500, MSG_QUIET_HOLD=950, MSG_GAP=260;
 let _msgQ=[], _msgT=0, _msgCur=null;
-function msg(t,sub=''){
+// kind: 'alert' (default, the full banner) or 'quiet' (routine notice -- smaller, dimmer, shorter).
+// Opt-in per call site, so none of the 101 existing calls change behaviour.
+function msg(t,sub='',kind){
   const html=t+(sub?`<small>${sub}</small>`:'');
   if(_msgCur===html) return;                       // already on screen
-  if(_msgQ.length && _msgQ[_msgQ.length-1]===html) return;
+  if(_msgQ.length && _msgQ[_msgQ.length-1].html===html) return;
   if(_msgQ.length>3) _msgQ.shift();                // never hoard: the oldest unseen line loses
-  _msgQ.push(html);
+  _msgQ.push({html:html, quiet:(kind==='quiet')});
   if(!_msgCur) _msgPump();
 }
 function _msgPump(){
   const m=document.getElementById('msg'); if(!m) return;
-  const html=_msgQ.shift();
-  if(html===undefined){ _msgCur=null; m.classList.remove('show'); return; }
-  _msgCur=html; m.innerHTML=html; m.classList.add('show');
+  const it=_msgQ.shift();
+  if(it===undefined){ _msgCur=null; m.classList.remove('show'); return; }
+  _msgCur=it.html; m.innerHTML=it.html;
+  m.classList.toggle('quiet', !!it.quiet);
+  m.classList.add('show');
   clearTimeout(_msgT);
   _msgT=setTimeout(()=>{
     m.classList.remove('show'); _msgCur=null;
     if(_msgQ.length) setTimeout(_msgPump,MSG_GAP);
-  },MSG_HOLD);
+  }, it.quiet?MSG_QUIET_HOLD:MSG_HOLD);
 }
 
 // ---- portal routing: every portal carries a destination `to` ----

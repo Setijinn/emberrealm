@@ -31,10 +31,24 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 @keyframes spin{0%,100%{transform:rotate(0)}50%{transform:rotate(90deg)}}
 #hud{position:fixed;top:8px;left:0;right:0;display:flex;justify-content:center;gap:14px;
   pointer-events:none;color:#d8d2c8;font-size:15px;z-index:5;text-shadow:0 1px 3px #000;}
-#msg{position:fixed;left:0;right:0;top:38%;text-align:center;color:#ffc94d;font-size:30px;
-  letter-spacing:.06em;pointer-events:none;text-shadow:0 2px 8px #000;opacity:0;transition:opacity .25s;z-index:6;}
-#msg.show{opacity:1;}
-#msg small{display:block;font-size:15px;color:#d8d2c8;margin-top:4px;}
+/* THE EVENT BANNER (user, 2026-07-28: "the text that flashes every time something happens").
+   It sat at top:38% -- dead centre of the play area, 30px gold, held 1.5s -- and 101 call sites
+   fire it, so during ordinary play it strobed directly over the fight. Three changes, none of
+   which lose a word of information:
+     * moved to 22%, clear of the middle where the eye actually is, and still above the hero
+     * 24px rather than 30, so it informs instead of interrupting
+     * a slower fade in and a longer fade out, which is what stops it reading as a FLASH --
+       a hard 0.25s cut on both edges is the flicker, not the text itself
+   A `quiet` variant is available for routine notices (see msg's `kind` argument): same position,
+   smaller, dimmer, shorter. Nothing is forced to use it -- it is opt-in per call site. */
+#msg{position:fixed;left:0;right:0;top:22%;text-align:center;color:#ffc94d;font-size:24px;
+  letter-spacing:.06em;pointer-events:none;text-shadow:0 2px 8px #000;opacity:0;
+  transition:opacity .38s ease-out;z-index:6;}
+#msg.show{opacity:1;transition:opacity .16s ease-in;}
+#msg small{display:block;font-size:14px;color:#d8d2c8;margin-top:4px;}
+/* routine notices: present, readable, and not competing with the fight */
+#msg.quiet{font-size:16px;color:#e8dcc0;letter-spacing:.04em;top:26%;}
+#msg.quiet small{font-size:12px;}
 
 .scr{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#1a1520,#0b0a10 70%);z-index:20;
  display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#d8d2c8;padding:16px;overflow-y:auto;}

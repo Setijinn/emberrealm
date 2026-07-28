@@ -532,24 +532,24 @@ function tierCol(t){ return t>=12?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?
 // never has a hard wall, and the low zones deliberately stay generous -- gear should not be scarce
 // at the start, only at the top.
 const ZONE_TIERS=[
- /* 0  The Landing Sands  Lv1-8   */ {pub:[[0,65],[1,35]],            sb:null,                      sbP:0},
- /* 1  Gullwind Shore     Lv8-14  */ {pub:[[1,60],[2,40]],            sb:null,                      sbP:0},
- /* 2  Sawgrass Flats     Lv14-20 */ {pub:[[2,60],[3,40]],            sb:null,                      sbP:0},
- /* 3  The Verdant Belt   Lv20-26 */ {pub:[[3,55],[4,45]],            sb:null,                      sbP:0},
- /* 4  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0},
- /* 5  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015},
- /* 6  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030},
+ /* 0  The Landing Sands  Lv1-8   */ {pub:[[0,65],[1,35]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 1  Gullwind Shore     Lv8-14  */ {pub:[[1,60],[2,40]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 2  Sawgrass Flats     Lv14-20 */ {pub:[[2,60],[3,40]],            sb:null,                      sbP:0,      gear:1.80},
+ /* 3  The Verdant Belt   Lv20-26 */ {pub:[[3,55],[4,45]],            sb:null,                      sbP:0,      gear:1.55},
+ /* 4  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0,      gear:1.55},
+ /* 5  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015, gear:1.30},
+ /* 6  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030, gear:1.30},
  // Cinderwatch is the calibration point: a Lv45 hero should be able to stand in a full T12 set.
  // At a 5% T12 weight that took a 118-boss median to complete — the right shape but one notch too
  // slow, so T12 is worth a quarter of this zone's bound drops. The grind ring still leads it.
- /* 7  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045},
- /* 8  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
- /* 9  Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
- /* 10 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
- /* 11 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
- /* 12 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060},
+ /* 7  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045, gear:1.10},
+ /* 8  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 9  Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 10 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 11 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 12 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
 ];
-const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0};   // ocean / bridge / anything unmapped
+const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0,gear:1.10};   // ocean / bridge / anything unmapped
 const PUB_TMAX=7;          // public gear caps at T8 (0-based 7). Everything above is soulbound.
 const TIER_OVERFLOW=0.05;  // a small tail one tier above the row's max, so the chase never dies
 
@@ -1050,7 +1050,16 @@ function rollPublicLoot(e,row,F,extra,cls){
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,true,cls)) items.push(it);  // a boss always pays out
    for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
  } else {
-   const gp=(PUB_GEAR[e.type]||0)*fmul;
+   // GEAR DROPS ARE ZONE-SCALED (user, 2026-07-28: "players should be able to progress early/mid
+   // game kinda easily"). The rate used to be flat -- measured at ~24 pieces per 1000 trash kills
+   // in EVERY zone, so a Lv3 hero and a Lv50 one found gear at exactly the same pace. The tier
+   // table was always zone-aware; the RATE was not.
+   //
+   // The curve is 1.80 across the starter island, 1.55 through the Lv20-32 belt, 1.30 to Lv45, and
+   // 1.10 at the top -- so early progression roughly doubles while the endgame gets only the
+   // "slightly" that was asked for. Cinderwatch stays near baseline on purpose: it is the
+   // calibration point for a Lv45 hero standing in a full T12 set, and that number was tuned.
+   const gp=(PUB_GEAR[e.type]||0)*fmul*((row&&row.gear)||1);
    if(r<gp) for(const it of rollBagSlots(BAG_SLOTS.pub,tier,F,false,cls)) items.push(it);
  }
  // A Hoarder's Draught copies what came out, at the moment the sack is assembled -- one place
