@@ -238,7 +238,7 @@ const ZBOSS=[9,10,12,11, 0,1,2,3,4, 6,5,-1,7,8];
 // Bands are not 0/1/2/3: terrain bands are a separate index space that tops out at 8 and carries
 // its own tilesets. The fourth zone borrows band 6, Stonebrow's grey stone and scree, which reads
 // as the rocky spine you climb between the shingle and the marsh.
-const STARTER_ZONES=4, STARTER_BANDS=[0,1,6,2];   // sand / shingle / stone rise / marsh
+const STARTER_ZONES=4, STARTER_BANDS=[0,1,9,2];   // sand / shingle / quarry stone / marsh
 // Seeds for the four starter provinces, marching NW->SE from the landing to the bridge. These are
 // REAL territories -- warped Voronoi with irregular borders, the same treatment the main island
 // gets -- not rings. Measured against the actual landmass rather than guessed, on four counts:
@@ -1006,8 +1006,11 @@ const EBEH={
 // Each pair is written for the ground it stands on, and the behaviour weights follow from the
 // creature rather than the other way round: a crab has no reason to pounce, a wolf has every
 // reason, and a thing that lives in a bog cannot dash through it.
-// Bands (rings.names): 0 Landing Sands, 1 Gullwind Shore, 2 Sawgrass Flats, 3 The Verdant Belt,
-// 4 Wolfwood, 5 Deep Timber, 6 Stonebrow Rise, 7 Cinderwatch, 8 The Ashfall.
+// Bands: 0 Landing Sands, 1 Gullwind Shore, 2 Sawgrass Flats, 3 The Verdant Belt, 4 Wolfwood,
+// 5 Deep Timber, 6 Stonebrow Rise, 7 Cinderwatch, 8 The Ashfall, 9 The Cairnworks.
+// 9 is APPENDED, not inserted: pillar band ids are `er-pillars` save keys, so renumbering would
+// relabel every waypoint a player has already attuned. It is a starter-island band that happens
+// to sort last, which is why the two places that treat band as an ordered ramp special-case it.
 const MOBSPEC=[
  // 0 THE LANDING SANDS (Lv1-8) — open beach. The first thing a new hero meets, so it is slow,
  // legible and forgiving: it scuttles at you in the open with nowhere to hide.
@@ -1118,6 +1121,24 @@ const MOBSPEC=[
   d:{c:[{n:'Sanctum Devout',inf:{id:'burn',dur:5.5}, hp:1.60,spd:1.00,tch:1.30,r:1.08, w:{hunter:44,pack:30,ambusher:16,sentinel:10},
         sig:{sway:0.38,swayF:2.0,commit:80,harry:76,lunge:{min:105,max:260,mul:2.8,dur:0.32,cd:1.9}}}],
      s:[{n:'Molten Herald',inf:{id:'burn',dur:6.0},  hp:1.40,spd:0.90,bd:1.45,r:1.08, rof:0.80, w:{skirmisher:48,sentinel:32,hunter:20}}]}},
+
+ // 9 THE CAIRNWORKS (Lv11-15) -- the worked-out quarry rise, third of the four starter provinces.
+ // APPENDED, so it sorts after the Lv50 rim while sitting between bands 1 and 2 on the ground.
+ // Before it existed this zone borrowed band 6, which meant a Lv12 player was fighting things named
+ // out of the Lv39-45 Stonebrow roster -- Vault Sentinels and Shatterstone Adepts on a starter
+ // beach. Slower and heavier than the shore either side of it, but nothing here is fast: it is
+ // stone, and the lesson it teaches is that some things you have to walk around.
+ {c:[{n:'Grit Crawler',   inf:null,                 hp:0.96,spd:0.84,tch:0.92,r:0.98, w:{roamer:42,sentinel:32,hunter:26},
+      sig:{sway:0.44,swayF:2.4,commit:46,harry:0,lunge:null}},
+     {n:'Spall Skitter',  inf:null,                 hp:0.62,spd:1.12,tch:0.70,r:0.78, w:{pack:54,roamer:28,hunter:18},
+      sig:{sway:0.76,swayF:4.0,commit:34,harry:0,lunge:null,flank:110,collapse:146}},
+     {n:'Yard Lurcher',   inf:{id:'weak',dur:3.4},  hp:1.24,spd:0.72,tch:1.06,r:1.06, w:{sentinel:60,ambusher:24,roamer:16},
+      sig:{sway:0.16,swayF:0.9,harry:0,lunge:null,pace:62,leash:300}}],
+  s:[{n:'Shard Spitter',  inf:{id:'bleed',dur:2.8}, hp:0.92,spd:0.88,bd:0.92,r:0.96, w:{skirmisher:52,sentinel:30,roamer:18}},
+     {n:'Wedge Lobber',   inf:{id:'stun',dur:0.6},  hp:1.06,spd:0.74,bd:1.00,r:1.04, rof:1.26, w:{sentinel:62,roamer:24,skirmisher:14}}],
+  d:{c:[{n:'Cairn Shade', inf:{id:'chill',dur:3.0}, hp:1.18,spd:0.90,tch:1.00,r:1.00, w:{ambusher:48,sentinel:30,roamer:22},
+        sig:{sway:0.26,swayF:1.2,harry:0,lunge:null,breakoff:1.8,rehide:250}}],
+     s:[{n:'Dust Warden', inf:{id:'weak',dur:3.6},  hp:1.22,spd:0.78,bd:1.04,r:1.04, rof:1.10, w:{sentinel:58,skirmisher:26,roamer:16}}]}},
 ];
 // A band's pool is a LIST now, not a single creature per type (user: "we need more open world and
 // dungeon enemies"). Inside a dungeon the band's `d` entries are appended, so a dream holds things
@@ -2023,6 +2044,14 @@ function makeElite(e,sp){
 // degrades to exactly today's behaviour rather than to a blank.
 const MOB_ARCH={
   // per-dungeon rosters
+  // The Cairnworks, terrain band 9 (overworld + its dungeon fallback pool)
+  'Grit Crawler':'crab',
+  'Spall Skitter':'crab',
+  'Yard Lurcher':'golem',
+  'Shard Spitter':'slinger',
+  'Wedge Lobber':'slinger',
+  'Cairn Shade':'wisp',
+  'Dust Warden':'shaman',
   // The Tally Yard (boss 12). Every species here needs a row or mobArch() drops it to the
   // hound/cultist fallback -- silently, and it looks fine until you notice the whole dungeon
   // is two silhouettes. Stone leans on golem; the yard crews are husks; the grit is a swarm.

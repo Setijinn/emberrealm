@@ -55,7 +55,10 @@ function _dvDrawMob(c,S,type,band){
   if(!im){ im=(type==='s')?(typeof _mobCultist!=='undefined'?_mobCultist:null)
                           :(typeof _mobHound!=='undefined'?_mobHound:null); }
   if(im&&im.naturalWidth){
-    const t=(typeof tintedMob==='function')?tintedMob(im,band):im;
+    // band -> MOBTINT row, same indirection enemyBand uses; a raw band 9 would read the
+    // Tidewrack's art-slot row instead of The Cairnworks'.
+    const _row=(typeof BAND_ROW!=='undefined'&&BAND_ROW[band]!==undefined)?BAND_ROW[band]:band;
+    const t=(typeof tintedMob==='function')?tintedMob(im,_row):im;
     const sc=Math.min(38/t.width,38/t.height);
     c.drawImage(t,20-t.width*sc/2,20-t.height*sc/2,t.width*sc,t.height*sc);
   } else {

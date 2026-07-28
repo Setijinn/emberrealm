@@ -1263,7 +1263,10 @@ let mapInt=null;
 // with the bridge, the infection portal, boss lairs, waypoints, and a "you" marker on top.
 const MAP_W=980, MAP_PAD=18, MAP_TOP=34, MAP_BOT=30;
 const MAP_OCEAN='#16303f', MAP_BRIDGE='#6e4d31';
-const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e'];
+// map colours by terrain band. 9 (The Cairnworks) is appended out of the green->red order because
+// it is a starter-island band, not a deeper one.
+const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e',
+ '#7d7768'];
 function mapLayout(G){ const s=(MAP_W-2*MAP_PAD)/G.w, gridH=G.h*s;
   return {s, ox:MAP_PAD, oy:MAP_TOP, gridH, H:Math.round(MAP_TOP+gridH+MAP_BOT)}; }
 // corruption straight from the room's rings metadata (no curRoom dependency -- the map can be open

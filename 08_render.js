@@ -37,6 +37,7 @@ const GBANDCOL=[
  ['#5e5854','#6a635e'], // 6 Ashfall Reach
  ['#7a4030','#8a4a22'], // 7 Cinderspire
  ['#9a3a1c','#b5451e'], // 8 Molten Crown
+ ['#6f6a5c','#7d7768'], // 9 The Cairnworks (starter island, out of the green->red order)
 ];
 // Radial band from tile-x/y — the new two-island world (grvBandAt lives in 03_entities).
 function grvBandXY(x,y){ return (typeof grvBandAt==='function')?grvBandAt(x,y):0; }
@@ -192,7 +193,8 @@ const TERR_ACCENT={
   5:['rgba(44,64,40,',     'rgba(28,44,26,'],     // Deep Timber     - deep shade
   6:['rgba(116,112,104,',  'rgba(72,70,66,'],     // Stonebrow Rise  - scree
   7:['rgba(96,84,78,',     'rgba(58,50,46,'],     // Cinderwatch     - ash drift
-  8:['rgba(112,52,26,',    'rgba(60,26,14,']      // The Ashfall     - ember crust
+  8:['rgba(112,52,26,',    'rgba(60,26,14,'],     // The Ashfall     - ember crust
+  9:['rgba(128,122,108,',  'rgba(80,76,68,']      // The Cairnworks  - chipped stone + quarry grit
 };
 // Open ground was one flat grain: the atlases are deliberately uniform so tiles never repeat, but
 // uniform is also featureless. This adds the missing scales back WITHOUT reintroducing a pattern,
@@ -872,7 +874,7 @@ function drawTileG(x,y){
       // (a very different biome tile) ~2.5%; the variant sheet (some bands' variant is quite
       // dark) ~14% so it never takes over into big dark regions.
       const nLo=vnoise(x+13,y+61,3.4), nVar=vnoise(x+140,y+9,6.5);
-      const loPatch=nLo > (bd>=5?0.82:0.90);
+      const loPatch=nLo > ((bd>=5&&bd<=8)?0.82:0.90);   // 5-8 are the hot bands; 9 is starter stone
       const g=loPatch?GROUND_LO:GROUND_UP;
       const useVar=!loPatch && _vs && _vs.naturalWidth && nVar>0.74;
       const src=useVar?_vs:_gset;
@@ -927,8 +929,13 @@ function drawTileG(x,y){
     // ring boundary lines: darker edge where the neighbour is a different band
     if(x>0 && grvBandXY(x-1,y)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,2,TILE); }
     if(y>0 && grvBandXY(x,y-1)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,TILE,2); }
-    if(x>0 && grvBandXY(x-1,y)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,2,TILE); }
-    if(y>0 && grvBandXY(x,y-1)>bd){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,TILE,2); }
+    // The gold "danger rises this way" edge reads the band as an ORDERED ramp. Band 9 (The
+    // Cairnworks) is appended, not inserted -- pillar bands are save keys -- so it is numerically
+    // the highest band in the game while sitting between 2 and 3 on the ground. Without this guard
+    // it would gild the 2|9 seam as the biggest jump on the map and draw the 9|3 seam backwards.
+    const _ord=(b)=>(b===9?2.5:b);
+    if(x>0 && _ord(grvBandXY(x-1,y))>_ord(bd)){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,2,TILE); }
+    if(y>0 && _ord(grvBandXY(x,y-1))>_ord(bd)){ ctx.fillStyle='rgba(255,201,77,0.18)'; ctx.fillRect(tx,ty,TILE,2); }
     // THE OVERWORLD'S 8-BIT PASS (user: "the entire overworld terrain needs better 8-bit features
     // like the hearth"). Layered ON the band tint rather than replacing it, so every zone keeps
     // its own colour identity and just gains texture. Two octaves of per-tile value noise break

@@ -285,19 +285,21 @@ const GROUND_UP=[0,96], GROUND_LO=[64,32];   // main + secondary ground tiles (u
 // and the shore while the verdant belt and wolfwood got bare rock -- exactly backwards. Decals
 // now follow the ground they land on: grass only where grass grows, rock on sand/scree, ember
 // in the burn.
-const DECAL_SRC={0:3,1:3,2:0,3:0,4:0,5:0,6:3,7:5,8:5};
-const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair structure
+const DECAL_SRC={0:3,1:3,2:0,3:0,4:0,5:0,6:3,7:5,8:5,9:3};   // 9 Cairnworks -> rocky scatter
+const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // bands 0-8 have a boss-lair structure.
+// Band 9 is NOT here on purpose. Arena walls/floors are keyed to the BOSS (lairTileSet), never
+// to the ground it stands on, and boss 12 borrows slot 3 -- so band 9 needs no lairset/floor/wall.
 (function(){
   if(typeof window==='undefined') return;
   for(const n of _projArt._list) _projArt[n]=_img('assets/proj/'+n+'.png');
   _miniPlus=_img('assets/ui/mini_plus.png'); _miniMinus=_img('assets/ui/mini_minus.png');
-  for(let b=0;b<=8;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
+  for(let b=0;b<=9;b++) _groundSet[b]=_img('assets/tiles/set_'+b+'.png');
   // per-zone variant ground sheet (sampled at GROUND_UP like the base) for large-scale variety
-  for(let b=0;b<=8;b++) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
+  for(let b=0;b<=9;b++) _groundVar[b]=_img('assets/tiles/setv_'+b+'.png');
   // scatter decals (small transparent props laid on the ground): shared per theme set
   const _dsrc={};
   for(const s of [0,3,5]){ _dsrc[s]=[]; for(let i=0;i<6;i++) _dsrc[s].push(_img('assets/env/decal_'+s+'_'+i+'.png')); }
-  for(let b=0;b<=8;b++) _decal[b]=_dsrc[DECAL_SRC[b]];
+  for(let b=0;b<=9;b++) _decal[b]=_dsrc[DECAL_SRC[b]];
   // The den sprite and its decor belong to the BOSS (art slots); the wall/floor tileset belongs
   // to the TERRAIN it's cut into (bands) — that split is what lets a boss move zones.
   for(const b of _artSlots) _lair[b]=_img('assets/env/lair_'+b+'.png');
@@ -308,7 +310,7 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   for(const b of LAIR_BANDS) _floorSet[b]=_img('assets/tiles/floor_'+b+'.png');
   for(const b of LAIR_BANDS) _wallSet[b]=_img('assets/tiles/wall_'+b+'.png');
   // open-world ground, one atlas per terrain band -- same no-repeat rule outdoors as in the arenas
-  for(let b=0;b<=8;b++) _terrSet[b]=_img('assets/tiles/terr_'+b+'.png');
+  for(let b=0;b<=9;b++) _terrSet[b]=_img('assets/tiles/terr_'+b+'.png');
   // Boss-room decor: all nine themes already ship their own set of four props, and
   // bossDecArt only borrows for the three starter bosses (DEC_SLOT). Do not "fix" this
   // by cutting the count -- fewer props per theme means a barer arena, not a richer one.
@@ -332,6 +334,7 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   _bandTree[6]=tBare;     // Stonebrow Rise  - stunted and windswept on rock
   _bandTree[7]=tDead;     // Cinderwatch     - burnt
   _bandTree[8]=tDead;     // The Ashfall
+  _bandTree[9]=tBare;     // The Cairnworks  - stunted scrub on a worked-out quarry rise
   const bGrass=_img('assets/env/boulder_grass.png'), bGrey=_img('assets/env/boulder_grey.png'),
         bScorch=_img('assets/env/boulder_scorched.png'), bVolc=_img('assets/env/boulder_volcanic.png');
   // mossy boulders belong where there is moss, not on sand
@@ -340,9 +343,14 @@ const LAIR_BANDS=[0,1,2,3,4,5,6,7,8];         // all 9 zones have a boss-lair st
   _bandBoulder[6]=bGrey;
   _bandBoulder[7]=bScorch;
   _bandBoulder[8]=bVolc;
+  _bandBoulder[9]=bGrey;
   _bandTone[0]='rgba(22,44,16,0.40)';   // toned-down vivid grass (per feedback)
   _bandTone[7]='rgba(8,4,12,0.32)';     // calm the volcanic glow -> dark rock w/ glowing cracks
   _bandTone[8]='rgba(8,3,10,0.46)';     // molten: darker still, subdue the busy lava grid
+  // The Cairnworks sheet came back cool and faintly blue; a warm dust wash pulls it back to dry
+  // worked stone without regenerating it. This is what _bandTone is for -- bands 0/7/8 all
+  // correct their sheets the same way rather than chasing a perfect generation.
+  _bandTone[9]='rgba(74,60,38,0.30)';
 })();
 
 // Enemy sprites (PixelLab). Mobs (hound=c, cultist=s) + per-band boss images.

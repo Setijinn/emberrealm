@@ -606,9 +606,11 @@ const ENAME={c:'Cinder Hound',s:'Ashbound Cultist',B:'CINDER TYRANT'};
 // art slots, not to the boss ids.
 const MOBNAME={
  c:['Briar Hound','Mist Hound','Bog Hound','Stone Hound','Crag Hound','Cinder Hound','Ash Hound','Char Hound','Molten Hound',
-    'Brine Hound','Gull Hound','Reed Hound','Quarry Hound'],
+    'Brine Hound','Gull Hound','Reed Hound','Quarry Hound',
+    'Chip Hound'],                                              // 13 = terrain band 9
  s:['Grove Cultist','Fog Cultist','Mire Cultist','Vault Cultist','Wind Cultist','Ember Cultist','Ashbound Cultist','Flame Cultist','Core Cultist',
-    'Salt Cultist','Lamp Cultist','Reed Cultist','Tally Cultist'],
+    'Salt Cultist','Lamp Cultist','Reed Cultist','Tally Cultist',
+    'Grit Cultist'],                                            // 13 = terrain band 9
 };
 // THE TINT IS WHAT MAKES A CREATURE BELONG TO ITS GROUND (user, 2026-07-27: "make sure they're
 // fitting of the biomes they're going to roam"), and it had drifted out of alignment with the
@@ -627,9 +629,16 @@ const MOBTINT=[
  'rgba(255,116,44,0.28)',    // 7 Cinderwatch     - ember
  'rgba(198,118,92,0.30)',    // 8 The Ashfall     - scorched ash
  'rgba(74,144,168,0.30)','rgba(143,174,106,0.30)','rgba(126,164,74,0.30)',
- 'rgba(154,143,125,0.30)'];   // starter-island slots (9-12; 12 is the Cairnworks' dry grey stone)
+ 'rgba(154,143,125,0.30)',   // starter-island slots (9-12; 12 is the Cairnworks' dry grey stone)
+ 'rgba(140,134,118,0.30)'];  // 13 = TERRAIN BAND 9, The Cairnworks -- see BAND_ROW below
+// MOBNAME/MOBTINT are indexed by TWO different things that both start at 0: a terrain band on the
+// overworld, and a boss ART SLOT in a dungeon. Rows 0-8 serve both on purpose. Rows 9-12 are the
+// starter bosses' art slots -- so terrain band 9 (The Cairnworks) CANNOT use row 9 or every
+// creature standing on it would be called a Brine Hound and wear the Tidewrack's blue. It gets its
+// own row on the end instead. Append here, never insert: row order is the slot order.
+const BAND_ROW=[0,1,2,3,4,5,6,7,8, 13];
 function enemyBand(e){
- if(curRoom&&curRoom.rings) return grvBandXY(e.x/TILE,e.y/TILE);
+ if(curRoom&&curRoom.rings){ const b=grvBandXY(e.x/TILE,e.y/TILE); return (b>=0&&BAND_ROW[b]!==undefined)?BAND_ROW[b]:b; }
  // In a dungeon curRoom.ring is a BOSS ID, which would run off the end of the 9-entry
  // MOBNAME/MOBTINT tables (silently — undefined name, no tint). Use the boss's ART SLOT: the
  // dungeon is that boss's dream of ITS lost homeland, so the mobs wear the boss's theme, not
