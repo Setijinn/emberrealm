@@ -1038,8 +1038,19 @@ function isAbilUnlocked(cls,rpg,id){ return unlockedAbils(cls,rpg).has(id); }
 // starter; #1.. become unlock nodes hung off the branches — extra forks/dead-ends too).
 (function _injectAbilityNodes(){ if(typeof APOOL==='undefined'||typeof CLASS_TREE==='undefined') return;
   for(const cls in CLASS_TREE){ const t=CLASS_TREE[cls], pool=APOOL[cls]; if(!pool||!t.branches) continue;
+    // ANCHOR AGAINST A SNAPSHOT, NOT A GROWING ARRAY. br.nodes.length increased with every push,
+    // so `(i-1) % br.nodes.length` drifted as it went: by i=5 it anchored on the branch KEYSTONE
+    // (a 3-cost node behind two prerequisite chains) and by i=6 on an ability node injected a
+    // moment earlier -- so two of the twelve abilities cost about 2 points, two cost 12+, and one
+    // required unlocking an unrelated ability first, with no design intent behind which.
+    // Snapshot the branch's ORIGINAL nodes and anchor shallowly, so every ability hangs off a
+    // cheap early node and the cost of unlocking one is the node's own 2 points.
+    const base={}; for(const br of t.branches) base[br.name||t.branches.indexOf(br)]=br.nodes.slice();
     for(let i=1;i<pool.length;i++){ const ab=pool[i], br=t.branches[(i-1)%t.branches.length];
-      if(!br.nodes.length) continue; const anchor=br.nodes[(i-1)%br.nodes.length];
+      const orig=base[br.name||t.branches.indexOf(br)]||br.nodes;
+      if(!orig.length) continue;
+      // first or second node of the branch: reachable early, never behind a keystone
+      const anchor=orig[Math.min(orig.length-1, (i-1)%2)];
       br.nodes.push({id:'ab_'+ab.id, name:ab.name, desc:'Unlock ability — '+ab.desc,
         cost:2, max:1, req:[anchor.id], eff:{}, ability:ab.id}); }
   }

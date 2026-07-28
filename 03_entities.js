@@ -2024,6 +2024,8 @@ const DUNSPEC=[
 // Stone Warden on it is a place you learn, not a slot machine. Bosses, nodes and summons never
 // qualify: a boss is already the thing an elite is a smaller version of.
 const ELITE_P = 0.075;                 // about one roaming spawn in thirteen
+// Rows 0-8 are terrain bands AND boss art slots 0-8, exactly like MOBNAME/MOBTINT. Rows 9-12 are
+// the starter bosses' art slots, row 13 is terrain band 9 -- BAND_ROW maps a band onto its row.
 const ELITE_TITLES=[
   ['Tide-Gorged','Barnacled','Shell-Crowned'],        // 0 Landing Sands
   ['Storm-Fed','Wreck-Born','Gale-Torn'],             // 1 Gullwind Shore
@@ -2034,6 +2036,13 @@ const ELITE_TITLES=[
   ['Granite-Cased','Quarry-Born','Stone-Crowned'],    // 6 Stonebrow Rise
   ['Slag-Cased','Ember-Crowned','Vent-Fed'],          // 7 Cinderwatch
   ['Rift-Touched','Ash-Crowned','Cinder-Fat'],        // 8 The Ashfall
+  // ---- boss art slots 9-12: the starter island's dungeons ----
+  ['Brine-Bloated','Net-Wound','Salt-Crusted'],       // 9  the Saltworks
+  ['Lamp-Blind','Wind-Flayed','Stair-Bound'],         // 10 Gullwind Light
+  ['Bone-Choired','Pew-Bound','Marrow-Fat'],          // 11 Marrow Chapel
+  ['Tally-Cut','Chisel-Marked','Stone-Fed'],          // 12 the Tally Yard
+  // ---- terrain band 9, where BAND_ROW sends it ----
+  ['Quarry-Grown','Grit-Scarred','Spall-Crowned'],    // 13 The Cairnworks (band 9)
 ];
 // Every multiplier here is on top of the species and the behaviour, so an elite Rubble Hulk is
 // still a wall and an elite Sandfly Cloud is still a cloud -- just one you cannot ignore.
@@ -2045,8 +2054,15 @@ function eliteRoll(sp){
   const h=(Math.imul(sp.x|0,2654435761)+Math.imul(sp.y|0,1597334677))>>>0;
   return (((h^(h>>>16))>>>0)%1000) < Math.round(ELITE_P*1000);
 }
+// BAND, THROUGH THE SAME INDIRECTION MOBNAME/MOBTINT USE. This clamped to ELITE_TITLES.length-1,
+// so terrain band 9 (The Cairnworks, Lv11-15) and all four starter dungeons -- whose _bd reaches
+// a boss ART SLOT as high as 12 -- were handed row 8, the Lv50 Ashfall crown-titles. A quarry
+// elite called "Rift-Touched" at Lv12. 09_sprites.js:634 fixed exactly this collision for
+// MOBNAME/MOBTINT with BAND_ROW and the fix was never applied here.
 function eliteTitle(band,sp){
-  const T=ELITE_TITLES[Math.max(0,Math.min(ELITE_TITLES.length-1,band|0))]||ELITE_TITLES[0];
+  let bi=band|0;
+  if(typeof BAND_ROW!=='undefined' && BAND_ROW[bi]!==undefined) bi=BAND_ROW[bi];
+  const T=ELITE_TITLES[bi]||ELITE_TITLES[Math.max(0,Math.min(ELITE_TITLES.length-1,band|0))]||ELITE_TITLES[0];
   const h=(Math.imul(sp?sp.x|0:1,374761393)+Math.imul(sp?sp.y|0:1,2246822519))>>>0;
   return T[((h^(h>>>11))>>>0)%T.length];
 }
@@ -2073,6 +2089,25 @@ function makeElite(e,sp){
 // Anything not listed falls back to its type's archetype, so a new species without an entry
 // degrades to exactly today's behaviour rather than to a blank.
 const MOB_ARCH={
+  // These ten had no row and fell through mobArch()'s beast/caster default. Six really are
+  // hounds and the fallback was right for them -- named explicitly so the integrity check can
+  // tell "deliberately generic" from "forgotten". The other four are not: Sunken Warden is a
+  // 1.70hp/1.18r sentinel and Sanctum Devout a heavy, and both were rendering as the hound.
+  'Briar Hound':'beast',
+  'Fogbound Hound':'beast',
+  'Magma Hound':'beast',
+  'Mist-Blind Pup':'beast',
+  'Dire Wolf':'beast',
+  'Yearling Wolf':'beast',
+  'Crag Leaper':'boar',
+  'Heartwood Thrall':'husk',
+  'Sanctum Devout':'acolyte',
+  'Sunken Warden':'golem',
+  // DEDUPED. 38 keys were declared twice and 37 of them DISAGREED, so which archetype a
+  // creature wore was decided by lexical position in an object literal -- a reorder or a merge
+  // would have silently flipped 37 species. The earlier, generic "shooter silhouette" entry
+  // was removed and the later thematic one kept, which is exactly what the engine already
+  // rendered (last key wins), so nothing changes on screen. 17m_integrity now fails on this.
   // per-dungeon rosters
   // The Cairnworks band-9 expansion rows (MOBSPEC_MORE / _MORE2 / _NIGHT)
   'Sledge Drudge':'golem',
@@ -2124,7 +2159,6 @@ const MOB_ARCH={
   'Thing With Too Many Legs':'crab',
   'Vault Crawler':'crab',
   'Warren Digger':'crab',
-  'Ash Brood':'swarm',
   'Bark Chorus':'swarm',
   'Cinder Choir':'swarm',
   'Crucible Brood':'swarm',
@@ -2258,10 +2292,8 @@ const MOB_ARCH={
   'Chanter of Ash':'acolyte',
   'Keystone Screamer':'acolyte',
   // shooter silhouettes
-  'Barnacle Popper':'slinger',
   'Bog Piper':'slinger',
   'Cairn Sling':'slinger',
-  'Cattail Spitter':'slinger',
   'Censer Bearer':'slinger',
   'Kelp Lobber':'slinger',
   'Magma Slinger':'slinger',
@@ -2271,81 +2303,46 @@ const MOB_ARCH={
   'Quarry Sling':'slinger',
   'Reefbone Piper':'slinger',
   'Rime Slinger':'slinger',
-  'Sawgrass Spitter':'slinger',
   'Scree Slinger':'slinger',
   'Slate Flinger':'slinger',
   'Spume Caster':'slinger',
-  'Thorn Slinger':'slinger',
   'Tide Spitter':'slinger',
   'Vent Piper':'slinger',
   'Antler Oracle':'shaman',
   'Ashvent Shaman':'shaman',
   'Barkhide Shaman':'shaman',
-  'Bloomcaster':'shaman',
   'Bone Flautist':'shaman',
   'Core Cultist':'shaman',
-  'Echo Caller':'shaman',
   'Ember Cultist':'shaman',
-  'Fen Whisperer':'shaman',
-  'Fungal Herald':'shaman',
   'Grove Cultist':'shaman',
-  'Gull Piper':'shaman',
   'Howl-Keeper':'shaman',
   'Mire Cultist':'shaman',
-  'Moon-Eye Seer':'shaman',
   'Pelt-Wrapped Adept':'shaman',
   'Ridge Whistler':'shaman',
-  'Root Speaker':'shaman',
-  'Sap Priest':'shaman',
-  'Seedcaster':'shaman',
-  'Shoal Whistler':'shaman',
-  'Signal Screamer':'shaman',
-  'Spore Puffer':'shaman',
   'Storm Caller':'shaman',
   'Vent Howler':'shaman',
   'Wolfwood Seer':'shaman',
-  'Wreck Scavenger':'shaman',
-  'Ashfall Oracle':'acolyte',
   'Beacon Keeper':'acolyte',
   'Bellows Adept':'acolyte',
   'Bog-Light Adept':'acolyte',
   'Brine Warden':'acolyte',
-  'Cairn Whistler':'acolyte',
-  'Cairnlight Seer':'acolyte',
-  'Cinder Oracle':'acolyte',
   'Cinderwind Adept':'acolyte',
   'Deep-Vault Adept':'acolyte',
-  'Drowned Chorus':'acolyte',
-  'Drowned Oracle':'acolyte',
   'Emberglass Adept':'acolyte',
   'Fault Chanter':'acolyte',
   'Fogbell Ringer':'acolyte',
   'Forge Cantor':'acolyte',
   'Grave-Ash Adept':'acolyte',
-  'Heart-Ash Cantor':'acolyte',
-  'Heartsap Chanter':'acolyte',
-  'Marrow Cantor':'acolyte',
-  'Marsh Oracle':'acolyte',
-  'Mirror Chanter':'acolyte',
-  'Mist Piper':'acolyte',
   'Molten Herald':'acolyte',
   'Prism Adept':'acolyte',
   'Pyre Chanter':'acolyte',
   'Quench Adept':'acolyte',
-  'Reedpipe Mourner':'acolyte',
-  'Requiem Cantor':'acolyte',
-  'Rift Cantor':'acolyte',
   'Rift Chanter':'acolyte',
   'Riftglass Adept':'acolyte',
-  'Rot Cantor':'acolyte',
-  'Rushlight Caller':'acolyte',
   'Saltglass Adept':'acolyte',
   'Shatterstone Adept':'acolyte',
-  'Spore Chanter':'acolyte',
   'Stonebell Cantor':'acolyte',
   'Tidewrack Acolyte':'acolyte',
-  'Wisp-Light Piper':'acolyte',
-  'Wrack Cantor':'acolyte',
   // third wave
   'Barnacle Crawler':'crab',
   'Bleached Hermit':'crab',
