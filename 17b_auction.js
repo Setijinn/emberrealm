@@ -13,6 +13,10 @@
 // every player sees the same shelf on the same day without anything being saved or synced.
 
 const AUCTION_SLOTS=6;        // items on the shelf at once
+// The highest tier the house will ever stock. Deliberately its own constant rather than MAXT-1:
+// see the note at the tier draw below. This is the top of the ORDINARY ladder (T12) and must stay
+// below SD_T, whatever the clamp does next.
+const AUC_TMAX=SD_T-1;
 const AUCTION_HOURS=24;       // how long a shelf lasts
 
 // deterministic PRNG — same seed, same shelf, on every machine
@@ -38,8 +42,12 @@ function auctionListings(){
   const out=[];
   for(let i=0;i<AUCTION_SLOTS;i++){
     const k=kinds[(rnd()*kinds.length)|0];
-    // triangular-ish tier draw: middle tiers common, the ends rare
-    const t=Math.max(0,Math.min(MAXT-1, Math.round((rnd()+rnd()+rnd())/3*(MAXT-1))));
+    // triangular-ish tier draw: middle tiers common, the ends rare.
+    // AUC_TMAX, NOT MAXT-1. The shelf used to top out at MAXT-1 because that was the top of the
+    // ordinary ladder; Scavenged Dreams raised the clamp, and a house rotation that could stock SD
+    // would put the rim's exclusive reward behind a glory price instead of behind the rim. The
+    // auction sells what the world sells, and the world does not sell this.
+    const t=Math.max(0,Math.min(AUC_TMAX, Math.round((rnd()+rnd()+rnd())/3*AUC_TMAX)));
     let it;
     // same rule as mkItem: a retired type carries `legacy` and never reaches a shelf
     if(k==='wpn'){ const ws=Object.keys(WTYPE).filter(x=>!WTYPE[x].legacy);

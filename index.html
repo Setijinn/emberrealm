@@ -293,6 +293,18 @@
   <button class="mbtn" id="stableClose">LEAVE</button>
  </div>
 </div></div></div>
+<!-- BRAM'S FORGE (18_forge.js). Same shopCard/shopInner shell as the Vault and the Stable, so the
+     frame fit that was measured against equip_panel.png's percentage inset is inherited rather than
+     re-earned. The whole machine is two slots and a button; everything else in the body is a list
+     of what you could put in them. -->
+<div class="scr" id="forgeScr" style="background:rgba(9,7,12,.92);"><div id="shopCard"><div id="shopInner">
+ <div id="shopTitle">BRAM'S FORGE</div>
+ <div id="forgeBody"></div>
+ <div class="vaultAct">
+  <button class="mbtn go" id="forgeGo">FORGE IT</button>
+  <button class="mbtn" id="forgeClose">LEAVE</button>
+ </div>
+</div></div></div>
 <!-- The diamond exchange (Sella) and the Wardrobe (17d_cosmetics.js). Diamonds are declared but
      cannot be bought: taking payment needs a server, so the packs explain themselves instead. -->
 <div class="scr" id="dmdScr" style="background:rgba(9,7,12,.9);"><div id="shopCard"><div id="shopInner">
@@ -415,6 +427,7 @@
 <script defer src="17j_vault.js"></script>
 <script defer src="17k_mounts.js"></script>
 <script defer src="17l_boosts.js"></script>
+<script defer src="18_forge.js"></script>
 <!-- last: it waits on every image the scripts above registered while they loaded -->
 <script defer src="10b_loading.js"></script>
 <script defer src="17m_integrity.js"></script>

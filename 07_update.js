@@ -1002,7 +1002,7 @@ function update(dt){
       if(d<64 && d<_lbest){ _lbest=d;
         const n=bagItems(lb).length, tt=bagTopTier(lb);
         lootPrompt={x:lb.x,y:lb.y,bag:lb,
-          ctx:'T'+(tt+1)+(n>1?(' · '+n+' pieces'):'')}; } } }
+          ctx:((typeof tierTag==='function')?tierTag(tt):('T'+(tt+1)))+(n>1?(' · '+n+' pieces'):'')}; } } }
   portalPrompt=null;
   if(!portalLock){ let _pbest=1e9;
     if(curRoom.portals) for(const pt of curRoom.portals){ const d=Math.hypot(pt.x-player.x,pt.y-player.y);

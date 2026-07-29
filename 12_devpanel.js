@@ -71,7 +71,7 @@ function devMkItem(kind){ const t=devItemTier, rar=devItemRar; let it;
  if(!ch.inv)ch.inv=[];
  if(ch.inv.length>=20){ devToast('Satchel full (20)'); return; }
  ch.inv.push(it); saveRPG();
- devToast('+ T'+(t+1)+' '+RAR_LBL[rar]+' '+kind);
+ devToast('+ '+tierTag(t)+' '+RAR_LBL[rar]+' '+kind);
 }
 function devToast(t){ if(typeof msg==='function'){ msg('DEV',t); } }
 $s('dGod').onclick=()=>{dev.god=!dev.god;devPaint();};

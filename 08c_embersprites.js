@@ -200,10 +200,13 @@ const _abilImgCache={};
 function abilImg(id){ if(typeof window==='undefined'||!id) return null;
   if(_abilImgCache[id]===undefined){ const i=new Image(); i.src='assets/abilities/'+id+'.png'; _abilImgCache[id]=i; }
   const im=_abilImgCache[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
-// The band maths below spreads the ROLLABLE tiers over whatever art a key ships, so it keys off
-// MAXT and not TIER_NAMES.length -- the ladder grew a thirteenth entry (Riftforged, relics only)
-// and counting that one would have re-mapped every existing tier onto the wrong sprite.
-function _nTiers(){ return (typeof MAXT!=='undefined')?MAXT:12; }
+// The band maths below spreads the tiers THE ART WAS DRAWN FOR over whatever sprites a key ships.
+// It used to read MAXT, which was right while MAXT and "how many tiers exist in the art" were the
+// same number -- but they came apart the moment Scavenged Dreams made MAXT 13, and dividing by a
+// clamp that can move would re-map every existing tier onto the wrong sprite. ART_TIERS is frozen
+// at 12 for exactly that reason: it describes the files, not the ladder. Do not make this read
+// MAXT again, and do not make it read TIER_NAMES.length either -- both of those grow.
+function _nTiers(){ return (typeof ART_TIERS!=='undefined')?ART_TIERS:12; }
 // Each relic ships its OWN sprite, drawn for the boss whose dungeon kept it. Lazy-loaded by id so
 // twelve more images cost nothing until one actually drops.
 const _relicArt={};

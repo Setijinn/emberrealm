@@ -924,6 +924,47 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 .embChip.dim{ opacity:.35; }
 .embChip img{ width:calc(var(--u)*8); height:calc(var(--u)*8); image-rendering:pixelated; }
 .embChipNm{ font-size:calc(var(--u)*1.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* ---------------------------------------------------------------------------
+   BRAM'S FORGE (18_forge.js). Sized in --u like every other panel so it scales
+   with the card rather than against it -- the vault overflowed by 87px at
+   320x568 precisely because fixed-px chrome does not follow the viewport.
+   Every strip scrolls on its own X axis so the page body never does.
+   --------------------------------------------------------------------------- */
+.fgAnvil{ display:flex; align-items:center; justify-content:center; gap:calc(var(--u)*0.8);
+  flex-wrap:wrap; margin:calc(var(--u)*1.2) 0; }
+.fgSlot{ flex:0 0 auto; min-width:calc(var(--u)*15); max-width:calc(var(--u)*20); text-align:center;
+  cursor:pointer; background:#1a1622; border:2px solid #4a3f58; border-radius:8px;
+  padding:calc(var(--u)*0.9) calc(var(--u)*0.7); }
+.fgSlot.empty{ border-style:dashed; opacity:.6; cursor:default; }
+.fgSlot b{ display:block; font-size:calc(var(--u)*1.75); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; }
+.fgIco{ display:block; font-size:calc(var(--u)*2.6); line-height:1.1; }
+.fgPlus{ font-size:calc(var(--u)*2.6); color:#8a8494; }
+.fgOut{ flex:0 0 auto; min-width:calc(var(--u)*17); text-align:center; padding:calc(var(--u)*1.1) calc(var(--u)*0.7);
+  border:2px solid #332b40; border-radius:8px; background:#141019; color:#cfc8bd;
+  font-family:'Pixelify Sans',monospace; font-size:calc(var(--u)*1.9); }
+.fgOut.on{ border-color:#ffc94d; background:#241a2e; color:#ffe08a; }
+.fgWhy{ text-align:center; font-size:calc(var(--u)*1.8); color:#9a92a4; min-height:calc(var(--u)*2.4);
+  margin-bottom:calc(var(--u)*0.8); }
+.fgWhy.ok{ color:#7dc47a; }
+.fgStrip{ display:flex; gap:calc(var(--u)*0.9); overflow-x:auto; padding-bottom:calc(var(--u)*0.5); }
+.fgChip{ flex:0 0 auto; width:calc(var(--u)*13); text-align:center; cursor:pointer;
+  background:#1a1622; border:1px solid #332b40; border-radius:8px; padding:calc(var(--u)*0.6); }
+.fgChip.on{ border-color:#ffc94d !important; background:#241a2e; }
+.fgChip b{ display:block; font-size:calc(var(--u)*1.6); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; }
+.fgN{ font-size:calc(var(--u)*1.6); color:#8a8494; }
+.fgSets{ display:flex; flex-wrap:wrap; gap:calc(var(--u)*0.7); }
+.fgSet{ flex:1 1 calc(var(--u)*22); cursor:pointer; background:#1a1622; border:1px solid #332b40;
+  border-radius:8px; padding:calc(var(--u)*0.7); }
+.fgSet.on{ border-color:#ffd24a; background:#241a2e; }
+.fgSet.owned{ opacity:.4; }
+.fgSet b{ display:block; font-size:calc(var(--u)*1.75); color:#e8c98a; }
+.fgSet span{ display:block; font-size:calc(var(--u)*1.6); }
+.fgBook{ max-height:calc(var(--u)*26); overflow-y:auto; }
+.fgRec{ font-size:calc(var(--u)*1.7); color:#6f6878; padding:calc(var(--u)*0.25) 0; }
+.fgRec.can{ color:#cfc8bd; }
+.fgDim{ color:#8a8494; }
 /* the machines */
 .embMachine{ text-align:center; }
 .embMachine img{ width:calc(var(--u)*22); image-rendering:pixelated;

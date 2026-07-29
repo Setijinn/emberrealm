@@ -225,7 +225,9 @@ function drawItemTier(g,it,cw,ch){
   // A relic stamps R, not T13. It is read in the same corner, in the same place, by the same
   // glance that reads a tier — which is the point: one mark per item, and R means "above the
   // ladder" without asking anyone to remember what the thirteenth number was.
-  const label=it.relic?'R':('T'+((it.t|0)+1));
+  // the icon stamp: 'R' for a relic, otherwise the tier's own tag -- which is 'SD' on the
+  // Scavenged Dreams rung and a plain T-number everywhere else
+  const label=it.relic?'R':((typeof tierTag==='function')?tierTag(it.t|0):('T'+((it.t|0)+1)));
   const fs=Math.max(8,Math.round(Math.min(cw,ch)*0.26));
   g.save();
   g.font='bold '+fs+'px "Pixelify Sans",monospace';
@@ -875,7 +877,7 @@ function drawLootBag(lb,pn){
   // nothing at all, so you had to walk over it to find out what you were picking up
   if(top>=0||isChest){ ctx.font='bold '+(isChest?12:10)+'px "Pixelify Sans",monospace'; ctx.textAlign='center';
     const ly=lb.y-(isChest?28:20)+bob;
-    let lab=(top>=0?('T'+(top+1)):'');
+    let lab=(top>=0?((typeof tierTag==='function')?tierTag(top):('T'+(top+1))):'');
     if(its.length>1) lab+=' ·'+its.length;
     if(bn&&bn.label) lab+=' '+bn.label;
     ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillText(lab,lb.x+1,ly+1);

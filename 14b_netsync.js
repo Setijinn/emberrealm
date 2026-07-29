@@ -240,7 +240,16 @@ function netBroadcast(){
 // sack. That is the whole cost, and it is cosmetic -- netUnpackBag builds a DISPLAY-ONLY ghost bag
 // and only the host's 'G' grant ever carries real contents, so a peer cannot take, duplicate or
 // lose anything by mis-reading the kind. Append only, exactly as before: never renumber.
-const NKIND=['wpn','arm','helm','ring','pot','coin','scroll','egg','mount'];
+//
+// 'mat' (forge materials, 18_forge.js) is index 9 -- an APPEND into the space the widening already
+// bought, so nothing moved and no older peer's reading of any existing kind changed. There are six
+// free slots left in the 4-bit field.
+//
+// THE TIER FIELD ALREADY HAD ROOM FOR THE NEW LADDER: t is 4 bits (0-15), so Scavenged Dreams (12)
+// and Riftforged (13) both travel correctly without touching the packing. The BAND field did not,
+// which is why SD shares the T11-T12 sack instead of getting a fifth LOOT_BANDS row: bd is 2 bits
+// and LOOT_BANDS has exactly four. A fifth row would silently alias to band 0 on the wire.
+const NKIND=['wpn','arm','helm','ring','pot','coin','scroll','egg','mount','mat'];
 function netPackBag(b){
   const its=(typeof bagItems==='function')?bagItems(b):(b.item?[b.item]:[]);
   const head=its[0]||{};

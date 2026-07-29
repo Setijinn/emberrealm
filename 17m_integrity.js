@@ -136,11 +136,109 @@ function _checkDuplicateKeys(){
   }).catch(()=>{});
 }
 
+// THE TIER LADDER AND THE FORGE (18_forge.js). The ladder now has two rungs above the ordinary
+// one and three constants that have to agree about where they are; getting any of them wrong is
+// silent, because every consumer defaults rather than throwing.
+function _checkTierLadder(){
+  if(typeof TIER_NAMES==='undefined'||typeof MAXT==='undefined') return;
+  if(typeof SD_T==='undefined'||typeof RELIC_T==='undefined'){ _iWarn('SD_T/RELIC_T not defined'); return; }
+  // the indices must name the tiers they claim to
+  if(TIER_NAMES[SD_T]!=='Scavenged Dreams')
+    _iErr('SD_T points at "'+TIER_NAMES[SD_T]+'", not Scavenged Dreams');
+  if(TIER_NAMES[RELIC_T]!=='Riftforged')
+    _iErr('RELIC_T points at "'+TIER_NAMES[RELIC_T]+'", not Riftforged');
+  if(RELIC_T!==SD_T+1) _iErr('RELIC_T ('+RELIC_T+') must sit directly above SD_T ('+SD_T+')');
+  if(TIER_NAMES.length!==RELIC_T+1)
+    _iErr('TIER_NAMES has '+TIER_NAMES.length+' entries; RELIC_T is '+RELIC_T+' — the ladder has a gap or a tail');
+  // MAXT is the clamp on every random draw and must land exactly on SD: one lower and the Lv50 rim
+  // can never pay the tier its table names, one higher and a relic becomes rollable.
+  if(MAXT-1!==SD_T) _iErr('MAXT-1 is '+(MAXT-1)+' but SD_T is '+SD_T+
+    ' — a random draw can '+(MAXT-1>SD_T?'reach a RELIC':'never reach Scavenged Dreams'));
+  // the art divisor must NOT follow the ladder, or every tier re-maps onto the wrong sprite
+  if(typeof ART_TIERS!=='undefined'){
+    if(ART_TIERS!==12) _iErr('ART_TIERS is '+ART_TIERS+', not 12 — every item sprite has re-mapped');
+    if(typeof _nTiers==='function' && _nTiers()!==ART_TIERS)
+      _iErr('_nTiers() returns '+_nTiers()+' but ART_TIERS is '+ART_TIERS);
+  }
+  // SD is the tag, not a number, and one function owns that spelling
+  if(typeof tierTag==='function'){
+    if(tierTag(SD_T)!=='SD') _iErr('tierTag(SD_T) is "'+tierTag(SD_T)+'", not "SD"');
+    if(tierTag(0)!=='T1') _iErr('tierTag(0) is "'+tierTag(0)+'", not "T1"');
+  }
+  // NOTHING BUT AN EXPLICIT TABLE ENTRY MAY REACH SD, and nothing at all may reach a relic.
+  if(typeof ZONE_TIERS!=='undefined'){
+    let sdZones=0;
+    ZONE_TIERS.forEach((z,i)=>{
+      const rows=(z.pub||[]).concat(z.sb||[]);
+      for(const r of rows){
+        if(r[0]>=RELIC_T) _iErr('ZONE_TIERS['+i+'] names tier '+r[0]+' — that is the relic band');
+        if(r[0]===SD_T) sdZones++;
+      }
+      if((z.pub||[]).some(r=>r[0]>=SD_T))
+        _iErr('ZONE_TIERS['+i+'] pays Scavenged Dreams in a PUBLIC sack — SD must be soulbound');
+    });
+    if(!sdZones) _iWarn('no ZONE_TIERS row names SD_T — Scavenged Dreams can only drop in ascended dungeons');
+  }
+  // the two shelves that draw their own tiers must both stop below SD
+  if(typeof AUC_TMAX!=='undefined' && AUC_TMAX>=SD_T)
+    _iErr('AUC_TMAX is '+AUC_TMAX+' — the auction can stock Scavenged Dreams');
+  if(typeof CHEST_TMAX!=='undefined' && CHEST_TMAX>=SD_T)
+    _iErr('CHEST_TMAX is '+CHEST_TMAX+' — the event chest can pay Scavenged Dreams');
+  // mkItem is the clamp everything else trusts: prove it cannot hand back a relic
+  if(typeof mkItem==='function'){
+    let worst=-1;
+    for(let i=0;i<200;i++){ const it=mkItem('ring',RELIC_T+4,0,null); if(it&&it.t>worst) worst=it.t; }
+    if(worst>SD_T) _iErr('mkItem clamped to t='+worst+', above SD_T — a roll can produce a relic');
+  }
+  // the loot band that carries relics must point at them and nothing else
+  if(typeof LOOT_BANDS!=='undefined'){
+    const top=LOOT_BANDS[LOOT_BANDS.length-1];
+    if(top && top.min!==RELIC_T)
+      _iErr('the top LOOT_BANDS row is min:'+top.min+' but RELIC_T is '+RELIC_T+
+        ' — '+(top.min<RELIC_T?'Scavenged Dreams claims the reliquary sprite':'relics have no band'));
+    // bd is 2 bits on the wire (14b_netsync): a fifth row silently aliases to band 0
+    if(LOOT_BANDS.length>4) _iErr('LOOT_BANDS has '+LOOT_BANDS.length+
+      ' rows; the co-op band field is 2 bits and holds 4');
+  }
+}
+
+// The forge's own tables: a recipe naming a material that does not exist, or a material nothing can
+// ever reach, both degrade silently -- the panel just renders a row that never lights up.
+function _checkForge(){
+  if(typeof MATERIALS==='undefined'||typeof MAT_RECIPES==='undefined') return;
+  const reachable={};
+  for(const k in MATERIALS){ const m=MATERIALS[k];
+    if(m.id!==k) _iErr('MATERIALS["'+k+'"] carries id "'+m.id+'"');
+    if(m.src!=='craft') reachable[k]=1; }
+  // walk the recipe graph to closure: anything still unreachable cannot be obtained at all
+  for(let pass=0; pass<MAT_KEYS.length+1; pass++){
+    for(const key in MAT_RECIPES){ const r=MAT_RECIPES[key];
+      if(reachable[r.a]&&reachable[r.b]) reachable[r.out]=1; } }
+  for(const key in MAT_RECIPES){ const r=MAT_RECIPES[key];
+    for(const side of ['a','b','out'])
+      if(!MATERIALS[r[side]]) _iErr('recipe '+key+' names unknown material "'+r[side]+'"');
+    if(r.out===r.a||r.out===r.b) _iErr('recipe '+key+' produces one of its own inputs'); }
+  for(const k in MATERIALS) if(!reachable[k])
+    _iErr('material "'+k+'" ('+MATERIALS[k].n+') can never be obtained — no drop source and no reachable recipe');
+  // the relic catalyst must exist and must be the thing the gear rung asks for
+  if(!MATERIALS.riftseed) _iErr('MATERIALS has no riftseed — the relic rung has no reagent');
+  // every drop pool must have something in it, or that whole area silently pays nothing
+  if(typeof matPool==='function') for(const src of ['starter','main','rift']){
+    if(!matPool(src).length) _iErr('no material carries src "'+src+'" — that pool drops nothing'); }
+  // every relic set needs a piece in all four slots or the forge offers a set it cannot deliver
+  if(typeof RELIC_SETS!=='undefined' && typeof forgeRelicPieceFor==='function'){
+    for(const S of RELIC_SETS) for(const sl of ['wpn','arm','helm','ring'])
+      if(!forgeRelicPieceFor(S.id,sl))
+        _iErr('relic set "'+S.id+'" has no '+sl+' — the forge lists it and then refuses'); }
+}
+
 function runIntegrityCheck(){
   INTEGRITY.errors.length=0; INTEGRITY.warns.length=0;
   try{ _checkBossTables(); }catch(e){ _iWarn('boss-table check threw: '+e.message); }
   try{ _checkBandTables(); }catch(e){ _iWarn('band-table check threw: '+e.message); }
   try{ _checkSpecies(); }catch(e){ _iWarn('species check threw: '+e.message); }
+  try{ _checkTierLadder(); }catch(e){ _iWarn('tier-ladder check threw: '+e.message); }
+  try{ _checkForge(); }catch(e){ _iWarn('forge check threw: '+e.message); }
   INTEGRITY.ran=true;
   const report=()=>{
     if(INTEGRITY.errors.length){

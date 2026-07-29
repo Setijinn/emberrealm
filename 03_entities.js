@@ -876,14 +876,16 @@ function enterDungeon(ring){
 // THE FOUR STALLS (user, 2026-07-26). Everyone keeps their id -- and so their stall art -- but
 // three of the four changed trade, because what they sold either no longer exists or was glory
 // buying power, which the economy forbids:
-//   bram   BLACKSMITH   reserved for the item-fusion system. Do not repurpose.
+//   bram   BLACKSMITH   THE FORGE (`forge:true`) -- 18_forge.js. The reservation is spent.
 //   sella  DIAMONDS     cosmetics and the premium currency (`diamond:true`)
 //   maren  AUCTIONEER   the date-seeded house rotation (`auction:true`)
 //   odo    BOUNTIES     the daily board (`event:true`)
 // The flag on the row is the whole dispatch: usePortalPrompt reads it to pick the panel.
 const SHOPNPCS=[
- // he sells nothing now (glory must never buy power), so the panel no longer claims to be a shop
- {id:'bram', name:'Bram', role:'BLACKSMITH', title:"BRAM'S FORGE", plabel:'FORGE', awn:'#b5482f', x:9.5*TILE,  y:10.8*TILE},
+ // He still sells nothing -- glory must never buy power -- but the stall is no longer waiting for
+ // something: `forge:true` opens the two-slot anvil (18_forge.js). What it costs is materials you
+ // dug out of the world, which is the one currency the economy has no objection to.
+ {id:'bram', name:'Bram', role:'BLACKSMITH', title:"BRAM'S FORGE", plabel:'FORGE', awn:'#b5482f', forge:true, x:9.5*TILE,  y:10.8*TILE},
  {id:'sella',name:'Sella',role:'CURIOS',     title:'THE DIAMOND EXCHANGE', awn:'#c46ee0', diamond:true, x:9.5*TILE,  y:18.3*TILE},
  {id:'maren',name:'Maren',role:'AUCTIONEER', title:'THE AUCTION HOUSE', awn:'#e8b34b', auction:true, x:32.5*TILE, y:10.8*TILE},
  {id:'odo',  name:'Odo',  role:'BOUNTIES',   title:'THE BOUNTY BOARD',  awn:'#7dc47a', event:true,   x:32.5*TILE, y:18.3*TILE},

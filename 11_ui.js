@@ -57,6 +57,7 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
     if(np.auction){ if(typeof openAuction==='function') openAuction(); }
     else if(np.event){ if(typeof openBounties==='function') openBounties(); }
     else if(np.diamond){ if(typeof openDiamonds==='function') openDiamonds(); }
+    else if(np.forge){ if(typeof openForge==='function') openForge(); }
     else openShop2(np.id);
     navigator.vibrate&&navigator.vibrate(15); return; }
   if(p.kind==='switch'){ const sw=p.sw; if(sw&&!sw.on){
@@ -240,7 +241,7 @@ function paintBagPanel(){
       ? '<span style="color:#ffd24a">left here on purpose</span>'
       : relic
       ? '<span style="color:'+RELIC_COL+'">kept by its dungeon — there is only one</span>'
-      : '<span style="color:'+tierCol(top)+'">T'+(top+1)+' '+(TIER_NAMES[top]||'')+'</span>')
+      : '<span style="color:'+tierCol(top)+'">'+tierTag(top)+' '+(TIER_NAMES[top]||'')+'</span>')
     +' · '+its.length+' piece'+(its.length===1?'':'s')
     +((bn&&bn.bound)?' · <span style="color:#ff9c50">bound to you</span>':' · anyone may take this');
   const L=$s('bagList'); L.innerHTML='';
@@ -530,14 +531,39 @@ function noteRelicTaken(id){ if(!rpg) return;
   if(rpg.relics.indexOf(id)<0){ rpg.relics.push(id);
     if(typeof runNote==='function') runNote('relics'); } }
 function legById(id){ return LEGENDS.filter(function(L){return L.id===id;})[0]||null; }
-// THE LADDER. Index 0-11 are T1-T12, the tiers the world can actually roll. Index 12 is the band
-// ABOVE the ladder: T13 Riftforged, which nothing rolls and nothing sells -- it exists only as the
-// twelve dungeon relics, one per dungeon.
-const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire','Riftforged'];
-// MAXT is the top ROLLABLE tier and every random draw still clamps to MAXT-1, so widening the
-// ladder above it cannot leak a T13 into a drop table, an auction shelf or a shop row.
-const MAXT=12;
-const RELIC_T=12;                    // 0-based index of the Riftforged band == T13
+// THE LADDER.
+//   index 0-11   T1-T12, the ordinary ladder, found anywhere the zone tables say so
+//   index 12     SCAVENGED DREAMS -- displayed as "SD", never as "T13" (user, 2026-07-28).
+//                DROPPED, not crafted: the highest-level areas and the ASCENDED DREAM DUNGEONS
+//                only. It is named for where it comes from -- what you carry out of a dead god's
+//                dream -- which is why it wears a tag instead of a number.
+//   index 13     T14 Riftforged, relics. Forged from an SD piece, or found at the dungeon rates.
+//
+// Relics used to sit at index 12 and moved up when Scavenged Dreams was inserted underneath them.
+// The NAME went with them, so a saved relic still reads 'Riftforged'; migrateForgeTiers() in
+// 18_forge.js moves the index on anything built before the change.
+const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire','Scavenged Dreams','Riftforged'];
+// MAXT IS THE CLAMP ON EVERY RANDOM DRAW, and it moved from 12 to 13 when Scavenged Dreams became
+// a DROPPED tier rather than a crafted one. That is a deliberate change to a documented invariant,
+// so here is why it is still safe:
+//   * The reason MAXT had to stay 12 was that _nTiers() divided the art bands by it, so raising it
+//     re-mapped every existing tier onto the wrong sprite. That job is now ART_TIERS (below), a
+//     frozen constant, because "how many tiers were the sprites drawn for" is not the same question
+//     as "how high can a roll go" and MAXT was answering both.
+//   * MAXT-1 is now 12 == SD_T, so ONLY a table that explicitly names tier 12 can pay one out.
+//     ZONE_TIERS does that in the top rows and nowhere else; the auction and the event chest carry
+//     their own lower ceilings (AUC_TMAX / CHEST_TMAX) so neither can reach it.
+//   * T14 is still above the clamp and still unreachable by any roll, exactly as before.
+const MAXT=13;
+const SD_T=12;                       // 0-based index of Scavenged Dreams. Displayed "SD".
+const RELIC_T=13;                    // 0-based index of the Riftforged band == T14
+// THE NUMBER OF TIERS THE ITEM ART WAS DRAWN FOR. Frozen at 12 forever: it is a fact about the
+// files on disk, not about the ladder. _nTiers() reads this so the ladder can grow without every
+// sword changing which sprite it uses.
+const ART_TIERS=12;
+// How a tier is WRITTEN. Scavenged Dreams is the one rung with a tag instead of a number, so every
+// place that used to build 'T'+(t+1) by hand goes through here or the two spellings drift apart.
+function tierTag(t){ return (t===SD_T) ? 'SD' : 'T'+((t|0)+1); }
 function classWT(cls){ return WTYPE[CWEAP[cls]]||WTYPE.sword; }
 function weaponAt(cls,t){ t=Math.max(0,Math.min(MAXT-1,t)); const wt=classWT(cls);
  return {n:TIER_NAMES[t]+' '+wt.n, add:Math.round(t*t*1.35+t*2),
@@ -549,7 +575,13 @@ function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
 // the ground at a glance. It is yellower than the T12 orange (#ff9c50) so the two never blur.
 // `--relic` in style.css is this same value; change both together.
 const RELIC_COL='#ffd24a';
-function tierCol(t){ return t>=12?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
+// THE CRAFTED TIER NEEDS ITS OWN COLOUR. Emberforged sits between the T12 orange and the relic
+// gold, and if it borrowed either one the two rungs of the forge would be indistinguishable in
+// every list -- which is the exact failure the relic gold was chosen to avoid against T12. This is
+// a hotter, redder orange than #ff9c50: the heat rises through the top of the ladder, then turns
+// gold at the relic. Keep all three distinct if any of them ever changes.
+const FORGE_COL='#ff6a3d';
+function tierCol(t){ return t>=13?RELIC_COL:t>=12?FORGE_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
 
 // ============================================================
 // LOOT TIERS BY AREA (user, 2026-07-26)
@@ -581,11 +613,16 @@ const ZONE_TIERS=[
  // At a 5% T12 weight that took a 118-boss median to complete — the right shape but one notch too
  // slow, so T12 is worth a quarter of this zone's bound drops. The grind ring still leads it.
  /* 8  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045, gear:1.10},
- /* 9  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 10 Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 11 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 12 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 13 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ // THE Lv50 RIM IS WHERE SCAVENGED DREAMS FALLS IN THE OPEN (user, 2026-07-28) -- these five rows
+ // and the ascended dream dungeons, and nowhere else in the game. The weight is deliberately small
+ // against T11/T12: this is the rim's reason to keep existing after a hero is already fully geared,
+ // so it has to be a thing you go back for rather than a thing you finish. `12` is SD_T; it is
+ // written as a literal here for the same reason every other tier in this table is.
+ /* 9  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
+ /* 10 Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
+ /* 11 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
+ /* 12 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
+ /* 13 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
 ];
 const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0,gear:1.10};   // ocean / bridge / anything unmapped
 const PUB_TMAX=7;          // public gear caps at T8 (0-based 7). Everything above is soulbound.
@@ -594,13 +631,41 @@ const TIER_OVERFLOW=0.05;  // a small tail one tier above the row's max, so the 
 // Which area's table applies to a kill. In a dungeon there is no overworld band under the tile
 // (rings is null), so the drop inherits the boss's OVERWORLD clump -- the dream pays out in the
 // currency of the homeland it remembers, which is the rule the tiles and mob names already follow.
+// SCAVENGED DREAMS IN AN ASCENDED DREAM DUNGEON (user, 2026-07-28).
+// SD falls in two places: the Lv50 rim, which the ZONE_TIERS rows say outright, and the ascended
+// dream dungeons, which they cannot -- a dungeon has no overworld tile under it and inherits its
+// boss's clump row, so the Ashen Keep and the Lv50 steppe read the SAME row. The dungeon half has
+// to be decided by the DUNGEON, and the test already exists: `gate` on the boss is the ascension
+// wall, where 'none' means a walk-in starter dungeon and anything else -- INCLUDING a missing
+// field -- means the awakened depths. Same default the dungeon door uses, so a new boss can never
+// accidentally start paying SD.
+const SD_DUN_W=22;                     // SD's weight inside an ascended dungeon's bound roll
+const _sdRowCache={};
+function _sdAugmentRow(row,ring){
+  if(!row||!row.sb) return row;
+  if(_sdRowCache[ring]) return _sdRowCache[ring];
+  // never add SD twice, and never mutate the shared ZONE_TIERS row -- it is read by every kill
+  for(const r of row.sb) if(r[0]===SD_T){ _sdRowCache[ring]=row; return row; }
+  const out=Object.assign({},row);
+  out.sb=row.sb.map(r=>[r[0],r[1]]).concat([[SD_T,SD_DUN_W]]);
+  _sdRowCache[ring]=out;
+  return out;
+}
+function _ascendedDungeon(){
+  if(typeof curRoom==='undefined'||!curRoom||!curRoom.dungeon) return -1;
+  if(typeof curRoom.ring!=='number'||typeof GBOSS==='undefined') return -1;
+  const gb=GBOSS[curRoom.ring];
+  return (gb && gb.gate!=='none') ? curRoom.ring : -1;
+}
 function zoneTierRow(x,y){
   let z=-1;
   if(typeof curRoom!=='undefined'&&curRoom){
     if(curRoom.rings && typeof zoneAt==='function') z=zoneAt(x/TILE,y/TILE);
     else if(typeof curRoom.ring==='number'&&typeof BOSS_ZONE!=='undefined') z=BOSS_ZONE[curRoom.ring];
   }
-  return ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
+  const row=ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
+  const ring=_ascendedDungeon();
+  return (ring>=0) ? _sdAugmentRow(row,ring) : row;
 }
 // The row one zone deeper than the ground you are standing on. Clamped at the last row, so an
 // elite in the final zone simply rolls that zone's row rather than falling off the end of the table.
@@ -611,7 +676,11 @@ function zoneTierRowUp(x,y){
     else if(typeof curRoom.ring==='number'&&typeof BOSS_ZONE!=='undefined') z=BOSS_ZONE[curRoom.ring];
   }
   if(z<0) return ZONE_TIERS_FALLBACK;
-  return ZONE_TIERS[Math.min(ZONE_TIERS.length-1,z+1)]||ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
+  const row=ZONE_TIERS[Math.min(ZONE_TIERS.length-1,z+1)]||ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
+  // an elite in an ascended dungeon gets the SD entry too, or the one kill that is supposed to pay
+  // better than the room around it would pay strictly worse than the boss beside it
+  const ring=_ascendedDungeon();
+  return (ring>=0) ? _sdAugmentRow(row,ring+100) : row;
 }
 function pickWeighted(rows,fort){
   if(!rows||!rows.length) return 0;
@@ -619,12 +688,16 @@ function pickWeighted(rows,fort){
   let q=Math.random()*tot;
   let t=rows[rows.length-1][0];
   for(const r of rows){ q-=r[1]; if(q<0){ t=r[0]; break; } }
+  let mx=0; for(const r of rows) if(r[0]>mx) mx=r[0];
   // the overflow tail: a rare step above the row's ceiling. Fortune widens it.
-  if(Math.random() < TIER_OVERFLOW*(1+(fort||0)*0.02)){
-    let mx=0; for(const r of rows) if(r[0]>mx) mx=r[0];
-    if(t===mx) t=mx+1;
-  }
-  return Math.max(0,Math.min(MAXT-1,t));
+  if(Math.random() < TIER_OVERFLOW*(1+(fort||0)*0.02) && t===mx) t=mx+1;
+  // THE CEILING IS THE ROW'S OWN, NOT MAXT. This used to clamp to MAXT-1, which was the same
+  // number as "the top of the ordinary ladder" right up until Scavenged Dreams raised MAXT — at
+  // which point every Lv50 row, all of which top out at T12, would have started paying SD through
+  // the 5% overflow tail. SD is meant to be an explicit entry in the tables that grant it and
+  // nowhere else, so a row may only reach SD_T if it actually names SD_T.
+  const ceil = (mx>=SD_T) ? SD_T : Math.min(SD_T-1, MAXT-1);
+  return Math.max(0,Math.min(ceil,t));
 }
 
 // ============================================================
@@ -739,13 +812,13 @@ function itemStats(it,cls){ if(!it||it.k==='pot'||it.k==='scroll'||it.k==='egg'|
  return base;
 }
 function itemBaseName(it){
- const p='T'+(it.t+1)+' '+TIER_NAMES[it.t]+' ';
+ const p=tierTag(it.t)+' '+TIER_NAMES[it.t]+' ';
  // guarded: an unknown type must not take the satchel down with it. A co-op peer on an older build
  // can hand over a weapon whose type this client has never heard of.
  if(it.k==='wpn')return p+(WTYPE[it.wt]||WTYPE.sword).n;
  if(it.k==='arm')return p+MATN[it.mt]+' Armor';
  if(it.k==='helm')return p+MATN[it.mt]+' Helm';
- if(it.k==='ring')return 'T'+(it.t+1)+' '+RINGN[it.st];
+ if(it.k==='ring')return tierTag(it.t)+' '+RINGN[it.st];
  if(it.k==='coin')return (COIN_NAMES[it.t||0])+' Fortune Coin';
  return p; }
 function itemName(it){ if(it.k==='pot')return 'Ember Tonic';
@@ -879,8 +952,12 @@ const LOOT_BANDS=[
  // material and ornament, never through shape -- but the richest one there is: violet and gold
  // thread, gems in the seams, light coming out of it. Ten minutes on the ground, because the one
  // thing that must never happen is a relic rotting while you are still fighting what dropped it.
- // `min:12` is RELIC_T, so bandOfTier finds it on its own and nothing else can reach this band.
- {min:12, spr:'_lootSackRelic', bound:true, life:600, label:'RELIC'},
+ // `min:13` is RELIC_T, so bandOfTier finds it on its own and nothing else can reach this band.
+ // IT MOVED WITH THE RELICS (2026-07-28). When the crafted Emberforged tier was inserted at index
+ // 12 this row had to go up with them or a T13 -- a thing no monster has ever dropped -- would have
+ // claimed the reliquary sprite. Nothing crafted can reach a sack at all, so the band above the
+ // ladder stays exactly as exclusive as it was; the number just has to keep pointing at relics.
+ {min:13, spr:'_lootSackRelic', bound:true, life:600, label:'RELIC'},
 ];
 // THE EVENT CHEST is not a band -- it is its own thing, and it opts OUT of bandOfTier entirely by
 // carrying `band:-1` and its own sprite. It sits in `loots` so every prompt, panel and co-op path
@@ -909,7 +986,11 @@ function isCreatureItem(it){ return !!it && (it.k==='mount' || it.k==='egg'); }
 // Deliberately generous: this is the reward for an event, not a kill. A dungeon boss pays a relic
 // at 0.25%-1% (relicChanceFor); a chest pays one better than one time in three, and everything
 // else it holds is drawn from the top of the tier table rather than the middle.
-const CHEST_RELIC_P=0.35, CHEST_PIECES=[4,6], CHEST_TMIN=8;
+// CHEST_TMAX exists because MAXT stopped being the top of the ordinary ladder. The chest draws
+// from the top of the tier table, and "the top" used to mean T12 by definition; once SD raised the
+// clamp, an unchanged `MAXT-1` here would have made a placed event object the easiest source of a
+// tier that is supposed to come only from the Lv50 rim and the ascended depths.
+const CHEST_RELIC_P=0.35, CHEST_PIECES=[4,6], CHEST_TMIN=8, CHEST_TMAX=SD_T-1;
 function rollEventChest(lv,cls,opts){
   const o=opts||{};
   const relicP=(o.relicP!==undefined)?o.relicP:CHEST_RELIC_P;
@@ -921,10 +1002,11 @@ function rollEventChest(lv,cls,opts){
   const n=CHEST_PIECES[0]+Math.floor(Math.random()*(CHEST_PIECES[1]-CHEST_PIECES[0]+1));
   const kinds=['wpn','arm','helm','ring'];
   for(let i=0;i<n;i++){
-    // weighted to the TOP of the table: floor at T9 and biased upward from there
-    const span=(MAXT-1)-CHEST_TMIN;
+    // weighted to the TOP of the table: floor at T9 and biased upward from there, stopping short
+    // of Scavenged Dreams (CHEST_TMAX) -- a chest is generous, not a shortcut past the rim
+    const span=CHEST_TMAX-CHEST_TMIN;
     const t=CHEST_TMIN+Math.floor(Math.pow(Math.random(),0.55)*(span+1));
-    items.push(mkItem(kinds[Math.floor(Math.random()*kinds.length)],Math.min(MAXT-1,t),0,cls));
+    items.push(mkItem(kinds[Math.floor(Math.random()*kinds.length)],Math.min(CHEST_TMAX,t),0,cls));
   }
   return items;
 }
@@ -998,6 +1080,13 @@ function awardItem(it,x,y){
     texts.push({x:px,y:py-14,txt:(d?d.icon+' '+d.n:'Pet Food'),
       col:(typeof PET_RAR_COL!=='undefined')?PET_RAR_COL[it.t||0]:'#e6c76a',life:1.4});
     return true; }
+  // a forge material goes to the account pouch, not the satchel -- same shape as pet food, and for
+  // the same reason: it is a counted supply, not a thing you carry one of
+  if(it.k==='mat'){ if(typeof matAdd==='function') matAdd(it.m,it.n||1);
+    const d=(typeof matDef==='function')?matDef(it.m):null;
+    texts.push({x:px,y:py-14,txt:(d?d.icon+' '+d.n:'Material')+(it.n>1?' x'+it.n:''),
+      col:d?d.col:'#d98a5a',life:1.4});
+    return true; }
   if(it.k==='egg'){ if(typeof giveEgg==='function') giveEgg(it.cond||0,it.cat);
     texts.push({x:px,y:py-14,txt:'+Pet Egg',col:'#ffd07a',life:1.6}); return true; }
   // a mount goes straight to the Stable, for the same reason an egg goes to the incubator: its
@@ -1056,6 +1145,7 @@ function takeLoot(item){
   else if(item.k==='pot'){ rpg.pots++; if(typeof hudRPG==='function') hudRPG(); }
   else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
   else if(item.k==='food'){ if(typeof petFoodAdd==='function') petFoodAdd(item.t||0,item.n||1); }
+  else if(item.k==='mat'){ if(typeof matAdd==='function') matAdd(item.m,item.n||1); }
   else if(item.k==='egg'){ if(typeof giveEgg==='function') giveEgg(item.cond||0,item.cat); }
   else if(item.k==='mount'){ if(typeof mountTake==='function') mountTake(item); }
   else if(ch.inv.length<20) ch.inv.push(item);
@@ -1203,6 +1293,10 @@ function rollLoot(e){
  if(typeof petFoodDropFor==='function'){ const fd=petFoodDropFor(e); if(fd) extra.push(fd); }  // pet food
  // boost draughts ride in the ordinary gear sack (17l_boosts.js)
  if(typeof boostDropFor==='function'){ const bd=boostDropFor(e); if(bd) extra.push(bd); }
+ // forge materials ride there too (18_forge.js). They are the most COMMON thing in the sack on
+ // purpose -- a material is a unit of work, not a prize -- and which pool a kill pays from is the
+ // one place the starter-island / mainland / post-ascension split is decided.
+ if(typeof matDropFor==='function'){ const md=matDropFor(e); if(md) extra.push(md); }
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
  // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
  // bandOfTier(bagTopTier) already decides, so a relic in the sack makes it a reliquary by itself.
@@ -1284,11 +1378,11 @@ function doAbility(wx,wy){ if(typeof castArmed==='function') castArmed(wx,wy); }
 function eqPrefix(slot){ const a=eqAffArr(slot); return (a&&a.length)?AFFIX_PREFIX[a[0].s]+' ':''; }
 function slotLabel(kind){ const ch=curChar(); if(!ch||!rpg)return '—';
  if(kind==='wpn'){ if(rpg.wpnL){const L=legById(rpg.wpnL); return '★ '+(L?L.n:'');}
-  return eqPrefix('wpn')+'T'+((rpg.wpn||0)+1)+' '+weaponAt(ch.cls,rpg.wpn||0).n; }
+  return eqPrefix('wpn')+tierTag(rpg.wpn||0)+' '+weaponAt(ch.cls,rpg.wpn||0).n; }
  if(kind==='arm'){ if(rpg.armL){const L=legById(rpg.armL); return '★ '+(L?L.n:'');}
-  return eqPrefix('arm')+'T'+((rpg.arm||0)+1)+' '+TIER_NAMES[rpg.arm||0]+' '+MATN[CARMOR[ch.cls]]; }
- if(kind==='helm') return rpg.helm>=0 ? eqPrefix('helm')+'T'+(rpg.helm+1)+' '+TIER_NAMES[rpg.helm]+' Helm' : 'No helm';
- if(kind==='ring') return rpg.ring ? eqPrefix('ring')+'T'+(rpg.ring.t+1)+' '+RINGN[rpg.ring.st] : 'No ring';
+  return eqPrefix('arm')+tierTag(rpg.arm||0)+' '+TIER_NAMES[rpg.arm||0]+' '+MATN[CARMOR[ch.cls]]; }
+ if(kind==='helm') return rpg.helm>=0 ? eqPrefix('helm')+tierTag(rpg.helm)+' '+TIER_NAMES[rpg.helm]+' Helm' : 'No helm';
+ if(kind==='ring') return rpg.ring ? eqPrefix('ring')+tierTag(rpg.ring.t)+' '+RINGN[rpg.ring.st] : 'No ring';
  return '—'; }
 let mapInt=null;
 // ---------- world map (top-down island minimap) ----------
@@ -2128,7 +2222,7 @@ function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allie
 // deliberately no HUD button to bind here any more.
 // Every stall panel closes the same way and in the same places (walking off, opening the menu,
 // crossing the bridge), so the list of them lives here once instead of in five call sites.
-const VENDOR_PANELS=['shopScr','aucScr','bntScr','dmdScr'];
+const VENDOR_PANELS=['shopScr','aucScr','bntScr','dmdScr','forgeScr'];
 function closeVendorPanels(){ for(const id of VENDOR_PANELS){ const el=document.getElementById(id);
   if(el) el.style.display='none'; } }
 $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none';});
@@ -2228,7 +2322,7 @@ function openChar(){
    +'<canvas class="cicCv" width="64" height="64"></canvas><div class="cn">'+ch.name+'</div>'
    +'<div class="cd">'+c.n+' · '+(gone?('fell at Lv '+ch.dead.lvl+'<br>'+ch.dead.zone):('Lv '+ch.rpg.lvl))+'</div>'
    +'<div class="cs">'+(gone?(ch.dead.kills+' kills · '+(ch.dead.glory||0)+'✦')
-        :('T'+((ch.rpg.wpn||0)+1)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n))+'</div>'
+        :(tierTag(ch.rpg.wpn||0)+' '+weaponAt(ch.cls,ch.rpg.wpn||0).n))+'</div>'
    +'<div class="cdel">✕</div>';
   paintClassIcon(d.querySelector('.cicCv'), ch.cls);
   d.onclick=(ev)=>{ if(ev.target.classList.contains('cdel')){
