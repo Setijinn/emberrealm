@@ -69,12 +69,34 @@ const MATERIALS = {
             d:'scraped from where something was buried a long time'},
   drakeash:{id:'drakeash',n:'Drake Ash',     tier:1, src:'main',    col:'#b06a4a', icon:'▲',
             d:'still warm, and it does not cool'},
-  // ---- the apex reagent. POST-ASCENSION BOSSES ONLY. ----
-  // This is the whole content gate for the T14 rung, and it is not a new mechanism: the dungeons
-  // that drop it already refuse to open without an ascension (11_ui.js reads gate:'none'), so
-  // gating the material on the boss gates the relic on the ascension for free.
-  riftcinder:{id:'riftcinder',n:'Rift Cinder',tier:3, src:'rift',   col:'#c07ad4', icon:'✦',
-            d:'it fell through from somewhere the world does not reach'},
+  // ---- THE NINE ASCENDED BOSSES, one signature material each (user, 2026-07-28) ----
+  // `ring` is the boss id, and it is the whole link: matDropFor pays the material belonging to the
+  // boss you actually killed, so a reagent is a record of which door you got through. This is the
+  // content gate for the T14 rung and it is not a new mechanism -- those dungeons already refuse
+  // to open without an ascension (11_ui.js reads gate:'none'), so gating the material on the boss
+  // gates the relic on the ascension for free.
+  //
+  // The first three depths have no relic sets of their own, so their materials chain into the
+  // UNIVERSAL half of a seed. The remaining six each host two sets, and their material makes the
+  // seed that forges those two and nothing else.
+  anchorroot:{id:'anchorroot',n:'Anchorroot', tier:3, src:'rift', ring:0, col:'#4f9a3f', icon:'⊕',
+            d:'a knot of the lattice that held the door open'},
+  veilshard:{id:'veilshard', n:'Veilshard',   tier:3, src:'rift', ring:1, col:'#6aae7a', icon:'◈',
+            d:'a piece of the parted veil, and it casts no shadow'},
+  wallrot:  {id:'wallrot',   n:'Wallrot',     tier:3, src:'rift', ring:2, col:'#5a7a3a', icon:'◍',
+            d:'the reagent that ate through the wall between worlds'},
+  gatestone:{id:'gatestone', n:'Gatestone',   tier:3, src:'rift', ring:3, col:'#8a8f88', icon:'⬛',
+            d:'a chip off what was set against the door'},
+  pinion:   {id:'pinion',    n:"Herald's Pinion",tier:3,src:'rift',ring:4, col:'#9aa0a8', icon:'⩗',
+            d:'it never once landed, and this never once touched ground'},
+  clinker:  {id:'clinker',   n:'Furnace Clinker',tier:3,src:'rift',ring:5, col:'#c85a2a', icon:'⬢',
+            d:'slag from a furnace a whole world was spent to light'},
+  rememberash:{id:'rememberash',n:'Rememberash',tier:3,src:'rift',ring:6, col:'#8a857e', icon:'⁂',
+            d:'ash that still knows the shape of what it was'},
+  firstcinder:{id:'firstcinder',n:'First Cinder',tier:3,src:'rift',ring:7, col:'#d4522a', icon:'✸',
+            d:'it was first, and it taught the others the way'},
+  titanheart:{id:'titanheart',n:'Titanheart',  tier:3, src:'rift', ring:8, col:'#ff7a3d', icon:'✦',
+            d:'the order was given here, and it is still warm'},
   // ---- crafted. Nothing drops these. ----
   emberalloy:{id:'emberalloy',n:'Emberalloy',tier:1, src:'craft',   col:'#e0975a', icon:'❖',
             d:'iron that took the burn and kept it'},
@@ -90,15 +112,51 @@ const MATERIALS = {
             d:'the burn, held in something that will pour'},
   truecore:{id:'truecore', n:'Truecore',     tier:3, src:'craft',   col:'#c9d2da', icon:'⯃',
             d:'struck through and found solid all the way'},
-  // The last thing the material tree can make on its own. Everything below this exists to reach it.
+  // The last thing the ORDINARY tree can make. Everything below it exists to reach this, and this
+  // exists to be handed to the rift chain.
   forgeheart:{id:'forgeheart',n:'Forgeheart',tier:3, src:'craft',   col:'#ff6a3d', icon:'❤',
             d:'the forge keeps one of these banked, and Bram will not say how'},
-  // The relic catalyst: this plus a Scavenged Dreams piece is a relic. The end of the tree.
-  riftseed:{id:'riftseed', n:'Riftseed',     tier:3, src:'craft',   col:'#ffd24a', icon:'✧',
-            d:'hold it and something on the other side notices'},
+  // ---- the rift chain: the universal half of a seed, built from the first three depths ----
+  riftcore: {id:'riftcore',  n:'Riftcore',    tier:4, src:'craft',   col:'#a06ad0', icon:'◉',
+            d:'a forgeheart with the anchor grown back through it'},
+  riftbloom:{id:'riftbloom', n:'Riftbloom',   tier:4, src:'craft',   col:'#b47ae0', icon:'❈',
+            d:'it opens when nothing is looking at it'},
+  riftheart:{id:'riftheart', n:'Riftheart',   tier:4, src:'craft',   col:'#c98af0', icon:'♥',
+            d:'the half of a seed that every door has in common'},
 };
+
+// ---- THE SIX RIFTSEEDS, one per relic-hosting dungeon ----
+// Generated rather than typed, because a seed is entirely determined by the boss it belongs to:
+// its name, its colour and the sets it can forge all come off GBOSS and RELIC_SETS. Typing six
+// near-identical rows is how the two lists drift apart.
+//
+// A SEED DECIDES WHICH SETS IT CAN BECOME. That is the point of tying materials to bosses at all:
+// you no longer pick any of the twelve sets off a list, you go and kill the thing that owns the
+// one you want. It is the same rule the relic DROP already follows -- six dungeons, two sets each
+// -- so crafting and finding finally answer to the same map.
+const SEED_PREFIX='seed_';
+function seedIdFor(ring){ return SEED_PREFIX+ring; }
+function seedRing(id){ return (id&&id.indexOf(SEED_PREFIX)===0) ? (parseInt(id.slice(SEED_PREFIX.length),10)) : -1; }
+function isSeed(id){ const r=seedRing(id); return r>=0 && !!MATERIALS[id]; }
+(function _buildSeeds(){
+  if(typeof RELIC_SETS==='undefined'||typeof GBOSS==='undefined') return;
+  const rings=[]; for(const S of RELIC_SETS) if(rings.indexOf(S.ring)<0) rings.push(S.ring);
+  rings.sort((a,b)=>a-b);
+  for(const ring of rings){
+    const gb=GBOSS[ring]; if(!gb) continue;
+    MATERIALS[seedIdFor(ring)]={
+      id:seedIdFor(ring), n:'Riftseed of '+String(gb.dn||gb.n).replace(/^The /,''),
+      tier:5, src:'craft', ring:ring, col:gb.col||'#ffd24a', icon:'✧', seed:true,
+      d:'hold it and something behind '+(gb.dn||gb.n)+' notices'};
+  }
+})();
+// Read AFTER the seed builder above has run, or the six generated seeds are missing from every
+// list, pool and integrity sweep that walks this. (They were, briefly.)
 const MAT_KEYS = Object.keys(MATERIALS);
 function matDef(id){ return MATERIALS[id]||null; }
+// the material a given ascended boss pays, and the reverse
+function matForRing(ring){ for(const k in MATERIALS){ const m=MATERIALS[k];
+  if(m.src==='rift' && m.ring===ring) return m; } return null; }
 
 // ------------------------------------------------------------
 // THE RECIPE TABLE
@@ -123,9 +181,27 @@ _recipe('flux','drakeash',   'drakeflux');
 // tier 2 -> tier 3.
 _recipe('stormsteel','gravebind','truecore');
 _recipe('truecore','drakeflux',  'forgeheart');
-// the apex. The ONLY recipe that consumes a rift material, and therefore the only one an
-// unascended player can never reach.
-_recipe('forgeheart','riftcinder','riftseed');
+
+// ---- THE RIFT CHAIN. Everything below here needs an ascension, because every rung consumes a
+// material that only an ascended boss drops. ----
+// The first three depths host no relic sets of their own -- RELIC_SETS starts at ring 3 -- so
+// rather than leaving their drops as flavour, they build the half of a seed that every door has in
+// common. It also means the awakened depths are walked in order: you cannot skip to the Core
+// Sanctum's seed without having been through the Heartwood Hollow.
+_recipe('forgeheart','anchorroot','riftcore');    // ring 0, the Grovewarden
+_recipe('riftcore','veilshard',   'riftbloom');   // ring 1, the Mistantler
+_recipe('riftbloom','wallrot',    'riftheart');   // ring 2, the Bog Horror
+
+// ---- THE SIX SEEDS. Riftheart plus a relic dungeon's own signature. ----
+// Generated from the same list the seeds themselves were, so a seventh relic dungeon would grow
+// its material, its seed and its recipe without anyone editing three places and missing one.
+(function _buildSeedRecipes(){
+  for(const k in MATERIALS){ const m=MATERIALS[k];
+    if(!m.seed) continue;
+    const sig=matForRing(m.ring);
+    if(sig) _recipe('riftheart', sig.id, m.id);
+  }
+})();
 
 function matRecipe(a,b){ return MAT_RECIPES[_pairKey(a,b)]||null; }
 // every recipe that produces `id` -- used by the panel to explain where something comes from
@@ -165,7 +241,7 @@ function matHeld(){ const m=matStore(); if(!m) return [];
 const MAT_DROP_P = {B:0.70, s:0.085, c:0.085, N:0.045};
 // Which pool a kill pays from. This is the ONE place the island/mainland/rift split is decided.
 function matPoolFor(e){
-  // A post-ascension dungeon boss is the only source of the apex reagent. `gate` on the boss is the
+  // A post-ascension dungeon boss is the only source of a rift reagent. `gate` on the boss is the
   // existing ascension wall -- 'none' means a walk-in starter dungeon, anything else (INCLUDING a
   // missing field) means the awakened depths, which is the same default the dungeon door uses.
   if(e && e.type==='B' && typeof curRoom!=='undefined' && curRoom && curRoom.dungeon){
@@ -180,6 +256,16 @@ function matPoolFor(e){
   return 'main';
 }
 function matPool(src){ return MAT_KEYS.filter(k=>MATERIALS[k].src===src); }
+// A RIFT DROP IS NOT DRAWN FROM A POOL -- it is the material belonging to the boss you just killed.
+// That is the whole link between the ascended bosses and the crafting tree: a reagent in your pouch
+// is a record of which door you got through, and the seed it eventually becomes can only forge the
+// relics of the dungeon it came out of. A pool would have made every ascended boss interchangeable,
+// which is exactly what the relic drop tables already refuse to do.
+function riftMatForKill(e){
+  if(typeof curRoom==='undefined'||!curRoom||!curRoom.dungeon) return null;
+  if(typeof curRoom.ring!=='number') return null;
+  return matForRing(curRoom.ring);
+}
 // Returns a loot item {k:'mat', m:id, n:count} or null. Pushed into rollLoot's `extra`, so it lands
 // in the ordinary gear sack.
 function matDropFor(e){
@@ -189,12 +275,20 @@ function matDropFor(e){
   const F=(typeof player!=='undefined'&&player.fortune)||0;
   p*=(1+F*0.012);
   if(Math.random()>=p) return null;
-  const pool=matPool(matPoolFor(e));
-  if(!pool.length) return null;
-  const id=pool[Math.floor(Math.random()*pool.length)];
-  // A boss pays a small stack; everything else pays one. The apex reagent NEVER stacks -- it is the
-  // one material whose count is meant to be countable.
-  const n=(id==='riftcinder') ? 1 : (e.type==='B' ? 2+Math.floor(Math.random()*3) : 1);
+  const src=matPoolFor(e);
+  let id=null;
+  if(src==='rift'){
+    const m=riftMatForKill(e); if(!m) return null;
+    id=m.id;
+  } else {
+    const pool=matPool(src);
+    if(!pool.length) return null;
+    id=pool[Math.floor(Math.random()*pool.length)];
+  }
+  // A boss pays a small stack; everything else pays one. A RIFT REAGENT NEVER STACKS -- it is the
+  // one kind whose count is meant to be countable, and one per clear is what makes the awakened
+  // depths worth re-entering rather than worth farming once.
+  const n=(src==='rift') ? 1 : (e.type==='B' ? 2+Math.floor(Math.random()*3) : 1);
   return {k:'mat', m:id, n:n};
 }
 
@@ -220,10 +314,13 @@ function forgeRelicPieceFor(setId, slot){
   for(const R of RELICS) if(R.set===setId && R.slot===slot) return R;
   return null;
 }
-// Every set the player could forge into right now, with whether each is already owned.
-function forgeSetsFor(slot){
+// The sets a given SEED can forge into, for a given slot. A seed belongs to one dungeon and a
+// dungeon hosts two sets, so this is a choice between two -- not a menu of twelve. Which two is
+// decided by which boss you killed to get the reagent, which is the whole point of tying the
+// materials to the bosses.
+function forgeSetsFor(slot, ring){
   if(typeof RELIC_SETS==='undefined') return [];
-  return RELIC_SETS.map(S=>{
+  return RELIC_SETS.filter(S=>ring===undefined||ring<0||S.ring===ring).map(S=>{
     const piece=forgeRelicPieceFor(S.id,slot);
     return {set:S, piece:piece,
             owned:!!(piece && typeof ownsRelic==='function' && ownsRelic(piece.id))};
@@ -256,19 +353,26 @@ function forgePlan(A,B,opts){
   if(item.k!=='wpn' && item.k!=='arm' && item.k!=='helm' && item.k!=='ring')
     return {ok:false, why:'That is not something Bram can work.'};
 
-  // SD + Riftseed -> a relic (T14). The ONLY thing the forge does to a piece of gear: the ordinary
-  // ladder is found, not made, and Scavenged Dreams is found too. Bram joins, he does not upgrade.
-  if(mat.id==='riftseed'){
-    if(item.t!==SD_T) return {ok:false, why:'The Riftseed only takes a '+TIER_NAMES[SD_T]+' piece.'};
-    if(matCount('riftseed')<1) return {ok:false, why:'You have no Riftseed.'};
-    const sets=forgeSetsFor(item.k);
-    if(!sets.length) return {ok:false, why:'No set has a piece for that slot.'};
+  // SD + a Riftseed -> a relic (T14). The ONLY thing the forge does to a piece of gear: the
+  // ordinary ladder is found, not made, and Scavenged Dreams is found too. Bram joins, he does not
+  // upgrade. WHICH relic is decided by the seed's dungeon and the item's slot, so the two inputs
+  // between them already answer it -- the only thing left to choose is which of that dungeon's two
+  // sets you want.
+  if(isSeed(mat.id)){
+    const seed=MATERIALS[mat.id];
+    if(item.t!==SD_T) return {ok:false, why:'A Riftseed only takes a '+TIER_NAMES[SD_T]+' piece.'};
+    if(matCount(mat.id)<1) return {ok:false, why:'You have no '+seed.n+'.'};
+    const sets=forgeSetsFor(item.k, seed.ring);
+    if(!sets.length) return {ok:false, why:'That dungeon has no set with a piece for this slot.'};
     const pick=o.set||null;
-    if(!pick) return {ok:false, why:'Choose which set to forge it into.', needSet:sets};
-    const chosen=sets.filter(s=>s.set.id===pick)[0];
-    if(!chosen) return {ok:false, why:'That set has no piece for this slot.', needSet:sets};
+    // one seed, one dungeon, two sets -- if only one is left unowned there is nothing to ask
+    const open=sets.filter(s=>!s.owned);
+    if(!open.length) return {ok:false, why:'You already carry both of that dungeon’s '+item.k+' relics.', needSet:sets};
+    const chosen = pick ? sets.filter(s=>s.set.id===pick)[0] : (open.length===1?open[0]:null);
+    if(!chosen) return {ok:false, why:'Choose which of the two sets to forge it into.', needSet:sets};
     if(chosen.owned) return {ok:false, why:'You already carry that relic.', needSet:sets};
-    return {ok:true, kind:'relic', cost:{riftseed:1}, relic:chosen.piece.id,
+    const cost={}; cost[mat.id]=1;
+    return {ok:true, kind:'relic', cost:cost, relic:chosen.piece.id,
             label:'★ '+chosen.piece.n, why:'', needSet:sets};
   }
   return {ok:false, why:'That reagent does nothing to a piece of gear.'};
@@ -296,7 +400,10 @@ function forgeDo(A,B,opts){
 
   // the Scavenged Dreams piece is consumed and a relic takes its place in the same satchel slot
   const rel=(typeof mkRelicItem==='function')?mkRelicItem(plan.relic, ch.cls):null;
-  if(!rel){ matAdd('riftseed',1); return {ok:false, why:'That relic could not be shaped.'}; }
+  // put back exactly what was taken. Hard-coding 'riftseed' here refunded a reagent that no longer
+  // exists once seeds became per-dungeon, which would have quietly minted one out of nothing.
+  if(!rel){ for(const id in plan.cost) matAdd(id, plan.cost[id]);
+    return {ok:false, why:'That relic could not be shaped.'}; }
   ch.inv[idx]=rel;
   if(typeof noteRelicTaken==='function') noteRelicTaken(plan.relic);
   if(typeof saveRPG==='function') saveRPG();
@@ -465,12 +572,15 @@ function paintForge(){
       +'<span style="color:'+A.col+'">'+A.n+'</span> + <span style="color:'+B.col+'">'+B.n+'</span>'
       +' <span class="fgDim">→</span> <b style="color:'+O.col+'">'+O.n+'</b></div>'; }
   h+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'+TIER_NAMES[SD_T]+' piece</span>'
-    +' + <span style="color:'+MATERIALS.riftseed.col+'">Riftseed</span>'
-    +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ a relic, T'+(RELIC_T+1)+'</b></div>';
+    +' + <span style="color:'+RELIC_COL+'">any Riftseed</span>'
+    +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ that dungeon’s relic, T'+(RELIC_T+1)+'</b></div>';
   h+='</div>';
   h+='<div class="embNote">Bram joins things; he does not improve them. The ladder up to '
     +TIER_NAMES[SD_T]+' is <b>found</b>, never made — and '+TIER_NAMES[SD_T]+' only falls in the '
-    +'highest-level areas and the ascended dream dungeons.</div>';
+    +'highest-level areas and the ascended dream dungeons.<br><br>'
+    +'Every ascended boss drops <b>its own</b> reagent. The first three depths build the '
+    +'<b>Riftheart</b>; the six that host relics each make a <b>Riftseed of their own dungeon</b>, '
+    +'and a seed can only ever forge the two sets that dungeon keeps.</div>';
 
   body.innerHTML=h;
 

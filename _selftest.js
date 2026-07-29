@@ -115,11 +115,54 @@
        Object.values(MAT_RECIPES).every(r=>r.a&&r.b&&r.out&&Object.keys(r).length===4));
     ok('the starter island pays three materials', matPool('starter').length===3, matPool('starter').join(','));
     ok('the main island pays three materials', matPool('main').length===3, matPool('main').join(','));
-    ok('the rift pays exactly one', matPool('rift').length===1, matPool('rift').join(','));
-    ok('riftseed needs a rift material somewhere up its tree',
-       matRecipe('forgeheart','riftcinder') && matRecipe('forgeheart','riftcinder').out==='riftseed');
     ok('recipe lookup is order-independent',
        matRecipe('cinder','bogiron') === matRecipe('bogiron','cinder'));
+
+    // ---- the ascended bosses and their signatures ----
+    note('== boss -> material link ==');
+    {
+      const ascended=[]; for(let r=0;r<GBOSS.length;r++) if(GBOSS[r].gate!=='none') ascended.push(r);
+      ok('there are nine ascended bosses', ascended.length===9, ascended.join(','));
+      ok('every ascended boss pays a signature material',
+         ascended.every(r=>!!matForRing(r)),
+         ascended.map(r=>r+':'+(matForRing(r)?matForRing(r).id:'NONE')).join(' '));
+      ok('no starter boss pays one',
+         [9,10,11,12].every(r=>!matForRing(r)));
+      ok('the rift pool is exactly the nine', matPool('rift').length===9, matPool('rift').length+'');
+      // The link itself: a kill in a dungeon pays THAT dungeon's material, not a random one.
+      // curRoom is a top-level `let` -- a LEXICAL global, not a window property -- so it has to be
+      // assigned directly. Writing window.curRoom silently does nothing and every ring reads null,
+      // which is the same trap that made every loot sack in the game draw as plain burlap.
+      const realRoom=curRoom;
+      let linked=true, detail=[];
+      for(const r of ascended){
+        curRoom={dungeon:true, ring:r};
+        const m=riftMatForKill({type:'B'});
+        if(!m || m.ring!==r){ linked=false; detail.push(r+':'+(m?m.id:'null')); }
+      }
+      curRoom=realRoom;
+      ok('a boss kill pays its own dungeon\'s material', linked, detail.join(' ')||'all nine matched');
+    }
+
+    // ---- the six seeds ----
+    note('== riftseeds ==');
+    {
+      const rings=[]; for(const S of RELIC_SETS) if(rings.indexOf(S.ring)<0) rings.push(S.ring);
+      ok('six dungeons host relic sets', rings.length===6, rings.sort((a,b)=>a-b).join(','));
+      ok('each has a seed', rings.every(r=>!!MATERIALS[seedIdFor(r)]));
+      ok('each seed is made from Riftheart plus its own dungeon\'s material',
+         rings.every(r=>{ const rec=matRecipe('riftheart', matForRing(r).id);
+           return rec && rec.out===seedIdFor(r); }));
+      ok('a seed reaches exactly its own dungeon\'s two sets',
+         rings.every(r=>{ const s=forgeSetsFor('helm', r);
+           return s.length===2 && s.every(x=>x.set.ring===r); }));
+      ok('no seed exists for a dungeon with no sets',
+         MAT_KEYS.filter(k=>MATERIALS[k].seed).every(k=>rings.indexOf(MATERIALS[k].ring)>=0));
+      // the rift chain must be walked in order -- you cannot reach a seed without the first three
+      ok('the Riftheart needs all three early depths',
+         !!matRecipe('forgeheart','anchorroot') && !!matRecipe('riftcore','veilshard')
+         && !!matRecipe('riftbloom','wallrot'));
+    }
 
     // ---------- 7. THE FORGE, DRIVEN ----------
     note('== the forge ==');
@@ -151,31 +194,41 @@
     ok('a join you lack the second half of is refused', !pShort.ok, pShort.why);
     ok('a refused join takes nothing', matCount('emberalloy')===before);
 
-    // the gear rung
+    // the gear rung. Ring 8 is the Core Sanctum: two sets, 'throne' and 'tide'.
+    const SEED8=seedIdFor(8);
     ch.inv.push(mkItem('helm',11,0,'knight'));            // a T12 -- must NOT be forgeable
     ch.inv.push({k:'helm', mt:'plate', t:SD_T, rar:3, aff:[]});   // a Scavenged Dreams helm
-    matAdd('riftseed',1);
-    const pT12=forgePlan({kind:'item',i:0},{kind:'mat',id:'riftseed'});
-    ok('a T12 piece is refused by the Riftseed', !pT12.ok, pT12.why);
-    const pNoSet=forgePlan({kind:'item',i:1},{kind:'mat',id:'riftseed'});
-    ok('an SD piece asks which set to become', !pNoSet.ok && !!pNoSet.needSet, pNoSet.why);
-    ok('every set offers a helm', pNoSet.needSet && pNoSet.needSet.length===RELIC_SETS.length,
-       (pNoSet.needSet?pNoSet.needSet.length:0)+' of '+RELIC_SETS.length);
+    matAdd(SEED8,1);
+    const pT12=forgePlan({kind:'item',i:0},{kind:'mat',id:SEED8});
+    ok('a T12 piece is refused by a Riftseed', !pT12.ok, pT12.why);
+    const pNoSet=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
+    ok('an SD piece asks which of the two sets', !pNoSet.ok && !!pNoSet.needSet, pNoSet.why);
+    ok('a seed offers only its own dungeon\'s two sets',
+       pNoSet.needSet && pNoSet.needSet.length===2 && pNoSet.needSet.every(s=>s.set.ring===8),
+       (pNoSet.needSet||[]).map(s=>s.set.id).join(','));
+    ok('it does NOT offer all twelve', pNoSet.needSet.length < RELIC_SETS.length,
+       pNoSet.needSet.length+' of '+RELIC_SETS.length);
     const setId=pNoSet.needSet[0].set.id;
-    const pRel=forgePlan({kind:'item',i:1},{kind:'mat',id:'riftseed'},{set:setId});
+    const pRel=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8},{set:setId});
     ok('with a set chosen the forge is ready', pRel.ok, pRel.ok?pRel.label:pRel.why);
-    const rRel=forgeDo({kind:'item',i:1},{kind:'mat',id:'riftseed'},{set:setId});
+    const rRel=forgeDo({kind:'item',i:1},{kind:'mat',id:SEED8},{set:setId});
     ok('forging pays a relic into the same satchel slot',
        rRel.ok && ch.inv[1] && !!ch.inv[1].relic, rRel.ok?('relic='+ch.inv[1].relic):rRel.why);
     ok('the forged relic sits at T14', ch.inv[1] && ch.inv[1].t===RELIC_T, 't='+(ch.inv[1]&&ch.inv[1].t));
+    ok('the forged relic belongs to the seed\'s own dungeon',
+       relicRing(ch.inv[1].relic)===8, 'ring '+relicRing(ch.inv[1].relic));
     ok('the forged relic is equippable by its maker',
        typeof canEquip==='function' && canEquip(ch.inv[1],ch), 'mt='+(ch.inv[1]&&ch.inv[1].mt));
-    ok('the Riftseed was spent', matCount('riftseed')===0, 'riftseed='+matCount('riftseed'));
+    ok('the seed was spent', matCount(SEED8)===0, SEED8+'='+matCount(SEED8));
     // and it cannot be made twice
     ch.inv.push({k:'helm', mt:'plate', t:SD_T, rar:3, aff:[]});
-    matAdd('riftseed',1);
-    const pDupe=forgePlan({kind:'item',i:2},{kind:'mat',id:'riftseed'},{set:setId});
+    matAdd(SEED8,1);
+    const pDupe=forgePlan({kind:'item',i:2},{kind:'mat',id:SEED8},{set:setId});
     ok('the same relic cannot be forged twice', !pDupe.ok, pDupe.why);
+    // a seed from another dungeon cannot reach this one's sets
+    const SEED3=seedIdFor(3); matAdd(SEED3,1);
+    const pWrong=forgePlan({kind:'item',i:2},{kind:'mat',id:SEED3},{set:setId});
+    ok('a seed cannot forge another dungeon\'s set', !pWrong.ok, pWrong.why);
 
     // ---------- 8. THE SAVE MIGRATION ----------
     note('== migration ==');

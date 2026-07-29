@@ -220,8 +220,6 @@ function _checkForge(){
     if(r.out===r.a||r.out===r.b) _iErr('recipe '+key+' produces one of its own inputs'); }
   for(const k in MATERIALS) if(!reachable[k])
     _iErr('material "'+k+'" ('+MATERIALS[k].n+') can never be obtained — no drop source and no reachable recipe');
-  // the relic catalyst must exist and must be the thing the gear rung asks for
-  if(!MATERIALS.riftseed) _iErr('MATERIALS has no riftseed — the relic rung has no reagent');
   // every drop pool must have something in it, or that whole area silently pays nothing
   if(typeof matPool==='function') for(const src of ['starter','main','rift']){
     if(!matPool(src).length) _iErr('no material carries src "'+src+'" — that pool drops nothing'); }
@@ -230,6 +228,58 @@ function _checkForge(){
     for(const S of RELIC_SETS) for(const sl of ['wpn','arm','helm','ring'])
       if(!forgeRelicPieceFor(S.id,sl))
         _iErr('relic set "'+S.id+'" has no '+sl+' — the forge lists it and then refuses'); }
+
+  // ---- THE BOSS <-> MATERIAL LINK ----
+  // Every ascended boss must pay exactly one signature material, and every relic-hosting dungeon
+  // must have a seed that reaches its own sets and nothing else. Any hole here is silent: the boss
+  // simply drops nothing, or a seed exists that can never be spent.
+  if(typeof GBOSS!=='undefined' && typeof matForRing==='function'){
+    const seen={};
+    for(const k in MATERIALS){ const m=MATERIALS[k];
+      if(m.src!=='rift') continue;
+      if(m.ring===undefined){ _iErr('rift material "'+k+'" carries no ring — no boss can drop it'); continue; }
+      if(seen[m.ring]!==undefined)
+        _iErr('bosses ring '+m.ring+' has two signature materials: '+seen[m.ring]+' and '+k);
+      seen[m.ring]=k;
+      const gb=GBOSS[m.ring];
+      if(!gb) _iErr('rift material "'+k+'" names ring '+m.ring+', which is not a boss');
+      else if(gb.gate==='none')
+        _iErr('rift material "'+k+'" belongs to '+gb.n+', a STARTER boss — it would drop unascended');
+    }
+    // and the reverse: every ascended boss must have one
+    for(let ring=0; ring<GBOSS.length; ring++){
+      const gb=GBOSS[ring]; if(!gb || gb.gate==='none') continue;
+      if(!matForRing(ring)) _iErr('ascended boss '+ring+' ('+gb.n+') drops no crafting material');
+    }
+  }
+  if(typeof RELIC_SETS!=='undefined' && typeof isSeed==='function' && typeof forgeSetsFor==='function'){
+    const relicRings=[]; for(const S of RELIC_SETS) if(relicRings.indexOf(S.ring)<0) relicRings.push(S.ring);
+    for(const ring of relicRings){
+      const sid=(typeof seedIdFor==='function')?seedIdFor(ring):null;
+      if(!sid||!MATERIALS[sid]){ _iErr('relic dungeon ring '+ring+' has no Riftseed'); continue; }
+      // the seed must be craftable, and from that dungeon's OWN material
+      let made=false;
+      for(const key in MAT_RECIPES){ const r=MAT_RECIPES[key];
+        if(r.out!==sid) continue;
+        made=true;
+        const sig=matForRing(ring);
+        if(!sig || (r.a!==sig.id && r.b!==sig.id))
+          _iErr('the seed for ring '+ring+' is not made from that dungeon\'s own material');
+      }
+      if(!made) _iErr('Riftseed "'+sid+'" has no recipe — it can never be obtained');
+      // and it must reach exactly that dungeon's sets
+      const sets=forgeSetsFor('helm', ring);
+      const want=RELIC_SETS.filter(S=>S.ring===ring).length;
+      if(sets.length!==want)
+        _iErr('the seed for ring '+ring+' reaches '+sets.length+' sets, that dungeon hosts '+want);
+      for(const s of sets) if(s.set.ring!==ring)
+        _iErr('the seed for ring '+ring+' can forge set "'+s.set.id+'" from ring '+s.set.ring);
+    }
+    // no seed may exist for a dungeon that hosts no sets
+    for(const k in MATERIALS){ const m=MATERIALS[k]; if(!m.seed) continue;
+      if(relicRings.indexOf(m.ring)<0)
+        _iErr('seed "'+k+'" belongs to ring '+m.ring+', which hosts no relic sets'); }
+  }
 }
 
 // NOTHING MAY SIT ABOVE THE LEVEL CAP. 50 is a hard ceiling -- levelUp stops there and there is no
