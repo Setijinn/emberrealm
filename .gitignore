@@ -6,3 +6,4 @@ node_modules/
 # point is that it cannot drift from the page it is testing
 _forgetest.html
 .claude/
+_lvaudit.html
