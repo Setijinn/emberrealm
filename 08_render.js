@@ -917,7 +917,8 @@ function drawTileG(x,y){
       // terrain features further down draw the trees and boulders. Returning here rendered a
       // world with no obstacles in it while collision still read them from the grid, so the
       // player walked into things that were not there.
-      if(!drawAtlas(_terrSet[bd],x,y,tx,ty,hh,16)){
+      const _atlasDrew=drawAtlas(_terrSet[bd],x,y,tx,ty,hh,16);
+      if(!_atlasDrew){
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
         ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
         // LARGE-SCALE BRIGHTNESS, WITHOUT DRAWING THE GRID (user, 2026-07-27: "the variety in
@@ -933,7 +934,16 @@ function drawTileG(x,y){
         // mottling, no grid. Four extra fillRects per ground tile.
         tileShade(tx,ty,x,y,0.065,0);
       }
-      if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
+      // A TONE CORRECTS A SHEET, AND ONLY THE SHEET IT WAS WRITTEN FOR. _bandTone exists because
+      // four PixelLab set_N/setv_N sheets came back with the wrong palette (band 0 too vivid a
+      // green, 7/8 too hot, 9 faintly blue) and correcting them in code beat regenerating them.
+      // The terr_N ATLASES that came later are DIFFERENT ART and have none of those faults --
+      // terr_0 is bright sand, (241,217,147) -- but the fill sat outside the atlas branch, so the
+      // band-0 grass wash was painted over the band-0 sand every frame and The Landing Sands, a
+      // BEACH, rendered as olive mud at luma 102 against the atlas's own 145. Same for the other
+      // three: band 8's 46% black wash landed on an atlas that is already the darkest in the game.
+      // Gate it on the fallback path and the correction goes back to correcting what it named.
+      if(!_atlasDrew && _bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
       terrainDetail(x,y,tx,ty,bd);      // multi-scale relief, patches and litter (continuous, never tiles)
       // CORRUPTION: the infection bleeding out from the portal. A violet/black stain rising
       // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
