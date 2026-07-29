@@ -19,6 +19,12 @@ project *is*, you are in the wrong file.
 - **Commit AND push every change, fetching first** — a collaborator shares the repo.
 - Drive QA with Chrome MCP `javascript_tool`. The tab may be throttled: **step frames manually**
   with `for(let i=0;i<N;i++){update(0.016);}` and never wait on `requestAnimationFrame`.
+- **`py tools/selftest.py` is the standing harness**, and it runs with no node and no CDP client —
+  neither is installed on this machine. It injects one `<script defer>` into the **real**
+  `index.html` (never a hand-maintained copy, which would drift) and reads the results back with
+  `chrome --headless=new --dump-dom`. `--headless=new` is required: the old mode was removed and
+  exits 21 with no output. 123 checks today. Run it after any change to the tier ladder, the loot
+  tables, the level cap or the forge.
 - Verify by driving the game. Report measurements. Say plainly when something fails, or when you
   did not test it.
 
@@ -32,10 +38,42 @@ is live as soon as `index.html` lists it.
 
 **Tier is the only power axis.** Rarity sets border colour and affix count, nothing else.
 
-**`MAXT` stays 12. Do not raise it.** It is the top *rollable* tier and every random draw clamps to
-`MAXT-1`, which is the only thing keeping T13 out of drop tables, auction shelves and shops.
-`_nTiers()` in `08c_embersprites.js` reads `MAXT` for the same reason — counting the 13th tier name
-would re-map every existing tier onto the wrong sprite.
+**THE LADDER HAS FOURTEEN RUNGS AND THREE OF THEM HAVE RULES.**
+
+| rung | where it comes from |
+|---|---|
+| T1–T12 | found, wherever `ZONE_TIERS` says |
+| **Scavenged Dreams** (index 12) | **dropped**, and only in the Lv50 rim and the ascended dream dungeons |
+| **T14 Riftforged** (index 13) | relics. Forged from an SD piece, or found at the dungeon rates |
+
+**Scavenged Dreams is written `SD`, never `T13`.** It is named for what it is — carried out of a
+dead god's dream — and a number would say nothing. `tierTag(t)` owns that spelling; never build
+`'T'+(t+1)` by hand or the two spellings drift.
+
+**`MAXT` MOVED TO 13 AND THAT WAS DELIBERATE.** The old invariant said it must stay 12, and the
+reason was real: `_nTiers()` divided the sprite bands by it, so raising it re-mapped every item in
+the game onto the wrong art. `MAXT` was doing two jobs — *how high can a roll go* and *how many
+tiers were the sprites drawn for* — and those stopped being the same number the moment SD became
+rollable. The second is **`ART_TIERS`** now, frozen at 12 forever because it is a fact about the
+files on disk. `_nTiers()` reads `ART_TIERS`; **do not make it read `MAXT` again, or
+`TIER_NAMES.length` either** — both of those grow.
+
+With that split, `MAXT-1` lands exactly on `SD_T`: a random draw can reach Scavenged Dreams and can
+**never** reach a relic. Three things could have leaked SD and all three are now closed —
+`pickWeighted` clamps to the *row's* own ceiling rather than `MAXT-1` (so a T12 row cannot overflow
+into SD by accident), and the auction and the event chest carry `AUC_TMAX` / `CHEST_TMAX`. A row may
+only pay SD if it **names** SD.
+
+**NOTHING MAY SIT ABOVE `LV_CAP`.** 50 is a hard ceiling — `levelUp` stops there and there is no
+prestige level — so any content that computes its own level must land on or under it. Six ascended
+dungeons were at Lv53–55 because their clamp was `LV_CAP+10`, which never bound anything; the whole
+endgame could only be fought underlevelled and no amount of playing could close the gap. They clamp
+at `LV_CAP` now and the top six land flat on 50, which is the right shape: at the ceiling, what
+separates the Shattered Vault from the Core Sanctum is `bossPace`, the mechanics and the relic rate,
+none of which is the level. A starter dungeon is separately bounded by `ISLAND_LV`
+(`STARTER_ZONES * STARTER_LV_PER_ZONE`), **not** by an offset off the cap — it used to read
+`LV_CAP-26`, a number that looks derived and is not, and it put Marrow Chapel at Lv22, off its own
+island. `_checkLevelCap()` fails at boot on any of this.
 
 **Glory must never buy power, and nothing may mint spendable glory mid-run.** It is account-level
 and paid only on permanent death, scored from what the run accomplished. Bounties *bank* onto the
@@ -134,9 +172,12 @@ it hands you the prestige caps while there are still levels left to earn.
 - `bagVerdict()` rates a piece for the sack panel. The panel's sort is a **VIEW** — `bagTakeOne`
   splices the bag by index, so sorting the array itself makes every button take the wrong piece.
 
-### Relics — T13 Riftforged
-- Forty-eight relics in **twelve four-piece sets** (`17e_relics.js`). `RELIC_T` (12) is the index
-  of the 13th `TIER_NAMES` entry.
+### Relics — T14 Riftforged
+- Forty-eight relics in **twelve four-piece sets** (`17e_relics.js`). `RELIC_T` (13) is the index
+  of the 14th `TIER_NAMES` entry. Relics used to sit at index 12 and moved up a rung when
+  Scavenged Dreams was inserted underneath them; the *name* went with them, so a saved relic still
+  reads 'Riftforged'. `migrateForgeTiers()` (`18_forge.js`) moves the index on anything older,
+  across every character's satchel and the account Vault, and is idempotent.
 - A relic is an **ordinary item** with `relic:id` — same equip path, satchel, compare and icon.
   Its id rides in `rpg.eqAff[slot].rel`.
 - It drops **shaped for its finder** (their class's `wt`/`mt`), so `canEquip` just works.
@@ -309,6 +350,34 @@ mount goes to the Stable rather than the satchel, exactly as an egg goes to the 
 already has the shape in `player.terrainGhost`, gated on `_pmove`), a decision on whether it clears
 only water/chasm or everything, and an answer to which enemies can reach a flyer at all.
 
+### The Forge (`18_forge.js`)
+**The machine takes exactly two things, at every rung.** Two materials join into a better material;
+a Scavenged Dreams piece plus a Riftseed becomes a relic. There is one panel because there is one
+gesture. **Bram joins things; he does not improve them** — the ordinary ladder is found, never made,
+and SD is found too.
+
+- **Sixteen materials, three drop pools.** `src` on the def is what `matDropFor` reads, so the
+  comment cannot drift from the behaviour: `starter` (the Lv1–20 island), `main` (Lv20–50),
+  `rift` (**post-ascension dungeon bosses only**), `craft` (never dropped). The rift pool is the
+  whole content gate on the T14 rung and it is not a new mechanism — those dungeons already refuse
+  to open without an ascension, so gating the material gates the relic for free.
+- **Ten recipes, keyed by the two inputs SORTED**, so a recipe cannot be written twice and the
+  lookup never cares which slot was filled first. Their single end product is the **Riftseed**.
+- **Materials are account-level**, like pets, mounts and the Vault, and for the reason the starter
+  island exists: it was the one stretch of the game that produced nothing permanent.
+- They ride in the **ordinary gear sack** beside pet food and boost draughts — one-sack-per-kill is
+  intact and Fortune finds them. `mat` is `NKIND[9]`, an append into space the mount widening
+  already bought.
+- **A relic is crafted INTO a set you choose**, and the piece is decided by the slot of the SD item
+  you feed it. That is the point of crafting one: a drop is 0.25–1% spread across forty-eight
+  pieces, and this completes the set you are actually wearing. It refuses a duplicate.
+- **`atForge()` has no "I opened it here" latch, on purpose.** That is the shape of the pet-panel
+  bug fixed in `f9e13e2` — a latch outlives the condition it was set for. `curShopNear` is the live
+  answer and its own transition already calls `closeVendorPanels()`.
+- **SD shares the T11–T12 sack** rather than getting a fifth `LOOT_BANDS` row, because the band
+  field on the wire is **2 bits** and `LOOT_BANDS` has exactly four rows. A fifth would silently
+  alias to band 0 on an older peer.
+
 ### The Vault (`17j_vault.js`) and the Scroll Registry
 Account-wide storage reached from the strongbox in the VAULT room. 60 gear slots paged 20 at a
 time, plus a SCROLLS tab holding surplus stat scrolls as a per-stat tally. `applyScroll`
@@ -330,7 +399,7 @@ style.css), aspect-locked with percentage padding exactly like the vault panel.
 ### The four stalls
 | stall | role |
 |---|---|
-| **Bram** | **BLACKSMITH — reserved for item fusion. Leave alone.** Stock is empty by design; the stall stays. |
+| **Bram** | **THE FORGE** (`forge:true`, `18_forge.js`). The reservation is spent — see below. |
 | Sella | diamond merchant — the exchange and the cosmetic catalogue |
 | Maren | auctioneer — a date-seeded house rotation |
 | Odo | event NPC — the daily bounty board |
@@ -477,5 +546,5 @@ stub the purchase. `diamondPacks()` is the one function a payment provider would
 `~/.claude/projects/C--Users-darkc/memory/` — read these first:
 - `emberrealm-mob-rules.md` — movement signatures, weapon-only projectile count, fire-rate
   quantisation, QA traps.
-- `emberrealm-economy-roadmap.md` — glory rules, the blacksmith fusion reservation, vendor roles,
-  and why the auction cannot take player listings.
+- `emberrealm-economy-roadmap.md` — glory rules, the forge, vendor roles, and why the auction
+  cannot take player listings.

@@ -1,7 +1,9 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker is at emberrealm-v481.
+Service worker code cache is at emberrealm-code-v547. (There are TWO caches now,
+versioned separately -- CODE_CACHE bumps freely, ART_CACHE only when art moves.
+See the note at the top of sw.js for why.)
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -15,14 +17,22 @@ FIRST, READ THESE
 ---------------------------------------------------------------------------
 HARD RULES — these are not preferences
 ---------------------------------------------------------------------------
-- Bump CACHE in sw.js on EVERY commit, and serve on a FRESH PORT to verify
-  (py -m http.server 9NNN). The trap is the browser's HTTP cache, not the SW.
+- Bump CODE_CACHE in sw.js on every commit.
+- SERVE WITH `py tools/serve.py` (fixed port 10500, no-store, kills its own
+  previous instance). Do NOT go back to `python -m http.server` on a fresh port
+  per edit -- that ritual leaked a process every time and one session found 232
+  orphaned servers holding 3.2 GB. serve.py fixes the caching instead of dodging
+  it. Verify it is actually serving before navigating: `&& echo serving` after a
+  failed command prints the echo and starts nothing.
 - Commit AND push each change, fetching first. A collaborator shares this repo.
 - Verify by DRIVING THE GAME, not by assuming. Report measurements. Say plainly
   when something fails or when you did not test it.
-- LEAVE THE BLACKSMITH ALONE. Reserved for a future item-fusion system. Bram's
-  stock is empty by design; the stall stays. Open design work: invent what fusion
-  consumes and where it drops.
+- RUN `py tools/selftest.py` after touching the tier ladder, the loot tables, the
+  level cap or the forge. 123 checks, no node and no CDP needed.
+- NOTHING MAY SIT ABOVE Lv50. levelUp stops at LV_CAP and there is no prestige
+  level, so content that computes its own level must land on or under it. Six
+  ascended dungeons were at Lv53-55 and could only ever be fought underlevelled.
+- SCAVENGED DREAMS IS WRITTEN "SD", NEVER "T13". Go through tierTag().
 - Do NOT build player-to-player auction listings. The peer-to-peer architecture
   cannot host them honestly — no escrow, no persistence, client-editable glory.
 - Do NOT attempt to collect real money for diamonds client-side.
@@ -34,7 +44,89 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v477 -> v481)
+WHAT SHIPPED MOST RECENTLY (v545 -> v547)
+---------------------------------------------------------------------------
+THE FORGE (18_forge.js, NEW) -- Bram's stall, finally lit. The reservation is
+spent; the "leave the blacksmith alone" rule is retired.
+- THE MACHINE TAKES EXACTLY TWO THINGS, at every rung. Two materials join into a
+  better material; a Scavenged Dreams piece plus a Riftseed becomes a relic. One
+  panel, one gesture. Bram JOINS things, he does not improve them.
+- SIXTEEN MATERIALS in three drop pools -- the Lv1-20 island, the Lv20-50
+  mainland, and one that falls ONLY from post-ascension dungeon bosses. Ten
+  recipes, keyed by the two inputs sorted; their single end product is the
+  Riftseed. The rift pool IS the content gate on T14 and it needed no new
+  mechanism: those dungeons already refuse to open without an ascension.
+- MATERIALS ARE ACCOUNT-LEVEL, like pets/mounts/the Vault, because the starter
+  island was the one stretch of the game that produced nothing permanent. They
+  ride in the ordinary gear sack, so one-sack-per-kill is intact.
+- A RELIC IS CRAFTED INTO A SET YOU CHOOSE and the piece follows the slot of the
+  SD item you feed it. A drop is 0.25-1% across forty-eight pieces; this
+  completes the set you are actually wearing. It refuses a duplicate.
+
+THE LADDER GREW A RUNG: SCAVENGED DREAMS.
+- T1-T12 found; SD (index 12) DROPPED, and only in the Lv50 rim and the ascended
+  dream dungeons; T14 Riftforged (index 13) = relics.
+- WRITTEN "SD", NEVER "T13". tierTag() owns that spelling.
+- MAXT MOVED 12 -> 13 and the old "never raise it" invariant was rewritten rather
+  than quietly broken. It was doing two jobs; the art divisor is ART_TIERS now,
+  frozen at 12 forever. MAXT-1 lands exactly on SD, so a roll can reach SD and
+  can NEVER reach a relic. Three leaks were closed on the way: pickWeighted's
+  overflow tail (clamps to the ROW's ceiling now), AUC_TMAX, CHEST_TMAX.
+- Relics moved up a rung and the NAME went with them, so a saved relic still
+  reads Riftforged. migrateForgeTiers() moves the index; idempotent.
+
+NOTHING SITS ABOVE THE LEVEL CAP ANY MORE.
+- Six ascended dungeons were Lv53-55 against a hero who stops at 50 -- their
+  clamp was LV_CAP+10, which never bound anything. Every relic-dropping dungeon
+  could only be fought five levels underlevelled, forever. They clamp at LV_CAP
+  now; the top six land flat on Lv50, which is right: at the ceiling what
+  separates two dungeons is bossPace, mechanics and relic rate, not the level.
+- Marrow Chapel was Lv22, off its own island. Starter dungeons clamped at
+  `LV_CAP-26` (= 24), a number that LOOKS derived from the cap and is not. It
+  reads ISLAND_LV now (STARTER_ZONES * STARTER_LV_PER_ZONE).
+- _checkLevelCap() fails at boot on any of it.
+
+THE CAP PAYS LIKE AN ARRIVAL. Tree budget 35 -> 44 points (0.88/level). The XP
+curve is UNCHANGED and deliberate -- 45-50 is still 64% of the whole run and
+49->50 still 23% of it -- but under the old rate that whole stretch paid four
+points out of thirty-five. 44 funds ~60% of the dearest tree (was 48%): one
+branch all the way plus a substantial second, and still no class can buy its
+whole tree. TREE_VER deliberately NOT bumped; grantPerkPoints delivers the
+difference on load, so a hero already at 50 banks +9.
+
+THE XP BAR STOPS LYING AT 50. rpg.xp keeps accumulating past the cap and
+xpNeed(50) still returns a live 704,851, so the bar filled and then sat pinned at
+100% for the life of the account. At the cap it is a plate, not a meter: it says
+MAX.
+
+tools/selftest.py is the standing harness -- 123 checks, no node, no CDP. It
+injects into the REAL index.html rather than a copy so it cannot drift.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v481 -> v545)
+---------------------------------------------------------------------------
+A five-phase performance pass, an integrity check, and three real bugs the
+killability sweep could not see. Read `git log` for these -- the commit bodies
+are the record and they are long.
+- THE SWEEP'S 27/27 WAS FALSE. The harness decremented ward gate-node hp
+  directly, which a player cannot: fire() ends with `if(ang===null) return;` and
+  the auto-aim loop skipped every e.node, so with dn0's ward up and four knots
+  standing the player could not shoot AT ALL. On touch, auto-aim is the only
+  mode there is. Gate nodes are targetable now and ranked last.
+- tintedMob cached a 0x0 canvas built from an undecoded image, so some creatures
+  stayed invisible for the rest of the session.
+- openPets() with no argument inherited whatever _petTab the last station left,
+  making COMPANION/FEED/MOUNTS unreachable after one Incubator visit. NO
+  ARGUMENT NOW ALWAYS MEANS THE BROWSABLE PANEL -- and that latch is the reason
+  atForge() deliberately has no "I opened it here" flag.
+- floorFamily never knew the overworld, so the generic stamp pass painted the
+  Hearth's mossy grass over dry khaki terrain as pale bars.
+- Keyboard reach for menus (05c_keyboard.js), DPR re-read on change, 44px touch
+  targets, hover gated behind (hover:hover), and the boot wave split 1783 -> 1171
+  images.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v477 -> v481)
 ---------------------------------------------------------------------------
 MOUNTS (17k_mounts.js, NEW) — ground mounts, the reward for reaching Lv20.
 - A RIDE COSTS YOU YOUR OFFENCE. No attacks, no abilities while mounted.
@@ -320,8 +412,13 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 ---------------------------------------------------------------------------
 DO THIS FIRST
 ---------------------------------------------------------------------------
-Nothing is blocked. Serve on a FRESH PORT and verify it actually responds before
+Nothing is blocked. `py tools/serve.py`, then `py tools/selftest.py` to confirm
+you are starting from green (123/123). Verify the server actually responds before
 you navigate — an `&& echo serving` after a failed command lies.
+
+THE FORGE HAS NO ART. Sixteen materials are all rendering as a coloured glyph in
+a chip. That is the largest single piece of unfinished work in the newest system
+and it is the obvious next job.
 
 THREE STATUS-EFFECT FINDINGS, measured and deliberately NOT fixed (balance calls,
 one-line each — ask before changing):
@@ -351,35 +448,40 @@ STILL OPEN, IN NO PARTICULAR ORDER
 - (done v455) The Sanctuary has a hub portal; the wardrobe mirror moved to the
   Hearth. The COSMETICS room def is still present but unreachable -- delete it or
   give it a purpose.
-- (open) "soft cap at 50" was implemented as the CURVE making 50 a practical
-  ceiling. LV_CAP is still 50 and there are no levels past it. If levels beyond
-  50 at diminishing returns were the intent, that is a larger change -- zone
-  levels, stat scaling and the ascension gate all key off the cap.
+- (settled v547) 50 IS A HARD CEILING AND THE GAME NOW REVOLVES AROUND IT (user,
+  2026-07-28). No levels past 50, nothing above it, and the cap pays 44 tree
+  points instead of 35 so arriving means something. The XP curve was reviewed
+  and deliberately KEPT: 45-50 is 64% of the run and 49->50 is 23% of it, and
+  that is the grind, on purpose. Do not "fix" it without asking.
 - (done v481) Mounts. Ground only, Lv20, 78 species. See WHAT SHIPPED.
 - FLYING MOUNTS at Lv40+ (user). Not built. The seam is declared in
   17k_mounts.js and nothing reads it yet. Needs: a collision exemption
   (04_collision already has the shape in player.terrainGhost, gated on
   _pmove), a decision on whether flight clears only water/chasm or
   everything, and an answer to which enemies can reach a flyer at all.
-- THE CRAFTING ARC (user, 2026-07-27), designed but NOT built:
-    * the Lv1-20 island farms fusion MATERIALS that prepare you for Lv20+
-    * fusion's real depth is late-game materials from bosses only reachable
-      AFTER ASCENSION. That gate ALREADY EXISTS and already works — 11_ui.js
-      refuses any dungeon whose boss lacks gate:'none' with "Ascend to enter
-      the awakened depths", and a MISSING field defaults to locked, so only
-      the starter three are open. No new gating mechanism is needed.
-    * many craftable items, everything derived from TWO base items
-    * the juicy end: forging RELICS into T14 uniques. THIS DOES NOT BREAK THE
-      MAXT INVARIANT — MAXT governs ROLLABLE tiers, and T13 Riftforged already
-      lives above it at index 12 for exactly that reason. _nTiers() reads MAXT
-      so a 14th name does not disturb sprite mapping, and itemArtImg already
-      lets a relic's own art win before the tier-band maths. The one absolute:
-      a crafted T14 must NEVER enter a random draw.
-- Blacksmith fusion. Design work only so far; nothing built. See the hard rule.
+- (done v547) THE CRAFTING ARC. Built as 18_forge.js. The design changed twice
+  while it was being built and the SHIPPED shape is: every craft takes exactly
+  two inputs; SD is DROPPED from the Lv50 rim and the ascended dungeons rather
+  than crafted; and the payoff is forging an SD piece into a relic. See WHAT
+  SHIPPED. Open follow-ups it left behind:
+    * MATERIALS HAVE NO ART. Every one is an emoji-ish glyph plus a colour in a
+      chip. They want real pixel art, and PixelLab's habits are documented in
+      HANDOFF.md's trap list before you start burning generations.
+    * SD HAS NO SACK OF ITS OWN -- it shares the T11-T12 bag, because the co-op
+      band field is 2 bits and LOOT_BANDS already has exactly four rows. Giving
+      it one means widening that field, which is a wire change.
+    * The material drop rates (B 0.70 / trash 0.085) are a first guess, chosen
+      against pet food's 5.5%/60% as the nearest comparison. Nobody has farmed
+      the tree end to end and timed how long a Riftseed actually takes.
+    * SD's own drop weight in the rim is 8 against T11's 50 and T12's 42, and
+      SD_DUN_W is 22 inside an ascended dungeon. Also unmeasured.
 - Bounty board has no fog objective.
-- Lv1-20 zone progression on the starter island is thin. The mount is now the
-  Lv20 reward that sits at the END of it; the island still produces nothing
-  permanent, which is what the fusion-materials plan above is meant to fix.
+- Lv1-20 zone progression on the starter island is thin. TWO of the three legs
+  are there now: the mount is the Lv20 reward at the END of it, and the island
+  finally produces something PERMANENT -- it pays the three base forge materials,
+  which are account-level and survive permadeath. What is still thin is the
+  moment-to-moment: it is 3.6% of the run's XP across four provinces, and the
+  only reason to walk them is the materials. It could use content of its own.
 - Per-class stat caps.
 - (done v444) The Vault. Account-wide storage, ungated. See DO THIS FIRST.
 - (done v432) The arena champion has THE CHALLENGE: it commits to a direction, a
