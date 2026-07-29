@@ -258,6 +258,46 @@ it hands you the prestige caps while there are still levels left to earn.
   seams, no stripes* or it returns something that will not tile. When the palette comes back wrong,
   correct it with `_bandTone` rather than burning generations chasing it; bands 0, 7, 8 and 9 all do.
 
+### Overworld ground — three rules that all say the same thing
+Every one of these was paid for twice in one session, and they are the same mistake wearing
+different hats: **a continuous field rendered through a per-tile decision becomes a grid.**
+
+- **Any smooth field filled as ONE value per tile is quantised at tile granularity.** `tileShade`
+  already existed for exactly this and the lesson still had to be relearned one layer out: the
+  band shade drift sampled noise once per tile and `fillRect`ed the whole tile, and at the strength
+  it needed to be visible at all the ground came out as flat squares. Sample at the tile CORNERS
+  and fill four bilinear quadrants — neighbours then share edge values by construction. If a new
+  ground layer is subtle enough to get away with a flat fill, it is probably too subtle to see.
+- **A domain warp must be LOWER-frequency than its own amplitude.** `grvBandXY` warps the band
+  lookup so provinces interlock instead of meeting on a Voronoi edge. At amplitude 4.6 tiles over
+  noise turning over every 3.1, touching tiles sampled points four tiles apart in unrelated
+  directions and the band flipped tile to tile — the boundary was not warped, it was shredded into
+  speckle, and every blend downstream faithfully drew that speckle as a chequerboard.
+  `BAND_WARP_SC` (13) must stay comfortably above `BAND_WARP` (4.6).
+- **A blend between two grounds has to be WIDE, and its weight has to be smooth.** One tile of
+  crossfade cannot join atlases at luma 129 and luma 51 — the tile beyond it still steps off the
+  cliff. `_bandBlendMap()` seeds every tile touching another band, dilates the seed outward
+  `BAND_BLEND_STEPS` tiles, then **box-blurs the weight**, because dilation alone hands out one
+  value per step and those discrete rings read as blocks. It is cached on the room (`RG._bbm`) like
+  `_territories`, since the band field is a property of the map, not of the frame. Blur the WEIGHT
+  only, never the band id — averaging identities is meaningless.
+
+**`grvBandXY` is the renderer's private opinion; `grvBandAt` is the truth.** The warp must never
+move into `grvBandAt`, which answers for the creature roster, the tile's level, the minimap ramp
+and the danger seam. Warping that would walk a spawn point into the next province and take the mob
+list and the level with it.
+
+**A tone correction belongs to the sheet it was written for.** `_bandTone` corrects four PixelLab
+`set_N` palettes; it is gated on the atlas fallback path because the later `terr_N` atlases are
+different art with none of those faults. Ungated, it painted band 0's grass wash over band 0's
+SAND and rendered a beach as olive mud.
+
+**Bloom fields are landmarks, so they must be a minority.** `BAND_BLOOM` grows each band its own
+thing — flowers on grass, lichen on scree, ember motes in the ash — gated by a low-frequency field
+so patches are scarce and dense rather than an even sprinkle. The flat one-in-seven scatter this
+replaced made flowers present everywhere and noticeable nowhere. `_terraudit.js` measures the
+coverage; 10-25% of tiles blooming is the band that reads as "some areas are special".
+
 ### Bosses
 - Thirteen identities in `GBOSS`; a boss's index is its **`ring`** everywhere in the code (a legacy
   name — it is a boss id, not a terrain band).
