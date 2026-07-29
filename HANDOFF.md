@@ -308,6 +308,25 @@ move into `grvBandAt`, which answers for the creature roster, the tile's level, 
 and the danger seam. Warping that would walk a spawn point into the next province and take the mob
 list and the level with it.
 
+**A FLAT ATLAS CANNOT BE FIXED AT RENDER TIME — repaint the file.** `terr_4/5/8` measured luma
+51.9 / 52.1 / 49.3 with a standard deviation of about **five**: not merely dark but nearly flat, a
+single colour carrying fine speckle. Brightening a flat field only gives a brighter flat field, so
+this is the one class of ground problem no filter, tone or drift can reach. `tools/repaint_terrain.py`
+remaps them onto a two-point ramp (shadow → highlight) chosen per band, lifting them to luma
+76 / 68 / 69 at std 9-11. `terr_8` also went from neutral grey (47,50,47) to the warm ember crust
+its own `TERR_ACCENT` entry (112,52,26) had always claimed — the art and the palette written for it
+had drifted apart.
+- **The remap is POINTWISE and must stay that way.** Every pixel's new colour depends only on its
+  own luminance. These sheets are seamless and tile against themselves and each other, so any
+  neighbourhood operation — blur, sharpen, added low-frequency structure — breaks the wrap at the
+  cell edges. A pointwise curve cannot.
+- **Originals live in `assets/tiles/orig/`** and the script always reads from there, so re-running
+  never compounds, the numbers are re-tunable, and `--restore` puts them back.
+- **Bump `ART_CACHE`, not `CODE_CACHE`**, when these change. That split exists for exactly this.
+- **The corruption stain is what now caps the rim.** With the new paint the rim provinces still
+  render at luma ~40 against an atlas of 69, because `corruptAt` reaches 0.88 out there and the
+  stain is `cor²·0.6` plus a magenta pulse. The art is no longer the limiting factor; the stain is.
+
 **A tone correction belongs to the sheet it was written for.** `_bandTone` corrects four PixelLab
 `set_N` palettes; it is gated on the atlas fallback path because the later `terr_N` atlases are
 different art with none of those faults. Ungated, it painted band 0's grass wash over band 0's
