@@ -1041,8 +1041,20 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
   background:#1a1622; border:1px solid #332b40; border-radius:6px;
   padding:calc(var(--u)*0.5) calc(var(--u)*0.2); }
 .fgChip.on{ border-color:#ffc94d !important; background:#241a2e; }
-.fgChip b{ display:block; font-size:calc(var(--u)*1.35); line-height:1.15;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* THE CHIP LABEL GETS TWO LINES. It was one nowrap line with an ellipsis, which turned every
+   generated seed into "Riftseed of As..." and left the full name only in the title attribute --
+   and a title is nothing at all on touch, which is where this panel is mostly read. The name is
+   the one thing on a chip that has to survive: a seed forges only the two sets ITS OWN dungeon
+   keeps, so which dungeon it names IS the item's meaning. Two lines at this size fit every one of
+   the 32 names, measured -- the longest is "Riftseed of Shattered Vault" at 27 characters. (Not
+   Heartwood Hollow, which is longer but names no seed: the first three depths host no relic sets,
+   so they pay into the universal Riftheart instead of getting a seed of their own.) Re-measure
+   with `tools/audit.py _chipaudit.js` if a name or a size changes. The two-line box is RESERVED
+   whether a name wraps or not, so a row of chips keeps a straight baseline instead of going ragged
+   where a short name sits beside a long one. */
+.fgChip b{ font-size:calc(var(--u)*1.2); line-height:1.15;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
+  overflow:hidden; overflow-wrap:break-word; min-height:calc(var(--u)*2.76); }
 .fgN{ font-size:calc(var(--u)*1.35); color:#8a8494; }
 .fgSets{ display:flex; flex-wrap:wrap; gap:calc(var(--u)*0.6); }
 .fgSet{ flex:1 1 calc(var(--u)*20); cursor:pointer; background:#1a1622; border:1px solid #332b40;

@@ -43,6 +43,11 @@ project *is*, you are in the wrong file.
   was hand-injected every time) and gets a 600s virtual-time budget, because a drop-rate audit runs
   millions of simulated kills. **An audit must put back every global it touched** — `_forgeaudit.js`
   saves and restores `curRoom` and `player.fortune`, and says so in its own output.
+- **An audit is also the answer to "does this fit", not just "what is the rate".** A photograph of
+  a strip that wraps and scrolls proves only the chips that happen to be on screen — the forge shows
+  8 of 32 — so `_chipaudit.js` grants every material and measures each label's `scrollHeight` and
+  `scrollWidth` against its box. Prefer that to a screenshot whenever the answer is *every* one of
+  something.
 - **`py tools/shot.py <panel> <w> <h> [tab]` PHOTOGRAPHS a panel** and writes it to `_shots/`. Use
   it before claiming any UI works. It exists because **the browser extension available here is
   attached to a Chrome that is not on this machine** — `Get-Process chrome` returns 0 locally — so

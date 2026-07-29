@@ -53,8 +53,17 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v550 -> v554)
+WHAT SHIPPED MOST RECENTLY (v550 -> v555)
 ---------------------------------------------------------------------------
+THE FORGE CHIP LABELS FIT (v555). They were one nowrap line with an ellipsis, so
+every generated seed read "Riftseed of As..." and the full name lived only in a
+title attribute -- nothing at all on touch, which is where this panel is mostly
+read. Two lines now, in a RESERVED box so a row of chips keeps a straight
+baseline, and the names were kept rather than shortened because which dungeon a
+seed names is the item's whole meaning. A photograph could only prove eight of
+the thirty-two, so `_chipaudit.js` measures every one: 32/32 render in full, one
+uniform height, and the panel still sits inside the art's percentage-inset field.
+
 Ground, feel, and the merge that brought them together. v554 is a MERGE COMMIT:
 the ground and combat work below was built on `claude/handoff-catch-up-sbo9ym`
 off v549 while the forge-panel fix landed on main, and the two were reconciled
@@ -705,10 +714,13 @@ STILL OPEN, IN NO PARTICULAR ORDER
     * SD HAS NO SACK OF ITS OWN -- it shares the T11-T12 bag, because the co-op
       band field is 2 bits and LOOT_BANDS already has exactly four rows. Giving
       it one means widening that field, which is a wire change.
-    * THE MATERIAL CHIP LABELS TRUNCATE at chip width ("Riftseed of As..."). The
-      full name is in the title attribute, which is useless on touch. Either
-      shorten the seed names or give the chip two lines. STILL OPEN, and visible
-      in _shots/forge_forge_844x390.png.
+    * (done v555) THE MATERIAL CHIP LABELS TRUNCATED at chip width ("Riftseed of
+      As..."), with the full name only in a title attribute that touch never
+      shows. The chip gets TWO LINES now rather than the names being shortened,
+      because which dungeon a seed names is the whole meaning of the item -- it
+      forges only the two sets that dungeon keeps. Measured, not eyeballed: all
+      32 labels render in full, one uniform height, panel still inside the art's
+      field. `py tools/audit.py _chipaudit.js`.
     * (MEASURED v549 — see THE FORGE, MEASURED.) The drop rates are no longer a
       guess and the tree HAS been farmed end to end: the starter leg is a median
       105 trash kills, the mainland leg 56, the rift leg 5 dungeon clears. What
