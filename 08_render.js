@@ -40,7 +40,96 @@ const GBANDCOL=[
  ['#6f6a5c','#7d7768'], // 9 The Cairnworks (starter island, out of the green->red order)
 ];
 // Radial band from tile-x/y — the new two-island world (grvBandAt lives in 03_entities).
-function grvBandXY(x,y){ return (typeof grvBandAt==='function')?grvBandAt(x,y):0; }
+// WHERE ONE PROVINCE'S GROUND BECOMES THE NEXT IS A RENDER DECISION, NOT A GAMEPLAY ONE.
+// A province is a warped-Voronoi cell, so its edge is smooth and mathematically exact, and two
+// bands meeting along it read as a wallpaper join — you can see the seam from across the map.
+// Warping the SAMPLE POINT by a couple of tiles of smooth noise makes the two grounds interlock
+// in fingers and islands instead, the way real terrain gives way to real terrain.
+//
+// IT MUST STAY IN HERE, and never move into grvBandAt. That function answers for the creature
+// roster, the tile's level, the minimap ramp and the danger seam; warping it would walk a spawn
+// point into the neighbouring province and take the mob list and the level with it. This is the
+// renderer's own private opinion about where the paint changes.
+// THE WARP MUST BE LOWER-FREQUENCY THAN ITS OWN AMPLITUDE, and getting that backwards is what
+// made every seam blocky. At amplitude 4.6 tiles on noise that turns over every 3.1, two touching
+// tiles sample points four tiles apart in unrelated directions, so the band assignment FLIPS from
+// tile to tile and the boundary is not warped, it is shredded into speckle -- which is what the
+// crossfade and the blend map were then faithfully drawing as a chequerboard. With the field
+// turning over across ~13 tiles instead, neighbours sample almost the same offset, and the
+// boundary moves as a coherent finger of one province reaching into the next.
+const BAND_WARP=4.6;                 // tiles of lateral wander
+const BAND_WARP_SC=13.0;             // tiles the warp field takes to turn over -- must exceed WARP
+// THE BLEND MAP. A one-tile crossfade cannot join two grounds that are genuinely far apart: the
+// Verdant Belt's atlas is luma 129 and Wolfwood's is 51, so however cleverly one tile is mixed,
+// the tile beyond it still steps off a cliff and the seam reads as a blocky staircase. A real
+// transition needs to be several tiles WIDE, which means each tile has to know how far it is from
+// the boundary -- and that is a property of the map, not of the frame, so it is computed once per
+// room and cached on the room the way _territories already caches the provinces.
+//
+// Built by dilation rather than by searching a neighbourhood per tile: seed every tile that
+// touches a different band, then push that seed outward a few steps at a decaying weight. Three
+// passes over the grid instead of a 48-sample lookup on each of 835,000 tiles.
+const BAND_BLEND_STEPS=3;            // how many tiles the transition reaches
+const BAND_BLEND_FALL=0.58;          // weight retained per step outward
+function _bandBlendMap(R){
+  const RG=R&&R.rings; if(!RG) return null;
+  if(RG._bbm) return RG._bbm;
+  const W=R.w|0, H=R.h|0, N=W*H;
+  const band=new Uint8Array(N), nbb=new Uint8Array(N), wt=new Uint8Array(N);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) band[y*W+x]=(grvBandXY(x,y)|0)+1;
+  // seeds: a tile whose 4-neighbourhood contains another band takes that band at full weight
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    const i=y*W+x, b=band[i];
+    const c=[band[i-1],band[i+1],band[i-W],band[i+W]];
+    for(let k=0;k<4;k++) if(c[k]&&c[k]!==b){ nbb[i]=c[k]; wt[i]=255; break; }
+  }
+  // dilate outward, so the transition fades over BAND_BLEND_STEPS tiles instead of stopping dead
+  for(let s=1;s<=BAND_BLEND_STEPS;s++){
+    const tgt=Math.round(255*Math.pow(BAND_BLEND_FALL,s));
+    const src=wt.slice(), sn=nbb.slice();
+    for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+      const i=y*W+x; if(src[i]) continue;
+      const j=(src[i-1]&&i-1)||(src[i+1]&&i+1)||(src[i-W]&&i-W)||(src[i+W]&&i+W);
+      if(!j) continue;
+      // never blend a tile toward its OWN band -- that is a no-op that costs a full atlas draw
+      if(sn[j]===band[i]) continue;
+      nbb[i]=sn[j]; wt[i]=tgt;
+    }
+  }
+  // AND SMOOTH THE WEIGHT. Dilation hands out one value per step, so the transition arrives as
+  // BAND_BLEND_STEPS discrete rings; along a ragged boundary those rings interleave and the eye
+  // reads the steps between them as blocks -- the same quantisation problem tileShade solved for
+  // brightness, one layer further out. Two separable box passes turn the staircase into a ramp.
+  // Only the weight is blurred, never the band id: averaging identities is meaningless.
+  const tmp=new Uint8Array(N);
+  for(let pass=0;pass<2;pass++){
+    for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+      const i=y*W+x;
+      tmp[i]=(wt[i-1]+wt[i]+wt[i+1])/3;
+    }
+    for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+      const i=y*W+x;
+      wt[i]=(tmp[i-W]+tmp[i]+tmp[i+W])/3;
+    }
+  }
+  // a blurred weight can bleed onto tiles that never got a band to mix with; give them the
+  // nearest one rather than dropping their weight, or the ramp develops holes
+  for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+    const i=y*W+x;
+    if(wt[i] && !nbb[i]){
+      const n=nbb[i-1]||nbb[i+1]||nbb[i-W]||nbb[i+W];
+      if(n && n!==band[i]) nbb[i]=n; else wt[i]=0;
+    }
+  }
+  RG._bbm={w:W,h:H,nb:nbb,wt:wt};
+  return RG._bbm;
+}
+function grvBandXY(x,y){
+  if(typeof grvBandAt!=='function') return 0;
+  const wx=x+(vnoise(x+311,y+97,BAND_WARP_SC)-0.5)*BAND_WARP;
+  const wy=y+(vnoise(x+53,y+821,BAND_WARP_SC)-0.5)*BAND_WARP;
+  return grvBandAt(wx,wy);
+}
 // Well-avalanched per-cell hash. The old `(x*131+y*57)` has its low bit == (x+y)&1, so
 // anything keyed off its low bits (the tile FLIP `&3`, tile choice `%100`) alternated on a
 // checkerboard — with directionally-lit ground art that read as a bright/dark grid across the
@@ -222,6 +311,42 @@ const TERR_ACCENT={
   8:['rgba(112,52,26,',    'rgba(60,26,14,'],     // The Ashfall     - ember crust
   9:['rgba(128,122,108,',  'rgba(80,76,68,']      // The Cairnworks  - chipped stone + quarry grit
 };
+// TWO ALTERNATE SHADES PER BAND (user, 2026-07-29: "it shouldn't be all one shade of green for
+// this area. Use different shades."). Everything above this varies the ground's BRIGHTNESS and
+// leaves its hue alone, which is why a province still reads as one colour from horizon to horizon:
+// light green and dark green are the same green. These are shades of the band's OWN ground, one
+// warmer/drier and one cooler/deeper, blended across TENS of tiles by smooth noise, so walking
+// through a zone takes you through sun-bleached grass, then deep meadow, then dry ground, without
+// ever leaving the zone's identity. Index 0 is the warm/dry drift, index 1 the cool/deep one.
+const BAND_SHADE={
+  0:['rgba(214,186,120,','rgba(120,124,104,'],   // Landing Sands  - bleached dune / damp packed sand
+  1:['rgba(150,138,116,','rgba(84,96,110,'],     // Gullwind Shore - dry shingle / wet cold stone
+  2:['rgba(176,166,72,', 'rgba(88,110,58,'],     // Sawgrass Flats - sun-cured hay / greener low ground
+  3:['rgba(138,164,64,', 'rgba(40,84,52,'],      // Verdant Belt   - young sunlit grass / deep pasture
+  4:['rgba(96,120,52,',  'rgba(34,62,46,'],      // Wolfwood       - clearing light / needle shade
+  5:['rgba(74,90,48,',   'rgba(22,40,34,'],      // Deep Timber    - moss in a sunbeam / black shade
+  6:['rgba(150,138,112,','rgba(78,84,96,'],      // Stonebrow Rise - dust / cold slate
+  7:['rgba(140,120,100,','rgba(64,58,66,'],      // Cinderwatch    - warm ash drift / cold clinker
+  8:['rgba(168,74,32,',  'rgba(48,30,34,'],      // The Ashfall    - live ember crust / cooled scab
+  9:['rgba(164,148,112,','rgba(92,96,100,']      // The Cairnworks - quarry dust / shadowed cut stone
+};
+// WHAT EACH BAND BLOOMS WITH. [bloom, highlight, stem|null] -- a stem is what makes a thing read
+// as growing, so the ash and stone entries deliberately have none and read as scattered matter
+// rather than as plants. Two or three species per band and a patch picks ONE, because a real
+// clump of anything is one species; mixing them per-pixel is what makes procedural flowers look
+// like confetti.
+const BAND_BLOOM={
+  0:[['#d8cf9a','#fff8dc',null],       ['#c98aa2','#e8b6c6','rgba(120,120,86,0.85)']],           // sea thrift + shell grit
+  1:[['#b9c6cc','#eef6f8',null],       ['#c2a86a','#e6d2a0',null]],                              // wrack + dry weed
+  2:[['#e0c452','#fff0a0','rgba(96,102,50,0.85)'], ['#dcd4e0','#ffffff','rgba(96,102,50,0.85)'], ['#c8a83a','#f0dc80','rgba(96,102,50,0.85)']],
+  3:[['#d8b84a','#f0d878','rgba(24,38,20,0.85)'],  ['#dcd4e0','#ffffff','rgba(24,38,20,0.85)'],  ['#c86a8e','#e89ab4','rgba(24,38,20,0.85)']],
+  4:[['#8a6ac0','#b39ae0','rgba(20,34,20,0.85)'],  ['#d86a4a','#f09a7a','rgba(20,34,20,0.85)'],  ['#dcd4e0','#f4f4f4','rgba(20,34,20,0.85)']],
+  5:[['#c8d8b0','#eef6e0','rgba(16,28,18,0.85)'],  ['#9a7ac0','#c0a8e0','rgba(16,28,18,0.85)']], // pale woodland stars
+  6:[['#a8b45a','#ccd888',null],       ['#8a9098','#c0c6cc',null]],                              // lichen + quartz chip
+  7:[['#8a8078','#b6aca2',null],       ['#c07a4a','#e0a878',null]],                              // ash bloom + scorched grit
+  8:[['#e07a2a','#ffc060',null],       ['#8a2a1a','#c04a2a',null]],                              // live ember motes
+  9:[['#b0b45a','#d6da88',null],       ['#9a9086','#c6bcae',null]]                               // quarry lichen + chippings
+};
 // Open ground was one flat grain: the atlases are deliberately uniform so tiles never repeat, but
 // uniform is also featureless. This adds the missing scales back WITHOUT reintroducing a pattern,
 // because every value here comes from world-position noise and so flows across tile borders:
@@ -254,6 +379,70 @@ function terrainDetail(x,y,tx,ty,bd){
   // 4. faint worn tracks: ridged noise reads as trodden ground rather than blobs
   const r=Math.abs(vnoise(x+7,y+131,9.0)-0.5);
   if(r<0.045){ ctx.fillStyle='rgba(0,0,0,'+((0.045-r)*1.7).toFixed(3)+')'; ctx.fillRect(tx,ty,TILE,TILE); }
+  // 5. THE SHADE DRIFT. Two smooth fields at scales nothing else here uses, so this cannot beat
+  // against the relief above and produce a pattern. Each pushes the ground toward one of the
+  // band's two alternate shades; where both are weak the atlas shows through unaltered, which is
+  // what keeps this a drift rather than a recolour.
+  // ONE AXIS, ALWAYS APPLIED, NOT TWO PATCHES. The first attempt thresholded each shade at 0.54
+  // and tinted only above it, which measured a maximum alpha of 0.03-0.17 and a MEAN of nearly
+  // zero -- most of every province got no tint at all and stayed exactly the flat colour this is
+  // meant to break up. The field moves 0.15-0.23 across one screen, so the information was there;
+  // the threshold was throwing it away. It is a single warm<->cool axis now: above the midpoint
+  // drifts toward the dry shade, below it toward the deep one, and the ground is somewhere on that
+  // axis EVERYWHERE. Same noise, same cost, and the variation is continuous instead of occasional.
+  // AND IT MUST BE FILLED BILINEARLY, NOT AS ONE FLAT VALUE PER TILE. This is tileShade's lesson
+  // and it cost a second attempt to relearn: sampling smooth noise once per tile and filling the
+  // whole tile with the result QUANTISES a continuous field at tile granularity, so the ramp does
+  // not run through the seam, it STEPS at it. At the small amplitudes the older detail layers use
+  // that step is invisible; at the strength this drift needs to be seen at all, the ground came
+  // out as a patchwork of flat squares -- the exact artefact tileShade exists to prevent, in a new
+  // layer. Sampled at the tile CORNERS and filled as four bilinear quadrants, neighbouring tiles
+  // share their edge values by construction and the drift runs smoothly across the whole province.
+  const S=BAND_SHADE[bd];
+  if(S){
+    const _w=(gx,gy)=>vnoise(gx+401,gy+37,19.0)*0.68+vnoise(gx+59,gy+503,8.0)*0.32;
+    const w00=_w(x,y), w10=_w(x+1,y), w01=_w(x,y+1), w11=_w(x+1,y+1);
+    const hq=TILE/2;
+    for(let qy=0;qy<2;qy++) for(let qx=0;qx<2;qx++){
+      const u=(qx+0.5)/2, vv=(qy+0.5)/2;
+      const wq=(w00*(1-u)+w10*u)*(1-vv)+(w01*(1-u)+w11*u)*vv;
+      let dq=(wq-0.5)*2;
+      dq=(dq<0?-1:1)*Math.pow(Math.abs(dq),0.55);
+      ctx.fillStyle=(dq>0?S[0]:S[1])+(Math.abs(dq)*0.42).toFixed(3)+')';
+      ctx.fillRect(tx+qx*hq, ty+qy*hq, hq+1, hq+1);
+    }
+  }
+  // RARER AND LOUDER. Measured, the first cut put 29-53% of every province "in a patch" and bloomed
+  // 9-33% of all tiles -- which is not a landmark, it is a lawn. Worse, the marks were 2px in
+  // colours chosen to sit politely against their own ground, so on sand and stone they measured as
+  // present and read as absent. A patch has to be a MINORITY of the map and unmistakable inside its
+  // own edge. Threshold raised so patches are scarce, density and mark size raised so the ones that
+  // do grow are dense enough to see from across a screen, and every bloom now gets a dark seat
+  // under it -- one dark pixel is what separates a flower from a speck of noise on this ground.
+  const B=BAND_BLOOM[bd];
+  if(B){
+    const fld=vnoise(x+877,y+149,17.0)*0.70+vnoise(x+311,y+643,6.5)*0.30;
+    if(fld>0.635){
+      const dens=Math.min(1,(fld-0.635)*9);          // 0 at the edge of the patch, 1 at its heart
+      const gh=hmix(x*3+7,y*5+11)>>>0;
+      if((gh>>>4)%100 < 22+dens*74){
+        const sp=B[(gh>>>9)%B.length]||B[0];
+        const n=2+((gh>>>13)%3)+(dens>0.5?2:0);
+        const cx0=6+((gh>>>7)%Math.max(1,TILE-12)), cy0=6+((gh>>>11)%Math.max(1,TILE-12));
+        for(let i=0;i<n;i++){
+          // >>> throughout. hmix is UNSIGNED; a signed shift here makes a negative index, and
+          // sp[-1] threw inside render() every frame -- the crash that stopped the world drawing.
+          const j=hmix(x*7+i,y*11+i)>>>0;
+          const fx=tx+cx0+((j%11)-5), fy=ty+cy0+(((j>>>4)%11)-5);
+          if(fx<tx+2||fy<ty+2||fx>tx+TILE-5||fy>ty+TILE-7) continue;
+          if(sp[2]){ ctx.fillStyle=sp[2]; ctx.fillRect(fx+1,fy+3,1,4); }   // stem, where it has one
+          ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.fillRect(fx,fy+1,3,2);     // seat: the contrast
+          ctx.fillStyle=sp[0]; ctx.fillRect(fx,fy,3,2);                    // bloom
+          ctx.fillStyle=sp[1]; ctx.fillRect(fx,fy,1,1);                    // highlight
+        }
+      }
+    }
+  }
 }
 function drawTileG(x,y){
   const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
@@ -917,7 +1106,8 @@ function drawTileG(x,y){
       // terrain features further down draw the trees and boulders. Returning here rendered a
       // world with no obstacles in it while collision still read them from the grid, so the
       // player walked into things that were not there.
-      if(!drawAtlas(_terrSet[bd],x,y,tx,ty,hh,16)){
+      const _atlasDrew=drawAtlas(_terrSet[bd],x,y,tx,ty,hh,16);
+      if(!_atlasDrew){
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);
         ctx.drawImage(src,g[0],g[1],32,32,-TILE/2,-TILE/2,TILE,TILE); ctx.restore();
         // LARGE-SCALE BRIGHTNESS, WITHOUT DRAWING THE GRID (user, 2026-07-27: "the variety in
@@ -933,7 +1123,16 @@ function drawTileG(x,y){
         // mottling, no grid. Four extra fillRects per ground tile.
         tileShade(tx,ty,x,y,0.065,0);
       }
-      if(_bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
+      // A TONE CORRECTS A SHEET, AND ONLY THE SHEET IT WAS WRITTEN FOR. _bandTone exists because
+      // four PixelLab set_N/setv_N sheets came back with the wrong palette (band 0 too vivid a
+      // green, 7/8 too hot, 9 faintly blue) and correcting them in code beat regenerating them.
+      // The terr_N ATLASES that came later are DIFFERENT ART and have none of those faults --
+      // terr_0 is bright sand, (241,217,147) -- but the fill sat outside the atlas branch, so the
+      // band-0 grass wash was painted over the band-0 sand every frame and The Landing Sands, a
+      // BEACH, rendered as olive mud at luma 102 against the atlas's own 145. Same for the other
+      // three: band 8's 46% black wash landed on an atlas that is already the darkest in the game.
+      // Gate it on the fallback path and the correction goes back to correcting what it named.
+      if(!_atlasDrew && _bandTone[bd]){ ctx.fillStyle=_bandTone[bd]; ctx.fillRect(tx,ty,TILE,TILE); }
       terrainDetail(x,y,tx,ty,bd);      // multi-scale relief, patches and litter (continuous, never tiles)
       // CORRUPTION: the infection bleeding out from the portal. A violet/black stain rising
       // toward the rift, plus sparse corrupted crystal/growth decals in the worst of it.
@@ -960,9 +1159,31 @@ function drawTileG(x,y){
           if(im && im.naturalWidth){ const ds=TILE*0.6, ox=((dh>>3)%12)-6, oy=((dh>>9)%12)-6;
             ctx.drawImage(im, tx+TILE/2-ds/2+ox, ty+TILE/2-ds/2+oy, ds, ds); } } } }
     else { ctx.fillStyle=GBANDCOL[bd][(x+y)&1]; ctx.fillRect(tx,ty,TILE,TILE); }
-    // ring boundary lines: darker edge where the neighbour is a different band
-    if(x>0 && grvBandXY(x-1,y)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,2,TILE); }
-    if(y>0 && grvBandXY(x,y-1)!==bd){ ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(tx,ty,TILE,2); }
+    // TWO GROUNDS MEET BY OVERLAPPING OVER SEVERAL TILES, NOT BY BUTTING UP. This was a 2px
+    // black line at half opacity, which is the most artificial thing on the map -- real ground has
+    // no keyline where it changes. Two attempts at a ONE-TILE crossfade failed for reasons worth
+    // recording: the first took its alpha from a per-tile hash, so touching tiles got uncorrelated
+    // strengths and the seam came out as a chequerboard (tileShade's lesson, relearned); the
+    // second fixed the alpha but was still binary in WHICH tiles it touched, and one tile of
+    // mixing cannot join atlases that are luma 129 and luma 51 -- the tile beyond the blend still
+    // stepped off the cliff. The transition is BAND_BLEND_STEPS tiles wide now, weighted by a map
+    // built once per room, so the two materials genuinely interpenetrate and the join reads as a
+    // gradient. With the warp in grvBandXY the boundary is ragged in plan and soft in section.
+    if(!window._noBlend){
+      const BM=_bandBlendMap(curRoom);
+      if(BM){
+        const i=y*BM.w+x, nbBand=BM.nb[i]-1, w=BM.wt[i];
+        if(w>0 && nbBand>=0 && nbBand!==bd){
+          ctx.save();
+          ctx.globalAlpha=Math.min(0.66,(w/255)*0.62);
+          if(!drawAtlas(_terrSet[nbBand],x,y,tx,ty,hmix(x+404,y+717),16)){
+            const gs=_groundSet[nbBand];
+            if(gs&&gs.naturalWidth){ ctx.imageSmoothingEnabled=false;
+              ctx.drawImage(gs,GROUND_UP[0],GROUND_UP[1],32,32,tx,ty,TILE,TILE); } }
+          ctx.restore();
+        }
+      }
+    }
     // The gold "danger rises this way" edge reads the band as an ORDERED ramp. Band 9 (The
     // Cairnworks) is appended, not inserted -- pillar bands are save keys -- so it is numerically
     // the highest band in the game while sitting between 2 and 3 on the ground. Without this guard
@@ -993,22 +1214,15 @@ function drawTileG(x,y){
     // terrain features layered on the band tint
     if(c==='d'){ if(h2(x*3,y*5)>0.7){ ctx.fillStyle='rgba(90,70,40,0.30)'; ctx.fillRect(tx+(x*13)%30+4,ty+(y*17)%30+4,3,3); } }
     else if(c==='g'){
-      // wildflowers out here too, but far sparser than the Hearth's tended lawn -- one tile in
-      // seven rather than one in two, because this is wilderness, not a garden
-      const gh=hmix(x*3+7,y*5+11)>>>0;
-      if((gh>>>4)%7===0){
-        const SP=[['#d8b84a','#f0d878'],['#dcd4e0','#ffffff'],['#c86a8e','#e89ab4'],
-                  ['#8a6ac0','#b39ae0'],['#d86a4a','#f09a7a']];
-        const sp=SP[(gh>>>9)%SP.length]||SP[0];      // >>> : a signed shift here crashed once
-        const n=1+((gh>>>13)%3);
-        const cx0=7+((gh>>>7)%(TILE-16)), cy0=7+((gh>>>11)%(TILE-16));
-        for(let i=0;i<n;i++){ const j=hmix(x*7+i,y*11+i)>>>0;
-          const fx=tx+cx0+((j%8)-4), fy=ty+cy0+(((j>>>4)%8)-4);
-          if(fx<tx+2||fy<ty+2||fx>tx+TILE-4||fy>ty+TILE-6) continue;
-          ctx.fillStyle='rgba(24,38,20,0.85)'; ctx.fillRect(fx+1,fy+3,1,3);
-          ctx.fillStyle=sp[0]; ctx.fillRect(fx,fy,2,2);
-          ctx.fillStyle=sp[1]; ctx.fillRect(fx,fy,1,1); }
-      } }
+      // The flat one-in-seven wildflower sprinkle that used to live here is GONE, and deleting it
+      // is the point rather than a side effect. It fired on every grass tile in the world at the
+      // same rate, so flowers were a uniform texture: present everywhere, noticeable nowhere, and
+      // exactly as dense in the heart of a meadow as on a bare ridge. terrainDetail's bloom field
+      // grows them in patches instead, keyed per band, and it covers every ground char rather
+      // than only 'g' -- so scree gets its lichen and the ash gets its embers. Two systems drawing
+      // flowers would have cancelled the clustering: the flat one fills in the gaps the field
+      // deliberately leaves empty, and empty is what makes a patch read as a patch.
+    }
     else if(c==='r'){ // rock: a few weathering specks instead of a square outline (no line, no square)
       const rh=hmix(x*5+1,y*9+2); ctx.fillStyle='rgba(0,0,0,.20)';
       ctx.fillRect(tx+4+(rh%13),ty+5+((rh>>4)%13),2,1); ctx.fillRect(tx+19+((rh>>8)%15),ty+21+((rh>>12)%15),1,2);

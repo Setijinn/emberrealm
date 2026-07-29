@@ -13,9 +13,11 @@ project *is*, you are in the wrong file.
 ## How to work on this project
 
 - Plain numbered JS files loaded in order by `index.html`. **No build step**, no modules.
-- **Bump `CACHE` in `sw.js` on every commit** or the service worker serves stale files.
-- **Serve on a fresh port for every edit** (`py -m http.server 9NNN`). The cache-first trap is the
-  *browser's* HTTP cache, not the SW.
+- **Bump `CODE_CACHE` in `sw.js` on every commit that changes served code** or the service worker
+  serves stale files. `ART_CACHE` moves only when art does — see the note at the top of `sw.js`.
+- **Serve with `py tools/serve.py`** (fixed port 10500, `no-store`, kills its own previous
+  instance). The old fresh-port-per-edit ritual is **retired** and must not come back — see
+  "Serving it while you work" below for what it leaked and why `serve.py` fixes the cause instead.
 - **Commit AND push every change, fetching first** — a collaborator shares the repo.
 - Drive QA with Chrome MCP `javascript_tool`. The tab may be throttled: **step frames manually**
   with `for(let i=0;i<N;i++){update(0.016);}` and never wait on `requestAnimationFrame`.
@@ -31,8 +33,16 @@ project *is*, you are in the wrong file.
   neither is installed on this machine. It injects one `<script defer>` into the **real**
   `index.html` (never a hand-maintained copy, which would drift) and reads the results back with
   `chrome --headless=new --dump-dom`. `--headless=new` is required: the old mode was removed and
-  exits 21 with no output. 144 checks today. Run it after any change to the tier ladder, the loot
-  tables, the level cap, the forge or the dev panel.
+  exits 21 with no output. It finds the browser itself — `$CHROME` first, then a list of the usual
+  install paths, then Playwright's versioned download dir — and adds `--no-sandbox` when it is
+  running as root, which Chrome's zygote otherwise refuses. 144 checks today. Run it after any
+  change to the tier ladder, the loot tables, the level cap, the forge or the dev workbench.
+- **`py tools/audit.py _forgeaudit.js` is the same trick for a MEASUREMENT.** An audit reports
+  numbers and never gates anything, which is why it is a separate runner: the self-test must stay a
+  thing that is green or red. It takes any `_*audit.js` (`_lvaudit.js` had no runner for months and
+  was hand-injected every time) and gets a 600s virtual-time budget, because a drop-rate audit runs
+  millions of simulated kills. **An audit must put back every global it touched** — `_forgeaudit.js`
+  saves and restores `curRoom` and `player.fortune`, and says so in its own output.
 - **`py tools/shot.py <panel> <w> <h> [tab]` PHOTOGRAPHS a panel** and writes it to `_shots/`. Use
   it before claiming any UI works. It exists because **the browser extension available here is
   attached to a Chrome that is not on this machine** — `Get-Process chrome` returns 0 locally — so
@@ -47,6 +57,11 @@ project *is*, you are in the wrong file.
   Chrome's own HTTP cache, and the thing you are photographing is CSS — a stale stylesheet renders
   faithfully and you get a picture of the previous edit. Same trap as the old fresh-port ritual in a
   different hat.
+- **`py tools/terrshot.py <zone|all>` PHOTOGRAPHS OVERWORLD GROUND** into `shots/`, which is a
+  different question from a panel and so a different tool: it puts a hero on real terrain in one of
+  the fourteen territories. It stubs `requestAnimationFrame` to zero, because the live loop
+  otherwise walked the hero into a portal *after* the harness returned and three shots of the Hearth
+  came back labelled as other zones.
 - Windows stdout is cp1252 and **cannot encode the `★` in a relic name**, so any tool that prints
   test output must `sys.stdout.reconfigure(encoding="utf-8")` or it dies on the report while every
   test passes.
@@ -174,10 +189,47 @@ Sanctuary. Incubation is wall-clock time by rarity, not kills.
 tint, `safe`/`petRoom` get a gentle neutral 0.20, everything else gets the dungeon 0.42. Every side
 room used to fall to the dungeon side and get its edges crushed.
 
-**`MOVE_SCALE` (01_constants.js) scales LOCOMOTION ONLY.** Not projectile speeds, telegraph timers,
-fire cadence, dash distances or knockback impulses — those are not movement speed and slowing them
-would silently re-tune every boss window in the game. It rides on `eSpdMul()`, which covers every
-enemy and boss in one place; the two summon sites set speed flat and need it explicitly.
+**`MOVE_SCALE` (01_constants.js) scales LOCOMOTION ONLY.** Not telegraph timers, fire cadence, dash
+distances or knockback impulses — those are not movement speed and slowing them would silently
+re-tune every boss window in the game. It rides on `eSpdMul()`, which covers every enemy and boss in
+one place; the two summon sites set speed flat and need it explicitly. **Projectiles have their own
+dial and are not MOVE_SCALE's business** — see below.
+
+**`PROJ_SCALE` (0.90) slows every projectile and MOVES NOTHING CLOSER OR FURTHER AWAY.** A shot's
+reach is not a number anyone wrote down: it is `speed × life`, stated in `WTYPE`'s header and read
+again by `fire()`'s auto-aim cap. So the scale is applied where shots are **advanced**, to the step
+and the lifetime together — `x += vx*dt*PROJ_SCALE` with `life -= dt*PROJ_SCALE` — which covers
+`v*PROJ_SCALE` per second for `life/PROJ_SCALE` seconds: identical distance, proportionally longer
+flight. Scaling velocity alone would have shortened every weapon's reach, every boss's threat radius
+and the auto-aim range by 10%, which is a much larger balance change hiding inside a cosmetic one.
+- **At the integration step, never at spawn.** There are ~35 places that create a projectile — 27
+  `eFire()` calls each with their own hard-coded speed, plus abilities, ultimates and perk volleys —
+  and a dial applied at 35 sites will drift. There are exactly **three** places a shot moves:
+  `pShots` and `eShots` in `07_update.js`, and the client's dead-reckoning in `14b_netsync.js`.
+  All three must carry it or a client's bolts drift 10% ahead of the host's.
+- **Velocities cross the wire UNSCALED**, precisely so both peers apply this once in their own
+  integration and a shot can never arrive pre-scaled and be scaled twice.
+- **`aimPoint` must be fed the effective speed AND the effective lifetime** (`spd*PROJ_SCALE`,
+  `life/PROJ_SCALE`). It solves an intercept in real seconds and rejects solutions later than
+  `life`; the raw pair under-leads every moving target by exactly the scale, which reads as broken
+  aim rather than as slower shots.
+- `s.age` is **not** scaled — it drives the sprite's tumble, which is a look, not a distance.
+
+**`RANGE_SCALE` (0.85) shortens WEAPON reach, and the word "weapon" is doing work.** It scales
+`wt.life` where `fire()` reads it — the `WTYPE` table, which is what this game calls a weapon — and
+nothing else. Ability bolts, ultimates and perk volleys keep their designed reach, because a
+Frostbolt's range belongs to the spell and not to whatever is being held; enemy and boss patterns
+are untouched, since shortening their reach too would hand the player a large safety margin under
+cover of a nerf. It is deliberately a **separate constant from `PROJ_SCALE`**: that one slows a bolt
+while *holding* its reach, this one shortens the reach while leaving the speed alone, and either
+must be re-tunable without dragging the other along.
+- **Three things read the reach and all three must agree**: the shot's own `life`, `fire()`'s
+  auto-aim distance cap, and `aimPoint`'s intercept window. An auto-aim that locks onto something
+  the bolt expires short of is worse than none — it silently spends your fire rate on a target you
+  cannot hit. `_projaudit.js` flies real bolts and asserts each weapon stops inside its own cap.
+- **A uniform cut lands hardest on the shortest weapons.** Reach is `spd*life`, so at 0.85 the
+  Crossbow loses 148px it will never miss while the Gauntlets lose 14px off 94 — under two tiles on
+  a 44px grid. If the melee end ever needs a floor, special-case the constant, not the `WTYPE` rows.
 
 **Ascension opens at `ASCEND_LV` (45), not at the cap.** One constant in `13_skills.js`; the gate,
 the locked button and the attributes status line all read from it. Ascending early is deliberate —
@@ -274,6 +326,65 @@ it hands you the prestige caps while there are still levels left to earn.
   focal point, no border, uniform density edge to edge*, and separately *no straight lines, no
   seams, no stripes* or it returns something that will not tile. When the palette comes back wrong,
   correct it with `_bandTone` rather than burning generations chasing it; bands 0, 7, 8 and 9 all do.
+
+### Overworld ground — three rules that all say the same thing
+Every one of these was paid for twice in one session, and they are the same mistake wearing
+different hats: **a continuous field rendered through a per-tile decision becomes a grid.**
+
+- **Any smooth field filled as ONE value per tile is quantised at tile granularity.** `tileShade`
+  already existed for exactly this and the lesson still had to be relearned one layer out: the
+  band shade drift sampled noise once per tile and `fillRect`ed the whole tile, and at the strength
+  it needed to be visible at all the ground came out as flat squares. Sample at the tile CORNERS
+  and fill four bilinear quadrants — neighbours then share edge values by construction. If a new
+  ground layer is subtle enough to get away with a flat fill, it is probably too subtle to see.
+- **A domain warp must be LOWER-frequency than its own amplitude.** `grvBandXY` warps the band
+  lookup so provinces interlock instead of meeting on a Voronoi edge. At amplitude 4.6 tiles over
+  noise turning over every 3.1, touching tiles sampled points four tiles apart in unrelated
+  directions and the band flipped tile to tile — the boundary was not warped, it was shredded into
+  speckle, and every blend downstream faithfully drew that speckle as a chequerboard.
+  `BAND_WARP_SC` (13) must stay comfortably above `BAND_WARP` (4.6).
+- **A blend between two grounds has to be WIDE, and its weight has to be smooth.** One tile of
+  crossfade cannot join atlases at luma 129 and luma 51 — the tile beyond it still steps off the
+  cliff. `_bandBlendMap()` seeds every tile touching another band, dilates the seed outward
+  `BAND_BLEND_STEPS` tiles, then **box-blurs the weight**, because dilation alone hands out one
+  value per step and those discrete rings read as blocks. It is cached on the room (`RG._bbm`) like
+  `_territories`, since the band field is a property of the map, not of the frame. Blur the WEIGHT
+  only, never the band id — averaging identities is meaningless.
+
+**`grvBandXY` is the renderer's private opinion; `grvBandAt` is the truth.** The warp must never
+move into `grvBandAt`, which answers for the creature roster, the tile's level, the minimap ramp
+and the danger seam. Warping that would walk a spawn point into the next province and take the mob
+list and the level with it.
+
+**A FLAT ATLAS CANNOT BE FIXED AT RENDER TIME — repaint the file.** `terr_4/5/8` measured luma
+51.9 / 52.1 / 49.3 with a standard deviation of about **five**: not merely dark but nearly flat, a
+single colour carrying fine speckle. Brightening a flat field only gives a brighter flat field, so
+this is the one class of ground problem no filter, tone or drift can reach. `tools/repaint_terrain.py`
+remaps them onto a two-point ramp (shadow → highlight) chosen per band, lifting them to luma
+76 / 68 / 69 at std 9-11. `terr_8` also went from neutral grey (47,50,47) to the warm ember crust
+its own `TERR_ACCENT` entry (112,52,26) had always claimed — the art and the palette written for it
+had drifted apart.
+- **The remap is POINTWISE and must stay that way.** Every pixel's new colour depends only on its
+  own luminance. These sheets are seamless and tile against themselves and each other, so any
+  neighbourhood operation — blur, sharpen, added low-frequency structure — breaks the wrap at the
+  cell edges. A pointwise curve cannot.
+- **Originals live in `assets/tiles/orig/`** and the script always reads from there, so re-running
+  never compounds, the numbers are re-tunable, and `--restore` puts them back.
+- **Bump `ART_CACHE`, not `CODE_CACHE`**, when these change. That split exists for exactly this.
+- **The corruption stain is what now caps the rim.** With the new paint the rim provinces still
+  render at luma ~40 against an atlas of 69, because `corruptAt` reaches 0.88 out there and the
+  stain is `cor²·0.6` plus a magenta pulse. The art is no longer the limiting factor; the stain is.
+
+**A tone correction belongs to the sheet it was written for.** `_bandTone` corrects four PixelLab
+`set_N` palettes; it is gated on the atlas fallback path because the later `terr_N` atlases are
+different art with none of those faults. Ungated, it painted band 0's grass wash over band 0's
+SAND and rendered a beach as olive mud.
+
+**Bloom fields are landmarks, so they must be a minority.** `BAND_BLOOM` grows each band its own
+thing — flowers on grass, lichen on scree, ember motes in the ash — gated by a low-frequency field
+so patches are scarce and dense rather than an even sprinkle. The flat one-in-seven scatter this
+replaced made flowers present everywhere and noticeable nowhere. `_terraudit.js` measures the
+coverage; 10-25% of tiles blooming is the band that reads as "some areas are special".
 
 ### Bosses
 - Thirteen identities in `GBOSS`; a boss's index is its **`ring`** everywhere in the code (a legacy
@@ -381,28 +492,45 @@ a Scavenged Dreams piece plus a Riftseed becomes a relic. There is one panel bec
 gesture. **Bram joins things; he does not improve them** — the ordinary ladder is found, never made,
 and SD is found too.
 
-- **Sixteen materials, three drop pools.** `src` on the def is what `matDropFor` reads, so the
-  comment cannot drift from the behaviour: `starter` (the Lv1–20 island), `main` (Lv20–50),
-  `rift` (**post-ascension dungeon bosses only**), `craft` (never dropped). The rift pool is the
-  whole content gate on the T14 rung and it is not a new mechanism — those dungeons already refuse
-  to open without an ascension, so gating the material gates the relic for free.
-- **Ten recipes, keyed by the two inputs SORTED**, so a recipe cannot be written twice and the
-  lookup never cares which slot was filled first. Their single end product is the **Riftseed**.
+- **Thirty-two materials, four sources.** `src` on the def is what `matDropFor` reads, so the
+  comment cannot drift from the behaviour: `starter` (the Lv1–20 island, 3), `main` (Lv20–50, 3),
+  `rift` (**post-ascension dungeon bosses only**, 9), `craft` (never dropped — 11 crafted rungs
+  plus 6 generated seeds). The rift pool is the whole content gate on the T14 rung and it is not a
+  new mechanism — those dungeons already refuse to open without an ascension, so gating the
+  material gates the relic for free.
+- **A rift material belongs to ONE boss.** `matDropFor` does not draw that pool at random;
+  `riftMatForKill` returns the material carrying the dead boss's `ring`, so a reagent in the pouch
+  is a record of which door you got through. Nine ascended bosses, nine signatures — assert that
+  every ascended boss has exactly one and no starter boss has any (`17m_integrity.js` does).
+- **Seventeen recipes, keyed by the two inputs SORTED**, so a recipe cannot be written twice and
+  the lookup never cares which slot was filled first. Eleven are written; **six are generated**
+  from `RELIC_SETS` + `GBOSS`, because a seed is entirely determined by the boss it belongs to and
+  six near-identical hand-written rows is how two lists drift apart.
+- **The first three depths host no relic sets** (`RELIC_SETS` starts at ring 3), so their drops
+  build the universal half of a seed: Forgeheart + Anchorroot → Riftcore + Veilshard → Riftbloom
+  + Wallrot → Riftheart. That is what makes the awakened depths walk **in order** — there is no
+  route to the Core Sanctum's seed that skips the Heartwood Hollow.
+- **Each of the six relic dungeons has its own Riftseed, and a seed forges only that dungeon's two
+  sets.** That is the whole reason materials are tied to bosses: you do not pick a set off a menu
+  of twelve, you kill the thing that owns the one you want, so crafting and finding answer to the
+  same map. Where only one of the two is still unowned the forge stops asking.
+- **Material art is lazy and falls back to the glyph.** `matArtImg()` returns null on the *first*
+  call — that call only starts the load — so the panel draws the coloured glyph for one repaint and
+  the sprite takes over on the next; never a broken img. The six seeds **share one sprite tinted by
+  `GBOSS[ring].col`**, the same trick `MOBTINT` and the mounts use. `itemArtImg` routes `mat` out
+  **before** the tier-band maths, exactly as it does `boost`: a material is not on the tier ladder,
+  so dividing by a tier it does not have lands it on sprite 0 of a set it does not belong to.
 - **Materials are account-level**, like pets, mounts and the Vault, and for the reason the starter
   island exists: it was the one stretch of the game that produced nothing permanent.
 - They ride in the **ordinary gear sack** beside pet food and boost draughts — one-sack-per-kill is
   intact and Fortune finds them. `mat` is `NKIND[9]`, an append into space the mount widening
   already bought.
-- **A relic is crafted INTO a set you choose**, and the piece is decided by the slot of the SD item
-  you feed it. That is the point of crafting one: a drop is 0.25–1% spread across forty-eight
-  pieces, and this completes the set you are actually wearing. It refuses a duplicate.
-- **Every ascended boss drops its OWN reagent**, carrying its `ring`. `riftMatForKill` pays the
-  material belonging to the boss you actually killed — never a pool draw, or the nine awakened
-  depths would be interchangeable, which is the one thing the relic drop tables refuse to do. The
-  first three depths (no relic sets of their own) chain into the universal **Riftheart**; the six
-  that host sets each make a **Riftseed of their own dungeon**, and *a seed can only forge the two
-  sets its dungeon keeps*. The seeds and their recipes are **generated** from `RELIC_SETS` + `GBOSS`,
-  so a seventh relic dungeon grows its material, seed and recipe with no edit.
+- **A relic is crafted INTO a set you choose** — from the two its seed's dungeon keeps — and the
+  piece is decided by the slot of the SD item you feed it. That is the point of crafting one: a
+  drop is 0.25–1% spread across forty-eight pieces, and this completes the set you are actually
+  wearing. It refuses a duplicate.
+- **A failed craft must put back exactly what `plan.cost` took.** The refund path once named a
+  hard-coded `'riftseed'` that no longer existed, which would have minted a material out of nothing.
 - **`atForge()` has no "I opened it here" latch, on purpose.** That is the shape of the pet-panel
   bug fixed in `f9e13e2` — a latch outlives the condition it was set for. `curShopNear` is the live
   answer and its own transition already calls `closeVendorPanels()`.
@@ -458,9 +586,11 @@ self-clearing (`if(u.x.p!==period) reset`).
 
 ## QA traps that have cost real time
 
-- **Top-level `const` is a LEXICAL global, not a `window` property.** `window[name]` lookups against
-  const-declared images silently return `undefined` — this is why every loot sack in the game drew
-  as plain burlap for weeks.
+- **Top-level `const` and `let` are LEXICAL globals, not `window` properties.** `window[name]`
+  lookups against const-declared images silently return `undefined` — this is why every loot sack in
+  the game drew as plain burlap for weeks. It cuts the other way too: `window.curRoom = x` in a test
+  harness assigns a *new* property and the game's own `curRoom` never moves, so every read comes
+  back null and the harness reports the system broken.
 - **Size sprites by their opaque bounding box** (`_imgBBox`), never `naturalWidth`. PixelLab files
   carry transparent margin: scaling by canvas size made the relic sack the *smallest* bag in the
   game and rendered the entire Hearth flock as specks.

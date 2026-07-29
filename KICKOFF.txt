@@ -1,9 +1,11 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker code cache is at emberrealm-code-v550. (There are TWO caches now,
-versioned separately -- CODE_CACHE bumps freely, ART_CACHE only when art moves.
-See the note at the top of sw.js for why.)
+Service worker code cache is at emberrealm-code-v554, art cache at
+emberrealm-art-v3. (There are TWO caches now, versioned separately -- CODE_CACHE
+bumps freely, ART_CACHE only when art moves. See the note at the top of sw.js for
+why. ART_CACHE has moved twice: the forge's 28 new files, and the three repainted
+ground atlases.)
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -28,7 +30,14 @@ HARD RULES — these are not preferences
 - Verify by DRIVING THE GAME, not by assuming. Report measurements. Say plainly
   when something fails or when you did not test it.
 - RUN `py tools/selftest.py` after touching the tier ladder, the loot tables, the
-  level cap or the forge. 144 checks, no node and no CDP needed.
+  level cap, the forge or the dev workbench. 144 checks, no node and no CDP
+  needed. It finds Chrome itself ($CHROME wins, then a list, then Playwright's
+  versioned download dir) and passes --no-sandbox when it is running as root.
+- `py` IS BROKEN ON THIS MACHINE -- call the interpreter by its full path,
+  C:\Users\darkc\AppData\Local\Programs\Python\Python312\python.exe. The `python`
+  on PATH is the Microsoft Store alias stub and the launcher follows each script's
+  env-python shebang straight into it. See HANDOFF.md; it reads as a broken script
+  rather than a broken launcher.
 - NOTHING MAY SIT ABOVE Lv50. levelUp stops at LV_CAP and there is no prestige
   level, so content that computes its own level must land on or under it. Six
   ascended dungeons were at Lv53-55 and could only ever be fought underlevelled.
@@ -44,24 +53,173 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v545 -> v550)
+WHAT SHIPPED MOST RECENTLY (v550 -> v554)
+---------------------------------------------------------------------------
+Ground, feel, and the merge that brought them together. v554 is a MERGE COMMIT:
+the ground and combat work below was built on `claude/handoff-catch-up-sbo9ym`
+off v549 while the forge-panel fix landed on main, and the two were reconciled
+rather than one being replayed over the other. If a number here disagrees with
+an older section, this one is current.
+
+TWO NEW DIALS, AND THEY ARE DELIBERATELY SEPARATE CONSTANTS.
+- PROJ_SCALE = 0.90 (01_constants.js) slows every projectile -- hero shots,
+  ability and ultimate bolts, perk volleys, every enemy and boss pattern -- and
+  HOLDS REACH CONSTANT. Reach in this game is speed x life and nobody ever wrote
+  it down as a number, so scaling velocity alone would have cut every weapon's
+  range, every boss's threat radius and the auto-aim cap by 10% -- a far bigger
+  balance change hiding inside a cosmetic one. So it lands where a shot is
+  ADVANCED, on the step and the lifetime together: x += vx*dt*S, life -= dt*S.
+  Measured: a 600px bolt still covers 603px, taking 1.117s where it took 1.000s.
+  Applied at the INTEGRATION step, not at spawn -- there are ~35 places that
+  create a projectile and 3 that move one (pShots, eShots, and the client's
+  dead-reckoning in 14b_netsync; miss that last one and a client's bolts drift
+  10% ahead of the host's).
+- RANGE_SCALE = 0.85 shortens WEAPON reach and leaves speed alone. Sword 106->90,
+  Dagger 157->133, Bow 768->653, Crossbow 988->840, Staff 432->367, Wand
+  840->714, Gauntlets 94->80. WEAPONS ONLY, taken literally: it scales wt.life
+  in WTYPE, so ability bolts, ultimates, perk volleys and every enemy/boss
+  pattern keep their designed reach -- nerfing enemy reach too would have quietly
+  handed the player a safety margin under cover of a nerf. All three readers of
+  reach moved together (shot lifetime, fire()'s auto-aim cap, aimPoint's
+  intercept window); miss one and the reticle locks onto something the bolt
+  expires short of, which reads as broken aim.
+  OPEN QUESTION FOR THE USER: if "weapons" was meant to include the spells or
+  the enemies, both are one line from here. Nobody has confirmed which was meant.
+
+THE GROUND STOPPED BEING FLAT GREEN.
+- A TONE CORRECTION OUTLIVED THE ART IT WAS CORRECTING. _bandTone exists because
+  four PixelLab sheets came back with the wrong palette, but the later terr_N
+  ATLASES have none of those faults and the fill sat OUTSIDE the atlas branch --
+  so the band-0 grass wash was painted over band-0 SAND every frame and the
+  Landing Sands beach rendered as olive mud, indistinguishable from Sawgrass
+  Flats two provinces away. Gated on the fallback path now, which is all it was
+  ever written for. z0 luma 102->145, z2 98->119, z8 49->65, the rim 29->35, and
+  the seven provinces on bands with no tone entry are byte-identical.
+- PROVINCES BLEND. grvBandXY warps the band SAMPLE POINT so boundaries interlock
+  in fingers instead of following the exact Voronoi edge, and _bandBlendMap()
+  makes the transition THREE TILES WIDE (one tile cannot join atlas luma 129 to
+  51 -- the tile past the blend still steps off the cliff). The warp stays in the
+  RENDERER and must never move into grvBandAt, which answers for the roster, the
+  level, the minimap and the danger seam. The 2px black keyline is gone; real
+  ground has no black line where it changes.
+- SHADES AND BLOOMS. BAND_SHADE gives every band a drier/warmer and a
+  deeper/cooler alternate along one continuous axis, so the ground is somewhere
+  on it everywhere rather than in occasional patches. BAND_BLOOM grows each band
+  its own thing where a low-frequency field says: flowers on grass, lichen on
+  scree, ember motes in the ash.
+- THREE ATLASES WERE REPAINTED, because this is the one ground problem no filter
+  can reach: terr_4/5/8 measured luma ~50 with a standard deviation of FIVE --
+  not merely dark but nearly FLAT, and brightening a flat field gives a brighter
+  flat field. terr_4 51.9->76.0, terr_5 52.1->68.0 (lifted least on purpose; its
+  own comment calls it "deep shade"), terr_8 49.3->69.1. AND terr_8 WAS THE WRONG
+  COLOUR: neutral grey (47,50,47) where TERR_ACCENT has called that band "ember
+  crust" (112,52,26) all along. THE REMAP IS POINTWISE and that is correctness,
+  not style -- these sheets tile against themselves, so any neighbourhood op
+  (blur, sharpen, added structure) breaks the wrap and puts a grid back on the
+  ground. Originals kept at assets/tiles/orig/.
+
+THE FORGE PANEL WAS BROKEN ON SCREEN, AND THE DEV MENU WAS DESKTOP-ONLY (v550).
+The panel shipped on the default #shopCard, which does not define --u, so every
+calc(var(--u)*N) was an invalid declaration silently dropped -- it read as a
+tuning problem while the whole block was being thrown away. THE WORKBENCH is 12
+tabs and 501 controls and is COMPACT ON A PHONE now; the landscape pass is keyed
+on max-HEIGHT, because every previous dev media query keyed on max-width and a
+landscape phone never trips it.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v547 -> v549)
+---------------------------------------------------------------------------
+Three commits, all of them finishing the forge rather than starting anything.
+
+EVERY ASCENDED BOSS DROPS ITS OWN REAGENT, AND A SEED FORGES ONLY ITS DUNGEON.
+The forge shipped with ONE generic rift material dropped by every post-ascension
+boss and a Riftseed that could become any of the twelve relic sets off a list,
+which made the nine awakened depths interchangeable -- the one thing the relic
+drop tables already refuse to do.
+- NINE BOSSES, NINE SIGNATURE MATERIALS, each carrying its ring. matDropFor no
+  longer draws the rift pool at random; riftMatForKill returns the material
+  belonging to the boss you actually killed, so a reagent in the pouch is a
+  record of which door you got through. Anchorroot off the Grovewarden,
+  Veilshard off the Mistantler, Wallrot off the Bog Horror, down to Titanheart.
+- THE FIRST THREE DEPTHS HOST NO RELIC SETS (RELIC_SETS starts at ring 3), so
+  their drops build the UNIVERSAL half of a seed: Forgeheart + Anchorroot ->
+  Riftcore + Veilshard -> Riftbloom + Wallrot -> Riftheart. The depths are
+  therefore walked IN ORDER; there is no route to the Core Sanctum's seed that
+  skips the Heartwood Hollow.
+- THE SIX THAT DO HOST SETS EACH MAKE THEIR OWN SEED -- Riftheart plus that
+  dungeon's signature -- and A SEED CAN ONLY FORGE THE TWO SETS ITS DUNGEON
+  KEEPS. You no longer pick a set off a menu of twelve; you go and kill the
+  thing that owns the one you want. Crafting and finding answer to the same map.
+- The seeds and their recipes are GENERATED from RELIC_SETS + GBOSS, not typed.
+  A seventh relic dungeon grows its material, seed and recipe with no edit.
+- So the counts moved: 32 MATERIALS (3 starter / 3 main / 9 rift signatures / 11
+  crafted rungs / 6 generated seeds) and 17 RECIPES (11 written, 6 generated).
+  Wherever an older note in this file says "sixteen materials, ten recipes, one
+  Riftseed", this paragraph is the current one.
+- Integrity now asserts: every ascended boss has exactly one signature, no
+  starter boss has one, every relic dungeon has a seed, every seed is made from
+  its own dungeon's material, and every seed reaches exactly that dungeon's sets.
+
+ART FOR THE FORGE -- 27 materials and an anvil, drawn as TREASURE. The first
+batch drew each material as what it literally is (three lumps of ore, a heap of
+ash) and read as debris swept off a workshop floor; this is the tree that ends in
+a T14 relic, so it was redrawn as ornate gold work with inner light, escalating
+from the island drops to the radiant rift reagents. Five needed a third pass and
+failed exactly the way HANDOFF.md's PixelLab notes warn: bare negatives do not
+hold, so it takes stating the negative three ways at once AND repeating it in the
+positive. Collisions (Gatestone vs Herald's Pinion, Truecore vs Gravebind) are
+only visible on a contact sheet -- individually fine, wrong beside each other.
+- THE SIX RIFTSEEDS SHARE ONE SPRITE tinted by their dungeon's GBOSS colour --
+  the MOBTINT trick, free, and always in agreement with the boss.
+- matArtImg() is lazy per material and returns null on the FIRST call (that call
+  only starts the load), so every caller falls back to the glyph for one repaint.
+  Never a broken img. itemArtImg routes 'mat' out BEFORE the tier-band maths, as
+  'boost' already is: a material is not on the tier ladder.
+- tools/install_forge_art.py records every job id, so the batch is reproducible
+  and re-running skips what is on disk.
+
+THE DEV MENU GREW A FORGE TAB AND A LEVELS TAB, and the tier ladder's labels got
+repaired under it. The SACKS band buttons still said "T11-T12" for a band that
+now carries SD too and computed their ceiling from MAXT-1; "Every slot, T12
+mythic" was spawning SD; the item spawner counted to "Tier 13", which this game
+calls nothing. All read tierTag() now. The killability sweep's local `MAXT=600`
+shadowed the global tier clamp -- it is SIM_SECS.
+- FORGE TAB (67 controls): every material with its real art grouped by where it
+  drops and labelled with the boss that pays it, SD gear in every slot, one
+  button per Riftseed showing which two sets it can become, and the whole recipe
+  tree crafting through the real forgeDo. "Exactly enough for ONE Riftseed"
+  walks a seed's tree back to its drops and grants precisely what it costs.
+- LEVELS TAB (35 controls): every dungeon with its computed level ticked or
+  crossed against the cap -- the readout that would have caught the six ascended
+  dungeons at Lv53-55 -- every territory with its band, the XP curve measured,
+  the tree budget against a full tree, and every gate in one line.
+- Both read the LIVE tables, so a 33rd material or a 7th relic dungeon appears
+  with no edit. 501 controls across 12 tabs; the self-test paints every tab and
+  asserts none throws and none is empty.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v545 -> v547)
 ---------------------------------------------------------------------------
 THE FORGE (18_forge.js, NEW) -- Bram's stall, finally lit. The reservation is
 spent; the "leave the blacksmith alone" rule is retired.
 - THE MACHINE TAKES EXACTLY TWO THINGS, at every rung. Two materials join into a
   better material; a Scavenged Dreams piece plus a Riftseed becomes a relic. One
   panel, one gesture. Bram JOINS things, he does not improve them.
-- SIXTEEN MATERIALS in three drop pools -- the Lv1-20 island, the Lv20-50
-  mainland, and one that falls ONLY from post-ascension dungeon bosses. Ten
-  recipes, keyed by the two inputs sorted; their single end product is the
-  Riftseed. The rift pool IS the content gate on T14 and it needed no new
-  mechanism: those dungeons already refuse to open without an ascension.
+- MATERIALS IN THREE DROP POOLS -- the Lv1-20 island, the Lv20-50 mainland, and
+  one that falls ONLY from post-ascension dungeon bosses. Recipes are keyed by
+  the two inputs sorted. The rift pool IS the content gate on T14 and it needed
+  no new mechanism: those dungeons already refuse to open without an ascension.
+  (It shipped here as sixteen materials, ten recipes and ONE Riftseed; v549
+  split the rift pool per boss and the seed per dungeon -- see above for the
+  current shape.)
 - MATERIALS ARE ACCOUNT-LEVEL, like pets/mounts/the Vault, because the starter
   island was the one stretch of the game that produced nothing permanent. They
   ride in the ordinary gear sack, so one-sack-per-kill is intact.
 - A RELIC IS CRAFTED INTO A SET YOU CHOOSE and the piece follows the slot of the
   SD item you feed it. A drop is 0.25-1% across forty-eight pieces; this
-  completes the set you are actually wearing. It refuses a duplicate.
+  completes the set you are actually wearing. It refuses a duplicate. (The
+  choice narrowed in v549: a seed reaches only the two sets its own dungeon
+  keeps, and where one of those two is already owned it stops asking.)
 
 THE LADDER GREW A RUNG: SCAVENGED DREAMS.
 - T1-T12 found; SD (index 12) DROPPED, and only in the Lv50 rim and the ascended
@@ -99,15 +257,11 @@ xpNeed(50) still returns a live 704,851, so the bar filled and then sat pinned a
 100% for the life of the account. At the cap it is a plate, not a meter: it says
 MAX.
 
-THE WORKBENCH: 12 tabs, 501 controls, and it is COMPACT ON A PHONE now. New FORGE
-and LEVELS tabs (nothing in 18_forge.js or the level cap had any dev access at
-all). The landscape-phone pass is keyed on max-HEIGHT, because every previous dev
-media query keyed on max-width and a landscape phone never trips it.
-
 tools/selftest.py is the standing harness -- 144 checks, no node, no CDP. It
 injects into the REAL index.html rather than a copy so it cannot drift, and it
 paints all 12 dev tabs to prove none of them throws.
 tools/shot.py photographs a panel. Use it before saying a panel works.
+tools/terrshot.py photographs overworld ground; tools/audit.py runs a measurement.
 
 ---------------------------------------------------------------------------
 WHAT SHIPPED BEFORE THAT (v481 -> v545)
@@ -420,8 +574,9 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 DO THIS FIRST
 ---------------------------------------------------------------------------
 Nothing is blocked. `py tools/serve.py`, then `py tools/selftest.py` to confirm
-you are starting from green (144/144). Verify the server actually responds before
-you navigate — an `&& echo serving` after a failed command lies.
+you are starting from green (144/144, verified at v554). Verify the server
+actually responds before you navigate — an `&& echo serving` after a failed
+command lies.
 
 BEFORE YOU CLAIM ANY UI WORKS, PHOTOGRAPH IT: `py tools/shot.py forge 844 390`.
 The browser extension here is attached to a Chrome that is NOT on this machine
@@ -431,6 +586,74 @@ AND A PHONE MEANS LANDSCAPE, 844x390: the game refuses to run in portrait, so a
 390x844 shot photographs the "turn your phone sideways" gate and tells you
 nothing. This is how the forge panel's layout was found to be broken after it had
 already been committed and called done.
+For GROUND rather than a panel, `py tools/terrshot.py <zone|all>` -> shots/.
+
+THE FORGE HAS BEEN MEASURED — `py tools/audit.py _forgeaudit.js`. The rates are no
+longer a guess, and the numbers are in THE FORGE, MEASURED below. What is left is
+a BALANCE CALL, which is the user's and not a bug to fix:
+
+  A RELIC HAS TWO HALVES AND THEY ARE NOT THE SAME LENGTH. The seed costs a
+  median of 5 ascended clears. An SD piece in the slot you actually want costs
+  19.8. So the material tree — the whole thing that was built, drawn and gated —
+  is NOT what paces a relic; SD gear is, by 4x. Anyone tuning MAT_DROP_P is
+  tuning the fast half.
+
+Nothing here has been retuned. Same rule as the three status findings: measured,
+reported, left alone until asked.
+
+The other two live candidates, both larger: FLYING MOUNTS at Lv40 (the seam is
+declared and nothing reads it — see STILL OPEN for the three open decisions), and
+the thin Lv1-20 starter island (3.6% of the run's XP across four provinces, and
+since the forge the only reason to walk it is the materials — and see below,
+because the audit found that every Riftseed sends a Lv50 hero back to it).
+
+---------------------------------------------------------------------------
+THE FORGE, MEASURED (v549, _forgeaudit.js)
+---------------------------------------------------------------------------
+Measured by calling the SHIPPED functions — matDropFor, rollSoulboundItems,
+zoneTierRow, matRecipesFor — not by re-deriving the constants, because the
+constants are not the rate: matDropFor doubles for an elite, scales with Fortune,
+and then draws UNIFORMLY from a three-material pool. 400k kills per rate row,
+20k simulated chases per leg. Fortune pinned to 0 unless stated.
+
+WHAT A SEED COSTS. All six are the SAME 13 raw drops and differ only in which
+dungeon pays the last one: 6 starter (2 Bog Iron, 2 Cinder Scale, 2 Pale Sap),
+3 mainland (Storm Glass, Grave Salt, Drake Ash), 4 rift (Anchorroot, Veilshard,
+Wallrot, + that dungeon's signature).
+
+MEASURED RATES (per kill)
+  starter/main trash    8.5%        elite trash   18.7%  (the 2.2x, confirmed)
+  ambush (type N)       4.4%        boss          69.9%, stacking exactly 3.00
+  ascended boss         70.0%, never stacking — one reagent, one clear
+  a boss is worth ~35 trash kills, and the uniform 3-material pool means any
+  SPECIFIC material is only 2.86% of a trash kill.
+
+THE CHASE, to one seed (medians over 20,000 runs)
+  starter leg   105 trash kills   (p90 181; 96 with elites at ELITE_P)
+  mainland leg   56 trash kills   (p90 117; 51 with elites)
+  rift leg        5 dungeon clears across 4 different ascended dungeons
+
+  EVERY RIFTSEED SENDS A Lv50 HERO BACK TO THE STARTER ISLAND for ~105 trash
+  kills. That is the design working as written — materials are account-level
+  precisely so the island produces something permanent — but it is now a
+  measured number rather than an intention, and it is the largest single block
+  of kills in the whole chase. Worth a decision either way.
+
+SD, THE OTHER HALF (and the actual bottleneck)
+  ascended dungeon boss    20.2% of clears pay an SD piece  → 5.0 clears for ANY
+                           piece, 19.8 for a CHOSEN slot (4 slots: wpn/arm/ring/helm)
+  rim BOSS                 1 in 10 kills
+  rim trash                1 in 1,600      rim shooter   1 in 539
+  The rim's SD is effectively BOSS-ONLY: trash there is three orders of
+  magnitude slower than the boss standing next to it. If the rim is meant to be
+  a place you grind for SD rather than a boss lap, that gap is the thing to look
+  at, not the weight of 8.
+
+FORTUNE is a real dial and a large one: F25 x1.29, F50 x1.58, F100 x2.18.
+
+NOT MEASURED: wall-clock. Everything above is in kills and clears, which is what
+the drop tables actually own; seconds belong to the hero swinging, and the dev
+BALANCE sweep cannot supply them — it drives fights at a FIXED TTK=60s INPUT.
 
 THREE STATUS-EFFECT FINDINGS, measured and deliberately NOT fixed (balance calls,
 one-line each — ask before changing):
@@ -471,23 +694,32 @@ STILL OPEN, IN NO PARTICULAR ORDER
   (04_collision already has the shape in player.terrainGhost, gated on
   _pmove), a decision on whether flight clears only water/chasm or
   everything, and an answer to which enemies can reach a flyer at all.
-- (done v547) THE CRAFTING ARC. Built as 18_forge.js. The design changed twice
-  while it was being built and the SHIPPED shape is: every craft takes exactly
-  two inputs; SD is DROPPED from the Lv50 rim and the ascended dungeons rather
-  than crafted; and the payoff is forging an SD piece into a relic. See WHAT
-  SHIPPED, with art (27 material icons + an anvil plate, v548) and per-boss
-  reagents (v549). Open follow-ups it left behind:
+- (done v547, extended v549) THE CRAFTING ARC. Built as 18_forge.js. The design
+  changed twice while it was being built and the SHIPPED shape is: every craft
+  takes exactly two inputs; SD is DROPPED from the Lv50 rim and the ascended
+  dungeons rather than crafted; and the payoff is forging an SD piece into a
+  relic. v549 tied the rift pool to individual bosses and gave each relic
+  dungeon its own seed. See WHAT SHIPPED. Open follow-ups it left behind:
+    * (done v549) MATERIALS HAVE NO ART. 27 sprites plus the anvil plate; the
+      six seeds share one sprite tinted by GBOSS colour.
     * SD HAS NO SACK OF ITS OWN -- it shares the T11-T12 bag, because the co-op
       band field is 2 bits and LOOT_BANDS already has exactly four rows. Giving
       it one means widening that field, which is a wire change.
-    * The material chip labels TRUNCATE at chip width ("Riftseed of As..."). The
+    * THE MATERIAL CHIP LABELS TRUNCATE at chip width ("Riftseed of As..."). The
       full name is in the title attribute, which is useless on touch. Either
-      shorten the seed names or give the chip two lines.
-    * The material drop rates (B 0.70 / trash 0.085) are a first guess, chosen
-      against pet food's 5.5%/60% as the nearest comparison. Nobody has farmed
-      the tree end to end and timed how long a Riftseed actually takes.
+      shorten the seed names or give the chip two lines. STILL OPEN, and visible
+      in _shots/forge_forge_844x390.png.
+    * (MEASURED v549 — see THE FORGE, MEASURED.) The drop rates are no longer a
+      guess and the tree HAS been farmed end to end: the starter leg is a median
+      105 trash kills, the mainland leg 56, the rift leg 5 dungeon clears. What
+      is still open is whether the SHAPE is right, given the seed half costs 5
+      clears and the SD half 19.8 for a chosen slot -- a 4x mismatch, so the
+      material tree is not what paces a relic. Wall-clock is still unmeasured.
     * SD's own drop weight in the rim is 8 against T11's 50 and T12's 42, and
-      SD_DUN_W is 22 inside an ascended dungeon. Also unmeasured.
+      SD_DUN_W is 22 inside an ascended dungeon. MEASURED v549: that lands at
+      1-in-10 for a rim BOSS but 1-in-1,600 for rim trash and 1-in-539 for a rim
+      shooter, and 20.2% of ascended clears. The rim's SD is boss-only in
+      practice; the weight is not the reason, sbP is.
 - Bounty board has no fog objective.
 - Lv1-20 zone progression on the starter island is thin. TWO of the three legs
   are there now: the mount is the Lv20 reward at the END of it, and the island

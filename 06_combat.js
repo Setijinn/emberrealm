@@ -253,7 +253,10 @@ function fire(dt){
     if(typeof inputMode!=='undefined' && inputMode==='pc' && typeof mouseWorld==='function') ref=mouseWorld();
     // auto-aim range cap: only engage targets the weapon can actually reach (+15% grace)
     const _psp=(wt.spd||520)*(player.projSpd||1);
-    const wRange=_psp*(wt.life||1)*1.15;
+    // RANGE_SCALE rides on the LIFETIME, so this cap and the shot below cannot disagree about how
+    // far the weapon reaches -- an auto-aim that locks onto something the bolt expires short of is
+    // worse than no auto-aim, because it silently spends your fire rate on a target you cannot hit.
+    const wRange=_psp*(wt.life||1)*RANGE_SCALE*1.15;
     // TARGETING MODE (user, 2026-07-27) decides WHICH reachable enemy wins, not whether to
     // auto-aim at all. Range and line-of-sight are still absolute: a mode can only ever reorder
     // the targets you could already hit, never let you shoot through a wall or past your reach.
@@ -284,7 +287,12 @@ function fire(dt){
       if(score<bd){ bd=score; best=e; }
     }
     // lead the target: aim where it WILL be when the shot arrives, not where it is now
-    if(best){ const p=aimPoint(best,_psp,wt.life||1);
+    // LEAD IT AT THE SPEED IT ACTUALLY FLIES. aimPoint solves an intercept in real seconds and
+    // rejects a solution later than `life`, so both arguments have to be in the same frame as the
+    // integration: PROJ_SCALE slows the bolt and stretches its lifetime by the same factor.
+    // Passing the raw pair would have under-led every moving target by exactly the scale, which is
+    // the kind of miss that reads as "the aim is broken" rather than as "the shots are slower".
+    if(best){ const p=aimPoint(best,_psp*PROJ_SCALE,(wt.life||1)*RANGE_SCALE/PROJ_SCALE);
       ang=Math.atan2(p.y-player.y,p.x-player.x); }
   }
   if(ang===null) return;
@@ -330,7 +338,9 @@ function fire(dt){
     else if(n>1){ sa=ang+(i-(n-1)/2)*(wt.spread||0.15); }
     pShots.push({x:sx,y:sy,px:sx,py:sy,
       vx:Math.cos(sa)*psp,vy:Math.sin(sa)*psp,
-      r:wt.size||5,life:wt.life||1,dmg:dm,crit:crit,
+      // the ONE place a weapon's reach is set. Abilities and ultimates push their own shots with
+      // their own lifetimes and are deliberately not scaled by this.
+      r:wt.size||5,life:(wt.life||1)*RANGE_SCALE,dmg:dm,crit:crit,
       pierce:pr,lastHit:null,slow:player.slowShot,pk:pk,pc:_sc,pcore:pcore,
       // a status build recolours the shot, so let its hue win over the tier's
       psh:_look?_look.shape:undefined, phu:(_look&&!_ss)?_look.hue:undefined,
