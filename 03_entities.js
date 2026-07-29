@@ -239,6 +239,11 @@ const ZBOSS=[9,10,12,11, 0,1,2,3,4, 6,5,-1,7,8];
 // its own tilesets. The fourth zone borrows band 6, Stonebrow's grey stone and scree, which reads
 // as the rocky spine you climb between the shingle and the marsh.
 const STARTER_ZONES=4, STARTER_BANDS=[0,1,9,2];   // sand / shingle / quarry stone / marsh
+// Each starter province holds exactly five levels, so the island's ceiling is a fact about the
+// province count and not a number to be typed twice. This is the bridge level and the level
+// permadeath starts at; anything on the island that needs "the top of the island" reads it here.
+const STARTER_LV_PER_ZONE=5;
+const ISLAND_LV=STARTER_ZONES*STARTER_LV_PER_ZONE;      // 20
 // Seeds for the four starter provinces, marching NW->SE from the landing to the bridge. These are
 // REAL territories -- warped Voronoi with irregular borders, the same treatment the main island
 // gets -- not rings. Measured against the actual landmass rather than guessed, on four counts:
@@ -671,6 +676,10 @@ const DUN_NPC={
 // A MISSING entry here falls back to `||ring`, so boss 12 would silently get depth 12: a
 // 482-wide grid and ~10 chambers for a Lv12 starter dungeon. It is 1, like the other short ones.
 const DDEPTH=[0,1,2,3,4,5,6,7,8, 0,0,1, 1];
+// How far past its homeland a dream sits. One named number instead of a `+5` buried in an
+// expression, because it is a design statement ("matching but a little more difficult") and the
+// clamp above it is the only thing standing between it and content above the level cap.
+const DUN_STEP=5;
 function genDungeon(ring){
  // the mind is a step beyond the zone's peak — "matching but a little more difficult".
  // Measured off the boss's OWN clump (which _territories already samples from the smooth radial
@@ -681,9 +690,28 @@ function genDungeon(ring){
    // Starter dungeons step past THIS BOSS, not the island's peak. Belt and braces now that the
    // clumps are real five-level bands (lvmax is 5/10/15/20, not 20 across the board): stepping off
    // the boss's own tile keeps a Lv4 den from dropping a dungeon its owner's killers can't enter.
+   //
+   // AND IT MAY NOT LEAVE THE ISLAND. The ceiling used to be `LV_CAP-26`, which is 24 -- a number
+   // that looks derived from the cap and is not: it has no relationship to 50, and if the cap ever
+   // moved it would have dragged the starter dungeons somewhere arbitrary with it. What actually
+   // bounds a starter dungeon is the island it stands on, so it reads ISLAND_LV. Measured effect:
+   // Marrow Chapel was Lv22, above the island's own Lv20 ceiling and above the bridge crossing
+   // that a player has to survive to outlevel it.
    const L=grvLairXY(ring), RGs=rooms['G'].rings;
-   lv=Math.max(3,Math.min(LV_CAP-26,Math.round(grvLvAtR(RGs,L.x/TILE,L.y/TILE))+4));
- } else lv=Math.min(LV_CAP+10,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+5);
+   lv=Math.max(3,Math.min(ISLAND_LV,Math.round(grvLvAtR(RGs,L.x/TILE,L.y/TILE))+4));
+ } else {
+   // THE DREAM IS A STEP BEYOND ITS HOMELAND, BUT THE CAP IS THE CAP (user, 2026-07-28).
+   // This used to clamp at LV_CAP+10, a bound so loose it never bound anything: six of the nine
+   // ascended dungeons came out at Lv53-55 against a hero who can never pass 50, so the whole
+   // endgame was fought permanently underlevelled and no amount of playing could fix it.
+   //
+   // Clamping at LV_CAP means the top six all land flat on 50, and that is the correct shape
+   // rather than a lost ramp: at the cap, every awakened depth is level-50 content fought by a
+   // level-50 hero, and what separates the Shattered Vault from the Core Sanctum is bossPace, the
+   // mechanics and the relic rate -- none of which are the level. Difficulty at the ceiling is
+   // supposed to come from the fight, not from a number the player is forbidden to match.
+   lv=Math.min(LV_CAP,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+DUN_STEP);
+ }
  // seeded PRNG — every ring gets its OWN layout, stable across visits.
  // MIRRORED 1:1 by scratchpad dun_gen2.py (structural validation) — keep in sync.
  let _s=(ring*7919+1013)>>>0;

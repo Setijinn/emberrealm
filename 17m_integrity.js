@@ -232,6 +232,48 @@ function _checkForge(){
         _iErr('relic set "'+S.id+'" has no '+sl+' — the forge lists it and then refuses'); }
 }
 
+// NOTHING MAY SIT ABOVE THE LEVEL CAP. 50 is a hard ceiling -- levelUp stops there and there is no
+// prestige level -- so any content that computes its own level has to land on or under it, or it is
+// content the player is structurally forbidden from matching. Six ascended dungeons were at Lv53-55
+// for exactly this reason: their clamp was LV_CAP+10, which never bound anything.
+function _checkLevelCap(){
+  if(typeof LV_CAP==='undefined') return;
+  if(typeof ASCEND_LV!=='undefined' && ASCEND_LV>LV_CAP)
+    _iErr('ASCEND_LV ('+ASCEND_LV+') is above LV_CAP ('+LV_CAP+') — ascension is unreachable');
+  if(typeof MOUNT_LV!=='undefined' && MOUNT_LV>LV_CAP)
+    _iErr('MOUNT_LV ('+MOUNT_LV+') is above LV_CAP — the Stable can never open');
+  if(typeof MOUNT_FLY_LV!=='undefined' && MOUNT_FLY_LV>LV_CAP)
+    _iWarn('MOUNT_FLY_LV ('+MOUNT_FLY_LV+') is above LV_CAP — flight would be unreachable if built');
+  // every dungeon computes its own level off its boss's clump; none may exceed the cap
+  if(typeof GBOSS!=='undefined' && typeof genDungeon==='function' && typeof rooms!=='undefined' && rooms['G']){
+    for(let ring=0; ring<GBOSS.length; ring++){
+      let d=null; try{ d=genDungeon(ring); }catch(e){ continue; }
+      if(!d||d.lv===undefined) continue;
+      if(d.lv>LV_CAP) _iErr('dungeon '+ring+' ('+(GBOSS[ring].dn||GBOSS[ring].n)+') is Lv'+d.lv+
+        ', above the Lv'+LV_CAP+' cap — it can only ever be fought underlevelled');
+      // a starter dungeon must stay on the island it belongs to
+      if(typeof isStarterBoss==='function' && isStarterBoss(ring) && typeof ISLAND_LV!=='undefined'
+         && d.lv>ISLAND_LV)
+        _iErr('starter dungeon '+ring+' ('+(GBOSS[ring].dn||GBOSS[ring].n)+') is Lv'+d.lv+
+          ', above the island ceiling of Lv'+ISLAND_LV);
+    }
+  }
+  // the overworld zones must not promise levels the cap forbids
+  if(typeof rooms!=='undefined' && rooms['G'] && typeof _territories==='function'){
+    let T=null; try{ T=_territories(rooms['G']); }catch(e){}
+    if(T) for(const t of T) if(t.lvmax>LV_CAP)
+      _iErr('territory "'+t.name+'" reaches Lv'+t.lvmax+', above the cap');
+  }
+  // the island's ceiling has to be the sum of its own provinces, not a number typed twice
+  if(typeof ISLAND_LV!=='undefined' && typeof STARTER_ZONES!=='undefined'
+     && typeof STARTER_LV_PER_ZONE!=='undefined'){
+    if(ISLAND_LV!==STARTER_ZONES*STARTER_LV_PER_ZONE)
+      _iErr('ISLAND_LV is '+ISLAND_LV+' but the island has '+STARTER_ZONES+' provinces of '+
+        STARTER_LV_PER_ZONE);
+    if(ISLAND_LV>=LV_CAP) _iErr('ISLAND_LV ('+ISLAND_LV+') leaves no mainland below the cap');
+  }
+}
+
 function runIntegrityCheck(){
   INTEGRITY.errors.length=0; INTEGRITY.warns.length=0;
   try{ _checkBossTables(); }catch(e){ _iWarn('boss-table check threw: '+e.message); }
@@ -239,6 +281,7 @@ function runIntegrityCheck(){
   try{ _checkSpecies(); }catch(e){ _iWarn('species check threw: '+e.message); }
   try{ _checkTierLadder(); }catch(e){ _iWarn('tier-ladder check threw: '+e.message); }
   try{ _checkForge(); }catch(e){ _iWarn('forge check threw: '+e.message); }
+  try{ _checkLevelCap(); }catch(e){ _iWarn('level-cap check threw: '+e.message); }
   INTEGRITY.ran=true;
   const report=()=>{
     if(INTEGRITY.errors.length){
