@@ -27,6 +27,12 @@ project *is*, you are in the wrong file.
   install paths, then Playwright's versioned download dir — and adds `--no-sandbox` when it is
   running as root, which Chrome's zygote otherwise refuses. 144 checks today. Run it after any
   change to the tier ladder, the loot tables, the level cap, the forge or the dev workbench.
+- **`py tools/audit.py _forgeaudit.js` is the same trick for a MEASUREMENT.** An audit reports
+  numbers and never gates anything, which is why it is a separate runner: the self-test must stay a
+  thing that is green or red. It takes any `_*audit.js` (`_lvaudit.js` had no runner for months and
+  was hand-injected every time) and gets a 600s virtual-time budget, because a drop-rate audit runs
+  millions of simulated kills. **An audit must put back every global it touched** — `_forgeaudit.js`
+  saves and restores `curRoom` and `player.fortune`, and says so in its own output.
 - Verify by driving the game. Report measurements. Say plainly when something fails, or when you
   did not test it.
 

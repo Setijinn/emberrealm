@@ -495,20 +495,72 @@ you are starting from green (144/144, verified at v549). Verify the server
 actually responds before you navigate — an `&& echo serving` after a failed
 command lies.
 
-THE FORGE IS FEATURE-COMPLETE AND DRAWN. What it has never had is a NUMBER on it:
-nobody has farmed the tree end to end and timed how long a Riftseed actually
-takes. MAT_DROP_P is {B:0.70, s/c:0.085, N:0.045} and SD's rim weight is 8
-against T11's 50 and T12's 42 (SD_DUN_W 22 inside an ascended dungeon) — every
-one of those is a first guess, chosen against pet food's 5.5%/60% as the nearest
-comparison. The dev FORGE tab's "Exactly enough for ONE Riftseed" button exists
-precisely so this can be measured rather than argued about, and the LEVELS tab
-now reads the whole ladder in one place. Measuring it is the obvious next job:
-it is the only part of the newest system that is still a guess.
+THE FORGE HAS BEEN MEASURED — `py tools/audit.py _forgeaudit.js`. The rates are no
+longer a guess, and the numbers are in THE FORGE, MEASURED below. What is left is
+a BALANCE CALL, which is the user's and not a bug to fix:
+
+  A RELIC HAS TWO HALVES AND THEY ARE NOT THE SAME LENGTH. The seed costs a
+  median of 5 ascended clears. An SD piece in the slot you actually want costs
+  19.8. So the material tree — the whole thing that was built, drawn and gated —
+  is NOT what paces a relic; SD gear is, by 4x. Anyone tuning MAT_DROP_P is
+  tuning the fast half.
+
+Nothing here has been retuned. Same rule as the three status findings: measured,
+reported, left alone until asked.
 
 The other two live candidates, both larger: FLYING MOUNTS at Lv40 (the seam is
 declared and nothing reads it — see STILL OPEN for the three open decisions), and
 the thin Lv1-20 starter island (3.6% of the run's XP across four provinces, and
-since the forge the only reason to walk it is the materials).
+since the forge the only reason to walk it is the materials — and see below,
+because the audit found that every Riftseed sends a Lv50 hero back to it).
+
+---------------------------------------------------------------------------
+THE FORGE, MEASURED (v549, _forgeaudit.js)
+---------------------------------------------------------------------------
+Measured by calling the SHIPPED functions — matDropFor, rollSoulboundItems,
+zoneTierRow, matRecipesFor — not by re-deriving the constants, because the
+constants are not the rate: matDropFor doubles for an elite, scales with Fortune,
+and then draws UNIFORMLY from a three-material pool. 400k kills per rate row,
+20k simulated chases per leg. Fortune pinned to 0 unless stated.
+
+WHAT A SEED COSTS. All six are the SAME 13 raw drops and differ only in which
+dungeon pays the last one: 6 starter (2 Bog Iron, 2 Cinder Scale, 2 Pale Sap),
+3 mainland (Storm Glass, Grave Salt, Drake Ash), 4 rift (Anchorroot, Veilshard,
+Wallrot, + that dungeon's signature).
+
+MEASURED RATES (per kill)
+  starter/main trash    8.5%        elite trash   18.7%  (the 2.2x, confirmed)
+  ambush (type N)       4.4%        boss          69.9%, stacking exactly 3.00
+  ascended boss         70.0%, never stacking — one reagent, one clear
+  a boss is worth ~35 trash kills, and the uniform 3-material pool means any
+  SPECIFIC material is only 2.86% of a trash kill.
+
+THE CHASE, to one seed (medians over 20,000 runs)
+  starter leg   105 trash kills   (p90 181; 96 with elites at ELITE_P)
+  mainland leg   56 trash kills   (p90 117; 51 with elites)
+  rift leg        5 dungeon clears across 4 different ascended dungeons
+
+  EVERY RIFTSEED SENDS A Lv50 HERO BACK TO THE STARTER ISLAND for ~105 trash
+  kills. That is the design working as written — materials are account-level
+  precisely so the island produces something permanent — but it is now a
+  measured number rather than an intention, and it is the largest single block
+  of kills in the whole chase. Worth a decision either way.
+
+SD, THE OTHER HALF (and the actual bottleneck)
+  ascended dungeon boss    20.2% of clears pay an SD piece  → 5.0 clears for ANY
+                           piece, 19.8 for a CHOSEN slot (4 slots: wpn/arm/ring/helm)
+  rim BOSS                 1 in 10 kills
+  rim trash                1 in 1,600      rim shooter   1 in 539
+  The rim's SD is effectively BOSS-ONLY: trash there is three orders of
+  magnitude slower than the boss standing next to it. If the rim is meant to be
+  a place you grind for SD rather than a boss lap, that gap is the thing to look
+  at, not the weight of 8.
+
+FORTUNE is a real dial and a large one: F25 x1.29, F50 x1.58, F100 x2.18.
+
+NOT MEASURED: wall-clock. Everything above is in kills and clears, which is what
+the drop tables actually own; seconds belong to the hero swinging, and the dev
+BALANCE sweep cannot supply them — it drives fights at a FIXED TTK=60s INPUT.
 
 THREE STATUS-EFFECT FINDINGS, measured and deliberately NOT fixed (balance calls,
 one-line each — ask before changing):
@@ -560,11 +612,17 @@ STILL OPEN, IN NO PARTICULAR ORDER
     * SD HAS NO SACK OF ITS OWN -- it shares the T11-T12 bag, because the co-op
       band field is 2 bits and LOOT_BANDS already has exactly four rows. Giving
       it one means widening that field, which is a wire change.
+    * (MEASURED v549 — see THE FORGE, MEASURED. The rates below are no longer
+      unknown; what is still open is whether the SHAPE is right, given the seed
+      half costs 5 clears and the SD half 19.8 for a chosen slot.)
     * The material drop rates (B 0.70 / trash 0.085) are a first guess, chosen
       against pet food's 5.5%/60% as the nearest comparison. Nobody has farmed
       the tree end to end and timed how long a Riftseed actually takes.
     * SD's own drop weight in the rim is 8 against T11's 50 and T12's 42, and
-      SD_DUN_W is 22 inside an ascended dungeon. Also unmeasured.
+      SD_DUN_W is 22 inside an ascended dungeon. MEASURED v549: that lands at
+      1-in-10 for a rim BOSS but 1-in-1,600 for rim trash and 1-in-539 for a rim
+      shooter, and 20.2% of ascended clears. The rim's SD is boss-only in
+      practice; the weight is not the reason, sbP is.
 - Bounty board has no fog objective.
 - Lv1-20 zone progression on the starter island is thin. TWO of the three legs
   are there now: the mount is the Lv20 reward at the END of it, and the island
