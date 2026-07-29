@@ -123,6 +123,29 @@ const MOVE_SCALE = 0.80;
 // arrive pre-scaled and get scaled twice.
 const PROJ_SCALE = 0.90;
 
+// ---------------------------------------------------------------------------------------------
+// RANGE_SCALE (user, 2026-07-29: "decrease overall range of weapons").
+// The THIRD dial, and the one PROJ_SCALE was deliberately built not to touch: that one slows a
+// bolt while holding its reach, this one shortens the reach while leaving the speed alone. Kept
+// apart precisely so either can be re-tuned without silently dragging the other with it.
+//
+// WEAPONS ONLY, and the word is doing work. It scales `wt.life` where fire() reads it -- the
+// WTYPE table, which is what this game calls a weapon -- and nothing else. Ability bolts,
+// ultimates and perk volleys keep the reach they were designed with, because a Frostbolt's range
+// is a property of the spell and not of whatever is being held. Enemy and boss patterns are
+// likewise untouched: they do not carry weapons, and shortening their reach as well would have
+// handed the player a large safety margin under cover of a nerf.
+//
+// Three things read the reach and ALL of them have to agree, or the weapon and the aim disagree
+// about what is in range: the shot's own lifetime, fire()'s auto-aim distance cap, and aimPoint's
+// intercept window. They are all `wt.life * RANGE_SCALE` now.
+//
+// A UNIFORM CUT LANDS HARDEST ON THE SHORTEST WEAPONS, which is worth knowing before re-tuning
+// it: reach = spd*life, so at 0.85 the Crossbow loses 148px it will never miss and the Gauntlets
+// lose 14px off 94 -- under two tiles of reach on a 44px grid. If the melee end ever needs a
+// floor, this is the constant to special-case, not the WTYPE rows.
+const RANGE_SCALE = 0.85;
+
 let BUILD='dev';
 function paintBuildTag(){ for(const el of document.querySelectorAll('.bTag')) el.textContent='build '+BUILD; }
 function _readBuild(){

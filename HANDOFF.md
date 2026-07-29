@@ -183,6 +183,22 @@ and the auto-aim range by 10%, which is a much larger balance change hiding insi
   aim rather than as slower shots.
 - `s.age` is **not** scaled — it drives the sprite's tumble, which is a look, not a distance.
 
+**`RANGE_SCALE` (0.85) shortens WEAPON reach, and the word "weapon" is doing work.** It scales
+`wt.life` where `fire()` reads it — the `WTYPE` table, which is what this game calls a weapon — and
+nothing else. Ability bolts, ultimates and perk volleys keep their designed reach, because a
+Frostbolt's range belongs to the spell and not to whatever is being held; enemy and boss patterns
+are untouched, since shortening their reach too would hand the player a large safety margin under
+cover of a nerf. It is deliberately a **separate constant from `PROJ_SCALE`**: that one slows a bolt
+while *holding* its reach, this one shortens the reach while leaving the speed alone, and either
+must be re-tunable without dragging the other along.
+- **Three things read the reach and all three must agree**: the shot's own `life`, `fire()`'s
+  auto-aim distance cap, and `aimPoint`'s intercept window. An auto-aim that locks onto something
+  the bolt expires short of is worse than none — it silently spends your fire rate on a target you
+  cannot hit. `_projaudit.js` flies real bolts and asserts each weapon stops inside its own cap.
+- **A uniform cut lands hardest on the shortest weapons.** Reach is `spd*life`, so at 0.85 the
+  Crossbow loses 148px it will never miss while the Gauntlets lose 14px off 94 — under two tiles on
+  a 44px grid. If the melee end ever needs a floor, special-case the constant, not the `WTYPE` rows.
+
 **Ascension opens at `ASCEND_LV` (45), not at the cap.** One constant in `13_skills.js`; the gate,
 the locked button and the attributes status line all read from it. Ascending early is deliberate —
 it hands you the prestige caps while there are still levels left to earn.

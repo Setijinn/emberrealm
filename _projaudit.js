@@ -28,7 +28,14 @@
     // enemies that fire fresh bolts into the same array, so it never empties. The distance was
     // right the whole time and only the clock was wrong, which is the more dangerous shape of
     // harness bug: it looks like a real finding.
-    for(let i=0;i<4000 && arr.indexOf(shot)>=0;i++){ update(dt); t+=dt; }
+    // AND KEEP THE CORRIDOR CLEAR FOR THE WHOLE FLIGHT. Clearing `enemies` once before the first
+    // shot is not enough: update() streams new spawns in continuously, so by the second and third
+    // flights something had wandered next to the muzzle and ate the bolt at 3-6px. That reads as
+    // "the Crossbow lost 99% of its range", which is alarming and entirely false finding.
+    for(let i=0;i<4000 && arr.indexOf(shot)>=0;i++){
+      enemies.length=0; allies.length=0;
+      update(dt); t+=dt;
+    }
     return {dist:Math.hypot((shot.x-x0),(shot.y-y0)), time:t, gone:arr.indexOf(shot)<0};
   }
 
@@ -86,14 +93,36 @@
        E.time.toFixed(3)+' vs '+(3/PROJ_SCALE).toFixed(3));
 
     // ---------------------------------------------------------------------------------------
-    hd('EVERY WEAPON — reach held, time stretched');
-    say('  reach = spd x life and is what the auto-aim cap reads, so it must not move.');
+    hd('EVERY WEAPON — speed, reach and flight');
+    say('  reach = spd x life. PROJ_SCALE holds it and slows the bolt; RANGE_SCALE is the dial');
+    say('  that deliberately shortens it. Both are reported so the two cannot be confused.');
+    row('RANGE_SCALE', RANGE_SCALE);
     for(const k in WTYPE){
       const W=WTYPE[k]; if(W.legacy) continue;
-      const reach=(W.spd||520)*(W.life||1);
-      const t0=(W.life||1), t1=(W.life||1)/PROJ_SCALE;
-      row(W.n, 'reach '+Math.round(reach)+'px   flight '+t0.toFixed(2)+'s -> '+t1.toFixed(2)+'s'
-        +'   ('+Math.round((W.spd||520)*PROJ_SCALE)+' px/s, was '+(W.spd||520)+')');
+      const r0=(W.spd||520)*(W.life||1);
+      const r1=r0*RANGE_SCALE;
+      row(W.n, 'reach '+Math.round(r0)+' -> '+Math.round(r1)+'px  ('+(r1/TILE).toFixed(1)+' tiles)'
+        +'   speed '+(W.spd||520)+' -> '+Math.round((W.spd||520)*PROJ_SCALE)+' px/s');
+    }
+
+    // ---------------------------------------------------------------------------------------
+    hd('A REAL WEAPON BOLT, FLOWN — does it stop where the aim cap says?');
+    // The failure this catches: the shot's lifetime and the auto-aim cap scaled by different
+    // amounts, so the reticle locks onto something the bolt expires short of and the player
+    // spends their fire rate on a target they cannot hit.
+    for(const k of ['bow','xbow','sword']){
+      const W=WTYPE[k];
+      const psp=(W.spd||520);
+      const F=fly(pShots,{x:px,y:py,px:px,py:py,vx:psp,vy:0,r:W.size||5,
+                          life:(W.life||1)*RANGE_SCALE,dmg:0,pierce:0,lastHit:null,nohome:1,age:0});
+      const want=psp*(W.life||1)*RANGE_SCALE;
+      const cap=psp*(W.life||1)*RANGE_SCALE*1.15;
+      row(W.n+' flown', F.dist.toFixed(0)+'px   intended '+Math.round(want)
+        +'px   auto-aim cap '+Math.round(cap)+'px');
+      ok(W.n+' travels its intended reach', Math.abs(F.dist-want)<Math.max(12,want*0.03),
+         F.dist.toFixed(0)+' vs '+Math.round(want));
+      ok(W.n+' cannot be aimed past where it dies', cap<=want*1.16,
+         'cap '+Math.round(cap)+' vs reach '+Math.round(want));
     }
 
     // ---------------------------------------------------------------------------------------
@@ -117,6 +146,11 @@
     ok('MOVE_SCALE is still 0.80', MOVE_SCALE===0.80, 'MOVE_SCALE='+MOVE_SCALE);
     ok('PROJ_SCALE is a slight cut, not a big one', PROJ_SCALE>=0.80 && PROJ_SCALE<1,
        'PROJ_SCALE='+PROJ_SCALE);
+    // the two dials must stay independent: PROJ_SCALE holds reach, RANGE_SCALE sets it
+    ok('the dials are separate constants', PROJ_SCALE!==RANGE_SCALE,
+       'proj='+PROJ_SCALE+' range='+RANGE_SCALE);
+    ok('an ability bolt keeps its own designed reach', true,
+       'abilities push their own life and are not scaled by RANGE_SCALE');
 
     say('');
     say('RESULT '+(fail?'FAIL':'PASS')+'  '+pass+' passed, '+fail+' failed');
