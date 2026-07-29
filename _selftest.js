@@ -308,6 +308,53 @@
          '+'+fake.perkPts+' points');
     }
 
+    // ---------- 9c. THE DEV MENU ----------
+    // Every tab is painted for real and its controls counted. A dev panel is exactly the kind of
+    // thing that rots silently: it reads live tables, so a rename anywhere throws inside one tab
+    // and nobody notices until they open it mid-investigation.
+    note('== dev menu ==');
+    if(typeof DEV_TABS!=='undefined' && typeof DEV_PANE!=='undefined'){
+      ok('every tab has a pane', DEV_TABS.every(t=>typeof DEV_PANE[t[0]]==='function'),
+         DEV_TABS.filter(t=>typeof DEV_PANE[t[0]]!=='function').map(t=>t[0]).join(',')||'all '+DEV_TABS.length);
+      let totalBtns=0; const broke=[], counts=[];
+      for(const [id] of DEV_TABS){
+        const host=document.createElement('div');
+        try{ DEV_PANE[id](host); }
+        catch(e){ broke.push(id+': '+e.message); continue; }
+        const n=host.querySelectorAll('button').length;
+        totalBtns+=n; counts.push(id+':'+n);
+        if(!n && id!=='levels') broke.push(id+': painted zero controls');
+      }
+      ok('every dev tab paints without throwing', broke.length===0, broke.join(' | ')||counts.join(' '));
+      ok('the workbench still has a lot of controls', totalBtns>300, totalBtns+' buttons');
+      // the two new tabs specifically
+      ok('there is a FORGE tab', DEV_TABS.some(t=>t[0]==='forge'));
+      ok('there is a LEVELS tab', DEV_TABS.some(t=>t[0]==='levels'));
+      // and the forge tab must offer every material, not a hand-typed subset
+      {
+        const host=document.createElement('div'); DEV_PANE.forge(host);
+        const txt=host.textContent;
+        const missing=MAT_KEYS.filter(k=>txt.indexOf(MATERIALS[k].n)<0);
+        ok('the FORGE tab lists every material', missing.length===0,
+           missing.join(',')||MAT_KEYS.length+' materials');
+      }
+      // the LEVELS tab must name every dungeon so an above-cap one cannot hide
+      {
+        const host=document.createElement('div'); DEV_PANE.levels(host);
+        const txt=host.textContent;
+        const missing=[]; for(let r=0;r<GBOSS.length;r++)
+          if(txt.indexOf(GBOSS[r].dn||GBOSS[r].n)<0) missing.push(r);
+        ok('the LEVELS tab names every dungeon', missing.length===0, missing.join(',')||GBOSS.length+' dungeons');
+        ok('and flags none of them as above the cap', txt.indexOf('ABOVE CAP')<0);
+      }
+      // tierTag, not a raw T-number, anywhere the dev panel prints a tier
+      {
+        const host=document.createElement('div'); DEV_PANE.sacks(host);
+        ok('the SACKS tab writes SD, not T13', host.textContent.indexOf('T13')<0,
+           host.textContent.indexOf('SD')>=0?'says SD':'no tier text found');
+      }
+    } else ok('dev panel loaded', false);
+
     // ---------- 10. THE PANEL ----------
     note('== panel ==');
     ok('the forge panel exists in the DOM', !!document.getElementById('forgeScr'));

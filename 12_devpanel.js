@@ -98,7 +98,10 @@ $s('dPots').onclick=()=>{ if(!rpg)return; rpg.pots=Math.min(99,(rpg.pots||0)+25)
 $s('dPerk').onclick=()=>{ if(!rpg)return; rpg.perkPts=(rpg.perkPts||0)+20; saveRPG(); devToast('+20 perk pts'); };
 $s('dRefill').onclick=()=>{ if(!player)return; player.hp=player.maxhp; player.mp=player.maxmp; devToast('HP/MP refilled'); };
 // item spawner
-$s('dItemTier').onclick=()=>{ devItemTier=(devItemTier+1)%MAXT; $s('dItemTier').textContent='Tier '+(devItemTier+1); };
+// Cycles 0..MAXT-1, which reaches Scavenged Dreams now that MAXT is 13 -- deliberate, it is the
+// only way to hand yourself an SD piece to feed the forge. tierTag() so the button reads "SD" and
+// not "Tier 13", which is not a thing the game calls anything.
+$s('dItemTier').onclick=()=>{ devItemTier=(devItemTier+1)%MAXT; $s('dItemTier').textContent='Tier: '+tierTag(devItemTier); };
 $s('dItemRar').onclick=()=>{ devItemRar=(devItemRar+1)%6; $s('dItemRar').textContent='Rarity: '+RAR_LBL[devItemRar]; };
 $s('dItemW').onclick=()=>{devMkItem('wpn');};
 $s('dItemA').onclick=()=>{devMkItem('arm');};

@@ -90,9 +90,9 @@ function _dvDrawBoss(c,ring,dungeonForm){
 }
 // ---------------------------------------------------------------------------------
 const DEV_TABS=[
- ['sacks','SACKS'], ['relics','RELICS'], ['items','ITEMS'], ['flasks','FLASKS'],
+ ['sacks','SACKS'], ['relics','RELICS'], ['items','ITEMS'], ['forge','FORGE'], ['flasks','FLASKS'],
  ['bosses','BOSSES'], ['anim','ANIMATION'], ['mobs','ENEMIES'], ['world','WORLD'],
- ['ui','UI / FX'], ['bal','BALANCE'],
+ ['levels','LEVELS'], ['ui','UI / FX'], ['bal','BALANCE'],
 ];
 function devPaintTabs(){
   const box=$s('devTabs'); if(!box) return; box.innerHTML='';
@@ -109,6 +109,222 @@ function devPaintBody(){
 }
 const DEV_PANE={};
 
+// ---------------------------------- FORGE ----------------------------------------
+// Everything in 18_forge.js had no dev controls at all: the only way to reach a Riftseed was to
+// clear nine ascended dungeons in the right order, which is not a way to test a panel.
+//
+// Every button reads the LIVE tables -- MATERIALS, MAT_RECIPES, RELIC_SETS, GBOSS -- so a
+// seventeenth material or a seventh relic dungeon appears here with no edit to this file. That is
+// the same rule the species and relic lists already follow.
+DEV_PANE.forge=function(B){
+  if(typeof MATERIALS==='undefined'){ B.appendChild(_dvNote('18_forge.js is not loaded.')); return; }
+  B.appendChild(_dvNote('Bram\'s forge. Materials are ACCOUNT-level, so anything given here survives permadeath — use WIPE POUCH to get back to a clean slate.'));
+
+  // ---- the pouch, at a glance ----
+  B.appendChild(_dvHd('POUCH'));
+  const held=matHeld();
+  B.appendChild(_dvNote(held.length
+    ? (matTotal()+' held across '+held.length+' kinds: '+held.map(m=>m.def.n+'×'+m.n).join(', '))
+    : 'empty'));
+  let g=_dvGrid();
+  g.appendChild(_dvBtn('Give 10 of EVERY material',()=>{
+    for(const k of MAT_KEYS) matAdd(k,10);
+    devLog('pouch filled — '+MAT_KEYS.length+' kinds × 10'); devPaintBody(); }));
+  g.appendChild(_dvBtn('Give 1 of every material',()=>{
+    for(const k of MAT_KEYS) matAdd(k,1); devLog('one of each'); devPaintBody(); }));
+  g.appendChild(_dvBtn('Exactly enough for ONE Riftseed',()=>{
+    // walk a seed's recipe tree back to its drops and grant precisely what it costs -- the honest
+    // way to see how long the chase really is, rather than handing over a full pouch
+    const ring=(typeof RELIC_SETS!=='undefined'&&RELIC_SETS.length)?RELIC_SETS[RELIC_SETS.length-1].ring:8;
+    const need={};
+    (function walk(id,n){
+      const made=matRecipesFor(id);
+      if(!made.length){ need[id]=(need[id]||0)+n; return; }
+      const r=made[0]; walk(r.a,n); walk(r.b,n);
+    })(seedIdFor(ring),1);
+    for(const id in need) matAdd(id,need[id]);
+    devLog('granted the exact cost of a '+MATERIALS[seedIdFor(ring)].n+': '
+      +Object.keys(need).map(k=>MATERIALS[k].n+'×'+need[k]).join(', '));
+    devPaintBody(); }));
+  g.appendChild(_dvBtn('WIPE POUCH',()=>{ const m=matStore();
+    if(m){ for(const k in m) delete m[k]; saveMats(); }
+    devLog('pouch wiped'); devPaintBody(); },'warn'));
+  B.appendChild(g);
+
+  // ---- one button per material, with its real art ----
+  B.appendChild(_dvHd('GIVE ONE — '+MAT_KEYS.length+' MATERIALS'));
+  const bySrc={starter:[],main:[],rift:[],craft:[]};
+  for(const k of MAT_KEYS) (bySrc[MATERIALS[k].src]||bySrc.craft).push(k);
+  const SRC_LABEL={starter:'STARTER ISLAND (Lv1–'+((typeof ISLAND_LV!=='undefined')?ISLAND_LV:20)+')',
+                   main:'MAIN ISLAND (Lv20–'+((typeof LV_CAP!=='undefined')?LV_CAP:50)+')',
+                   rift:'ASCENDED BOSSES — one each, and only from that boss',
+                   craft:'CRAFTED — no drop source'};
+  for(const src of ['starter','main','rift','craft']){
+    if(!bySrc[src].length) continue;
+    B.appendChild(_dvHd(SRC_LABEL[src]));
+    const gg=_dvGrid();
+    for(const k of bySrc[src]){
+      const d=MATERIALS[k];
+      const label=d.n+(d.ring!==undefined&&typeof GBOSS!=='undefined'&&GBOSS[d.ring]
+        ? ' — '+GBOSS[d.ring].n : '');
+      gg.appendChild(_dvIcoBtn(label,(c,S)=>{
+        c.imageSmoothingEnabled=false;
+        const im=(typeof matArtImg==='function')?matArtImg(d.id):null;
+        if(im&&im.width){ const sc=Math.min(S/im.width,S/im.height);
+          c.drawImage(im,S/2-im.width*sc/2,S/2-im.height*sc/2,im.width*sc,im.height*sc); }
+        else { c.fillStyle=d.col; c.font='22px monospace'; c.textAlign='center';
+          c.fillText(d.icon,S/2,S/2+8); }
+      },()=>{ matAdd(d.id,1); devLog('+1 '+d.n+' (now '+matCount(d.id)+')'); devPaintBody(); }));
+    }
+    B.appendChild(gg);
+  }
+
+  // ---- the SD gear the forge actually consumes ----
+  B.appendChild(_dvHd('SCAVENGED DREAMS GEAR — the only thing the anvil takes'));
+  const g2=_dvGrid();
+  for(const k of ['wpn','arm','helm','ring']){
+    g2.appendChild(_dvBtn(tierTag(SD_T)+' '+k,()=>{ const ch=_dvCh(); ch.inv=ch.inv||[];
+      if(ch.inv.length>=20) throw new Error('satchel full');
+      ch.inv.push(mkItem(k,SD_T,0,ch.cls)); saveRPG();
+      devLog('+ '+tierTag(SD_T)+' '+k+' to satchel'); }));
+  }
+  g2.appendChild(_dvBtn('Sack of all four',()=>{ const ch=_dvCh();
+    _dvSack(['wpn','arm','helm','ring'].map(k=>mkItem(k,SD_T,0,ch.cls)),tierTag(SD_T)+' set'); }));
+  B.appendChild(g2);
+
+  // ---- seeds: straight to the end of the tree ----
+  B.appendChild(_dvHd('RIFTSEEDS — one per relic dungeon'));
+  B.appendChild(_dvNote('A seed can only forge the two sets its own dungeon keeps. That is the link: kill the boss that owns the set you want.'));
+  const g3=_dvGrid();
+  if(typeof RELIC_SETS!=='undefined'){
+    const rings=[]; for(const S of RELIC_SETS) if(rings.indexOf(S.ring)<0) rings.push(S.ring);
+    rings.sort((a,b)=>a-b);
+    for(const ring of rings){
+      const sid=seedIdFor(ring), d=MATERIALS[sid]; if(!d) continue;
+      const sets=RELIC_SETS.filter(S=>S.ring===ring).map(S=>S.n).join(' / ');
+      g3.appendChild(_dvBtn(d.n+'  →  '+sets,()=>{ matAdd(sid,1);
+        devLog('+1 '+d.n+' (now '+matCount(sid)+')'); devPaintBody(); }));
+    }
+  }
+  g3.appendChild(_dvBtn('One of EVERY seed',()=>{
+    for(const k of MAT_KEYS) if(MATERIALS[k].seed) matAdd(k,1);
+    devLog('all six seeds'); devPaintBody(); }));
+  B.appendChild(g3);
+
+  // ---- the recipe tree, and whether each rung is reachable right now ----
+  B.appendChild(_dvHd('THE TREE — '+Object.keys(MAT_RECIPES).length+' RECIPES'));
+  const g4=_dvGrid();
+  for(const key in MAT_RECIPES){ const r=MAT_RECIPES[key];
+    const A=MATERIALS[r.a], Bm=MATERIALS[r.b], O=MATERIALS[r.out];
+    const can=matCount(r.a)>0&&matCount(r.b)>0;
+    g4.appendChild(_dvBtn((can?'✓ ':'· ')+A.n+' + '+Bm.n+' → '+O.n,()=>{
+      // craft it for real, through forgeDo, so this tests the actual path and not a shortcut
+      if(matCount(r.a)<1) matAdd(r.a,1);
+      if(matCount(r.b)<1) matAdd(r.b,1);
+      const res=forgeDo({kind:'mat',id:r.a},{kind:'mat',id:r.b});
+      if(!res.ok) throw new Error(res.why);
+      devLog('forged '+O.n+' (now '+matCount(r.out)+')'); devPaintBody(); }));
+  }
+  B.appendChild(g4);
+
+  // ---- open the panel itself without walking to the Hearth ----
+  B.appendChild(_dvHd('THE PANEL'));
+  const g5=_dvGrid();
+  g5.appendChild(_dvBtn('Open the forge (stand in for Bram)',()=>{
+    // atForge() reads curShopNear, so pretend we are at the stall. This is the ONLY honest way to
+    // open it from here -- faking the panel open without the location would test a state the game
+    // cannot reach.
+    curShopNear='bram';
+    if(typeof openForge==='function') openForge(); else throw new Error('openForge missing');
+    devLog('forge opened — curShopNear spoofed to bram'); }));
+  g5.appendChild(_dvBtn('Drop a material sack at my feet',()=>{
+    const pick=MAT_KEYS[Math.floor(Math.random()*MAT_KEYS.length)];
+    _dvSack([{k:'mat',m:pick,n:3}],MATERIALS[pick].n+' ×3'); }));
+  B.appendChild(g5);
+};
+
+// --------------------------------- LEVELS ----------------------------------------
+// The level cap is the spine the whole game hangs off and nothing here could see it. Every number
+// is computed live, so this doubles as the readout that caught six ascended dungeons sitting above
+// the cap.
+DEV_PANE.levels=function(B){
+  B.appendChild(_dvNote('Lv'+LV_CAP+' is a hard ceiling: levelUp stops there and there is no prestige level. Nothing that computes its own level may land above it.'));
+
+  B.appendChild(_dvHd('WHERE YOU ARE'));
+  let g=_dvGrid();
+  for(const lv of [1,10,20,ASCEND_LV,LV_CAP]){
+    g.appendChild(_dvBtn('Set Lv '+lv+(lv===ASCEND_LV?' (ascension)':(lv===LV_CAP?' (cap)':'')),()=>{
+      if(!rpg) throw new Error('not in a run');
+      rpg.lvl=lv; rpg.xp=0;
+      if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
+      recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp; saveRPG(); hudRPG();
+      devLog('Lv '+lv+' — '+rpg.perkPts+' perk points banked'); devPaintBody(); }));
+  }
+  g.appendChild(_dvBtn('+1 level',()=>{ if(!rpg) throw new Error('not in a run');
+    rpg.lvl=Math.min(LV_CAP,(rpg.lvl||1)+1); rpg.xp=0;
+    if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
+    recalcStats(); saveRPG(); hudRPG(); devLog('Lv '+rpg.lvl); devPaintBody(); }));
+  g.appendChild(_dvBtn('Grant 90% of this level\'s XP',()=>{ if(!rpg) throw new Error('not in a run');
+    rpg.xp=Math.floor(xpNeed(rpg.lvl)*0.9); saveRPG(); hudRPG();
+    devLog('xp '+rpg.xp+' / '+xpNeed(rpg.lvl)); }));
+  B.appendChild(g);
+
+  // the XP shape, measured rather than asserted
+  B.appendChild(_dvHd('THE XP CURVE'));
+  let tot=0, at45=0, at20=0;
+  for(let l=1;l<LV_CAP;l++){ tot+=xpNeed(l); if(l===ASCEND_LV-1) at45=tot; if(l===19) at20=tot; }
+  B.appendChild(_dvNote(
+    'whole run 1→'+LV_CAP+': '+tot.toLocaleString()+' XP   ·   last level '
+    +xpNeed(LV_CAP-1).toLocaleString()+' ('+(100*xpNeed(LV_CAP-1)/tot).toFixed(1)+'% of the run)'
+    +'   ·   island Lv1–20 is '+(100*at20/tot).toFixed(1)+'%   ·   '+ASCEND_LV+'→'+LV_CAP+' is '
+    +(100*(tot-at45)/tot).toFixed(1)+'%.  XP_EXP_FROM '+XP_EXP_FROM+' / XP_EXP_BASE '+XP_EXP_BASE
+    +' — reviewed and deliberately kept.'));
+
+  B.appendChild(_dvHd('THE TREE BUDGET'));
+  let dearest=0, cheapest=1e9;
+  for(const cls in CLASS_TREE){ let full=0;
+    for(const b of CLASS_TREE[cls].branches) for(const n of b.nodes) full+=(n.cost||1)*(n.max||1);
+    dearest=Math.max(dearest,full); cheapest=Math.min(cheapest,full); }
+  B.appendChild(_dvNote('perkTotalFor('+LV_CAP+') = '+perkTotalFor(LV_CAP)+' points. A full tree costs '
+    +cheapest+'–'+dearest+', so the cap funds '+(100*perkTotalFor(LV_CAP)/dearest).toFixed(0)
+    +'% of the dearest. No class can buy its whole tree — that is the line that matters.'));
+
+  // ---- what level everything in the world actually is ----
+  B.appendChild(_dvHd('EVERY DUNGEON, AND WHETHER IT IS ABOVE THE CAP'));
+  const g2=_dvGrid();
+  for(let ring=0; ring<GBOSS.length; ring++){
+    let lv='?'; try{ const d=genDungeon(ring); lv=(d&&d.lv!==undefined)?d.lv:'?'; }catch(e){ lv='threw'; }
+    const gb=GBOSS[ring];
+    const bad=(typeof lv==='number'&&lv>LV_CAP);
+    const starter=(gb.gate==='none');
+    g2.appendChild(_dvBtn((bad?'✖ ':'✓ ')+(gb.dn||gb.n)+'  Lv'+lv+(starter?'  [starter]':'  [ascended]')
+      +(bad?'  ABOVE CAP':''),()=>{
+      if(typeof enterDungeon==='function'){ enterDungeon(ring); devLog('entered '+(gb.dn||gb.n)); }
+      else throw new Error('enterDungeon missing'); }, bad?'warn':''));
+  }
+  B.appendChild(g2);
+
+  B.appendChild(_dvHd('EVERY TERRITORY'));
+  const g3=_dvGrid();
+  try{
+    for(const t of _territories(rooms['G']))
+      g3.appendChild(_dvBtn(t.name+'  Lv'+t.lvmin+'–'+t.lvmax+'  band '+t.band,()=>{
+        devLog(t.name+': Lv'+t.lvmin+'–'+t.lvmax+', terrain band '+t.band); }));
+  }catch(e){ B.appendChild(_dvNote('territories unavailable: '+e.message)); }
+  B.appendChild(g3);
+
+  B.appendChild(_dvHd('THE GATES'));
+  B.appendChild(_dvNote('ascension Lv'+ASCEND_LV+'  ·  stable Lv'+((typeof MOUNT_LV!=='undefined')?MOUNT_LV:'?')
+    +'  ·  flying mounts Lv'+((typeof MOUNT_FLY_LV!=='undefined')?MOUNT_FLY_LV:'?')+' (declared, NOT built)'
+    +'  ·  island ceiling Lv'+((typeof ISLAND_LV!=='undefined')?ISLAND_LV:'?')
+    +'  ·  a dream sits +'+((typeof DUN_STEP!=='undefined')?DUN_STEP:'?')+' past its homeland, clamped at the cap'));
+  const g4=_dvGrid();
+  g4.appendChild(_dvBtn('Toggle ascension',()=>{ if(!rpg) throw new Error('not in a run');
+    rpg.ascension=rpg.ascension?null:(CLASS_TREE[_dvCh().cls].ascend||[{id:'dev'}])[0].id;
+    saveRPG(); devLog('ascension = '+(rpg.ascension||'none')); }));
+  B.appendChild(g4);
+};
+
 // ---------------------------------- SACKS ----------------------------------------
 // One "chest" per loot band, plus the shapes that are awkward to reproduce by playing.
 DEV_PANE.sacks=function(B){
@@ -116,8 +332,8 @@ DEV_PANE.sacks=function(B){
   B.appendChild(_dvHd('ONE PER BAND'));
   let g=_dvGrid();
   for(let i=0;i<LOOT_BANDS.length;i++){
-    const bn=LOOT_BANDS[i], lo=bn.min, hi=(LOOT_BANDS[i+1]?LOOT_BANDS[i+1].min-1:MAXT-1);
-    g.appendChild(_dvBtn(bn.label+' (T'+(lo+1)+'–T'+(hi+1)+')',()=>{
+    const bn=LOOT_BANDS[i], lo=bn.min, hi=(LOOT_BANDS[i+1]?LOOT_BANDS[i+1].min-1:RELIC_T);
+    g.appendChild(_dvBtn((bn.label||'PUBLIC')+' ('+tierTag(lo)+'–'+tierTag(hi)+')',()=>{
       const ch=_dvCh(), items=[];
       if(bn.min>=RELIC_T){ const r=RELICS[Math.floor(Math.random()*RELICS.length)];
         items.push(mkRelicItem(r.id,ch.cls)); }
@@ -138,8 +354,8 @@ DEV_PANE.sacks=function(B){
       {k:'wpn', wt:(CWEAP[ch.cls]==='staff'?'bow':'staff'), t:MAXT-1, rar:4, aff:[]},  // off-class
     ],'mixed-verdict sack');
   }));
-  g.appendChild(_dvBtn('Every slot, T12 mythic',()=>{ const ch=_dvCh();
-    _dvSack(['wpn','arm','helm','ring'].map(k=>mkItem(k,MAXT-1,0,ch.cls)),'full T12 sack'); }));
+  g.appendChild(_dvBtn('Every slot, '+tierTag(MAXT-1)+' mythic',()=>{ const ch=_dvCh();
+    _dvSack(['wpn','arm','helm','ring'].map(k=>mkItem(k,MAXT-1,0,ch.cls)),'full '+tierTag(MAXT-1)+' sack'); }));
   g.appendChild(_dvBtn('Single consumable (auto-take)',()=>_dvSack([{k:'coin'}],'lone coin')));
   g.appendChild(_dvBtn('20 pieces (overflow)',()=>{ const ch=_dvCh();
     const it=[]; for(let i=0;i<20;i++) it.push(mkItem(['wpn','arm','helm','ring'][i%4],(i%MAXT),0,ch.cls));
@@ -198,7 +414,7 @@ DEV_PANE.relics=function(B){
 DEV_PANE.items=function(B){
   B.appendChild(_dvNote('Tier and rarity below apply to every spawn on this tab. Items go to the satchel.'));
   const g0=_dvGrid();
-  g0.appendChild(_dvBtn('Tier '+(devItemTier+1),()=>{ devItemTier=(devItemTier+1)%MAXT; devPaintBody(); }));
+  g0.appendChild(_dvBtn('Tier: '+tierTag(devItemTier),()=>{ devItemTier=(devItemTier+1)%MAXT; devPaintBody(); }));
   g0.appendChild(_dvBtn('Rarity: '+RAR_LBL[devItemRar],()=>{ devItemRar=(devItemRar+1)%6; devPaintBody(); }));
   B.appendChild(g0);
   B.appendChild(_dvHd('WEAPONS — every type, including the monk gauntlets'));
@@ -530,7 +746,11 @@ DEV_PANE.bal=function(B){
   //                 player-DPS-dependent by design; what must hold is that killing the adds drops
   //                 the ward. Judging these by ANCHOR_WIN flags dn0 and ow8 every time.
   g.appendChild(_dvBtn('Killability sweep (all fights)',()=>{
-    const DT=1/20, MAXT=600, TTK=60, CAP=ANCHOR_WIN*1.35;
+    // SIM_SECS, not MAXT. This used to be a local `MAXT=600` that SHADOWED the global tier clamp
+    // inside this whole function -- harmless while it worked, but the global MAXT now means "the
+    // top rollable tier is Scavenged Dreams" and a reader hitting `MAXT` in a combat sim would
+    // reasonably think the two were related. They never were: 600 is a number of simulated seconds.
+    const DT=1/20, SIM_SECS=600, TTK=60, CAP=ANCHOR_WIN*1.35;
     const ks=[]; for(let r=0;r<GBOSS.length;r++) ks.push('ow'+r,'dn'+r); ks.push('arena');
     // the sim clobbers combat state, so take it all back afterwards
     const save={en:enemies.slice(), bar:(typeof bossBar!=='undefined')?bossBar:null,
@@ -555,7 +775,7 @@ DEV_PANE.bal=function(B){
       const dps=e.maxhp/TTK;
       let t=0,streak=0,worst=0,killT=null,warded=false,err=null;
       try{
-        while(t<MAXT){
+        while(t<SIM_SECS){
           player.hp=player.maxhp; player.inv=0;
           bossMechTick(e,DT);
           const np=bossPhaseFor(e);
@@ -580,7 +800,7 @@ DEV_PANE.bal=function(B){
       if(warded){ if(worst>worstWard) worstWard=worst; }
       else if(worst>worstAnchor) worstAnchor=worst;
       if(err) fails.push(key+': threw '+err);
-      else if(killT===null) fails.push(key+': UNKILLABLE (still alive after '+MAXT+'s)');
+      else if(killT===null) fails.push(key+': UNKILLABLE (still alive after '+SIM_SECS+'s)');
       else if(!warded && worst>CAP) fails.push(key+': anchor streak '+worst.toFixed(1)+'s > '+CAP.toFixed(1)+'s');
     }
     enemies.length=0; for(const x of save.en) enemies.push(x);
