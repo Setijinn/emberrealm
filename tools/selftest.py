@@ -38,6 +38,9 @@ CHROMES = [
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
     os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
     "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 ]
 
@@ -61,10 +64,19 @@ def build():
 
 
 def find_chrome():
+    # $CHROME wins, so a machine with the browser somewhere odd needs no edit here.
+    env = os.environ.get("CHROME")
+    if env and os.path.exists(env):
+        return env
     for p in CHROMES:
         if os.path.exists(p):
             return p
-    sys.exit("no Chrome binary found; add yours to CHROMES in this file")
+    # Playwright's download dir is versioned, so glob it rather than pinning a build number.
+    import glob
+    root = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers")
+    for p in sorted(glob.glob(os.path.join(root, "chromium*", "chrome-linux", "chrome"))):
+        return p
+    sys.exit("no Chrome binary found; set $CHROME or add yours to CHROMES in this file")
 
 
 def run():
@@ -76,8 +88,11 @@ def run():
         "--user-data-dir=" + profile,
         "--virtual-time-budget=40000",
         "--dump-dom",
-        "http://localhost:%d/_selftest.html" % PORT,
     ]
+    # Chrome refuses to start its zygote as root without this, and CI/container shells are root.
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        cmd.append("--no-sandbox")
+    cmd.append("http://localhost:%d/_selftest.html" % PORT)
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     dom = proc.stdout.decode("utf-8", "replace")
     m = re.search(r'(?s)<pre id="testout"[^>]*>(.*?)</pre>', dom)

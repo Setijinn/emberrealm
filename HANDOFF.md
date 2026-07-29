@@ -23,8 +23,10 @@ project *is*, you are in the wrong file.
   neither is installed on this machine. It injects one `<script defer>` into the **real**
   `index.html` (never a hand-maintained copy, which would drift) and reads the results back with
   `chrome --headless=new --dump-dom`. `--headless=new` is required: the old mode was removed and
-  exits 21 with no output. 123 checks today. Run it after any change to the tier ladder, the loot
-  tables, the level cap or the forge.
+  exits 21 with no output. It finds the browser itself — `$CHROME` first, then a list of the usual
+  install paths, then Playwright's versioned download dir — and adds `--no-sandbox` when it is
+  running as root, which Chrome's zygote otherwise refuses. 144 checks today. Run it after any
+  change to the tier ladder, the loot tables, the level cap, the forge or the dev workbench.
 - Verify by driving the game. Report measurements. Say plainly when something fails, or when you
   did not test it.
 
@@ -356,21 +358,45 @@ a Scavenged Dreams piece plus a Riftseed becomes a relic. There is one panel bec
 gesture. **Bram joins things; he does not improve them** — the ordinary ladder is found, never made,
 and SD is found too.
 
-- **Sixteen materials, three drop pools.** `src` on the def is what `matDropFor` reads, so the
-  comment cannot drift from the behaviour: `starter` (the Lv1–20 island), `main` (Lv20–50),
-  `rift` (**post-ascension dungeon bosses only**), `craft` (never dropped). The rift pool is the
-  whole content gate on the T14 rung and it is not a new mechanism — those dungeons already refuse
-  to open without an ascension, so gating the material gates the relic for free.
-- **Ten recipes, keyed by the two inputs SORTED**, so a recipe cannot be written twice and the
-  lookup never cares which slot was filled first. Their single end product is the **Riftseed**.
+- **Thirty-two materials, four sources.** `src` on the def is what `matDropFor` reads, so the
+  comment cannot drift from the behaviour: `starter` (the Lv1–20 island, 3), `main` (Lv20–50, 3),
+  `rift` (**post-ascension dungeon bosses only**, 9), `craft` (never dropped — 11 crafted rungs
+  plus 6 generated seeds). The rift pool is the whole content gate on the T14 rung and it is not a
+  new mechanism — those dungeons already refuse to open without an ascension, so gating the
+  material gates the relic for free.
+- **A rift material belongs to ONE boss.** `matDropFor` does not draw that pool at random;
+  `riftMatForKill` returns the material carrying the dead boss's `ring`, so a reagent in the pouch
+  is a record of which door you got through. Nine ascended bosses, nine signatures — assert that
+  every ascended boss has exactly one and no starter boss has any (`17m_integrity.js` does).
+- **Seventeen recipes, keyed by the two inputs SORTED**, so a recipe cannot be written twice and
+  the lookup never cares which slot was filled first. Eleven are written; **six are generated**
+  from `RELIC_SETS` + `GBOSS`, because a seed is entirely determined by the boss it belongs to and
+  six near-identical hand-written rows is how two lists drift apart.
+- **The first three depths host no relic sets** (`RELIC_SETS` starts at ring 3), so their drops
+  build the universal half of a seed: Forgeheart + Anchorroot → Riftcore + Veilshard → Riftbloom
+  + Wallrot → Riftheart. That is what makes the awakened depths walk **in order** — there is no
+  route to the Core Sanctum's seed that skips the Heartwood Hollow.
+- **Each of the six relic dungeons has its own Riftseed, and a seed forges only that dungeon's two
+  sets.** That is the whole reason materials are tied to bosses: you do not pick a set off a menu
+  of twelve, you kill the thing that owns the one you want, so crafting and finding answer to the
+  same map. Where only one of the two is still unowned the forge stops asking.
+- **Material art is lazy and falls back to the glyph.** `matArtImg()` returns null on the *first*
+  call — that call only starts the load — so the panel draws the coloured glyph for one repaint and
+  the sprite takes over on the next; never a broken img. The six seeds **share one sprite tinted by
+  `GBOSS[ring].col`**, the same trick `MOBTINT` and the mounts use. `itemArtImg` routes `mat` out
+  **before** the tier-band maths, exactly as it does `boost`: a material is not on the tier ladder,
+  so dividing by a tier it does not have lands it on sprite 0 of a set it does not belong to.
 - **Materials are account-level**, like pets, mounts and the Vault, and for the reason the starter
   island exists: it was the one stretch of the game that produced nothing permanent.
 - They ride in the **ordinary gear sack** beside pet food and boost draughts — one-sack-per-kill is
   intact and Fortune finds them. `mat` is `NKIND[9]`, an append into space the mount widening
   already bought.
-- **A relic is crafted INTO a set you choose**, and the piece is decided by the slot of the SD item
-  you feed it. That is the point of crafting one: a drop is 0.25–1% spread across forty-eight
-  pieces, and this completes the set you are actually wearing. It refuses a duplicate.
+- **A relic is crafted INTO a set you choose** — from the two its seed's dungeon keeps — and the
+  piece is decided by the slot of the SD item you feed it. That is the point of crafting one: a
+  drop is 0.25–1% spread across forty-eight pieces, and this completes the set you are actually
+  wearing. It refuses a duplicate.
+- **A failed craft must put back exactly what `plan.cost` took.** The refund path once named a
+  hard-coded `'riftseed'` that no longer existed, which would have minted a material out of nothing.
 - **`atForge()` has no "I opened it here" latch, on purpose.** That is the shape of the pet-panel
   bug fixed in `f9e13e2` — a latch outlives the condition it was set for. `curShopNear` is the live
   answer and its own transition already calls `closeVendorPanels()`.
@@ -415,9 +441,11 @@ self-clearing (`if(u.x.p!==period) reset`).
 
 ## QA traps that have cost real time
 
-- **Top-level `const` is a LEXICAL global, not a `window` property.** `window[name]` lookups against
-  const-declared images silently return `undefined` — this is why every loot sack in the game drew
-  as plain burlap for weeks.
+- **Top-level `const` and `let` are LEXICAL globals, not `window` properties.** `window[name]`
+  lookups against const-declared images silently return `undefined` — this is why every loot sack in
+  the game drew as plain burlap for weeks. It cuts the other way too: `window.curRoom = x` in a test
+  harness assigns a *new* property and the game's own `curRoom` never moves, so every read comes
+  back null and the harness reports the system broken.
 - **Size sprites by their opaque bounding box** (`_imgBBox`), never `naturalWidth`. PixelLab files
   carry transparent margin: scaling by canvas size made the relic sack the *smallest* bag in the
   game and rendered the entire Hearth flock as specks.

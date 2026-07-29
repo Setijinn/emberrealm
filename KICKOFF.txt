@@ -1,9 +1,10 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker code cache is at emberrealm-code-v547. (There are TWO caches now,
-versioned separately -- CODE_CACHE bumps freely, ART_CACHE only when art moves.
-See the note at the top of sw.js for why.)
+Service worker code cache is at emberrealm-code-v549, art cache at
+emberrealm-art-v2. (There are TWO caches now, versioned separately -- CODE_CACHE
+bumps freely, ART_CACHE only when art moves. See the note at the top of sw.js for
+why. ART_CACHE has moved exactly once, for the forge's 28 new files.)
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -28,7 +29,9 @@ HARD RULES — these are not preferences
 - Verify by DRIVING THE GAME, not by assuming. Report measurements. Say plainly
   when something fails or when you did not test it.
 - RUN `py tools/selftest.py` after touching the tier ladder, the loot tables, the
-  level cap or the forge. 123 checks, no node and no CDP needed.
+  level cap, the forge or the dev workbench. 144 checks, no node and no CDP
+  needed. It finds Chrome itself ($CHROME wins, then a list, then Playwright's
+  versioned download dir) and passes --no-sandbox when it is running as root.
 - NOTHING MAY SIT ABOVE Lv50. levelUp stops at LV_CAP and there is no prestige
   level, so content that computes its own level must land on or under it. Six
   ascended dungeons were at Lv53-55 and could only ever be fought underlevelled.
@@ -44,24 +47,99 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v545 -> v547)
+WHAT SHIPPED MOST RECENTLY (v547 -> v549)
+---------------------------------------------------------------------------
+Three commits, all of them finishing the forge rather than starting anything.
+
+EVERY ASCENDED BOSS DROPS ITS OWN REAGENT, AND A SEED FORGES ONLY ITS DUNGEON.
+The forge shipped with ONE generic rift material dropped by every post-ascension
+boss and a Riftseed that could become any of the twelve relic sets off a list,
+which made the nine awakened depths interchangeable -- the one thing the relic
+drop tables already refuse to do.
+- NINE BOSSES, NINE SIGNATURE MATERIALS, each carrying its ring. matDropFor no
+  longer draws the rift pool at random; riftMatForKill returns the material
+  belonging to the boss you actually killed, so a reagent in the pouch is a
+  record of which door you got through. Anchorroot off the Grovewarden,
+  Veilshard off the Mistantler, Wallrot off the Bog Horror, down to Titanheart.
+- THE FIRST THREE DEPTHS HOST NO RELIC SETS (RELIC_SETS starts at ring 3), so
+  their drops build the UNIVERSAL half of a seed: Forgeheart + Anchorroot ->
+  Riftcore + Veilshard -> Riftbloom + Wallrot -> Riftheart. The depths are
+  therefore walked IN ORDER; there is no route to the Core Sanctum's seed that
+  skips the Heartwood Hollow.
+- THE SIX THAT DO HOST SETS EACH MAKE THEIR OWN SEED -- Riftheart plus that
+  dungeon's signature -- and A SEED CAN ONLY FORGE THE TWO SETS ITS DUNGEON
+  KEEPS. You no longer pick a set off a menu of twelve; you go and kill the
+  thing that owns the one you want. Crafting and finding answer to the same map.
+- The seeds and their recipes are GENERATED from RELIC_SETS + GBOSS, not typed.
+  A seventh relic dungeon grows its material, seed and recipe with no edit.
+- So the counts moved: 32 MATERIALS (3 starter / 3 main / 9 rift signatures / 11
+  crafted rungs / 6 generated seeds) and 17 RECIPES (11 written, 6 generated).
+  Wherever an older note in this file says "sixteen materials, ten recipes, one
+  Riftseed", this paragraph is the current one.
+- Integrity now asserts: every ascended boss has exactly one signature, no
+  starter boss has one, every relic dungeon has a seed, every seed is made from
+  its own dungeon's material, and every seed reaches exactly that dungeon's sets.
+
+ART FOR THE FORGE -- 27 materials and an anvil, drawn as TREASURE. The first
+batch drew each material as what it literally is (three lumps of ore, a heap of
+ash) and read as debris swept off a workshop floor; this is the tree that ends in
+a T14 relic, so it was redrawn as ornate gold work with inner light, escalating
+from the island drops to the radiant rift reagents. Five needed a third pass and
+failed exactly the way HANDOFF.md's PixelLab notes warn: bare negatives do not
+hold, so it takes stating the negative three ways at once AND repeating it in the
+positive. Collisions (Gatestone vs Herald's Pinion, Truecore vs Gravebind) are
+only visible on a contact sheet -- individually fine, wrong beside each other.
+- THE SIX RIFTSEEDS SHARE ONE SPRITE tinted by their dungeon's GBOSS colour --
+  the MOBTINT trick, free, and always in agreement with the boss.
+- matArtImg() is lazy per material and returns null on the FIRST call (that call
+  only starts the load), so every caller falls back to the glyph for one repaint.
+  Never a broken img. itemArtImg routes 'mat' out BEFORE the tier-band maths, as
+  'boost' already is: a material is not on the tier ladder.
+- tools/install_forge_art.py records every job id, so the batch is reproducible
+  and re-running skips what is on disk.
+
+THE DEV MENU GREW A FORGE TAB AND A LEVELS TAB, and the tier ladder's labels got
+repaired under it. The SACKS band buttons still said "T11-T12" for a band that
+now carries SD too and computed their ceiling from MAXT-1; "Every slot, T12
+mythic" was spawning SD; the item spawner counted to "Tier 13", which this game
+calls nothing. All read tierTag() now. The killability sweep's local `MAXT=600`
+shadowed the global tier clamp -- it is SIM_SECS.
+- FORGE TAB (67 controls): every material with its real art grouped by where it
+  drops and labelled with the boss that pays it, SD gear in every slot, one
+  button per Riftseed showing which two sets it can become, and the whole recipe
+  tree crafting through the real forgeDo. "Exactly enough for ONE Riftseed"
+  walks a seed's tree back to its drops and grants precisely what it costs.
+- LEVELS TAB (35 controls): every dungeon with its computed level ticked or
+  crossed against the cap -- the readout that would have caught the six ascended
+  dungeons at Lv53-55 -- every territory with its band, the XP curve measured,
+  the tree budget against a full tree, and every gate in one line.
+- Both read the LIVE tables, so a 33rd material or a 7th relic dungeon appears
+  with no edit. 501 controls across 12 tabs; the self-test paints every tab and
+  asserts none throws and none is empty.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v545 -> v547)
 ---------------------------------------------------------------------------
 THE FORGE (18_forge.js, NEW) -- Bram's stall, finally lit. The reservation is
 spent; the "leave the blacksmith alone" rule is retired.
 - THE MACHINE TAKES EXACTLY TWO THINGS, at every rung. Two materials join into a
   better material; a Scavenged Dreams piece plus a Riftseed becomes a relic. One
   panel, one gesture. Bram JOINS things, he does not improve them.
-- SIXTEEN MATERIALS in three drop pools -- the Lv1-20 island, the Lv20-50
-  mainland, and one that falls ONLY from post-ascension dungeon bosses. Ten
-  recipes, keyed by the two inputs sorted; their single end product is the
-  Riftseed. The rift pool IS the content gate on T14 and it needed no new
-  mechanism: those dungeons already refuse to open without an ascension.
+- MATERIALS IN THREE DROP POOLS -- the Lv1-20 island, the Lv20-50 mainland, and
+  one that falls ONLY from post-ascension dungeon bosses. Recipes are keyed by
+  the two inputs sorted. The rift pool IS the content gate on T14 and it needed
+  no new mechanism: those dungeons already refuse to open without an ascension.
+  (It shipped here as sixteen materials, ten recipes and ONE Riftseed; v549
+  split the rift pool per boss and the seed per dungeon -- see above for the
+  current shape.)
 - MATERIALS ARE ACCOUNT-LEVEL, like pets/mounts/the Vault, because the starter
   island was the one stretch of the game that produced nothing permanent. They
   ride in the ordinary gear sack, so one-sack-per-kill is intact.
 - A RELIC IS CRAFTED INTO A SET YOU CHOOSE and the piece follows the slot of the
   SD item you feed it. A drop is 0.25-1% across forty-eight pieces; this
-  completes the set you are actually wearing. It refuses a duplicate.
+  completes the set you are actually wearing. It refuses a duplicate. (The
+  choice narrowed in v549: a seed reaches only the two sets its own dungeon
+  keeps, and where one of those two is already owned it stops asking.)
 
 THE LADDER GREW A RUNG: SCAVENGED DREAMS.
 - T1-T12 found; SD (index 12) DROPPED, and only in the Lv50 rim and the ascended
@@ -99,7 +177,7 @@ xpNeed(50) still returns a live 704,851, so the bar filled and then sat pinned a
 100% for the life of the account. At the cap it is a plate, not a meter: it says
 MAX.
 
-tools/selftest.py is the standing harness -- 123 checks, no node, no CDP. It
+tools/selftest.py is the standing harness -- 144 checks now, no node, no CDP. It
 injects into the REAL index.html rather than a copy so it cannot drift.
 
 ---------------------------------------------------------------------------
@@ -413,12 +491,24 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 DO THIS FIRST
 ---------------------------------------------------------------------------
 Nothing is blocked. `py tools/serve.py`, then `py tools/selftest.py` to confirm
-you are starting from green (123/123). Verify the server actually responds before
-you navigate — an `&& echo serving` after a failed command lies.
+you are starting from green (144/144, verified at v549). Verify the server
+actually responds before you navigate — an `&& echo serving` after a failed
+command lies.
 
-THE FORGE HAS NO ART. Sixteen materials are all rendering as a coloured glyph in
-a chip. That is the largest single piece of unfinished work in the newest system
-and it is the obvious next job.
+THE FORGE IS FEATURE-COMPLETE AND DRAWN. What it has never had is a NUMBER on it:
+nobody has farmed the tree end to end and timed how long a Riftseed actually
+takes. MAT_DROP_P is {B:0.70, s/c:0.085, N:0.045} and SD's rim weight is 8
+against T11's 50 and T12's 42 (SD_DUN_W 22 inside an ascended dungeon) — every
+one of those is a first guess, chosen against pet food's 5.5%/60% as the nearest
+comparison. The dev FORGE tab's "Exactly enough for ONE Riftseed" button exists
+precisely so this can be measured rather than argued about, and the LEVELS tab
+now reads the whole ladder in one place. Measuring it is the obvious next job:
+it is the only part of the newest system that is still a guess.
+
+The other two live candidates, both larger: FLYING MOUNTS at Lv40 (the seam is
+declared and nothing reads it — see STILL OPEN for the three open decisions), and
+the thin Lv1-20 starter island (3.6% of the run's XP across four provinces, and
+since the forge the only reason to walk it is the materials).
 
 THREE STATUS-EFFECT FINDINGS, measured and deliberately NOT fixed (balance calls,
 one-line each — ask before changing):
@@ -459,14 +549,14 @@ STILL OPEN, IN NO PARTICULAR ORDER
   (04_collision already has the shape in player.terrainGhost, gated on
   _pmove), a decision on whether flight clears only water/chasm or
   everything, and an answer to which enemies can reach a flyer at all.
-- (done v547) THE CRAFTING ARC. Built as 18_forge.js. The design changed twice
-  while it was being built and the SHIPPED shape is: every craft takes exactly
-  two inputs; SD is DROPPED from the Lv50 rim and the ascended dungeons rather
-  than crafted; and the payoff is forging an SD piece into a relic. See WHAT
-  SHIPPED. Open follow-ups it left behind:
-    * MATERIALS HAVE NO ART. Every one is an emoji-ish glyph plus a colour in a
-      chip. They want real pixel art, and PixelLab's habits are documented in
-      HANDOFF.md's trap list before you start burning generations.
+- (done v547, extended v549) THE CRAFTING ARC. Built as 18_forge.js. The design
+  changed twice while it was being built and the SHIPPED shape is: every craft
+  takes exactly two inputs; SD is DROPPED from the Lv50 rim and the ascended
+  dungeons rather than crafted; and the payoff is forging an SD piece into a
+  relic. v549 tied the rift pool to individual bosses and gave each relic
+  dungeon its own seed. See WHAT SHIPPED. Open follow-ups it left behind:
+    * (done v549) MATERIALS HAVE NO ART. 27 sprites plus the anvil plate; the
+      six seeds share one sprite tinted by GBOSS colour.
     * SD HAS NO SACK OF ITS OWN -- it shares the T11-T12 bag, because the co-op
       band field is 2 bits and LOOT_BANDS already has exactly four rows. Giving
       it one means widening that field, which is a wire change.
