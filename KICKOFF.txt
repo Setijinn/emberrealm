@@ -99,8 +99,15 @@ xpNeed(50) still returns a live 704,851, so the bar filled and then sat pinned a
 100% for the life of the account. At the cap it is a plate, not a meter: it says
 MAX.
 
-tools/selftest.py is the standing harness -- 123 checks, no node, no CDP. It
-injects into the REAL index.html rather than a copy so it cannot drift.
+THE WORKBENCH: 12 tabs, 501 controls, and it is COMPACT ON A PHONE now. New FORGE
+and LEVELS tabs (nothing in 18_forge.js or the level cap had any dev access at
+all). The landscape-phone pass is keyed on max-HEIGHT, because every previous dev
+media query keyed on max-width and a landscape phone never trips it.
+
+tools/selftest.py is the standing harness -- 144 checks, no node, no CDP. It
+injects into the REAL index.html rather than a copy so it cannot drift, and it
+paints all 12 dev tabs to prove none of them throws.
+tools/shot.py photographs a panel. Use it before saying a panel works.
 
 ---------------------------------------------------------------------------
 WHAT SHIPPED BEFORE THAT (v481 -> v545)
@@ -416,9 +423,14 @@ Nothing is blocked. `py tools/serve.py`, then `py tools/selftest.py` to confirm
 you are starting from green (123/123). Verify the server actually responds before
 you navigate — an `&& echo serving` after a failed command lies.
 
-THE FORGE HAS NO ART. Sixteen materials are all rendering as a coloured glyph in
-a chip. That is the largest single piece of unfinished work in the newest system
-and it is the obvious next job.
+BEFORE YOU CLAIM ANY UI WORKS, PHOTOGRAPH IT: `py tools/shot.py forge 844 390`.
+The browser extension here is attached to a Chrome that is NOT on this machine
+(Get-Process chrome returns 0 locally), so it can never reach this dev server --
+every navigation lands on Chrome's error page. Headless Chrome on this box can.
+AND A PHONE MEANS LANDSCAPE, 844x390: the game refuses to run in portrait, so a
+390x844 shot photographs the "turn your phone sideways" gate and tells you
+nothing. This is how the forge panel's layout was found to be broken after it had
+already been committed and called done.
 
 THREE STATUS-EFFECT FINDINGS, measured and deliberately NOT fixed (balance calls,
 one-line each — ask before changing):
@@ -463,13 +475,14 @@ STILL OPEN, IN NO PARTICULAR ORDER
   while it was being built and the SHIPPED shape is: every craft takes exactly
   two inputs; SD is DROPPED from the Lv50 rim and the ascended dungeons rather
   than crafted; and the payoff is forging an SD piece into a relic. See WHAT
-  SHIPPED. Open follow-ups it left behind:
-    * MATERIALS HAVE NO ART. Every one is an emoji-ish glyph plus a colour in a
-      chip. They want real pixel art, and PixelLab's habits are documented in
-      HANDOFF.md's trap list before you start burning generations.
+  SHIPPED, with art (27 material icons + an anvil plate, v548) and per-boss
+  reagents (v549). Open follow-ups it left behind:
     * SD HAS NO SACK OF ITS OWN -- it shares the T11-T12 bag, because the co-op
       band field is 2 bits and LOOT_BANDS already has exactly four rows. Giving
       it one means widening that field, which is a wire change.
+    * The material chip labels TRUNCATE at chip width ("Riftseed of As..."). The
+      full name is in the title attribute, which is useless on touch. Either
+      shorten the seed names or give the chip two lines.
     * The material drop rates (B 0.70 / trash 0.085) are a first guess, chosen
       against pet food's 5.5%/60% as the nearest comparison. Nobody has farmed
       the tree end to end and timed how long a Riftseed actually takes.

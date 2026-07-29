@@ -581,8 +581,10 @@ function paintForge(){
         +'<b style="color:'+col+'">'+((typeof itemName==='function')?itemName(r.it):r.it.k)+'</b></div>'; }
     h+='</div>'; }
 
-  // ---- what the tree looks like. A crafting system nobody can see the shape of is a wiki tab. ----
-  h+='<div class="embSect">WHAT JOINS WITH WHAT</div><div class="fgBook">';
+  // ---- what the tree looks like. A crafting system nobody can see the shape of is a wiki tab --
+  // but sixteen lines of it is reference material, so it is FOLDED by default. Rendering it open
+  // pushed the pouch and the anvil off the top of a panel whose frame is a fixed percentage inset.
+  h+='<details class="fgBook"><summary>WHAT JOINS WITH WHAT ('+Object.keys(MAT_RECIPES).length+')</summary>';
   for(const k in MAT_RECIPES){ const r=MAT_RECIPES[k];
     const A=MATERIALS[r.a], B=MATERIALS[r.b], O=MATERIALS[r.out];
     const can=matCount(r.a)>0&&matCount(r.b)>0;
@@ -594,7 +596,7 @@ function paintForge(){
   h+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'+TIER_NAMES[SD_T]+' piece</span>'
     +' + <span style="color:'+RELIC_COL+'">any Riftseed</span>'
     +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ that dungeon’s relic, T'+(RELIC_T+1)+'</b></div>';
-  h+='</div>';
+  h+='</details>';
   h+='<div class="embNote">Bram joins things; he does not improve them. The ladder up to '
     +TIER_NAMES[SD_T]+' is <b>found</b>, never made — and '+TIER_NAMES[SD_T]+' only falls in the '
     +'highest-level areas and the ascended dream dungeons.<br><br>'

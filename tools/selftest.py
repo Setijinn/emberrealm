@@ -30,6 +30,12 @@ import subprocess
 import sys
 import tempfile
 
+# Windows stdout defaults to cp1252, which cannot encode the star in a relic name -- so printing the
+# results crashed with UnicodeEncodeError the moment output was redirected to a file rather than to a
+# console that happened to cope. The tests were all passing; only the report died.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORT = 10500
 

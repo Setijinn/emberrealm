@@ -175,7 +175,10 @@
  </div>
 </div>
 <div class="scr" id="devScr">
- <div class="mtitle" style="font-size:26px;">DEV PANEL</div>
+ <!-- the size lives in style.css (#devScr .mtitle), NOT inline: an inline style beats every
+      stylesheet rule without !important, so the landscape-phone media query could not shrink it
+      and the title kept eating a row of a 390px-tall screen. -->
+ <div class="mtitle" id="devTitle">DEV PANEL</div>
  <!-- THE WORKBENCH (user, 2026-07-27: "chests for everything we have added so far, as in depth as
       you could possibly make it"). Tabbed because a flat grid of ~200 controls is unusable, and
       "chests" are SACKS: the loot rule is one sack per kill and nothing else, and a dev tool that

@@ -7,3 +7,6 @@ node_modules/
 _selftest.html
 .claude/
 _lvaudit.html
+_shots/
+_shot.html
+_measure.html

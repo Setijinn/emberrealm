@@ -122,9 +122,14 @@ DEV_PANE.forge=function(B){
 
   // ---- the pouch, at a glance ----
   B.appendChild(_dvHd('POUCH'));
+  // A COUNT AND THE TOP FEW, not all thirty-two. Enumerating the whole pouch was four wrapped lines
+  // on a landscape phone -- more vertical space than the buttons underneath it -- and the per-chip
+  // counts are already on the buttons below, so the list was saying it twice.
   const held=matHeld();
   B.appendChild(_dvNote(held.length
-    ? (matTotal()+' held across '+held.length+' kinds: '+held.map(m=>m.def.n+'×'+m.n).join(', '))
+    ? (matTotal()+' held across '+held.length+' of '+MAT_KEYS.length+' kinds · deepest: '
+       + held.slice(0,4).map(m=>m.def.n+'×'+m.n).join(', ')
+       + (held.length>4?(' +'+(held.length-4)+' more'):''))
     : 'empty'));
   let g=_dvGrid();
   g.appendChild(_dvBtn('Give 10 of EVERY material',()=>{
@@ -165,8 +170,11 @@ DEV_PANE.forge=function(B){
     const gg=_dvGrid();
     for(const k of bySrc[src]){
       const d=MATERIALS[k];
+      // "Anchorroot · Grovewarden", not "Anchorroot — The Grovewarden". The boss has to be named --
+      // which boss pays which reagent IS the feature -- but the definite article wrapped these to
+      // three lines in a 104px column on a phone and bought nothing.
       const label=d.n+(d.ring!==undefined&&typeof GBOSS!=='undefined'&&GBOSS[d.ring]
-        ? ' — '+GBOSS[d.ring].n : '');
+        ? ' · '+String(GBOSS[d.ring].n).replace(/^The /,'') : '');
       gg.appendChild(_dvIcoBtn(label,(c,S)=>{
         c.imageSmoothingEnabled=false;
         const im=(typeof matArtImg==='function')?matArtImg(d.id):null;

@@ -23,8 +23,25 @@ project *is*, you are in the wrong file.
   neither is installed on this machine. It injects one `<script defer>` into the **real**
   `index.html` (never a hand-maintained copy, which would drift) and reads the results back with
   `chrome --headless=new --dump-dom`. `--headless=new` is required: the old mode was removed and
-  exits 21 with no output. 123 checks today. Run it after any change to the tier ladder, the loot
-  tables, the level cap or the forge.
+  exits 21 with no output. 144 checks today. Run it after any change to the tier ladder, the loot
+  tables, the level cap, the forge or the dev panel.
+- **`py tools/shot.py <panel> <w> <h> [tab]` PHOTOGRAPHS a panel** and writes it to `_shots/`. Use
+  it before claiming any UI works. It exists because **the browser extension available here is
+  attached to a Chrome that is not on this machine** — `Get-Process chrome` returns 0 locally — so
+  every navigation to the dev server lands on Chrome's network error page and the extension can
+  never see this game. Headless Chrome on this box can.
+- **A PHONE MEANS LANDSCAPE.** The game refuses to run in portrait — there is a "turn your phone
+  sideways" gate — so `390x844` photographs that gate and tells you nothing. Shoot `844x390`. Every
+  dev-panel media query was keyed on `max-width`, which a landscape phone never trips, so the panel
+  kept its desktop metrics on the one device it needed to be compact for. **Key phone rules on
+  `max-height`.**
+- **`--force-device-scale-factor=2` and a FRESH profile** on every shot. A reused profile keeps
+  Chrome's own HTTP cache, and the thing you are photographing is CSS — a stale stylesheet renders
+  faithfully and you get a picture of the previous edit. Same trap as the old fresh-port ritual in a
+  different hat.
+- Windows stdout is cp1252 and **cannot encode the `★` in a relic name**, so any tool that prints
+  test output must `sys.stdout.reconfigure(encoding="utf-8")` or it dies on the report while every
+  test passes.
 - Verify by driving the game. Report measurements. Say plainly when something fails, or when you
   did not test it.
 
@@ -371,9 +388,27 @@ and SD is found too.
 - **A relic is crafted INTO a set you choose**, and the piece is decided by the slot of the SD item
   you feed it. That is the point of crafting one: a drop is 0.25–1% spread across forty-eight
   pieces, and this completes the set you are actually wearing. It refuses a duplicate.
+- **Every ascended boss drops its OWN reagent**, carrying its `ring`. `riftMatForKill` pays the
+  material belonging to the boss you actually killed — never a pool draw, or the nine awakened
+  depths would be interchangeable, which is the one thing the relic drop tables refuse to do. The
+  first three depths (no relic sets of their own) chain into the universal **Riftheart**; the six
+  that host sets each make a **Riftseed of their own dungeon**, and *a seed can only forge the two
+  sets its dungeon keeps*. The seeds and their recipes are **generated** from `RELIC_SETS` + `GBOSS`,
+  so a seventh relic dungeon grows its material, seed and recipe with no edit.
 - **`atForge()` has no "I opened it here" latch, on purpose.** That is the shape of the pet-panel
   bug fixed in `f9e13e2` — a latch outlives the condition it was set for. `curShopNear` is the live
   answer and its own transition already calls `closeVendorPanels()`.
+- **THE PANEL MUST DEFINE `--u`, AND THE DEFAULT `#shopCard` DOES NOT.** Only `#vaultScr` and
+  `#stableScr` ever did. The forge shipped on the default, so every `calc(var(--u)*N)` in its
+  stylesheet referenced a variable that did not exist on its card — each one an **invalid
+  declaration, silently dropped**. The text fell back to inherited size, the chips sized to their
+  content instead of to a grid, not one margin applied, and it read as a tuning problem when the
+  whole block was being thrown away. `#forgeScr` now carries a `--u` floor so that failure is
+  impossible rather than merely fixed. If you add a panel on `#shopCard`, set `--u` or give it a
+  fallback.
+- Its card is **pinned to the art's aspect** with percentage padding, like the Vault's, and
+  `#forgeBody` is the single scroller. The recipe book is a folded `<details>`: rendered open it
+  pushed the pouch and the anvil out through the bottom of the frame.
 - **SD shares the T11–T12 sack** rather than getting a fifth `LOOT_BANDS` row, because the band
   field on the wire is **2 bits** and `LOOT_BANDS` has exactly four rows. A fifth would silently
   alias to band 0 on an older peer.
@@ -428,6 +463,13 @@ self-clearing (`if(u.x.p!==period) reset`).
   16ms steps. A rate change that does not cross a frame boundary does literally nothing. Measure.
 - **`touch-action` does not inherit.** Setting it on `html`/`body` says nothing about the canvas or
   the buttons on top of it.
+- **An INLINE `style=` beats every stylesheet rule** without `!important`, so a media query cannot
+  shrink it. The dev panel's title was `style="font-size:26px"` in the markup and stayed 26px on a
+  phone. And once moved into CSS, the base rule sat *after* the media query and beat it on **source
+  order** — same specificity means later wins, so a base value has to be declared first.
+- **A translucent panel shows the screen behind it.** Panel backgrounds are `rgba(9,7,12,.92)`, so
+  character-select text bleeds through and reads exactly like the panel's own layout overlapping
+  itself. A screenshot rig has to hide every other `.scr`, not just the canvas and the HUD.
 - **`.scr` centres its children**, and a flex container centring content taller than itself clips
   BOTH ends — the top becomes unreachable whatever `scrollTop` says. A child with only a
   `max-height` also gets flex-shrunk to its min-content.
