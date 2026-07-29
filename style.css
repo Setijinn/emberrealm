@@ -939,6 +939,11 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 .fgSlot b{ display:block; font-size:calc(var(--u)*1.75); white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis; }
 .fgIco{ display:block; font-size:calc(var(--u)*2.6); line-height:1.1; }
+/* Material art. image-rendering:pixelated or a 64px sprite drawn at 30px turns to mush, and these
+   are drawn at several sizes (30 in a chip and a slot, 14 in the recipe book). Sized in px by the
+   markup rather than in --u because they sit inline with text that is already --u-scaled. */
+.fgArt{ display:block; margin:0 auto calc(var(--u)*0.2); image-rendering:pixelated; }
+.fgRec .fgArt{ display:inline-block; vertical-align:-2px; margin:0 2px 0 0; }
 .fgPlus{ font-size:calc(var(--u)*2.6); color:#8a8494; }
 .fgOut{ flex:0 0 auto; min-width:calc(var(--u)*17); text-align:center; padding:calc(var(--u)*1.1) calc(var(--u)*0.7);
   border:2px solid #332b40; border-radius:8px; background:#141019; color:#cfc8bd;

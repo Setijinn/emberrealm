@@ -496,11 +496,26 @@ function _forgePick(slot){
   if(!_forgeA) _forgeA=slot; else if(!_forgeB) _forgeB=slot; else _forgeB=slot;
   _forgeSet=null;                      // a new pair invalidates the set choice
 }
+// The material's own art, with its glyph as the fallback. A lazy Image returns null on its FIRST
+// call because that call only starts the load, so the glyph is what shows for one repaint and the
+// art takes over on the next -- never a broken <img>, and never an empty chip.
+//
+// A SEED HAS NO FILE OF ITS OWN: it shares mat_seed.png and is tinted by its dungeon's colour, so
+// the src here is the shared sprite and the tint is applied by matArtImg on the canvas path. The
+// panel is HTML, so it gets the shared sprite plus a CSS hue the same colour instead -- cheaper
+// than canvas-per-chip and it reads identically at chip size.
+function _matIcoHtml(d,size){
+  const px=size||22;
+  const file=d.seed?'mat_seed':('mat_'+d.id);
+  return '<img class="fgArt'+(d.seed?' seed':'')+'" src="assets/items/'+file+'.png" '
+    +'style="width:'+px+'px;height:'+px+'px'+(d.seed?(';filter:drop-shadow(0 0 3px '+d.col+')'):'')+'" '
+    +'alt="'+d.icon+'" onerror="this.replaceWith(document.createTextNode(\''+d.icon+'\'))">';
+}
 function _forgeSlotHtml(s,which){
   if(!s) return '<div class="fgSlot empty" data-clear="'+which+'"><span class="fgDim">empty</span></div>';
   if(s.kind==='mat'){ const d=MATERIALS[s.id];
     return '<div class="fgSlot" data-clear="'+which+'" style="border-color:'+d.col+'">'
-      +'<span class="fgIco" style="color:'+d.col+'">'+d.icon+'</span>'
+      +_matIcoHtml(d,30)
       +'<b style="color:'+d.col+'">'+d.n+'</b></div>'; }
   const it=_slotItem(s); if(!it) return '<div class="fgSlot empty" data-clear="'+which+'"><span class="fgDim">gone</span></div>';
   const col=(typeof tierCol==='function')?tierCol(it.t):'#fff';
@@ -520,6 +535,9 @@ function paintForge(){
 
   const plan=forgePlan(_forgeA,_forgeB,{set:_forgeSet});
   let h='';
+
+  // the anvil plate, same shape as the Incubator's and the Altar's machine art
+  h+='<div class="embMachine"><img src="assets/items/forge_ui.png" alt=""></div>';
 
   // ---- the anvil ----
   h+='<div class="fgAnvil">'+_forgeSlotHtml(_forgeA,'a')
@@ -546,7 +564,7 @@ function paintForge(){
     for(const m of held){
       const sel=_slotSame(_forgeA,{kind:'mat',id:m.def.id})||_slotSame(_forgeB,{kind:'mat',id:m.def.id});
       h+='<div class="fgChip'+(sel?' on':'')+'" data-mat="'+m.def.id+'" title="'+m.def.d+'" style="border-color:'+m.def.col+'">'
-        +'<span class="fgIco" style="color:'+m.def.col+'">'+m.def.icon+'</span>'
+        +_matIcoHtml(m.def,30)
         +'<b style="color:'+m.def.col+'">'+m.def.n+'</b><span class="fgN">x'+m.n+'</span></div>'; }
     h+='</div>'; }
 
@@ -569,8 +587,10 @@ function paintForge(){
     const A=MATERIALS[r.a], B=MATERIALS[r.b], O=MATERIALS[r.out];
     const can=matCount(r.a)>0&&matCount(r.b)>0;
     h+='<div class="fgRec'+(can?' can':'')+'">'
-      +'<span style="color:'+A.col+'">'+A.n+'</span> + <span style="color:'+B.col+'">'+B.n+'</span>'
-      +' <span class="fgDim">→</span> <b style="color:'+O.col+'">'+O.n+'</b></div>'; }
+      +_matIcoHtml(A,14)+'<span style="color:'+A.col+'">'+A.n+'</span> + '
+      +_matIcoHtml(B,14)+'<span style="color:'+B.col+'">'+B.n+'</span>'
+      +' <span class="fgDim">→</span> '+_matIcoHtml(O,14)
+      +'<b style="color:'+O.col+'">'+O.n+'</b></div>'; }
   h+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'+TIER_NAMES[SD_T]+' piece</span>'
     +' + <span style="color:'+RELIC_COL+'">any Riftseed</span>'
     +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ that dungeon’s relic, T'+(RELIC_T+1)+'</b></div>';

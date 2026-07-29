@@ -213,6 +213,29 @@ const _relicArt={};
 function relicArtImg(id){ if(typeof window==='undefined'||!id) return null;
   if(_relicArt[id]===undefined){ const i=new Image(); i.src='assets/items/relic_'+id+'.png'; _relicArt[id]=i; }
   const im=_relicArt[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+// FORGE MATERIALS (18_forge.js). Lazy per material, like the relics: twenty-odd images cost
+// nothing until one is actually in a pouch.
+//
+// THE SIX RIFTSEEDS SHARE ONE SPRITE, tinted by their dungeon's own GBOSS colour -- the same trick
+// MOBTINT plays on two mob bases and the mounts play on twelve archetypes. Six near-identical
+// glowing seeds would have been six generations spent to draw the same object in different inks.
+// _tintImg lives in 09_sprites.js and paints source-atop, so the tint follows the artwork rather
+// than filling its bounding box; it caches per (src,colour), so this is per-sprite work, not
+// per-frame.
+const _matArt={};
+function matArtImg(id){
+  if(typeof window==='undefined'||!id) return null;
+  const d=(typeof matDef==='function')?matDef(id):null;
+  // a seed loads the shared sprite and is tinted on the way out
+  const file=(d&&d.seed)?'mat_seed':('mat_'+id);
+  if(_matArt[file]===undefined){ const i=new Image(); i.src='assets/items/'+file+'.png'; _matArt[file]=i; }
+  const im=_matArt[file];
+  // A LAZY IMAGE RETURNS NULL ON THE FIRST CALL because that call only starts the load. Callers
+  // must fall back rather than concluding the art is missing -- see the trap list in HANDOFF.md.
+  if(!im||!im.complete||!im.naturalWidth) return null;
+  if(d&&d.seed&&d.col&&typeof _tintImg==='function') return _tintImg(im,d.col,0.42,0);
+  return im;
+}
 // The three boost draughts (17l_boosts.js). Lazy per bottle, like the relics: three images cost
 // nothing until one is actually in a sack.
 const _boostArt={};
@@ -225,6 +248,9 @@ function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
   if(it.relic){ const r=relicArtImg(it.relic); if(r) return r; }   // its own art wins outright
   // a draught has no tier and no band -- its own bottle is the whole identity
   if(it.k==='boost'){ return boostArtImg(it.bt); }
+  // nor does a material: it is not on the tier ladder at all, so the band maths below would divide
+  // by a tier it does not have and land on sprite 0 of a set it does not belong to
+  if(it.k==='mat'){ return matArtImg(it.m); }
   const NTIERS=_nTiers();
   let key=null;
   if(it.k==='wpn') key='wpn_'+it.wt; else if(it.k==='arm') key='arm_'+it.mt;
