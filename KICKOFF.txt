@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker code cache is at emberrealm-code-v547. (There are TWO caches now,
+Service worker code cache is at emberrealm-code-v550. (There are TWO caches now,
 versioned separately -- CODE_CACHE bumps freely, ART_CACHE only when art moves.
 See the note at the top of sw.js for why.)
 
@@ -28,7 +28,7 @@ HARD RULES — these are not preferences
 - Verify by DRIVING THE GAME, not by assuming. Report measurements. Say plainly
   when something fails or when you did not test it.
 - RUN `py tools/selftest.py` after touching the tier ladder, the loot tables, the
-  level cap or the forge. 123 checks, no node and no CDP needed.
+  level cap or the forge. 144 checks, no node and no CDP needed.
 - NOTHING MAY SIT ABOVE Lv50. levelUp stops at LV_CAP and there is no prestige
   level, so content that computes its own level must land on or under it. Six
   ascended dungeons were at Lv53-55 and could only ever be fought underlevelled.
@@ -44,7 +44,7 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v545 -> v547)
+WHAT SHIPPED MOST RECENTLY (v545 -> v550)
 ---------------------------------------------------------------------------
 THE FORGE (18_forge.js, NEW) -- Bram's stall, finally lit. The reservation is
 spent; the "leave the blacksmith alone" rule is retired.
@@ -420,7 +420,7 @@ caught it -- it reported `sp[0]` with a repeat count of 256.
 DO THIS FIRST
 ---------------------------------------------------------------------------
 Nothing is blocked. `py tools/serve.py`, then `py tools/selftest.py` to confirm
-you are starting from green (123/123). Verify the server actually responds before
+you are starting from green (144/144). Verify the server actually responds before
 you navigate — an `&& echo serving` after a failed command lies.
 
 BEFORE YOU CLAIM ANY UI WORKS, PHOTOGRAPH IT: `py tools/shot.py forge 844 390`.

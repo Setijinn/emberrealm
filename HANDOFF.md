@@ -19,6 +19,14 @@ project *is*, you are in the wrong file.
 - **Commit AND push every change, fetching first** — a collaborator shares the repo.
 - Drive QA with Chrome MCP `javascript_tool`. The tab may be throttled: **step frames manually**
   with `for(let i=0;i<N;i++){update(0.016);}` and never wait on `requestAnimationFrame`.
+- **`py` IS NOT RELIABLE ON THIS MACHINE — call the interpreter by its full path.**
+  `C:\Users\darkc\AppData\Local\Programs\Python\Python312\python.exe`. The `python` on PATH is the
+  Microsoft Store **App Execution Alias stub**, a zero-byte reparse point that fails with
+  "The file cannot be accessed by the system", and the `py` launcher honours a script's
+  `#!/usr/bin/env python` shebang — so it resolves *through* that stub and dies, while bare
+  `py --version` succeeds because it never spawns anything. The failure therefore looks like the
+  script is broken rather than the launcher, and it is intermittent between shells: the same
+  `py tools/serve.py` started fine and then failed on the next call.
 - **`py tools/selftest.py` is the standing harness**, and it runs with no node and no CDP client —
   neither is installed on this machine. It injects one `<script defer>` into the **real**
   `index.html` (never a hand-maintained copy, which would drift) and reads the results back with
