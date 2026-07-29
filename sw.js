@@ -4,7 +4,7 @@
 // deleted the cache holding 38MB of art, forcing every player to re-download all of it. Art is
 // content-addressed by filename and changes when a file changes, so it needs its own version
 // that moves only when the art does.
-const CODE_CACHE = 'emberrealm-code-v546';   // bump freely; holds html/css/js only
+const CODE_CACHE = 'emberrealm-code-v547';   // bump freely; holds html/css/js only
 const ART_CACHE  = 'emberrealm-art-v1';      // bump ONLY when art is added/replaced
 const CACHE = CODE_CACHE;                    // install/precache target
 const ASSETS = ['.', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];

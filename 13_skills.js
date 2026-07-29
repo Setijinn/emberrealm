@@ -1,5 +1,7 @@
 // ---------- skill trees + ascension ----------
-// Scarce points (1 per 2 levels): total earned at level L = floor(L/2).
+// Scarce points: total earned at level L is perkTotalFor(L) -- see the note there for the rate and
+// what it buys. (This line used to name a formula, floor(L/2), that had been wrong through two
+// separate rescalings; the function is the only place the rate is stated now.)
 // Trees cost more than you can fully buy -> specialize. Respec refunds all.
 // Tree ends in an ASCENSION: choose 1 of 3 subclasses (higher-tier form).
 //
@@ -12,22 +14,35 @@
 // Bump whenever node IDs/meanings change: every save is refunded to a clean slate on load,
 // because rewritten trees would otherwise leave points stranded on ids that no longer exist.
 const TREE_VER=4;
-// Rescaled for the Lv50 cap (was floor(lvl/2)=75 pts at Lv150). ~0.7/level -> 35 pts at cap.
-// WHAT 35 POINTS ACTUALLY BUYS (measured across all 17 trees, not estimated): a full tree costs
-// 67-73 points and a single branch 20-26, so the cap funds about HALF a tree -- one branch taken
-// to the end plus a good part of a second. The comment here used to claim "nearly complete one
-// 3-branch tree + dip a second", which overstated it by roughly 2x; anyone retuning from that
-// figure would have doubled the budget by accident.
-// It is a real choice rather than a shortfall: every keystone in every class is reachable well
-// inside 35 (cheapest 2, dearest 14), two keystones are affordable in all 17, and any one branch
-// can be maxed. Specialisation is the point, and respec is free.
-function perkTotalFor(lvl){ return Math.floor((lvl||1)*0.7); }      // total points earned by level
+// Rescaled for the Lv50 cap (was floor(lvl/2)=75 pts at Lv150, then ~0.7/level = 35 at cap).
+//
+// RAISED TO 0.88/LEVEL -> 44 AT THE CAP (user, 2026-07-28), because 35 did not read as an arrival.
+// Levels 45-50 are 64% of the entire run's XP -- measured, 1,248,905 of 2,121,284 -- and under the
+// old rate that whole stretch paid four points out of thirty-five. The XP curve is deliberate and
+// stays exactly as it was; what changes is what the cap hands you for finishing it.
+//
+// WHAT 44 POINTS ACTUALLY BUYS (measured across all 17 trees, not estimated): a full tree costs
+// 67-73 points and a single branch 20-26, so the cap funds about 60% of the dearest tree -- one
+// branch taken all the way to the end plus a substantial second, which is what it was raised to
+// do. It was 48%. An earlier version of this comment claimed "nearly complete one 3-branch tree +
+// dip a second", which overstated the 35 by roughly 2x; anyone retuning from that figure would
+// have doubled the budget by accident, so the measured number is the one written down.
+//
+// It is still a real choice rather than a shortfall: no class can buy its whole tree, every
+// keystone is reachable well inside the budget (cheapest 2, dearest 14), and respec is free.
+//
+// A HERO ALREADY AT THE CAP IS NOT STRANDED BY THIS. grantPerkPoints awards the difference between
+// perkTotalFor(lvl) and what has already been earned, and it runs on the run-start path and on
+// opening the skill screen -- not only on a level-up -- so a Lv50 character banks the extra nine
+// the next time they load. TREE_VER is deliberately NOT bumped: no node id or meaning changed, and
+// bumping it would wipe every tree in every save to hand out points that arrive on their own.
+function perkTotalFor(lvl){ return Math.floor((lvl||1)*0.88); }     // total points earned by level
 function xpTreeInit(rpg){
   if(rpg.perkEarned===undefined) rpg.perkEarned=0;
   if(rpg.perkPts===undefined) rpg.perkPts=0;
   if(!rpg.tree) rpg.tree={};                 // nodeId -> ranks
   if(rpg.ascension===undefined) rpg.ascension=null;
-  if(rpg.treeVer!==TREE_VER){                // full refund from level (points = floor(lvl/2))
+  if(rpg.treeVer!==TREE_VER){                // full refund, re-earned from level via perkTotalFor
     const had=Object.keys(rpg.tree).length;
     rpg.tree={}; rpg.perkEarned=rpg.perkPts=perkTotalFor(rpg.lvl);   // ascension is kept
     rpg.treeVer=TREE_VER;

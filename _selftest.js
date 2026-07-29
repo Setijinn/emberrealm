@@ -203,6 +203,58 @@
       ok('a relic tier survives the wire', rround.items[0].t===RELIC_T, 't='+rround.items[0].t);
     }
 
+    // ---------- 9b. THE LEVEL CAP ----------
+    // 50 is a hard ceiling: levelUp stops there and there is no prestige level. Anything that
+    // computes its own level has to land on or under it, or it is content the player is
+    // structurally forbidden from matching -- which is what six ascended dungeons were.
+    note('== level cap ==');
+    ok('ASCEND_LV is reachable', ASCEND_LV<=LV_CAP, 'ASCEND_LV='+ASCEND_LV+' cap='+LV_CAP);
+    ok('the Stable opens below the cap', MOUNT_LV<LV_CAP, 'MOUNT_LV='+MOUNT_LV);
+    ok('ISLAND_LV is derived from its own provinces',
+       ISLAND_LV===STARTER_ZONES*STARTER_LV_PER_ZONE, 'ISLAND_LV='+ISLAND_LV);
+    ok('the island leaves a mainland below the cap', ISLAND_LV<LV_CAP);
+    {
+      const over=[], isleOver=[];
+      for(let ring=0; ring<GBOSS.length; ring++){
+        let d=null; try{ d=genDungeon(ring); }catch(e){ continue; }
+        if(!d||d.lv===undefined) continue;
+        if(d.lv>LV_CAP) over.push(ring+':Lv'+d.lv);
+        if(isStarterBoss(ring) && d.lv>ISLAND_LV) isleOver.push(ring+':Lv'+d.lv);
+      }
+      ok('no dungeon sits above the cap', over.length===0, over.join(' ')||'all 13 at or under Lv'+LV_CAP);
+      ok('no starter dungeon leaves the island', isleOver.length===0, isleOver.join(' ')||'all on-island');
+    }
+    {
+      const T=_territories(rooms['G']);
+      ok('no territory reaches past the cap', T.every(t=>t.lvmax<=LV_CAP),
+         'highest = Lv'+Math.max.apply(null,T.map(t=>t.lvmax)));
+    }
+    // the tree budget: raised so the cap reads as an arrival, but never enough to buy a whole tree
+    note('== skill budget ==');
+    {
+      const atCap=perkTotalFor(LV_CAP);
+      ok('the cap pays 44 points', atCap===44, atCap+' points');
+      ok('points rise with level', perkTotalFor(LV_CAP)>perkTotalFor(ASCEND_LV),
+         perkTotalFor(ASCEND_LV)+' at ascension -> '+atCap+' at cap');
+      let dearest=0, cheapest=1e9;
+      for(const cls in CLASS_TREE){ let full=0;
+        for(const b of CLASS_TREE[cls].branches)
+          for(const n of b.nodes) full+=(n.cost||1)*(n.max||1);
+        dearest=Math.max(dearest,full); cheapest=Math.min(cheapest,full); }
+      ok('no class can buy its whole tree at the cap', atCap<cheapest,
+         atCap+' points vs a cheapest tree of '+cheapest);
+      ok('the cap funds more than half the dearest tree', atCap/dearest>0.5,
+         (100*atCap/dearest).toFixed(0)+'% of '+dearest);
+      // TREE_VER must NOT have moved: a bump wipes every saved tree to hand out points that
+      // grantPerkPoints delivers on its own
+      ok('TREE_VER unchanged at 4', TREE_VER===4, 'TREE_VER='+TREE_VER);
+      // a capped hero must actually receive the raise
+      const fake={lvl:LV_CAP, perkEarned:35, perkPts:0, tree:{}, treeVer:TREE_VER, ascension:null};
+      grantPerkPoints(fake);
+      ok('a Lv50 hero on the old budget banks the difference', fake.perkPts===atCap-35,
+         '+'+fake.perkPts+' points');
+    }
+
     // ---------- 10. THE PANEL ----------
     note('== panel ==');
     ok('the forge panel exists in the DOM', !!document.getElementById('forgeScr'));

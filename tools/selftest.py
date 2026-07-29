@@ -10,7 +10,7 @@ to miss, so they get a harness.
 
 HOW IT WORKS. It does NOT hand-maintain a copy of index.html -- that copy would drift, which is the
 exact failure mode the whole file is about. It reads the real index.html, appends one <script defer>
-and one <pre> to it, and writes _forgetest.html beside it. Because the injected script is `defer` and
+and one <pre> to it, and writes _selftest.html beside it. Because the injected script is `defer` and
 last, it runs after every other script in the real load order, against the real DOM.
 
 The results are read back out of the DOM with `chrome --headless=new --dump-dom`, which needs no
@@ -20,7 +20,7 @@ USAGE
     py tools/serve.py            # in another shell, or the fetch()es 404
     py tools/selftest.py
 
-    py tools/selftest.py --build-only     # just write _forgetest.html
+    py tools/selftest.py --build-only     # just write _selftest.html
 """
 
 import io
@@ -44,7 +44,7 @@ CHROMES = [
 INJECT = (
     '<pre id="testout" style="position:fixed;left:0;top:0;z-index:99999;'
     'background:#000;color:#0f0;font:12px monospace;white-space:pre-wrap">pending</pre>\n'
-    '<script defer src="_forgetest.js"></script>\n'
+    '<script defer src="_selftest.js"></script>\n'
 )
 
 
@@ -54,7 +54,7 @@ def build():
     if "</body>" not in html:
         sys.exit("index.html has no </body> to inject before")
     out = html.replace("</body>", INJECT + "</body>")
-    path = os.path.join(ROOT, "_forgetest.html")
+    path = os.path.join(ROOT, "_selftest.html")
     with io.open(path, "w", encoding="utf-8") as f:
         f.write(out)
     return path
@@ -76,7 +76,7 @@ def run():
         "--user-data-dir=" + profile,
         "--virtual-time-budget=40000",
         "--dump-dom",
-        "http://localhost:%d/_forgetest.html" % PORT,
+        "http://localhost:%d/_selftest.html" % PORT,
     ]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     dom = proc.stdout.decode("utf-8", "replace")

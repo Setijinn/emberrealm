@@ -2144,7 +2144,24 @@ function render(){
     // class resource meter (only for classes whose tree actually uses one)
     if(typeof drawResMeter==='function') drawResMeter(W/2,xby,xbw);
     ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(xbx,xby,xbw,xbh);
-    ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),xbh);
+    // AT THE CAP THE BAR IS NOT A BAR. levelUp stops at LV_CAP but rpg.xp keeps accumulating, and
+    // xpNeed(50) still returns a live 704,851 -- so this used to render min(1, xp/704851), fill
+    // completely within one zone of reaching 50, and then sit pinned at 100% for the rest of the
+    // account's life. A progress bar that is permanently full reads as "about to level up",
+    // forever, which is the opposite of what arriving at the ceiling should feel like.
+    const _atCap = rpg.lvl>=LV_CAP;
+    if(_atCap){
+      // solid, and a different colour from the fill so it does not read as a full bar: this is a
+      // plate, not a meter. Nothing is in progress any more.
+      ctx.fillStyle='rgba(201,160,74,.30)'; ctx.fillRect(xbx,xby,xbw,xbh);
+      ctx.fillStyle='#e8c98a';
+      ctx.font=Math.max(8,Math.round(xbh*0.92))+'px "Pixelify Sans",monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('MAX', W/2, xby+xbh/2+0.5);
+      ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    } else {
+      ctx.fillStyle='#c9a04a'; ctx.fillRect(xbx,xby,xbw*Math.min(1,rpg.xp/xpNeed(rpg.lvl)),xbh);
+    }
     ctx.strokeStyle='rgba(216,210,200,.2)'; ctx.lineWidth=1; ctx.strokeRect(xbx-0.5,xby-0.5,xbw+1,xbh+1);
     // the status line that used to live here is a banner at the top of the screen now
     // (drawStatusBanner) -- where you are is the first thing you should see, not the last.
