@@ -340,7 +340,11 @@ function netInterp(dt){
   for(const e of enemies){ const t=netEnts[e.nid]; if(!t) continue;
     e.px=e.x; e.py=e.y;
     e.x+=(t.tx-e.x)*k; e.y+=(t.ty-e.y)*k; }
-  for(const s of eShots){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; }  // dead-reckon between packets
+  // Dead-reckon between packets -- and at the SAME PROJ_SCALE the host advances them at, or a
+  // client's shots would drift ahead of the host's by 10% of their travel and the two machines
+  // would disagree about where a bolt is. Velocities cross the wire unscaled precisely so that
+  // both ends apply this once, here and in 07_update, and neither applies it twice.
+  for(const s of eShots){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt*PROJ_SCALE; s.y+=s.vy*dt*PROJ_SCALE; }
 }
 
 // Boss hazards are evaluated against the LOCAL player on every machine. The host's mech tick only

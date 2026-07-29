@@ -96,6 +96,33 @@ function checkSize(){ if((cv.clientWidth||_vpW())!==W||(cv.clientHeight||_vpH())
 // striding past a slowed hero.
 const MOVE_SCALE = 0.80;
 
+// ---------------------------------------------------------------------------------------------
+// PROJ_SCALE (user, 2026-07-29: "decrease projectile speed all around slightly").
+// The SECOND dial, and deliberately not the first one: MOVE_SCALE's whole contract is that it
+// scales locomotion and nothing else, so projectiles get their own number rather than quietly
+// widening that one. Applied to the hero's shots, ability and ultimate bolts, perk volleys and
+// every enemy and boss pattern alike -- "all around" -- so no matchup shifts relative to another.
+//
+// RANGE IS HELD CONSTANT, and that is the part worth reading twice. A projectile's reach in this
+// game is not a number anyone wrote down: it is `speed x life`, stated outright in WTYPE's own
+// header ("reach spd*life = ~94px, the shortest in the game") and read again by fire()'s auto-aim
+// cap. Scaling velocity alone would therefore have shortened every weapon's reach, every boss's
+// threat radius and the auto-aim range by the same fraction -- a second, larger balance change
+// nobody asked for, hidden inside a cosmetic one. So the scale is applied where shots are
+// ADVANCED, to the step and to the lifetime together:
+//     x += vx*dt*PROJ_SCALE      life -= dt*PROJ_SCALE
+// which travels v*PROJ_SCALE per second for life/PROJ_SCALE seconds: exactly the same distance,
+// taking proportionally longer to get there. Shots are slower and floatier; nothing moved an inch
+// closer or further away.
+//
+// AT THE INTEGRATION STEP, NOT AT SPAWN, for the same reason MOVE_SCALE rides on eSpdMul(): there
+// are ~35 places that create a projectile -- 27 eFire() calls with their own hard-coded speeds,
+// plus abilities, ultimates and perk volleys -- and a dial applied at 35 sites is a dial that will
+// drift. There are exactly three places a shot moves. It also keeps the wire honest: velocities
+// cross the network UNSCALED and both peers apply this in their own integration, so a shot cannot
+// arrive pre-scaled and get scaled twice.
+const PROJ_SCALE = 0.90;
+
 let BUILD='dev';
 function paintBuildTag(){ for(const el of document.querySelectorAll('.bTag')) el.textContent='build '+BUILD; }
 function _readBuild(){

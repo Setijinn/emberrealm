@@ -157,10 +157,31 @@ Sanctuary. Incubation is wall-clock time by rarity, not kills.
 tint, `safe`/`petRoom` get a gentle neutral 0.20, everything else gets the dungeon 0.42. Every side
 room used to fall to the dungeon side and get its edges crushed.
 
-**`MOVE_SCALE` (01_constants.js) scales LOCOMOTION ONLY.** Not projectile speeds, telegraph timers,
-fire cadence, dash distances or knockback impulses — those are not movement speed and slowing them
-would silently re-tune every boss window in the game. It rides on `eSpdMul()`, which covers every
-enemy and boss in one place; the two summon sites set speed flat and need it explicitly.
+**`MOVE_SCALE` (01_constants.js) scales LOCOMOTION ONLY.** Not telegraph timers, fire cadence, dash
+distances or knockback impulses — those are not movement speed and slowing them would silently
+re-tune every boss window in the game. It rides on `eSpdMul()`, which covers every enemy and boss in
+one place; the two summon sites set speed flat and need it explicitly. **Projectiles have their own
+dial and are not MOVE_SCALE's business** — see below.
+
+**`PROJ_SCALE` (0.90) slows every projectile and MOVES NOTHING CLOSER OR FURTHER AWAY.** A shot's
+reach is not a number anyone wrote down: it is `speed × life`, stated in `WTYPE`'s header and read
+again by `fire()`'s auto-aim cap. So the scale is applied where shots are **advanced**, to the step
+and the lifetime together — `x += vx*dt*PROJ_SCALE` with `life -= dt*PROJ_SCALE` — which covers
+`v*PROJ_SCALE` per second for `life/PROJ_SCALE` seconds: identical distance, proportionally longer
+flight. Scaling velocity alone would have shortened every weapon's reach, every boss's threat radius
+and the auto-aim range by 10%, which is a much larger balance change hiding inside a cosmetic one.
+- **At the integration step, never at spawn.** There are ~35 places that create a projectile — 27
+  `eFire()` calls each with their own hard-coded speed, plus abilities, ultimates and perk volleys —
+  and a dial applied at 35 sites will drift. There are exactly **three** places a shot moves:
+  `pShots` and `eShots` in `07_update.js`, and the client's dead-reckoning in `14b_netsync.js`.
+  All three must carry it or a client's bolts drift 10% ahead of the host's.
+- **Velocities cross the wire UNSCALED**, precisely so both peers apply this once in their own
+  integration and a shot can never arrive pre-scaled and be scaled twice.
+- **`aimPoint` must be fed the effective speed AND the effective lifetime** (`spd*PROJ_SCALE`,
+  `life/PROJ_SCALE`). It solves an intercept in real seconds and rejects solutions later than
+  `life`; the raw pair under-leads every moving target by exactly the scale, which reads as broken
+  aim rather than as slower shots.
+- `s.age` is **not** scaled — it drives the sprite's tumble, which is a look, not a distance.
 
 **Ascension opens at `ASCEND_LV` (45), not at the cap.** One constant in `13_skills.js`; the gate,
 the locked button and the attributes status line all read from it. Ascending early is deliberate —

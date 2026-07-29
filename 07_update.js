@@ -754,7 +754,10 @@ function update(dt){
         // pointed roughly right. A falcon wheels — this is the rate that lets it come back.
         const na=cur+Math.max(-5.5*dt,Math.min(5.5*dt,diff)), sp2=Math.hypot(s.vx,s.vy);
         s.vx=Math.cos(na)*sp2; s.vy=Math.sin(na)*sp2; } }
-    s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
+    // PROJ_SCALE on the step AND the lifetime together, so the shot is slower but its reach is
+    // unchanged -- see the note in 01_constants.js. `age` is NOT scaled: it drives the sprite's
+    // tumble, which is a look and not a distance.
+    s.x+=s.vx*dt*PROJ_SCALE; s.y+=s.vy*dt*PROJ_SCALE; s.life-=dt*PROJ_SCALE;
     s.age=(s.age||0)+dt;                       // drives the tumble on spinning projectiles
     if(s.life<=0||solid(s.x,s.y)){ pShots.splice(i,1); continue; }
     for(const e of enemies){ if(e!==s.lastHit && Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
@@ -870,7 +873,8 @@ function update(dt){
   // same question, same answer: if this room is mine to run, its shots are mine to advance
   const _netCl=_shadow;
   for(let i=eShots.length-1;i>=0;i--){ const s=eShots[i];
-    if(!_netCl){ s.px=s.x; s.py=s.y; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt;
+    if(!_netCl){ s.px=s.x; s.py=s.y;
+      s.x+=s.vx*dt*PROJ_SCALE; s.y+=s.vy*dt*PROJ_SCALE; s.life-=dt*PROJ_SCALE;
       if(s.life<=0||solid(s.x,s.y)){ eShots.splice(i,1); continue; } }
     if(player.inv<=0 && Math.hypot(player.x-s.x,player.y-s.y)<player.r+s.r){
       player._lastHitBy=(s.owner||null);   // whoever fired the shot, when the shot knows

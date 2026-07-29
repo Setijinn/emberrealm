@@ -284,7 +284,12 @@ function fire(dt){
       if(score<bd){ bd=score; best=e; }
     }
     // lead the target: aim where it WILL be when the shot arrives, not where it is now
-    if(best){ const p=aimPoint(best,_psp,wt.life||1);
+    // LEAD IT AT THE SPEED IT ACTUALLY FLIES. aimPoint solves an intercept in real seconds and
+    // rejects a solution later than `life`, so both arguments have to be in the same frame as the
+    // integration: PROJ_SCALE slows the bolt and stretches its lifetime by the same factor.
+    // Passing the raw pair would have under-led every moving target by exactly the scale, which is
+    // the kind of miss that reads as "the aim is broken" rather than as "the shots are slower".
+    if(best){ const p=aimPoint(best,_psp*PROJ_SCALE,(wt.life||1)/PROJ_SCALE);
       ang=Math.atan2(p.y-player.y,p.x-player.x); }
   }
   if(ang===null) return;
