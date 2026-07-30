@@ -44,6 +44,17 @@ def build():
         f.write(html.replace("</body>", inject + "</body>"))
 
 
+def _zone_count():
+    """How many provinces the world declares, read out of 00c_worldgen.js's own table."""
+    import re as _re
+    try:
+        src = io.open(os.path.join(ROOT, "00c_worldgen.js"), encoding="utf-8").read()
+        blk = src[src.index("const WG_ZONES"):src.index("];", src.index("const WG_ZONES"))]
+        return max(1, len(_re.findall(r"\{ *n:", blk)))
+    except Exception:
+        return 15
+
+
 def shoot(idx, hud=False, extra=(), name=None, size="1280,720"):
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
@@ -90,7 +101,10 @@ if __name__ == "__main__":
             passthru.append(kv)
     extra = passthru
     if arg == "all":
-        for i in range(14):
+        # ONE SHOT PER PROVINCE, counted from the world rather than typed. It was range(14), which
+        # silently stopped photographing the moment a fifteenth province existed -- and the one it
+        # would have skipped is on island C, the half of the world nobody can walk to and check.
+        for i in range(_zone_count()):
             shoot(i, hud=hud, extra=extra, size=size)
     else:
         # a lair shot is not a territory shot -- name the file after what it is

@@ -36,7 +36,7 @@
     // this header lumped them into one "clipped" number -- which then reported "1 clipped" with no
     // CLIPPED row anywhere in the table, and sent me looking for a panel that was not there.
     const head='FIT AUDIT  '+innerWidth+'x'+innerHeight+'  '
-      +clip+' clipped, '+side+' scrolls sideways, '+warn+' tight';
+      +clip+' clipped or overlapping, '+side+' scrolls sideways, '+warn+' tight';
     if(el) el.textContent=head+'\n'+L.join('\n');
     document.title='FIT '+((clip+side)?'FAIL':'OK');
   }
@@ -60,17 +60,27 @@
     ['fallenScr', ()=>openFallen()],
     ['shopScr',   ()=>openShop2('bram')],
     ['devScr',    ()=>openDev()],
-    ['mapScr',    ()=>{ const s=document.getElementById('mapScr'); if(s) s.style.display='flex';
+    // the six that were missing, and they are not the small ones: the skill tree, the ability
+    // loadout, the pet stable, the attributes screen, the character sheet and the loot bag are
+    // where a player spends most of their time out of combat
+    ['skillScr',  ()=>openSkills()],
+    ['loadScr',   ()=>openLoadout()],
+    ['petScr',    ()=>openPets()],
+    ['statsScr',  ()=>openStats()],
+    ['sheetScr',  ()=>{ const f=(typeof openSheet==='function')?openSheet:null; if(f) f();
+                        const e=document.getElementById('sheetScr'); if(e) e.style.display='flex'; }],
+    ['bagScr',    ()=>{ // a loot bag needs a bag: build one holding a spread of real gear
+                        const bag={x:0,y:0,items:[]};
+                        if(typeof mkItem==='function') for(let t=3;t<=8;t++) bag.items.push(mkItem('wpn',t,0,'knight'));
+                        if(typeof openBagPanel==='function') openBagPanel(bag); }],
+    ['mapScr',    ()=>{ const s2=document.getElementById('mapScr'); if(s2) s2.style.display='flex';
                         if(typeof drawMap==='function') drawMap(); }],
+    // the two modal interrupts. They have no opener -- the game raises them -- so they are shown
+    // by id, which is exactly how a player meets them.
+    ['hcScr',     null],
+    ['deathScr',  null],
   ];
-  // the panels whose own openers live elsewhere and take arguments this audit has no business
-  // inventing: the pet panel needs a stable, the bag panel needs a loot bag, the skill and loadout
-  // panels need a live character sheet. They are opened by id and painted if a painter exists.
-  const EXTRA=[
-    ['bagScr',   'paintBagPanel'],
-    ['hcScr',    null],
-    ['deathScr', null],
-  ];
+  const EXTRA=[];
 
   function measure(id){
     const s=document.getElementById(id); if(!s) return null;
@@ -109,6 +119,55 @@
       hidden:Math.max(0, sc.scrollHeight-sc.clientHeight),
       shown:sc.clientHeight||1
     };
+  }
+
+  // ---- DO TWO PIECES OF TEXT SIT ON TOP OF EACH OTHER? ----
+  // Overflow is measurable; COLLISION is what photographs catch and numbers miss. The zone plaque
+  // drawn underneath the HUD's button row overflowed nothing -- both elements were comfortably
+  // inside the viewport, one was simply on top of the other -- and it shipped because every
+  // screenshot was taken at the one size where it did not happen.
+  //
+  // Only TEXT-BEARING LEAVES, and only pairs where neither contains the other: a badge deliberately
+  // sitting on its icon is a layout, not a fault, and every element overlaps its own ancestors. The
+  // threshold is 35% of the SMALLER box, so a one-pixel touch between neighbours is not a finding.
+  function collisions(root){
+    const els=[];
+    root.querySelectorAll('*').forEach(e=>{
+      if(e.children.length) return;                       // leaves only
+      const t=(e.textContent||'').trim();
+      if(!t) return;
+      const st=getComputedStyle(e);
+      if(st.display==='none'||st.visibility==='hidden'||+st.opacity===0) return;
+      // A CLOSED <details> STILL GIVES ITS CHILDREN RECTS. Chrome lays the collapsed content out at
+      // the summary's position under content-visibility, so every folded dev section reported its
+      // buttons as sitting on top of the next section's heading. Nothing is visible there.
+      if(e.closest('details:not([open])')) return;
+      const r=e.getBoundingClientRect();
+      if(r.width<4||r.height<4) return;
+      if(r.right<0||r.bottom<0||r.left>innerWidth||r.top>innerHeight) return;
+      els.push({e:e,r:r,t:t.slice(0,22)});
+    });
+    const out=[];
+    for(let i=0;i<els.length;i++) for(let j=i+1;j<els.length;j++){
+      const A=els[i], B=els[j];
+      if(A.e.contains(B.e)||B.e.contains(A.e)) continue;
+      const ox=Math.min(A.r.right,B.r.right)-Math.max(A.r.left,B.r.left);
+      const oy=Math.min(A.r.bottom,B.r.bottom)-Math.max(A.r.top,B.r.top);
+      if(ox<=0||oy<=0) continue;
+      // BOTH BOXES HAVE TO BE MEANINGFULLY COVERED. Requiring only 35% of the SMALLER one reported
+      // nine panels, and most of them were a small element sitting inside a large one's box: a "+"
+      // between two anvil slots is entirely within the slot's padding, so the overlap is 100% of the
+      // "+" and 2% of the slot. That is a layout, not a collision. A real one -- two buttons on top
+      // of each other, a banner under a button row -- covers a serious fraction of both.
+      const area=ox*oy;
+      const aA=A.r.width*A.r.height, aB=B.r.width*B.r.height;
+      if(area < Math.min(aA,aB)*0.35) continue;
+      if(area < Math.max(aA,aB)*0.15) continue;
+      const rr=(r)=>Math.round(r.left)+','+Math.round(r.top)+' '+Math.round(r.width)+'x'+Math.round(r.height);
+      out.push('"'+A.t+'"['+rr(A.r)+'] over "'+B.t+'"['+rr(B.r)+']');
+      if(out.length>=4) return out;
+    }
+    return out;
   }
 
   function hideAll(){
@@ -151,6 +210,8 @@
       if(clipped) clip++;
       if(sideways) side++;
       if(!clipped && !sideways && m.hidden>m.shown*1.5) warn++;
+      const hits=collisions(s||document.body);
+      if(hits.length){ clip++; L.push('  '+pad(id,12)+' OVERLAP  '+hits.join('   |   ')); }
       L.push('  '+pad(id,12)+pad(m.w+'x'+m.h,11)
              +pad((clipped?('CLIPPED '+m.offX+'x'+m.offY):'-'),12)
              +pad(sideways?('SIDEWAYS '+m.sideways):(m.sideways>1?('('+m.sideways+'px)'):'-'),11)
@@ -169,7 +230,17 @@
     out();
   }
 
-  function boot(){ try{ go(); }catch(e){ L.push('AUDIT THREW: '+(e&&e.stack||e)); clip++; out(); } }
+  // WAIT FOR THE FONT. Every measurement in here is a text box, and 'Pixelify Sans' loads
+  // asynchronously: before it arrives the browser lays text out in a fallback whose metrics are
+  // wider, so lines overflow boxes they fit in perfectly once the real font lands. That produced
+  // four confident OVERLAP findings on the bounty board, the auction and the diamond exchange --
+  // and photographing the bounty board at the same size showed a panel with nothing wrong with it.
+  // A layout audit that runs before its fonts is measuring a layout the player never sees.
+  function boot(){
+    const run=()=>{ try{ go(); }catch(e){ L.push('AUDIT THREW: '+(e&&e.stack||e)); clip++; out(); } };
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>setTimeout(run,120)).catch(run);
+    else run();
+  }
   if(document.readyState==='complete') setTimeout(boot,700);
   else window.addEventListener('load',()=>setTimeout(boot,700));
 })();

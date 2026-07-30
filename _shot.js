@@ -26,6 +26,9 @@
         ch.inv.push(mkRelicItem(R.id, ch.cls)); if(Object.keys(seen).length>=4) break; }
     }
     ch.inv.push(mkItem('wpn', MAXT-1, 0, ch.cls));      // a plain T12, to show it is refused
+    // glory to spend, so the stable's lesson shelf photographs in its affordable state rather than
+    // greyed out -- both states matter, and `?poor=1` gets the other one
+    users['_shot'].glory=(new URLSearchParams(location.search).get('poor')==='1')?50:9000;
     // stand at Bram's counter
     curShopNear='bram';
   }
@@ -43,6 +46,7 @@
     for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr',
                     'hcScr','deathScr','invScr','mapScr','skillScr','statsScr','sheetScr']){
       if(s===WANT+'Scr') continue;            // never hide the thing we came to photograph
+      if(WANT==='panel' && s===(Q.get('id')||'')) continue;
       const el=document.getElementById(s); if(el) el.style.display='none'; }
     document.body.style.background='#0b0910';
   }
@@ -64,6 +68,13 @@
       // either, because past square the game shows its portrait gate instead of the game.
       if(Q.get('scroll')==='end'){ const b=document.getElementById('forgeBody');
         if(b){ void b.offsetHeight; b.scrollTop=b.scrollHeight; } }
+    } else if(WANT==='panel'){
+      // ANY PANEL, BY ID AND OPENER. _fitaudit measures every screen; this photographs whichever one
+      // it flagged, because a number can say two boxes overlap and cannot say whether that reads as
+      // a fault or as a design. `?id=bntScr&fn=openBounties`.
+      const id=Q.get('id')||'bntScr', fn=Q.get('fn')||'';
+      if(fn){ try{ eval(fn+'()'); }catch(e){ console.warn('opener threw',e); } }
+      const el=document.getElementById(id); if(el) el.style.display='flex';
     } else if(WANT==='inv'){
       // THE SATCHEL, WITH A SCROLL SELECTED. The third action button (USE) only exists for a
       // consumable, so photographing the row that proves it needs a scroll in the bag AND that

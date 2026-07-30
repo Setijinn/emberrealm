@@ -104,9 +104,13 @@ const MOUNT_FLY_LV = 40;
 function mountIsFlyer(m){ const d=mountDef(m); return !!(d&&d.fly); }
 // Has this ACCOUNT earned flight? Same account-wide reading as the Lv20 stable gate: the highest
 // level any character reached, so an alt does not have to climb to 40 again.
-function mountFlyOk(){ const u=mountStore(); if(!u) return false;
+function mountFlyLevelOk(){ const u=mountStore(); if(!u) return false;
   const cur=(typeof rpg!=='undefined'&&rpg&&rpg.lvl)?rpg.lvl:0;
   return Math.max(u.mountLv|0, cur|0) >= MOUNT_FLY_LV; }
+// Same shape as mountUnlocked: the level AND the book. Everything that gates on flight -- mountUp's
+// refusal, travelTo's island-C check, the roster the stable will saddle -- goes through this one
+// function, so the lesson lands everywhere at once.
+function mountFlyOk(){ return mountFlyLevelOk() && lessonKnown('fly'); }
 // Is the player in the air RIGHT NOW? Read by collision, by the damage gate and by the renderer.
 function playerIsFlying(){ return mounted() && mountIsFlyer(player.mnt); }
 // The single seam for "who can touch a flyer". Today: nobody. Widening this is how the rule
@@ -492,9 +496,57 @@ function giveMount(id){ const u=mountStore(), d=mountDef(id); if(!u||!d) return 
 // again. This mirrors the Vault's ungated withdrawal decision rather than contradicting it.
 function mountNoteLevel(lv){ const u=mountStore(); if(!u) return;
   if((lv|0)>(u.mountLv|0)){ u.mountLv=lv|0; saveMounts(); } }
-function mountUnlocked(){ const u=mountStore(); if(!u) return false;
+function mountLevelOk(){ const u=mountStore(); if(!u) return false;
   const cur=(typeof rpg!=='undefined'&&rpg&&rpg.lvl)?rpg.lvl:0;   // the field is rpg.lvl, not rpg.lv
   return Math.max(u.mountLv|0, cur|0) >= MOUNT_LV; }
+
+// ---- THE LESSON BOOKS (user, 2026-07-30) -----------------------------------------------------
+// Riding was a level check and nothing else: hit 20 and every mount in the stable was rideable, hit
+// 40 and so was every flyer. That is a birthday, not an achievement -- and flight is the gate on a
+// whole island, so it was the most consequential thing in the game that you got for waiting.
+//
+// Two books, sold by the stablemaster:
+//   RIDING     lets you sit any ground mount at all
+//   FLIGHT     lets you sit a flyer, on top of the riding lesson -- you learn to ride before you fly
+//
+// PAID IN GLORY, AND THAT NEEDS SAYING OUT LOUD, because the standing rule is that GLORY MUST NEVER
+// BUY POWER. A lesson buys no stat, no tier and no item: it buys the right to use mounts you still
+// have to FIND, and the level gates below are untouched -- Lv20 for the ground book, Lv40 for the
+// flight book, both still account-wide. You cannot buy your way onto island C early; you can only
+// spend glory on a thing you have already earned the level for. That is the same shape as the
+// wardrobe and the diamond exchange, which are the two other places glory is allowed to go.
+//
+// ACCOUNT-LEVEL, like the mounts themselves: bought once, kept through permadeath. Re-learning a
+// lesson every run would make the price a tax on dying rather than a thing you buy.
+const LESSONS = {
+  ride: { id:'ride', n:'The Saddle-Wright\u2019s Primer', cost:900,  lv:MOUNT_LV,
+          d:'Girth, gait and the trick of staying on. Lets you ride any mount you own.' },
+  fly:  { id:'fly',  n:'On Thermals and Tether',          cost:4200, lv:MOUNT_FLY_LV,
+          d:'Reading the air, and the long fall if you read it wrong. Lets you ride a flyer.' }
+};
+function lessonStore(){ const u=mountStore(); if(!u) return null;
+  if(!u.lessons) u.lessons={}; return u.lessons; }
+function lessonKnown(id){ const L=lessonStore(); return !!(L&&L[id]); }
+function lessonLevelOk(id){ const d=LESSONS[id]; if(!d) return false;
+  const u=mountStore(); const cur=(typeof rpg!=='undefined'&&rpg&&rpg.lvl)?rpg.lvl:0;
+  return Math.max((u&&u.mountLv)|0, cur|0) >= d.lv; }
+// Buy one. Returns {ok, why} so the panel can say what happened rather than doing nothing.
+function learnLesson(id){
+  const d=LESSONS[id]; if(!d) return {ok:false, why:'no such lesson'};
+  if(lessonKnown(id)) return {ok:false, why:'you have already read it'};
+  if(!lessonLevelOk(id)) return {ok:false, why:'the stablemaster wants to see level '+d.lv+' first'};
+  if(id==='fly' && !lessonKnown('ride')) return {ok:false, why:'learn to ride before you learn to fly'};
+  const have=(typeof accountGlory==='function')?accountGlory():0;
+  if(have<d.cost) return {ok:false, why:'costs '+d.cost+' glory; you have '+have};
+  if(typeof spendGlory==='function' && !spendGlory(d.cost)) return {ok:false, why:'could not spend the glory'};
+  const L=lessonStore(); if(L) L[id]=1;
+  if(typeof saveUsers==='function') saveUsers();
+  return {ok:true, why:'learned '+d.n};
+}
+// THE GATE THE REST OF THE GAME READS. mountUnlocked keeps its name and its meaning -- "may this
+// player ride at all" -- so its callers (the stable panel, the HUD mount button, mountUp) do not
+// move; it just asks one more question than it used to.
+function mountUnlocked(){ return mountLevelOk() && lessonKnown('ride'); }
 
 // ---- ride state ----
 // player.mnt      the id of the mount under you, null when afoot
@@ -534,7 +586,9 @@ function mountUp(id){
   if((player.mntCd||0)>0) return false;
   // a flyer you own but have not earned the sky for stays in the stable
   if(d.fly && !mountFlyOk()){
-    if(typeof msg==='function') msg('NOT YET','flight is earned at level '+MOUNT_FLY_LV);
+    if(typeof msg==='function') msg('NOT YET', mountFlyLevelOk()
+      ? 'the stablemaster sells the flight lesson'
+      : 'flight is earned at level '+MOUNT_FLY_LV);
     return false; }
   if(!mountAllowedHere()){ if(typeof msg==='function') msg('NOT HERE','you cannot mount in a fight'); return false; }
   player.mntCast=MOUNT_CAST; player.mntCastId=d.id;
@@ -871,12 +925,55 @@ function paintStable(){
 
   if(cnt) cnt.innerHTML= mountUnlocked()
     ? '<span class="purse">'+owned.length+' of '+MOUNT_DB.length+' mounts stabled</span>'
-    : '<span class="purse">The stablemaster turns you away — reach level '+MOUNT_LV+'</span>';
+    : (mountLevelOk()
+        ? '<span class="purse">You have the level. You have not had the lesson.</span>'
+        : '<span class="purse">The stablemaster turns you away — reach level '+MOUNT_LV+'</span>');
 
   list.innerHTML='';
+
+  // ---- THE LESSON SHELF ----
+  // Drawn ABOVE the stalls and only while something is still unlearned, so a rider who has both
+  // books never sees it again. It is the first thing in the panel because until you have the first
+  // book the rest of the panel does nothing.
+  const shelf=document.createElement('div');
+  shelf.className='lessonShelf';
+  let anyLesson=false;
+  for(const id of ['ride','fly']){
+    const d=LESSONS[id]; if(!d || lessonKnown(id)) continue;
+    anyLesson=true;
+    const lvOk=lessonLevelOk(id), pre=(id==='fly'&&!lessonKnown('ride'));
+    const glory=(typeof accountGlory==='function')?accountGlory():0;
+    const afford=glory>=d.cost;
+    const card=document.createElement('div');
+    card.className='shopcard lesson'+((lvOk&&afford&&!pre)?'':' broke');
+    const ico=document.createElement('div'); ico.className='shopico emoji';
+    ico.textContent=(id==='fly')?'\uD83E\uDEB6':'\uD83D\uDCD6';
+    card.appendChild(ico);
+    const txt=document.createElement('div'); txt.className='shoptext';
+    const why = pre ? 'learn to ride first'
+              : !lvOk ? ('needs level '+d.lv)
+              : !afford ? ('you have '+glory+'\u2726')
+              : d.d;
+    txt.innerHTML='<div class="shopname">'+d.n+'</div><div class="shopdesc">'+why+'</div>';
+    card.appendChild(txt);
+    const pr=document.createElement('div'); pr.className='shopprice';
+    pr.textContent=d.cost+'\u2726';
+    card.appendChild(pr);
+    card.onclick=()=>{
+      const r=learnLesson(id);
+      if(typeof msg==='function') msg(r.ok?'LESSON LEARNED':'NOT YET', r.why);
+      paintStable();
+      if(typeof updateHudMount==='function') updateHudMount();
+    };
+    shelf.appendChild(card);
+  }
+  if(anyLesson) list.appendChild(shelf);
+
   if(!mountUnlocked()){
     const d=document.createElement('div'); d.className='mnote';
-    d.textContent='Mounts are for riders who have crossed the bridge. Reach level '+MOUNT_LV+' and come back.';
+    d.textContent = mountLevelOk()
+      ? 'Buy the riding lesson above and the stalls open to you.'
+      : 'Mounts are for riders who have crossed the bridge. Reach level '+MOUNT_LV+' and come back.';
     list.appendChild(d);
   } else if(!owned.length){
     const d=document.createElement('div'); d.className='mnote';

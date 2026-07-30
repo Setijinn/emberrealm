@@ -15,7 +15,7 @@
     row('LV_CAP', LV_CAP);
     row('ASCEND_LV', ASCEND_LV);
     row('MOUNT_LV (stable opens)', typeof MOUNT_LV!=='undefined'?MOUNT_LV:'n/a');
-    row('MOUNT_FLY_LV (declared, unbuilt)', typeof MOUNT_FLY_LV!=='undefined'?MOUNT_FLY_LV:'n/a');
+    row('MOUNT_FLY_LV (built; the gate to island C)', typeof MOUNT_FLY_LV!=='undefined'?MOUNT_FLY_LV:'n/a');
 
     say('');
     say('--- XP curve ---');

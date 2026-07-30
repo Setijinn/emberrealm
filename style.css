@@ -152,8 +152,12 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    Locking the card to the art's own aspect and paying every inset as a fraction of it is what the
    vault already proved, so the stable does the same and inherits the phone sizes with it. */
 #stableScr>#shopCard{
-  --vH: min(94vh, calc(var(--pinW) * 600 / 448));
-  --vW: calc(var(--vH) * 448 / 600);
+  /* SIZED FROM THE VIEWPORT, NOT FROM THE ART'S ASPECT -- see #shopCard for the reasoning. Pinned
+     to 448:600 this panel was a 263px column on a sideways phone with two thirds of the screen
+     black beside it. The frame's inset is a fraction of each rendered axis, so it survives being
+     stretched; the layout inside is sized in --u and scales with it. */
+  --vH: min(94vh, 620px);
+  --vW: min(94vw, 760px);
   --u:  calc(var(--vH) / 100);
   width:var(--vW); height:var(--vH); max-height:none;
 }
@@ -616,9 +620,130 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 /* ---------- shop UI ---------- */
 #shopScr{gap:0;}
 /* ornate shop panel (reuses the equipment window frame) */
-#shopCard{width:min(95vw,432px);max-height:94vh;display:flex;padding:0;
- background:url(assets/ui/equip_panel.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
-#shopInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:46px 40px 44px;display:flex;flex-direction:column;}
+/* THE CONTENT HAS TO SIT INSIDE THE CARVED BORDER, and it did not.
+   equip_panel.png is 448x600 painted at `background-size:100% 100%`, so its ornate frame is a
+   PERCENTAGE inset of whatever box it is stretched to -- about 16.5% top, 18% bottom, 16% each side.
+   #shopInner padded a fixed 46/40/44px, which matches that art at exactly one card size and nowhere
+   else: at 432px wide the sides needed ~69px and had 40, so every row and every button in the
+   bounty board, the auction and the diamond exchange ran out over the woodwork.
+   In percent it is right at every size, because it is the same kind of measurement as the art.
+   AND THE CARD IS BIGGER. 432px was a phone's cap applied to every screen -- a third of a 1280px
+   window, with the frame's usable field a third of THAT. 560px still fits a 667px phone at 95vw. */
+/* THE CARD PINS TO ITS ART, the same way the stable, the Vault and the forge already do -- and for
+   the same reason, which this panel had been paying for the whole time.
+   equip_panel.png is 448x600 painted at `background-size:100% 100%`, so its ornate frame is a
+   PERCENTAGE inset of whatever box it is stretched to: ~16.5% top, 18% bottom, 16% each side.
+   #shopInner padded a fixed 46/40/44px, which matches that art at exactly ONE card size -- at 432px
+   wide the sides needed ~69px and had 40, so every row and every button in the bounty board, the
+   auction and the diamond exchange ran out over the woodwork.
+   PLAIN PERCENTAGES DO NOT FIX IT and that was the first attempt: CSS resolves percentage padding
+   against the WIDTH on all four sides, so a card wider than it is tall gets a top padding of 16.5%
+   OF ITS WIDTH and the content is crushed into a strip. The frame's inset is a fraction of each axis
+   independently, which is what pinning the aspect makes expressible.
+   The width cap is --pinW (620px), shared with the other three: 432px was a phone's cap applied to
+   every screen -- a third of a 1280px window, with the frame's usable field a third of THAT. */
+/* THE CARD FILLS THE SCREEN SIDEWAYS (user, 2026-07-30: "let's stretch it to fill the screen on
+   mobile -- holding the phone sideways").
+   Pinning to the art's 448:600 gave a 263x352 column on a 667x375 phone -- a narrow strip with two
+   thirds of the screen black either side of it, on the one orientation this game runs in. The frame
+   does not need the pin: equip_panel.png is painted at `background-size:100% 100%`, so its border is
+   16.5%/18% of the rendered HEIGHT and 16% of the rendered WIDTH whatever box it is stretched into,
+   and the padding below is written as exactly that. Sizing the box from the viewport keeps the inset
+   correct and lets the panel be the shape of the screen it is on.
+   The caps stop a desktop from getting a 1200px-wide bounty list; 94vw/94vh bind on any phone. */
+#shopCard{
+  --vH: min(94vh, 620px);
+  --vW: min(94vw, 760px);
+  --u:  calc(var(--vH) / 100);
+  width:var(--vW); height:var(--vH); max-height:none; display:flex; padding:0;
+  background:url(assets/ui/equip_panel.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
+/* THE WAY OUT IS A SMALL X IN THE CORNER (user, 2026-07-30), not a full-width LEAVE bar at the
+   bottom. Three things wrong with the bar, and the card being pinned to its frame made all three
+   worse: it is `width:min(78vw,300px)` on a content box that is 177px wide at phone size, so it hung
+   out over the carved border; it ate ~45px of a 352px card, which is the height the bounty rows
+   needed; and it put the commonest action furthest from the thumb.
+   The DOM is untouched -- every closeX handler still binds the same button by the same id. The label
+   is hidden with font-size:0 and an ::after draws the glyph, so nothing in the JS has to know. */
+#shopCard{ position:relative; }
+/* THE SELECTORS CARRY THEIR PANEL'S ID TOO. `#forgeClose{font-size:0}` is one id, and
+   `#forgeScr .mbtn{font-size:calc(var(--u)*2.0)}` further down is an id plus a class -- so the label
+   won and the corner button rendered as "EAVE X", the LEAVE text spilling out beside the glyph.
+   Matching the panel as well makes these two ids, which beats every per-panel button rule. */
+#shopScr #shopClose,#aucScr #aucClose,#bntScr #bntClose,#dmdScr #dmdClose,#wrdScr #wrdClose,
+#vaultScr #vaultClose,#stableScr #stableClose,#forgeScr #forgeClose{
+  position:absolute; z-index:3;
+  /* INSIDE THE CARVED FIELD, not on the woodwork. The frame's inset is 16.5% top and 16% side, so
+     anything above that is sitting on the metal corner bracket -- which is where the first attempt
+     put it, half of it hanging off the top edge of the panel entirely. Then 5% farther out again
+     (user), which tucks it into the corner of the field and stops it crowding the title: at 18.5%
+     it sat close enough that "THE BOUNTY BOARD" wrapped onto two lines to get around it. */
+  top:calc(var(--vH)*0.135); right:calc(var(--vW)*0.130);
+  width:calc(var(--u)*8.5); height:calc(var(--u)*8.5); min-width:0; min-height:0;
+  padding:0; margin:0; border-radius:calc(var(--u)*2.2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0; line-height:0;
+  background:rgba(23,20,29,.92); border:1px solid #5a4326; color:#e8dcc0;
+}
+#shopScr #shopClose::after,#aucScr #aucClose::after,#bntScr #bntClose::after,
+#dmdScr #dmdClose::after,#wrdScr #wrdClose::after,#vaultScr #vaultClose::after,
+#stableScr #stableClose::after,#forgeScr #forgeClose::after{
+  content:'\2715'; font-size:calc(var(--u)*4.4); line-height:1; color:inherit;
+}
+#shopScr #shopClose:active,#aucScr #aucClose:active,#bntScr #bntClose:active,
+#dmdScr #dmdClose:active,#wrdScr #wrdClose:active,#vaultScr #vaultClose:active,
+#stableScr #stableClose:active,#forgeScr #forgeClose:active{ background:#e07a2e; color:#0b0a10; }
+/* THE FORGE KEEPS ITS FOOTER, because FORGE IT is the action and a lone button reads better centred
+   than orphaned beside a gap where LEAVE used to be. */
+#forgeScr .mbtn.go{ margin-left:auto; margin-right:auto; }
+
+/* EVERYTHING INSIDE SHRINKS SLIGHTLY (user, 2026-07-30). The card is pinned to its art now, so its
+   content box is 177px wide on a phone -- and the row text was still at its desktop 14/11px, which
+   wrapped "Fell 22 creatures" onto three lines and pushed a two-bounty list past the frame. Sized in
+   --u (a hundredth of the card's own height) it scales with the panel instead of fighting it, which
+   is the same thing the stable, the Vault and the forge already do with their own contents. */
+/* the title keeps clear of the X on BOTH sides, so it stays centred in the field rather than being
+   pushed off-centre by a button in one corner */
+/* A SMALL SYMMETRIC INSET, now that the X is tucked into the frame's corner rather than sitting in
+   the field. 10u each side was reserving room for a button that is no longer there, and it left
+   "THE BOUNTY BOARD" 117px of a 177px box -- so the title wrapped onto two lines to fit a gap. */
+/* SYMMETRIC CLEARANCE FOR THE X, and a title small enough to live inside it. The X is pinned to the
+   CARD's corner, so it reaches about 22px into the content box on a phone -- with 2u of padding
+   "THE BOUNTY BOARD" ran straight under it and lost its D. Padding both sides keeps the title
+   centred in the field rather than shoved left by a button in one corner. */
+#shopInner #shopTitle{ font-size:calc(var(--u)*4.3); margin-bottom:calc(var(--u)*1.0);
+  padding:0 calc(var(--u)*7); line-height:1.15; }
+#shopInner .mnote{ font-size:calc(var(--u)*2.6); line-height:1.25; }
+#shopInner .purse{ font-size:calc(var(--u)*3.4); padding:calc(var(--u)*0.9) calc(var(--u)*2.6); }
+#shopInner .shopcard{ gap:calc(var(--u)*2.4); padding:calc(var(--u)*1.8) calc(var(--u)*2.4);
+  border-radius:calc(var(--u)*2.6); }
+#shopInner .shopico{ width:calc(var(--u)*10); height:calc(var(--u)*9);
+  border-radius:calc(var(--u)*2.0); }
+#shopInner .shopico.emoji{ font-size:calc(var(--u)*4.8); }
+#shopInner .shopico .isprite{ width:calc(var(--u)*8.6); height:calc(var(--u)*7.4); }
+#shopInner .shopname{ font-size:calc(var(--u)*3.3); }
+#shopInner .shopdesc{ font-size:calc(var(--u)*2.5); margin-top:calc(var(--u)*0.4); }
+#shopInner .shopprice{ font-size:calc(var(--u)*3.0); }
+
+#shopInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;
+  padding: calc(var(--vH)*0.165) calc(var(--vW)*0.160) calc(var(--vH)*0.180);}
+/* THE CHROME DOES NOT SHRINK; THE LIST DOES.
+   #shopInner is a flex column, and flex items shrink by default. On a 375px-tall phone the bounty
+   board and the diamond exchange squeezed their LEAVE button to a few pixels while their row lists
+   kept their full height, so the button's label rendered outside its own box and sat on top of the
+   rows above it -- caught by _fitaudit's collision pass as "Fell 2 world bosses" over "LEAVE".
+   The title, the purse line, the note and the button are fixed chrome and are pinned; the LIST is
+   the only thing allowed to give, and it gets its own scroller (min-height:0 is what actually lets a
+   flex item shrink below its content -- without it the rule does nothing).
+   Every panel built on #shopCard gets this, not just the two that were caught: the same layout is
+   one row of content away from the same fault. */
+#shopInner>#shopTitle,#shopInner>.mnote,#shopInner>.mbtn,
+#shopInner>#bntBanked,#shopInner>#dmdPurse,#shopInner>#vaultCount,
+#shopInner>#aucNote,#shopInner>#wrdNote{ flex:0 0 auto; }
+#bntRows,#dmdRows,#wrdRows,#aucRows{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; }
+#bntRows::-webkit-scrollbar,#dmdRows::-webkit-scrollbar,#wrdRows::-webkit-scrollbar,
+#aucRows::-webkit-scrollbar{width:5px;}
+#bntRows::-webkit-scrollbar-thumb,#dmdRows::-webkit-scrollbar-thumb,
+#wrdRows::-webkit-scrollbar-thumb,#aucRows::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
 #shopInner::-webkit-scrollbar{width:5px;} #shopInner::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
 #shopTitle{font-family:'Pixelify Sans',monospace;font-size:19px;color:#ffce7a;text-align:center;text-shadow:0 2px 3px #000;letter-spacing:.04em;margin-bottom:4px;}
 #shopGold{margin-bottom:10px;text-align:center;}
@@ -646,10 +771,25 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 /* bounty board + diamond exchange reuse the shop card; these are the only additions.
    The exchange lists packs AND the whole catalogue, which is long enough to run past the frame's
    ornate border, so the LIST scrolls inside the panel rather than the panel growing to fit it. */
+/* NO max-height:56vh. A fraction of the VIEWPORT cannot know how much room is left inside a CARD
+   that is itself capped at 94vh minus its frame inset and its own pinned chrome. On a 375px-tall
+   phone 56vh is 210px, the chrome needs ~135, and the card only has 263 -- so the list overran the
+   LEAVE button and the two drew on top of each other. `flex:1 1 auto; min-height:0` above says the
+   same thing correctly: the list takes exactly what is left, at any viewport. min-height:0 is the
+   part that matters -- without it a flex item refuses to shrink below its content and the rule is
+   inert. */
 #bntRows,#dmdRows,#wrdRows{display:flex;flex-direction:column;width:100%;gap:7px;padding:2px 0;margin-bottom:8px;
- max-height:56vh;overflow-y:auto;overflow-x:hidden;}
+ overflow-y:auto;overflow-x:hidden;}
 #dmdRows::-webkit-scrollbar,#wrdRows::-webkit-scrollbar,#bntRows::-webkit-scrollbar{width:5px;}
 #dmdRows::-webkit-scrollbar-thumb,#wrdRows::-webkit-scrollbar-thumb,#bntRows::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
+/* THE LESSON SHELF at the top of the stable. A row of shopcards rather than a bespoke widget,
+   because they ARE purchases and the player has met that row in four other panels. It is removed
+   entirely once both books are read -- a shelf of things you already own is furniture. */
+.lessonShelf{display:flex;flex-direction:column;gap:7px;width:100%;margin-bottom:9px;}
+.shopcard.lesson{border-color:#5a4326;background:linear-gradient(180deg,#241d14,#17120c);}
+.shopcard.lesson .shopname{color:#ffd07a;}
+.shopcard.lesson .shopprice{color:#ffc94d;}
+.shopcard.lesson.broke{opacity:.55;}
 .shopcard.ready{border-color:#7dc47a;background:linear-gradient(180deg,#16241a,#101a13);}
 .shopcard.ready .shopprice{color:#7dc47a;}
 .bntBar{margin-top:5px;height:5px;background:#0f0c14;border:1px solid #2a2433;border-radius:4px;overflow:hidden;}
@@ -793,6 +933,39 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
  #devBody{max-height:44vh;}
  #devBody .dgrid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr));}
 }
+/* THE WORKBENCH FILLS THE SCREEN AND CLOSES WITH AN X (user, 2026-07-30: "do the same thing with
+   the dev menu"). RESUME GAME was a full-width bar at the BOTTOM of four screens of scrolling --
+   to leave the panel you first had to scroll to the end of it. It is the same X the other panels
+   use now, in the same corner, always visible.
+   The panel itself is a plain .scr rather than a framed card, so "fill the screen" here means
+   dropping the fixed widths: #devTabs and #devBody were min(96vw,860px), which on a 1280px desktop
+   left 400px of empty gutter beside a list that was scrolling. */
+#devScr{ position:relative; }
+#devScr #dResume{
+  position:absolute; z-index:4; top:calc(6px + env(safe-area-inset-top,0px)); right:8px;
+  width:34px; height:34px; min-width:0; min-height:0; padding:0; margin:0; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0; line-height:0; background:rgba(23,20,29,.92); border:1px solid #5a4326; color:#e8dcc0;
+}
+#devScr #dResume::after{ content:'\2715'; font-size:17px; line-height:1; }
+#devScr #dResume:active{ background:#e07a2e; color:#0b0a10; }
+#devTabs,#devBody,#devLog{ width:min(98vw,1400px); }
+
+/* A SECTION IS A DROPDOWN. The summary carries the same look the .msub header had, plus a marker
+   that says which way it is going -- a fold with no affordance reads as a heading that lost its
+   content. */
+.dvSec{ width:100%; border-top:1px solid #2a2433; margin-top:6px; }
+.dvSec>summary{
+  list-style:none; cursor:pointer; user-select:none;
+  font-family:'Pixelify Sans',monospace; font-size:12px; letter-spacing:.14em; color:#c9a04a;
+  padding:8px 4px 6px; display:flex; align-items:center; gap:8px; min-height:34px;
+}
+.dvSec>summary::-webkit-details-marker{ display:none; }
+.dvSec>summary::before{ content:'\25B8'; font-size:11px; color:#7a6a4a; transition:transform .12s; }
+.dvSec[open]>summary::before{ transform:rotate(90deg); }
+.dvSec>summary:active{ color:#ffc94d; }
+.dvSec[open]{ padding-bottom:6px; }
+
 /* ---- THE WORKBENCH ON A PHONE, WHICH MEANS LANDSCAPE -----------------------------------------
    EmberRealm refuses to run in portrait -- there is a "turn your phone sideways" gate -- so the
    only phone geometry that matters is a SHORT, WIDE one: 844x390, not 390x844. Every dev-panel
@@ -872,8 +1045,12 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
         left over, showing fewer rows and scrolling. Nothing is allowed to push the panel taller
         than its own frame at any size. */
 #vaultScr>#shopCard{
-  --vH: min(94vh, calc(var(--pinW) * 600 / 448));
-  --vW: calc(var(--vH) * 448 / 600);
+  /* SIZED FROM THE VIEWPORT, NOT FROM THE ART'S ASPECT -- see #shopCard for the reasoning. Pinned
+     to 448:600 this panel was a 263px column on a sideways phone with two thirds of the screen
+     black beside it. The frame's inset is a fraction of each rendered axis, so it survives being
+     stretched; the layout inside is sized in --u and scales with it. */
+  --vH: min(94vh, 620px);
+  --vW: min(94vw, 760px);
   --u:  calc(var(--vH) / 100);
   width:var(--vW); height:var(--vH); max-height:none;
 }
@@ -1024,8 +1201,12 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
    section headers sat on top of the strips. Nothing in here is allowed to push the panel taller
    than its own border at any viewport. */
 #forgeScr>#shopCard{
-  --vH: min(94vh, calc(var(--pinW) * 600 / 448));
-  --vW: calc(var(--vH) * 448 / 600);
+  /* SIZED FROM THE VIEWPORT, NOT FROM THE ART'S ASPECT -- see #shopCard for the reasoning. Pinned
+     to 448:600 this panel was a 263px column on a sideways phone with two thirds of the screen
+     black beside it. The frame's inset is a fraction of each rendered axis, so it survives being
+     stretched; the layout inside is sized in --u and scales with it. */
+  --vH: min(94vh, 620px);
+  --vW: min(94vw, 760px);
   --u:  calc(var(--vH) / 100);
   width:var(--vW); height:var(--vH); max-height:none;
 }

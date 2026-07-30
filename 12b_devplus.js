@@ -92,6 +92,7 @@ function _dvDrawBoss(c,ring,dungeonForm){
 const DEV_TABS=[
  ['sacks','SACKS'], ['relics','RELICS'], ['items','ITEMS'], ['forge','FORGE'], ['flasks','FLASKS'],
  ['bosses','BOSSES'], ['anim','ANIMATION'], ['mobs','ENEMIES'], ['world','WORLD'],
+ ['mounts','MOUNTS'], ['travel','TRAVEL'],
  ['levels','LEVELS'], ['ui','UI / FX'], ['bal','BALANCE'],
 ];
 function devPaintTabs(){
@@ -106,6 +107,46 @@ function devPaintTabs(){
 function devPaintBody(){
   const B=$s('devBody'); if(!B) return; B.innerHTML='';
   const fn=DEV_PANE[_devTab]; if(fn) fn(B);
+  _dvFold(B);
+}
+// ---- EVERY SECTION BECOMES A DROPDOWN (user, 2026-07-30) ------------------------------------
+// The workbench is ~500 controls across ten tabs, and a tab was four screens of scrolling on a
+// phone: you hunted for a heading, and the heading you wanted was usually the one just above or
+// below the fold. Folded, a tab is a list of a dozen labels and you open the one you want.
+//
+// DONE AS A POST-PASS OVER WHAT THE PANE ALREADY BUILT, not by rewriting ten panes. Every pane emits
+// a flat run of siblings -- a `.msub` header, then the grids and notes that belong to it, then the
+// next `.msub` -- so the structure is already there implicitly and this just makes it real. A new
+// pane written tomorrow gets dropdowns for free, which is the same rule the species and relic lists
+// follow: read the live tables, do not maintain a parallel copy.
+//
+// OPEN STATE SURVIVES A REPAINT. Every dev button repaints the body, so without this the section
+// you were working in would slam shut the moment you pressed anything in it.
+const _dvOpen={};
+function _dvFold(B){
+  if(!B) return;
+  const kids=[...B.children];
+  let cur=null, first=true;
+  for(const el of kids){
+    if(el.classList && el.classList.contains('msub')){
+      const name=(el.textContent||'').trim();
+      const d=document.createElement('details');
+      d.className='dvSec';
+      const sm=document.createElement('summary');
+      sm.textContent=name;
+      d.appendChild(sm);
+      // remembered if we have seen it; otherwise the first section of a tab starts open so the
+      // pane never reads as empty
+      const key=_devTab+'|'+name;
+      d.open=(key in _dvOpen)?_dvOpen[key]:first;
+      d.addEventListener('toggle',()=>{ _dvOpen[key]=d.open; });
+      B.insertBefore(d,el);
+      el.remove();
+      cur=d; first=false;
+      continue;
+    }
+    if(cur) cur.appendChild(el);     // everything after a header belongs to it
+  }
 }
 const DEV_PANE={};
 
@@ -841,3 +882,134 @@ function devKillabilitySweep(){
 // openDev (12_devpanel.js) calls devPaintPlus() at the end -- wrapping the function here would not
 // work, because the dev BUTTON captured the original reference when it bound its listener.
 function devPaintPlus(){ devPaintTabs(); devPaintBody(); }
+
+
+// ---------------------------------- MOUNTS ---------------------------------------------------
+// Flight is the gate on island C, and until now the only way to test it was to reach Lv40 and hope a
+// flyer dropped. Every button here goes through the SHIPPED functions -- giveMount, mountUp,
+// dismount, mountFlyOk -- so what it exercises is what a player gets, not a parallel path.
+DEV_PANE.mounts=function(B){
+  if(typeof MOUNT_DB==='undefined'){ B.appendChild(_dvNote('17k_mounts.js is not loaded.')); return; }
+  const u=(typeof mountStore==='function')?mountStore():null;
+  const owned=(u&&u.mounts)?Object.keys(u.mounts).length:0;
+  const flyers=MOUNT_DB.filter(m=>m.fly), ground=MOUNT_DB.filter(m=>!m.fly);
+  B.appendChild(_dvNote(MOUNT_DB.length+' species ('+ground.length+' ground, '+flyers.length
+    +' flying) · you own '+owned
+    +' · RIDING: level '+(mountLevelOk()?'ok':'no')+', book '+(lessonKnown('ride')?'read':'unread')
+    +' \u2192 '+(mountUnlocked()?'ALLOWED':'BLOCKED')
+    +' · FLIGHT: level '+(mountFlyLevelOk()?'ok':'no')+', book '+(lessonKnown('fly')?'read':'unread')
+    +' \u2192 '+(mountFlyOk()?'ALLOWED':'BLOCKED')));
+
+  B.appendChild(_dvHd('THE LESSON BOOKS'));
+  B.appendChild(_dvNote('Riding and flight are BOUGHT from the stablemaster now, on top of the level gates. These grant and revoke the books without paying, so both sides of the gate can be tested.'));
+  const gl=_dvGrid();
+  for(const id of ['ride','fly']){
+    const d=LESSONS[id];
+    gl.appendChild(_dvBtn((lessonKnown(id)?'\u2713 ':'')+'Learn: '+d.n,()=>{
+      const L=lessonStore(); if(!L) throw new Error('no account loaded');
+      L[id]=1; saveUsers&&saveUsers(); devLog('learned '+d.n); devPaintBody(); }));
+  }
+  gl.appendChild(_dvBtn('Forget BOTH lessons',()=>{
+    const L=lessonStore(); if(!L) throw new Error('no account loaded');
+    delete L.ride; delete L.fly; saveUsers&&saveUsers();
+    devLog('lessons forgotten — mountUnlocked() '+mountUnlocked()+', mountFlyOk() '+mountFlyOk());
+    devPaintBody(); }));
+  gl.appendChild(_dvBtn('Give 10000 glory',()=>{
+    const u=users[curUser]; if(!u) throw new Error('no account loaded');
+    u.glory=(u.glory|0)+10000; saveUsers&&saveUsers(); devLog('glory = '+u.glory); }));
+  B.appendChild(gl);
+
+  B.appendChild(_dvHd('THE FLIGHT GATE'));
+  const g1=_dvGrid();
+  g1.appendChild(_dvBtn('Unlock flight (set mountLv '+MOUNT_FLY_LV+')',()=>{
+    const st=mountStore(); if(!st) throw new Error('no account loaded');
+    st.mountLv=Math.max(st.mountLv|0, MOUNT_FLY_LV); saveUsers&&saveUsers();
+    devLog('mountLv = '+st.mountLv+' — mountFlyOk() is now '+mountFlyOk()); devPaintBody(); }));
+  g1.appendChild(_dvBtn('RE-LOCK flight (mountLv 0)',()=>{
+    const st=mountStore(); if(!st) throw new Error('no account loaded');
+    st.mountLv=0; saveUsers&&saveUsers();
+    devLog('mountLv = 0 — mountFlyOk() is now '+mountFlyOk()); devPaintBody(); }));
+  g1.appendChild(_dvBtn('Can I mount HERE?',()=>{
+    const ok=(typeof mountAllowedHere==='function')?mountAllowedHere():'?';
+    devLog('mountAllowedHere() = '+ok+(ok?'':' — aggro or terrain is refusing')); }));
+  g1.appendChild(_dvBtn('Dismount',()=>{ if(typeof dismount==='function') dismount('dev'); devLog('dismount()'); }));
+  B.appendChild(g1);
+
+  B.appendChild(_dvHd('GIVE ONE'));
+  B.appendChild(_dvNote('Every species, ground first. A flyer still refuses to be ridden until the gate above is open — that refusal is the thing worth testing.'));
+  const g2=_dvGrid();
+  for(const m of ground.concat(flyers)){
+    g2.appendChild(_dvBtn((m.fly?'\u2708 ':'')+ (m.n||m.id), ()=>{
+      if(!giveMount(m.id)) throw new Error('giveMount refused '+m.id);
+      devLog('gave '+(m.n||m.id)+(m.fly?' (flyer)':'')); }));
+  }
+  B.appendChild(g2);
+
+  B.appendChild(_dvHd('GIVE MANY'));
+  const g3=_dvGrid();
+  g3.appendChild(_dvBtn('Give EVERY ground mount',()=>{ let n=0;
+    for(const m of ground) if(giveMount(m.id)) n++; devLog('gave '+n+' ground mounts'); }));
+  g3.appendChild(_dvBtn('Give EVERY flyer',()=>{ let n=0;
+    for(const m of flyers) if(giveMount(m.id)) n++; devLog('gave '+n+' flyers'); }));
+  g3.appendChild(_dvBtn('Give one flyer + unlock',()=>{
+    const st=mountStore(); if(!st) throw new Error('no account loaded');
+    st.mountLv=Math.max(st.mountLv|0, MOUNT_FLY_LV);
+    const f=flyers[0]; giveMount(f.id); saveUsers&&saveUsers();
+    devLog('gave '+(f.n||f.id)+' and unlocked flight — you can cross to island C'); devPaintBody(); }));
+  g3.appendChild(_dvBtn('Ride the first flyer I own',()=>{
+    const st=mountStore(); if(!st||!st.mounts) throw new Error('no account loaded');
+    const id=Object.keys(st.mounts).filter(k=>mountIsFlyer(k))[0];
+    if(!id) throw new Error('you own no flyer — give one first');
+    mountUp(id); devLog('mountUp('+id+')'); }));
+  B.appendChild(g3);
+};
+
+// ---------------------------------- TRAVEL ---------------------------------------------------
+// Three islands, fifteen provinces and a world 3700 tiles across. Walking to the place you want to
+// test is minutes of holding one direction, and island C cannot be walked to at all.
+DEV_PANE.travel=function(B){
+  const G=(typeof rooms!=='undefined')?rooms['G']:null;
+  if(!G||!G.rings){ B.appendChild(_dvNote('the overworld is not built')); return; }
+  const RG=G.rings, Z=RG.zones||[], SD=RG.seeds||[];
+  B.appendChild(_dvNote('Drops you at a province seed through the same safeSpot() the waypoints use. Island C is flight-only for a PLAYER; this ignores that on purpose, so the ground can be tested without farming a mount first.'));
+
+  B.appendChild(_dvHd('WAYPOINTS'));
+  const gw=_dvGrid();
+  gw.appendChild(_dvBtn('Attune EVERY waypoint',()=>{
+    let n=0; for(const pl of (G.pillars||[])){ if(!pillarUnlocked(pl)){ unlockPillar(pl); n++; } }
+    devLog('attuned '+n+' waypoints ('+(G.pillars||[]).length+' total)'); }));
+  gw.appendChild(_dvBtn('Forget every waypoint',()=>{
+    try{ localStorage.removeItem('er-pillars-v2'); localStorage.removeItem('er-pillars'); }catch(e){}
+    _pillarSet=null; devLog('waypoints cleared'); }));
+  gw.appendChild(_dvBtn('Open every lair gate',()=>{
+    const n=(typeof GBOSS!=='undefined')?GBOSS.length:0; let k=0;
+    for(let i=0;i<n;i++) if(openDen(i)) k++; devLog('opened '+k+' dens'); }));
+  gw.appendChild(_dvBtn('Reveal the whole map',()=>{
+    if(typeof fogReveal!=='function') throw new Error('no fog');
+    const _x=player.x, _y=player.y;
+    for(let y=20;y<G.h;y+=18) for(let x=20;x<G.w;x+=18){
+      player.x=(x+0.5)*TILE; player.y=(y+0.5)*TILE; fogReveal(G,0.2); }
+    player.x=_x; player.y=_y; devLog('fog cleared across '+G.w+'x'+G.h); }));
+  B.appendChild(gw);
+
+  const ISLE_NAME=['ISLAND A · Lv1-20 · the starter',
+                   'ISLAND B · Lv20-40 · across the bridge',
+                   'ISLAND C · Lv40-50 · FLIGHT ONLY'];
+  for(let isle=0; isle<3; isle++){
+    B.appendChild(_dvHd(ISLE_NAME[isle]));
+    const g=_dvGrid();
+    for(let i=0;i<Z.length;i++){
+      if((Z[i].isle|0)!==isle) continue;
+      const sd=SD[i]||[0,0], z=Z[i];
+      g.appendChild(_dvBtn(z.n+'  Lv'+z.lv+(z.lv2!==z.lv?('-'+z.lv2):''),()=>{
+        if(typeof devTeleport==='function' && curRoom!==G) devTeleport('G');
+        const sp=(typeof safeSpot==='function')?safeSpot(G,(sd[0]+0.5)*TILE,(sd[1]+0.5)*TILE)
+                                              :{x:(sd[0]+0.5)*TILE,y:(sd[1]+0.5)*TILE};
+        player.x=sp.x; player.y=sp.y;
+        if(typeof enemies!=='undefined') enemies=enemies.filter(e=>e.boss);
+        devLog('warped to '+z.n+' ('+sd[0]+','+sd[1]+') — Lv'
+          +((typeof grvLvAt==='function')?Math.round(grvLvAt(player.x/TILE,player.y/TILE)):'?')); }));
+    }
+    B.appendChild(g);
+  }
+};
