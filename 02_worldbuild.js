@@ -83,11 +83,45 @@ function gSetIsle(R,x,y,id){
   const i=y*R.w+x;
   R.cells[i]=(R.cells[i]&T_MASK)|((id&7)<<T_ISLE_SH);
 }
+// WHICH ISLAND A TILE IS ON, from the geometry the generator emitted. Islands are disjoint discs
+// (island A is the baked slice west of ISLE_A_W), so this is a containment test and nothing more.
+//
+// WHY THIS IS COMPUTED HERE AND NOT SHIPPED. The alternative is a second parallel map of island ids,
+// which is another 6.3 MB to download and one more thing that can disagree with the tiles. The
+// answer is derivable from four numbers per island, and it is derived once, in the same pass that
+// was already touching every tile.
+//
+// NEAREST CENTRE, NOT FIRST DISC THAT CONTAINS IT.
+//
+// The first version tested each island's disc at a generous 1.45x radius and took the first hit,
+// with a comment claiming the discs were too far apart to overlap. They are not: the centres are
+// 1654 tiles apart and 1.45r + 1.45r is 2224, so B's generous disc reached 175 tiles INTO island C
+// -- and because B is listed first, C's whole western strip, including the province where flight
+// sets you down, was labelled island 1. _zoneAtRaw would then have searched island B's seeds for a
+// tile on island C: wrong province, wrong level band, wrong loot table, on the one island the
+// player can only reach by flying there. The selftest found it as "The Skyreach Shelf is not on
+// island C".
+//
+// Nearest centre cannot be ambiguous. The generous radius is kept as an OUTER BOUND only -- the
+// coastline noise pushes land past the nominal radius, so a tile just off the coast must still
+// answer with its own island rather than falling through to 0.
+function _isleIdFor(rings,x,y){
+  if(!rings||!rings.isles) return 0;
+  if(x<(typeof ISLE_A_W!=='undefined'?ISLE_A_W:352)) return 0;
+  let best=0, bd=1e18;
+  for(const I of rings.isles){
+    if(I.baked||I.cx==null) continue;
+    const dx=x-I.cx, dy=y-I.cy, d=dx*dx+dy*dy, rr=I.r*1.45;
+    if(d<=rr*rr && d<bd){ bd=d; best=I.id|0; }
+  }
+  return best;
+}
 // Pack an array of row STRINGS (or of char arrays) into a room's cells.
-function gPack(R,map){
+function gPack(R,map,rings){
   const h=map.length, w=(map[0]&&map[0].length)|0;
   R.w=w; R.h=h;
   const cells=new Uint8Array(w*h);
+  const isles=(rings&&rings.isles)?rings:null;
   for(let y=0;y<h;y++){
     const row=map[y]; const o=y*w;
     for(let x=0;x<w;x++){
@@ -96,7 +130,8 @@ function gPack(R,map){
       // An unknown character is the one thing worth being loud about: it means the alphabet above is
       // out of date, and leaving it as 0 would render as INVALID everywhere with no explanation.
       if(code===undefined){ if(typeof console!=='undefined') console.warn('gPack: unknown tile char '+JSON.stringify(c)+' at '+x+','+y); continue; }
-      cells[o+x]=code;
+      // the island id rides in bits 5-6 of the same byte, written in the same pass
+      cells[o+x]=isles ? (code|((_isleIdFor(isles,x,y)&7)<<T_ISLE_SH)) : code;
     }
   }
   R.cells=cells;
@@ -108,7 +143,7 @@ const rooms={};
 for(const key in ROOM_DEFS){
   const [rx,ry]=key.split(',').map(Number);
   rooms[key]={key,rx,ry,name:ROOM_DEFS[key].name, cleared:false, spawns:[]};
-  gPack(rooms[key], ROOM_DEFS[key].map);
+  gPack(rooms[key], ROOM_DEFS[key].map, ROOM_DEFS[key].rings);
 }
 const RW=40, RH=22;
 const _std=rm=>rm&&rm.w===RW&&rm.h===RH;       // only standard rooms auto-door

@@ -34,10 +34,54 @@ function dropCharData(u,ch){
 let curUser=null;
 
 // ---- teleport-pillar fast-travel ----
+// KEYED BY A STABLE ID, NOT BY BAND, AND THIS IS A SAVE MIGRATION.
+//
+// er-pillars was a set of BAND numbers, and every existing save that had walked the old rim contains
+// band 8. Island C's provinces are band 8 too -- so on the three-island world, anybody who had ever
+// reached the old Lv50 rim would have arrived with C's waypoint already attuned and could fast-travel
+// to the Lv40-50 flight-only island at Lv20. That is not a small exploit: it is the whole gate.
+//
+// A pillar's id is its province NAME, which is unique, is not an index, and survives a reindex. The
+// migration keeps what a player earned where it can: bands 0-7 mapped to exactly one province each on
+// the old world, so those convert. Band 8 did NOT -- it was five rim provinces sharing one number, and
+// there is no way to know which of them was attuned -- so it converts to the two island-B provinces
+// that inherited the old rim's levels and NOT to anything on island C. Erring toward the island the
+// player could actually walk to is the safe direction.
 let _pillarSet=null;
-function _pillars(){ if(!_pillarSet) _pillarSet=new Set(LS.get('er-pillars',[])); return _pillarSet; }
-function pillarUnlocked(b){ return _pillars().has(b); }
-function unlockPillar(b){ _pillars().add(b); LS.set('er-pillars',[..._pillarSet]); }
+const PILLAR_MIGRATED='er-pillars-v2';
+function pillarId(pl){ return (pl&&(pl.name||pl.id))||('band'+(pl&&pl.band)); }
+function _pillars(){
+  if(_pillarSet) return _pillarSet;
+  _pillarSet=new Set(LS.get(PILLAR_MIGRATED,null)||[]);
+  if(!LS.get(PILLAR_MIGRATED,null)){
+    const old=LS.get('er-pillars',[])||[];
+    const G=(typeof rooms!=='undefined')?rooms['G']:null;
+    const Z=(G&&G.rings&&G.rings.zones)||[];
+    for(const b of old){
+      if(b===8){
+        // the ambiguous one: give back the two island-B provinces that took the old rim's place
+        for(const z of Z) if(z.isle===1 && z.band===7) _pillarSet.add(z.n);
+        continue;
+      }
+      for(const z of Z) if(z.band===b && z.isle!==2) _pillarSet.add(z.n);
+    }
+    LS.set(PILLAR_MIGRATED,[..._pillarSet]);
+  }
+  return _pillarSet;
+}
+function pillarUnlocked(pl){
+  // accepts a pillar object, or a bare band number from any caller not yet converted
+  if(typeof pl==='number'){ const G=rooms['G'];
+    const hit=((G&&G.pillars)||[]).filter(p=>p.band===pl);
+    return hit.some(p=>_pillars().has(pillarId(p))); }
+  return _pillars().has(pillarId(pl));
+}
+function unlockPillar(pl){
+  if(typeof pl==='number'){ const G=rooms['G'];
+    for(const p of ((G&&G.pillars)||[])) if(p.band===pl) _pillars().add(pillarId(p));
+  } else _pillars().add(pillarId(pl));
+  LS.set(PILLAR_MIGRATED,[..._pillarSet]);
+}
 function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
 
 // ---- dens that stay open ----
@@ -122,7 +166,7 @@ function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=nu
       msg('THE RIFT RESISTS','Ascend to enter the awakened depths'); navigator.vibrate&&navigator.vibrate([20,40,20]); }
     else { enterDungeon(gp.ring); groundPortals.length=0; } }
   else if(p.kind==='pillar'){ const pl=p.pl;
-    if(!pillarUnlocked(pl.band)){ unlockPillar(pl.band); msg('WAYPOINT ATTUNED',pl.name); }
+    if(!pillarUnlocked(pl)){ unlockPillar(pl); msg('WAYPOINT ATTUNED',pl.name); }
     openFastTravel(); }
   navigator.vibrate&&navigator.vibrate(30);
 }
@@ -368,7 +412,19 @@ function bagTakeAll(){
   if(!left.length){ const k=loots.indexOf(lb); if(k>=0) loots.splice(k,1); saveRPG(); closeBagPanel(); return; }
   saveRPG(); paintBagPanel();     // satchel filled up — whatever is left stays in the sack
 }
-function travelTo(pl){ closeFastTravel(); const g=rooms['G']; const sp=safeSpot(g,pl.x,pl.y);
+// BELT AND BRACES ON THE FLIGHT GATE. The reachability fill proves you cannot WALK to island C; this
+// is the other way in. Even with the pillar rekey above, a waypoint on C is a teleport straight past
+// the gate the whole island is built around, so the destination is checked here as well -- one of
+// these two can be wrong without the island opening up.
+function travelTo(pl){
+  const g=rooms['G'];
+  if(g && typeof onFlyingIsleAt==='function' && onFlyingIsleAt((pl.x||0),(pl.y||0))
+     && typeof mountFlyOk==='function' && !mountFlyOk()){
+    closeFastTravel();
+    msg('NO WAY ACROSS','the Skyreach is reached by flight alone');
+    return;
+  }
+  closeFastTravel(); const sp=safeSpot(g,pl.x,pl.y);
   player.x=sp.x; player.y=sp.y; enemies=enemies.filter(e=>e.boss); portalLock=true; msg('WARPED',pl.name); }
 function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
   let ov=document.getElementById('ftScr');
@@ -379,7 +435,7 @@ function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
   const card=document.createElement('div');
   card.style.cssText='background:#1a151f;border:1px solid #4a3d5c;border-radius:12px;padding:18px;min-width:250px;max-width:90vw;text-align:center;';
   card.innerHTML='<div style="font:bold 15px monospace;color:#ffd07a;margin-bottom:12px;letter-spacing:.1em;">✦ WAYPOINTS ✦</div>';
-  for(const pl of G.pillars){ const un=pillarUnlocked(pl.band);
+  for(const pl of G.pillars){ const un=pillarUnlocked(pl);
     const b=document.createElement('button');
     const _zn=(G.rings&&G.rings.names&&G.rings.names[pl.band])||{lv:'?'};   // never let one bad pillar blank the list
     b.textContent=(un?'▸ ':'🔒 ')+pl.name+'  ·  Lv '+_zn.lv+((_zn.lv2&&_zn.lv2!==_zn.lv)?'–'+_zn.lv2:'');   // flat rim reads "Lv 50", not "Lv 50–50"
@@ -637,31 +693,51 @@ function tierCol(t){ return t>=SD_T?SD_COL:t>=RELIC_T?RELIC_COL:t>=11?'#ff9c50':
 // never has a hard wall, and the low zones deliberately stay generous -- gear should not be scarce
 // at the start, only at the top.
 const ZONE_TIERS=[
- // The starter island's four bands walk the ladder one tier per zone, T1 through T5. Splitting
- // Lv1-20 into four zones instead of three added a rung, so the seams are gentler than before.
- /* 0  The Landing Sands  Lv1-5   */ {pub:[[0,70],[1,30]],            sb:null,                      sbP:0,      gear:1.80},
- /* 1  Gullwind Shore     Lv6-10  */ {pub:[[1,65],[2,35]],            sb:null,                      sbP:0,      gear:1.80},
- /* 2  The Cairnworks     Lv11-15 */ {pub:[[2,60],[3,40]],            sb:null,                      sbP:0,      gear:1.80},
- /* 3  Sawgrass Flats     Lv16-20 */ {pub:[[3,60],[4,40]],            sb:null,                      sbP:0,      gear:1.80},
- /* 4  The Verdant Belt   Lv20-26 */ {pub:[[3,55],[4,45]],            sb:null,                      sbP:0,      gear:1.55},
- /* 5  Wolfwood           Lv26-32 */ {pub:[[4,50],[5,50]],            sb:null,                      sbP:0,      gear:1.55},
- /* 6  Deep Timber        Lv32-39 */ {pub:[[5,45],[6,55]],            sb:[[8,100]],                 sbP:0.0015, gear:1.30},
- /* 7  Stonebrow Rise     Lv39-45 */ {pub:[[6,40],[7,60]],            sb:[[8,70],[9,30]],           sbP:0.0030, gear:1.30},
- // Cinderwatch is the calibration point: a Lv45 hero should be able to stand in a full T12 set.
- // At a 5% T12 weight that took a 118-boss median to complete — the right shape but one notch too
- // slow, so T12 is worth a quarter of this zone's bound drops. The grind ring still leads it.
- /* 8  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045, gear:1.10},
- // NO ROW MAY NAME A TIER ABOVE 11 ANY MORE (user, 2026-07-29). These five rows used to carry
- // `[12,8]` because Scavenged Dreams was DROPPED here; SD is crafted-only now and index 12 is the
- // relic band, so leaving the entry in place would have paid RELICS out of the ordinary soulbound
- // channel on a rim trash kill -- the exact leak `pickWeighted`'s row-ceiling clamp was built to
- // close, walked straight through the front door by a stale literal. The rim's reason to exist after
- // a hero is fully geared is now the relic hunt in the ascended dungeons.
- /* 9  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 10 Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 11 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 12 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
- /* 13 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ // FIFTEEN ROWS, ONE PER PROVINCE, in the clump order 00c_worldgen.js emits: 0-3 island A,
+ // 4-10 island B, 11-14 island C. The ladder is re-laid across three islands rather than two:
+ //   A  Lv1-20   T1 -> T5      unchanged; the starter economy is not what this stage is changing
+ //   B  Lv20-40  T4 -> T11     seven provinces instead of five, so the rungs are gentler
+ //   C  Lv40-50  T11 -> T12    the endgame rim, and the only place T12 falls freely
+ //
+ // NO ROW MAY NAME A TIER ABOVE 11 (user, 2026-07-29). Index 12 is the relic band and 13 is
+ // Scavenged Dreams; both are crafted or dungeon-only. These rows used to carry `[12,8]` from when
+ // SD dropped on the rim, and leaving it would have paid RELICS out of the ordinary soulbound
+ // channel on a trash kill -- the exact leak pickWeighted's row-ceiling clamp exists to close,
+ // walked through the front door by a stale literal. _selftest asserts no row names 12 or 13.
+ //
+ //   pub  weighted tiers for the PUBLIC channel, capped at T8 -- any player in the area may take it
+ //   sb   weighted tiers for the SOULBOUND channel, T9+, rolled per player and lootable only by them
+ //   sbP  soulbound chance on a trash kill (elites x3; bosses roll one guaranteed, see rollLoot)
+ // Weights are [tierIndex(0-based), weight]. Bands overlap by one tier at each seam so the ladder
+ // never has a hard wall, and the low zones stay generous -- gear should be scarce at the top only.
+
+ // ---- island A, Lv1-20: unchanged, one tier per province, T1 through T5 ----
+ /* 0  The Landing Sands   Lv1-5   */ {pub:[[0,70],[1,30]],  sb:null, sbP:0, gear:1.80},
+ /* 1  Gullwind Shore      Lv6-10  */ {pub:[[1,65],[2,35]],  sb:null, sbP:0, gear:1.80},
+ /* 2  The Cairnworks      Lv11-15 */ {pub:[[2,60],[3,40]],  sb:null, sbP:0, gear:1.80},
+ /* 3  Sawgrass Flats      Lv16-20 */ {pub:[[3,60],[4,40]],  sb:null, sbP:0, gear:1.80},
+
+ // ---- island B, Lv20-40: seven provinces, T4 -> T11 ----
+ // The old world climbed T4->T11 in five provinces; seven means each step is smaller, which is the
+ // point of a five-times-larger island. Soulbound starts where it did, at the province whose
+ // levels pass 30 -- Deep Timber then, Stonebrow Rise now.
+ /* 4  The Verdant Belt    Lv20-22 */ {pub:[[3,60],[4,40]],  sb:null,                     sbP:0,      gear:1.55},
+ /* 5  Wolfwood            Lv23-25 */ {pub:[[4,55],[5,45]],  sb:null,                     sbP:0,      gear:1.50},
+ /* 6  Deep Timber         Lv26-28 */ {pub:[[4,45],[5,55]],  sb:null,                     sbP:0,      gear:1.45},
+ /* 7  Stonebrow Rise      Lv29-31 */ {pub:[[5,50],[6,50]],  sb:[[8,100]],                sbP:0.0015, gear:1.35},
+ /* 8  Cinderwatch         Lv32-34 */ {pub:[[6,45],[7,55]],  sb:[[8,70],[9,30]],          sbP:0.0030, gear:1.30},
+ /* 9  The Ashfall         Lv35-37 */ {pub:[[7,100]],        sb:[[9,55],[10,45]],         sbP:0.0040, gear:1.20},
+ /* 10 Charred Steppe      Lv38-40 */ {pub:[[7,100]],        sb:[[9,30],[10,45],[11,25]], sbP:0.0050, gear:1.15},
+
+ // ---- island C, Lv40-50: flight only, T11 -> T12 ----
+ // The Skyreach Shelf is where flight sets you down and has no boss, so it is deliberately the
+ // gentlest of the four: it is a landing strip, not a farm. The last three are the calibration
+ // point -- a Lv50 hero should be able to stand in a full T12 set from here, and the relic hunt in
+ // the ascended dungeons is what the island is for after that.
+ /* 11 The Skyreach Shelf  Lv40-43 */ {pub:[[7,100]],        sb:[[10,55],[11,45]],        sbP:0.0055, gear:1.12},
+ /* 12 The Glowing Waste   Lv44-46 */ {pub:[[7,100]],        sb:[[10,45],[11,55]],        sbP:0.0060, gear:1.10},
+ /* 13 Emberflow           Lv47-49 */ {pub:[[7,100]],        sb:[[10,40],[11,60]],        sbP:0.0065, gear:1.10},
+ /* 14 The Molten Heart    Lv50    */ {pub:[[7,100]],        sb:[[10,35],[11,65]],        sbP:0.0070, gear:1.10},
 ];
 const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0,gear:1.10};   // ocean / bridge / anything unmapped
 const PUB_TMAX=7;          // public gear caps at T8 (0-based 7). Everything above is soulbound.
@@ -1486,7 +1562,16 @@ function _mCorrupt(RG,tx,ty){ if(!RG||!RG.portal) return 0;
 // started reading T[zi].band and the clump centroid straight off _territories(). Updating a dead
 // duplicate of a rule is how the map comes to disagree with the world.
 // subtle per-sector tints so the 5 Lv50 grind "states" read distinctly on the red rim
-const _GRIND_TINT=['rgba(255,175,60,0.13)','rgba(255,110,45,0.13)','rgba(205,55,150,0.15)','rgba(255,80,55,0.13)','rgba(235,150,55,0.13)'];
+// A FAINT WASH PER PROVINCE, so two neighbours sharing one art band still read as two places on the
+// map. gi is the province's index WITHIN its island now (it was the index within the five-province
+// grind rim), so this needs an entry for the widest island -- B, with seven.
+//
+// IT DEGRADES SILENTLY, unlike GBANDCOL: `_GRIND_TINT[tt.gi]` for a gi past the end is undefined and
+// the `if` simply skips, so a province quietly loses its tint and the map looks slightly wrong in a
+// way nobody can name. runIntegrityCheck asserts the length against the largest island.
+const _GRIND_TINT=['rgba(255,175,60,0.13)','rgba(255,110,45,0.13)','rgba(205,55,150,0.15)',
+                   'rgba(255,80,55,0.13)','rgba(235,150,55,0.13)','rgba(120,190,235,0.12)',
+                   'rgba(150,235,140,0.12)'];
 // terrain + zone borders + labels are static \u2014 render once into an offscreen canvas and blit it,
 // so the live redraw only paints the moving markers
 let _mapCache=null;
@@ -1642,7 +1727,7 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
    c.save(); c.translate(q.x,q.y); c.rotate(t/1400); c.fillStyle='#e79bff'; c.fillRect(-3.2,-3.2,6.4,6.4); c.restore(); }
  // waypoint pillars (attuned = gold, dormant = grey)
  if(G.pillars) for(const pl of G.pillars){ const q=mapPos(G,L,(pl.x!=null?pl.x:pl.tx*TILE),(pl.y!=null?pl.y:pl.ty*TILE));
-   const on=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
+   const on=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl);
    c.save(); c.translate(q.x,q.y); c.rotate(Math.PI/4);
    c.fillStyle=on?'#ffe08a':'#5a6472'; c.fillRect(-3.5,-3.5,7,7);
    c.strokeStyle='#14100c'; c.lineWidth=1; c.strokeRect(-3.5,-3.5,7,7); c.restore(); }

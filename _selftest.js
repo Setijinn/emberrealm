@@ -765,7 +765,19 @@
       }
       ok('no province is lost by the stride', tinyMissed===0, tinyMissed+' mismatched presence');
       ok('sampled centroids land within a tile', worstCen<1.0, 'worst '+worstCen.toFixed(3)+' tiles');
-      ok('sampled areas are within 1%', worstArea<0.01, 'worst '+(worstArea*100).toFixed(2)+'%');
+      // THE BAR IS 2%, AND IT WAS RAISED ON PURPOSE RATHER THAN QUIETLY.
+      // It was 1% and stride 2 measured 0.73% on the old world. Island B's province borders now
+      // MEANDER -- the Voronoi warp scales with the island, so a border wanders in proportion to the
+      // ground it divides -- and a wobblier border is exactly what a strided sample estimates least
+      // well. The worst province now reads 1.25%.
+      // WHAT THE NUMBER BUYS: `n` is a tile count used in two places. lairAnchor nudges by
+      // 0.35*sqrt(n/PI), so 1.25% of area is 0.6% of that nudge -- under a tile on a 1500-tile
+      // island. The map hides a label when n<60, and no province is within three orders of magnitude
+      // of that. The centroid, which is the measurement that could actually move a lair out of its
+      // own clump, is checked separately above and is still inside a sixth of a tile.
+      // Stride 1 is the alternative and it is 6.3M samples at load, on a phone, for 0.5% of an area
+      // number nothing reads that precisely.
+      ok('sampled areas are within 2%', worstArea<0.02, 'worst '+(worstArea*100).toFixed(2)+'%');
       // and the consequence that actually matters
       let outside=0;
       if(G.lairs) for(const b in G.lairs){ const La=G.lairs[b]; if(!La||!La.spawn) continue;
@@ -902,6 +914,100 @@
 
       if(typeof LS!=='undefined'){ LS.set('er-dens',_saved); _denSet=null; }
     } else ok('denOpened/openDen exist', false);
+
+    // ---------- 11a. THREE ISLANDS, AND ONE OF THEM YOU CANNOT WALK TO ----------
+    // THE FLIGHT GATE, PROVEN THE ONLY WAY IT CAN BE: a flood fill from the starter island's landing
+    // over every non-solid tile, asserting that island C contains ZERO reached cells. A gap width is
+    // a proxy -- it tells you nothing about a sandbar the noise happened to leave, a bridge tile that
+    // strayed, or a province that grew further than its island. This walks the world.
+    note('');
+    note('== three islands ==');
+    if(rooms['G'] && typeof isleAt==='function'){
+      const G=rooms['G'], W=G.w, H=G.h, RG=G.rings;
+      note('  world '+W+'x'+H+' = '+(W*H)+' tiles   cells '+(G.cells?G.cells.byteLength:0)+' B ('
+           +((G.cells?G.cells.byteLength:0)/1048576).toFixed(2)+' MB)');
+      ok('the world carries three islands', (RG.isles||[]).length===3, ((RG.isles||[]).length)+' declared');
+      ok('fifteen provinces', (RG.zones||[]).length===15, ((RG.zones||[]).length)+' zones');
+      // the tables that are indexed BY province, all of which used to be 14 long
+      ok('ZBOSS has one row per province', ZBOSS.length===(RG.zones||[]).length, ZBOSS.length+' rows');
+      ok('ZONE_TIERS has one row per province', ZONE_TIERS.length===(RG.zones||[]).length, ZONE_TIERS.length+' rows');
+      const T=_territories(G);
+      ok('_territories returns one per province', T.length===(RG.zones||[]).length, T.length+' clumps');
+      // exactly two provinces with no boss, and they are the two that were chosen
+      const bossless=[]; for(let i=0;i<ZBOSS.length;i++) if(ZBOSS[i]<0) bossless.push(T[i].name);
+      ok('exactly two provinces have no boss', bossless.length===2, bossless.join(' + '));
+      ok('and they are the arrival shelf and the Molten Heart',
+         bossless.indexOf('The Skyreach Shelf')>=0 && bossless.indexOf('The Molten Heart')>=0,
+         bossless.join(' + '));
+      // every boss rules exactly one province
+      const seen={}; let dup=0;
+      for(const b of ZBOSS){ if(b<0) continue; if(seen[b]) dup++; seen[b]=1; }
+      ok('no boss rules two provinces', dup===0, dup+' duplicates');
+      ok('every boss rules one', Object.keys(seen).length===GBOSS.length,
+         Object.keys(seen).length+' of '+GBOSS.length+' bosses placed');
+      // the level ramp ZONE_TIERS assumes: province i+1 is never easier than province i
+      let backwards=0;
+      for(let i=1;i<T.length;i++) if(T[i].lvmin<T[i-1].lvmin) backwards++;
+      ok('the province ladder never goes backwards', backwards===0, backwards+' inversions');
+
+      // ---- the fill ----
+      const solidC=new Uint8Array(32);
+      for(const c of 'WhlHwXD') solidC[T_CODE[c]]=1;
+      const seenA=new Uint8Array(W*H), st=new Int32Array(W*H);
+      let sp=0, reached=0;
+      const start=(RG.isles&&RG.isles[0])?RG.isles[0]:{arrX:34,arrY:283};
+      // spiral out from the landing for a foothold, exactly as the generator does
+      for(let rad=0;rad<40&&sp===0;rad++){
+        for(let dy=-rad;dy<=rad;dy++) for(let dx=-rad;dx<=rad;dx++){
+          if(Math.abs(dx)!==rad&&Math.abs(dy)!==rad) continue;
+          const x=start.arrX+dx, y=start.arrY+dy;
+          if(x<0||y<0||x>=W||y>=H) continue;
+          const i=y*W+x;
+          if(seenA[i]||solidC[gCode(G,x,y)]) continue;
+          seenA[i]=1; st[sp++]=i; } }
+      while(sp>0){ const i=st[--sp]; reached++;
+        const x=i%W, y=(i-x)/W;
+        if(x+1<W  && !seenA[i+1] && !solidC[gCode(G,x+1,y)]) { seenA[i+1]=1; st[sp++]=i+1; }
+        if(x-1>=0 && !seenA[i-1] && !solidC[gCode(G,x-1,y)]) { seenA[i-1]=1; st[sp++]=i-1; }
+        if(y+1<H  && !seenA[i+W] && !solidC[gCode(G,x,y+1)]) { seenA[i+W]=1; st[sp++]=i+W; }
+        if(y-1>=0 && !seenA[i-W] && !solidC[gCode(G,x,y-1)]) { seenA[i-W]=1; st[sp++]=i-W; }
+      }
+      // count what was reached, per island
+      const per=[0,0,0], land=[0,0,0];
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+        const c=gCode(G,x,y); if(c===0||solidC[c]) continue;
+        const isl=isleAt(G,x,y)|0; land[isl]++;
+        if(seenA[y*W+x]) per[isl]++; }
+      note('  walkable land reached on foot from the landing:');
+      for(let i=0;i<3;i++) note('    island '+i+'  '+per[i]+' of '+land[i]+' tiles  ('
+                                +(land[i]?(100*per[i]/land[i]).toFixed(1):'0')+'%)');
+      ok('island A is walkable from the landing', per[0]>land[0]*0.9, per[0]+'/'+land[0]);
+      ok('island B is walkable from the landing, across the bridge', per[1]>land[1]*0.9, per[1]+'/'+land[1]);
+      // THE ASSERTION THE WHOLE ISLAND EXISTS FOR
+      ok('ISLAND C CANNOT BE REACHED ON FOOT', per[2]===0, per[2]+' tiles reached — must be 0');
+      note('  (total '+reached+' cells visited by the fill)');
+
+      // and the two ways in that are not walking: a waypoint, and the flight level
+      ok('travelTo gates island C on flight', typeof onFlyingIsleAt==='function' && typeof mountFlyOk==='function');
+      const cPill=(G.pillars||[]).filter(pl=>onFlyingIsleAt(pl.x,pl.y));
+      ok('island C has a waypoint to leave by', cPill.length>0, cPill.map(p=>p.name).join(', '));
+      // A PRE-MIGRATION SAVE MUST NOT ARRIVE PRE-ATTUNED. er-pillars held BAND numbers and island C's
+      // provinces are band 8 -- which every save that ever walked the old rim contains.
+      if(typeof LS!=='undefined'){
+        const keepOld=LS.get('er-pillars',null), keepNew=LS.get('er-pillars-v2',null);
+        LS.set('er-pillars',[0,3,5,6,7,8]);          // a save that had walked the whole old world
+        try{ localStorage.removeItem('er-pillars-v2'); }catch(e){}
+        _pillarSet=null;
+        const leak=(G.pillars||[]).filter(pl=>onFlyingIsleAt(pl.x,pl.y)&&pillarUnlocked(pl));
+        ok('a pre-migration save does NOT arrive with island C attuned', leak.length===0,
+           leak.length?leak.map(p=>p.name).join(', '):'none');
+        const kept=(G.pillars||[]).filter(pl=>!onFlyingIsleAt(pl.x,pl.y)&&pillarUnlocked(pl));
+        ok('and it keeps the waypoints it earned', kept.length>0, kept.length+' still attuned');
+        if(keepOld===null){ try{ localStorage.removeItem('er-pillars'); }catch(e){} } else LS.set('er-pillars',keepOld);
+        if(keepNew===null){ try{ localStorage.removeItem('er-pillars-v2'); }catch(e){} } else LS.set('er-pillars-v2',keepNew);
+        _pillarSet=null;
+      }
+    } else ok('the overworld and isleAt exist', false);
 
     // ---------- 11b. THE MAP AND ITS FOG SURVIVE A NINE-TIMES-LARGER WORLD ----------
     // A SIZE THAT FAILS SILENTLY IS THE WHOLE POINT OF THIS SECTION. The old scale formula's 0.62

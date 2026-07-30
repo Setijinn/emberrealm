@@ -1157,7 +1157,7 @@ function drawLootPrompt(){
   ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
 }
 function drawPillar(pl){
-  const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl.band);
+  const un=(typeof pillarUnlocked==='function')&&pillarUnlocked(pl);
   const t=performance.now()/1000, pulse=0.55+0.45*Math.sin(t*3);
   const img=(typeof _waypointImg!=='undefined'&&_waypointImg&&_waypointImg.complete&&_waypointImg.naturalWidth)?_waypointImg:null;
   if(img){

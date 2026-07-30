@@ -230,7 +230,16 @@ function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return
 // _territories() lays clumps down in a fixed order: 0-3 starter, 4-8 inner main, 9-13 grind rim.
 //   -1 = no boss. Clump 11 is The Molten Heart — the rift's own province, held for the final boss.
 // Starter clump 2 (The Cairnworks, Lv11-15) is the new fourth zone; boss 12 takes it in phase 2.
-const ZBOSS=[9,10,12,11, 0,1,2,3,4, 6,5,-1,7,8];
+// FIFTEEN NOW, in the order 00c_worldgen.js emits: 0-3 island A, 4-10 island B, 11-14 island C.
+// TWO -1s, both deliberate and both explained where the province is declared (rings.zones):
+//   11  The Skyreach Shelf -- where flight sets you down. Its waypoint has to stay clear of a lair,
+//       because landing and aggroing something makes mountAllowedHere() false and the pillar is
+//       then the only way off the island.
+//   14  The Molten Heart -- the rift's own province, bossless on the old world too.
+// NO 14TH BOSS. One identity needs GBOSS + BOSS_PROJ + DPUZ + DPUZ_LABEL + DSHAPE + DDEPTH +
+// DUNSPEC + LAIR_ARCH + BOSS_SLOT + TILE_SLOT + DEC_SLOT + LAIR_TILE + ow/dn BOSS_MECH entries + an
+// animation profile + a relic reagent + 8-direction and den art. That is a content drop, not a row.
+const ZBOSS=[9,10,12,11, 0,1,2,3,4,6,5, -1,7,8,-1];
 // The starter island's four five-level bands, and the TERRAIN band each one wears. Declared up
 // here beside ZBOSS, not next to _territories 2000 lines below, because stampLairs() runs at load
 // (line ~523) and calls _territories() -- a `const` further down the file is still in its temporal
@@ -238,12 +247,35 @@ const ZBOSS=[9,10,12,11, 0,1,2,3,4, 6,5,-1,7,8];
 // Bands are not 0/1/2/3: terrain bands are a separate index space that tops out at 8 and carries
 // its own tilesets. The fourth zone borrows band 6, Stonebrow's grey stone and scree, which reads
 // as the rocky spine you climb between the shingle and the marsh.
-const STARTER_ZONES=4, STARTER_BANDS=[0,1,9,2];   // sand / shingle / quarry stone / marsh
+// ---- THE LEVEL MODEL, READ OFF THE WORLD RATHER THAN TYPED HERE -----------------------------
+// 00c_worldgen.js emits rings.zones: fifteen provinces in clump order, each carrying its name, its
+// level range, its art band and which island it is on. Everything below is derived from that one
+// array, so a label can never disagree with a level again -- which the old world managed, its
+// ZONE_TIERS claiming Lv20-26/26-32/32-39 while the clumps measured about 35/43/45+.
+//
+// DECLARED UP HERE, beside ZBOSS, and NOT next to _territories 2000 lines below: stampLairs() runs
+// at load and calls _territories(), so a `const` further down the file is still in its temporal
+// dead zone at that point and throws, taking the whole of 03_entities.js with it.
+const WZONES=(typeof ROOM_DEFS!=='undefined'&&ROOM_DEFS['G']&&ROOM_DEFS['G'].rings&&ROOM_DEFS['G'].rings.zones)
+  ? ROOM_DEFS['G'].rings.zones : [];
+const WSEEDS=(typeof ROOM_DEFS!=='undefined'&&ROOM_DEFS['G']&&ROOM_DEFS['G'].rings&&ROOM_DEFS['G'].rings.seeds)
+  ? ROOM_DEFS['G'].rings.seeds : [];
+// How many provinces each island owns, and where each island's block starts in clump order. Counted
+// from the table rather than written down, so adding a province to island B is one row there.
+const ISLE_ZONES=[0,0,0];
+for(const z of WZONES) ISLE_ZONES[z.isle|0]=(ISLE_ZONES[z.isle|0]|0)+1;
+const ISLE_Z0=[0, ISLE_ZONES[0], ISLE_ZONES[0]+ISLE_ZONES[1]];
+// Kept under their old names because five files read them and they still mean exactly what they did:
+// the starter island's province count, and the level you leave it at.
+const STARTER_ZONES=ISLE_ZONES[0]||4;
+const STARTER_BANDS=WZONES.length?WZONES.slice(0,STARTER_ZONES).map(z=>z.band):[0,1,9,2];
 // Each starter province holds exactly five levels, so the island's ceiling is a fact about the
 // province count and not a number to be typed twice. This is the bridge level and the level
 // permadeath starts at; anything on the island that needs "the top of the island" reads it here.
 const STARTER_LV_PER_ZONE=5;
-const ISLAND_LV=STARTER_ZONES*STARTER_LV_PER_ZONE;      // 20
+// The island's ceiling is now the last starter province's OWN ceiling, not a multiplication -- the
+// two agree at 20 today and the province table is the one that decides.
+const ISLAND_LV=(WZONES.length>=STARTER_ZONES)?WZONES[STARTER_ZONES-1].lv2:(STARTER_ZONES*STARTER_LV_PER_ZONE);
 // Seeds for the four starter provinces, marching NW->SE from the landing to the bridge. These are
 // REAL territories -- warped Voronoi with irregular borders, the same treatment the main island
 // gets -- not rings. Measured against the actual landmass rather than guessed, on four counts:
@@ -253,7 +285,7 @@ const ISLAND_LV=STARTER_ZONES*STARTER_LV_PER_ZONE;      // 20
 //             stops a Lv5 player wandering out of The Landing Sands straight into Lv11 ground.
 //             Staggering the middle two north/south is also what stops their map labels colliding.
 //   contiguity each province is a single connected blob, not islands of itself
-const STARTER_SEED=[[90,290],[168,325],[228,392],[292,438]];
+const STARTER_SEED=WSEEDS.length?WSEEDS.slice(0,STARTER_ZONES):[[90,290],[168,325],[228,392],[292,438]];
 // HOW COARSELY THE TERRITORY AGGREGATES ARE SAMPLED. _territories used to visit every tile to get each
 // province's centroid and area; one tile in SR*SR is plenty for an average, and at the three-island size
 // it is 500,000 samples instead of 8,000,000. Every consumer reads `n` as a TILE COUNT -- lairAnchor's
@@ -2562,41 +2594,66 @@ function safeSpot(r,px,py){
    if(!sol(t0x+dx,t0y+dy)) return {x:(t0x+dx+.5)*TILE,y:(t0y+dy+.5)*TILE};
   } }
  return {x:px,y:py}; }
-// ===== RADIAL world model (two islands + bridge; matches genworld.py) =====
-// Band 0-8 and level 1-50 come from RADIAL distance: starter island (west) is Lv1-20 by
-// distance from its spawn centre; the bridge is the Lv20 gate; the main island (east) is
-// Lv20-50 by distance from the CORE (bridge landing), with a flat Lv50 grind ring at the rim.
+// ===== THE WORLD MODEL: THREE ISLANDS, AND THE PROVINCE OWNS THE LEVEL =====
+// A Lv1-20, walkable from the landing. B Lv20-40, across the bridge. C Lv40-50, reachable only by
+// flight. Level is NOT a radius any more, on any island: each province declares the range it owns in
+// rings.zones, and inside a province the danger ramps from its floor to its ceiling with distance
+// from that island's arrival point. So Wolfwood is Lv23-25 everywhere in it no matter what shape its
+// border takes, and crossing a border is a real step -- which is the point of a border.
+//
+// The radial ramp this replaces is why the old world's labels lied: it computed a level from
+// distance-to-core and the province names were typed separately, so ZONE_TIERS said Lv20-26/26-32/
+// 32-39 while the ground measured about 35/43/45+. A range that is DECLARED cannot drift from itself.
 function _onBridge(R,tx,ty){ const B=R.bridge; return tx>=B.x0&&tx<=B.x1&&Math.abs(ty-B.cy)<=(B.w>>1); }
-// Starter-island test. NOT `tx<bridge.x0`: the island is noise-shaped and its east shore spills
-// past bridge.x0 (176), so those tiles fell through to the MAIN formulas and read Lv27 +
-// main-island corruption on what is plainly the safe island. The bridge gap is pure ocean
-// (starter land ends ~190, main land starts ~230), so its MIDPOINT cleanly divides the two.
-function _onStarter(R,tx,ty){ return tx<(R.bridge.x0+R.bridge.x1)*0.5; }
-// LEVEL is still smooth-radial (danger climbs outward), computed from the rings geometry.
+// ---- WHICH ISLAND ----
+// From the tile byte, which 02_worldbuild wrote at load. `tx < 352` cannot express three islands, and
+// the two coordinate compares this replaces lived in different files and drifted.
+//
+// _onStarter and onMainIsland keep their names and their exact old meanings, because between them
+// they have ten call sites: _onStarter is "the safe island", onMainIsland is "NOT the safe island"
+// -- which now means B or C, and every one of its consumers (permadeath, the forge gate, mounts)
+// wants exactly that. onFlyingIsle is the new question.
+function isleOf(R,tx,ty){
+  const rm=(typeof rooms!=='undefined'&&rooms['G'])?rooms['G']:null;
+  if(rm&&rm.cells) return isleAt(rm,Math.floor(tx),Math.floor(ty))|0;
+  // before the room is packed (or for a room that is not G): fall back to the geometry
+  // NEAREST CENTRE, matching _isleIdFor in 02_worldbuild exactly -- the two answer the same question
+  // and a disagreement between them would be a tile whose province and whose island came from
+  // different rules. See the note there for what "first disc that contains it" cost.
+  if(R&&R.isles){ if(tx<((typeof ISLE_A_W!=='undefined')?ISLE_A_W:352)) return 0;
+    let best=0, bd=1e18;
+    for(const I of R.isles){ if(I.baked||I.cx==null) continue;
+      const dx=tx-I.cx, dy=ty-I.cy, d=dx*dx+dy*dy, rr=I.r*1.45;
+      if(d<=rr*rr && d<bd){ bd=d; best=I.id|0; } }
+    return best; }
+  return 0;
+}
+function _onStarter(R,tx,ty){ return isleOf(R,tx,ty)===0; }
+function onFlyingIsleR(R,tx,ty){ return isleOf(R,tx,ty)===2; }
+// LEVEL comes from the province, and from where you are inside it.
 function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
- if(_onBridge(RG,tx,ty)) return 20;
- if(_onStarter(RG,tx,ty)){ const S=RG.starter, d=Math.hypot(tx-S.cx,ty-S.cy);
-   // THE TERRITORY OWNS THE LEVEL. Level is not a radius here: the four starter provinces each
-   // hold exactly five levels, and inside a province the danger ramps from its floor to its
-   // ceiling with distance from the landing. So The Landing Sands is Lv1-5 everywhere in it and
-   // Gullwind Shore is Lv6-10 everywhere in it, no matter what shape the border happens to take.
-   // Crossing a border is a real step, which is the point of a border.
-   // (Before this the island was a smooth radial ramp with the zones cut off it, which made them
-   // concentric rings; before THAT the ramp was centred on the spawn in the island's middle,
-   // which made all three of them span Lv1-20 at once.)
-   const T=RG._terr;
+ if(_onBridge(RG,tx,ty)) return ISLAND_LV;
+ const T=RG._terr;
+ if(T){
    // through zoneAt, so this reads the cached chunk rather than re-solving the Voronoi per entity
-   if(T){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
-     if(z>=0&&z<STARTER_ZONES){ const t=T[z], q=t.dq;
-       if(!q) return t.lvmin;
-       let lv=t.lvmin; for(let k=0;k<4;k++) if(d>=q[k]) lv++;
-       return lv; } }
-   // Off-land (coast, shallows) or called before the territories exist: no province to ask, so
-   // approximate smoothly across the island. Only water and the bridge approach take this path.
-   return Math.max(1,Math.min(20,Math.round(1+Math.min(1,d/S.r)*19))); }
- const gR=RG.grindR||0.8, f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax);
- if(f>=gR) return 50;                                   // flat Lv50 grind ring
- return Math.max(20,Math.min(50,Math.round(20+(f/gR)*29))); }
+   const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
+   if(z>=0&&z<T.length){ const t=T[z], q=t.dq;
+     if(!q||!q.length) return t.lvmin;
+     const I=(RG.isles&&RG.isles[t.isle])||RG.isles&&RG.isles[0];
+     const d=I?Math.hypot(tx-I.arrX,ty-I.arrY):0;
+     let lv=t.lvmin; for(let k=0;k<q.length;k++) if(d>=q[k]) lv++;
+     return Math.min(t.lvmax,lv); } }
+ // Off-land (coast, shallows) or called before the territories exist: no province to ask. Answer
+ // with the island's own band rather than a world-wide radius, so a beach never reads as somewhere
+ // else entirely. Only water and the bridge approach take this path.
+ const isle=isleOf(RG,tx,ty), i0=ISLE_Z0[isle]|0, n=ISLE_ZONES[isle]|0;
+ if(!n||!RG.zones) return 1;
+ const I=(RG.isles&&RG.isles[isle])||null;
+ const lo=RG.zones[i0].lv, hi=RG.zones[i0+n-1].lv2;
+ if(!I) return lo;
+ const rr=(I.r||RG.starter.r||330);
+ const f=Math.min(1,Math.hypot(tx-I.arrX,ty-I.arrY)/(rr*1.9));
+ return Math.max(lo,Math.min(hi,Math.round(lo+f*(hi-lo)))); }
 function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) return (curRoom&&curRoom.lv)||1;
  return grvLvAtR(R,tx,ty); }
 // ----- Clumped zones (territories) -----
@@ -2612,30 +2669,36 @@ function grvLvAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.radial) retur
 // The seeds now march NW->SE across the island, and each province owns a five-level band outright
 // (grvLvAtR reads the band off the province, not off a radius). Territory first, level second.
 function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; if(RG._terr) return RG._terr;
- const S=RG.starter, C=RG.core, Rm=RG.rmax, nm=RG.names, sz=RG.starterZones||[], gr=RG.grind||[], T=[];
- const add=(cx,cy,name,band,gi)=>{ T.push({cx,cy,name,band,gi:(gi==null?-1:gi),lvmin:99,lvmax:0,sx:0,sy:0,n:0,dlo:1e18,dhi:-1e18,dq:null}); };
- for(let i=0;i<STARTER_ZONES;i++) add(STARTER_SEED[i][0],STARTER_SEED[i][1],(sz[i]&&sz[i].n)||('Zone '+i),STARTER_BANDS[i]);
- const iAng=[0.5,-0.7,0.95,-0.35,0.35];                                                            // main inner (bands 3-7)
- // nm is BAND-indexed, not clump-indexed: nm[3+i] stays 3+i even though these are now clumps 4-8.
- for(let i=0;i<5;i++){ const b=3+i, f=(b-2.4)/6; add(Math.round(C.cx+Math.cos(iAng[i])*Rm*f),Math.round(C.cy+Math.sin(iAng[i])*Rm*f),nm[3+i].n,b); }
- const gAng=[-0.8,-0.35,0.05,0.45,0.85];                                                           // grind clumps (band 8)
- for(let i=0;i<gr.length;i++){ add(Math.round(C.cx+Math.cos(gAng[i])*Rm*0.9),Math.round(C.cy+Math.sin(gAng[i])*Rm*0.9),gr[i],8,i); }
- // Reach histogram per starter province, one bucket per tile of distance from the landing. Used
- // below to cut each province's five levels by AREA rather than by raw distance -- a province is
- // widest in its middle, so an even distance split leaves its first and last levels with almost
- // no ground on them (Lv15 came out with 167 tiles of the 21,296 in its province).
- const DQN=420, sHist=[]; for(let i=0;i<STARTER_ZONES;i++) sHist.push(new Int32Array(DQN));
+ const Z=RG.zones||[], SD=RG.seeds||[], IS=RG.isles||[], T=[];
+ // ONE PROVINCE PER ROW OF rings.zones, in that order, carrying the level range it OWNS. Nothing
+ // here is measured off a curve any more: the province is the authority and grvLvAtR reads it back.
+ for(let i=0;i<Z.length;i++){
+   const z=Z[i], sd=SD[i]||[0,0];
+   T.push({cx:sd[0], cy:sd[1], name:z.n, band:z.band, isle:z.isle|0,
+           // gi is the index of this province WITHIN its island, which is what _GRIND_TINT wants
+           gi:i-(ISLE_Z0[z.isle|0]|0),
+           lvmin:z.lv, lvmax:z.lv2,
+           sx:0, sy:0, n:0, dlo:1e18, dhi:-1e18, dq:null});
+ }
+ // Reach histogram per province, one bucket per tile of distance from ITS OWN ISLAND'S arrival
+ // point. Used below to cut each province's levels by AREA rather than by raw distance -- a province
+ // is widest in its middle, so an even distance split leaves its first and last levels with almost
+ // no ground on them (Lv15 once came out with 167 tiles of the 21,296 in its province).
+ //
+ // DQN SCALES WITH THE WORLD. It was 420 buckets of one tile, which covered the whole starter
+ // island; island B is 1534 tiles across, so a fixed 420 would put every tile past the 420th into
+ // one bucket and collapse four fifths of the province into its top level.
+ const DQN=Math.max(420, Math.ceil(Math.max(R.w,R.h)*0.55));
+ const hist=[]; for(let i=0;i<T.length;i++) hist.push(new Int32Array(DQN));
+ const arr=[]; for(const t of T){ const I=IS[t.isle]||IS[0]||{arrX:0,arrY:0}; arr.push([I.arrX,I.arrY]); }
  const W=R.w,H=R.h;
  // ---- THE AGGREGATES, ON A STRIDE ----
- // This pass used to visit every tile AND build a full W*H raster (`_zg`). The raster is gone -- zoneAt
- // rasterises 64x64 chunks on demand now -- but the aggregates still need to see the ground: a
- // province's centroid places its map label and its lair anchor, and its area gates both.
- //
- // ONE TILE IN SIXTEEN IS ENOUGH FOR AN AVERAGE, and at the three-island size the difference is
- // 8,000,000 samples against 500,000. `n` is scaled back up by the stride squared so every consumer
- // that reads it as a TILE COUNT -- lairAnchor's 0.35*sqrt(n/PI) nudge, the map's `tt.n<60` label
- // filter -- keeps its meaning without knowing this happened. The drift is measured, not assumed:
- // _selftest compares centroid and area against a full-resolution pass.
+ // A province's centroid places its map label and its lair anchor, and its area gates both. One tile
+ // in SR*SR is plenty for an average: at this size that is 1.6M samples instead of 6.3M. `n` is
+ // scaled back up by SR*SR so every consumer that reads it as a TILE COUNT -- lairAnchor's
+ // 0.35*sqrt(n/PI) nudge, the map's `tt.n<60` label filter -- keeps its meaning without knowing.
+ // The drift is MEASURED in _selftest against a full-resolution pass, not assumed: it moves a lair
+ // anchor, and a lair that lands outside its own territory cannot spawn its boss at all.
  const SR=ZONE_AGG_STRIDE, SR2=SR*SR;
  for(let ty=0;ty<H;ty+=SR){
    for(let tx=0;tx<W;tx+=SR){
@@ -2647,21 +2710,21 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
      // inside the province answers "where is this clump" in O(1); the old fallback walked all W*H,
      // per boss, whenever the spiral failed to find a footprint.
      if(t.wx===undefined){ t.wx=tx; t.wy=ty; }
-     if(_onStarter(RG,tx,ty)){ // how far this province reaches, so its five levels can be spread
-       const d=Math.hypot(tx-S.cx,ty-S.cy); if(d<t.dlo)t.dlo=d; if(d>t.dhi)t.dhi=d;
-       sHist[bi][Math.max(0,Math.min(DQN-1,Math.round(d)))]+=SR2; }
-     else { const lv=grvLvAtR(RG,tx,ty); if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; } } }
+     const a=arr[bi], d=Math.hypot(tx-a[0],ty-a[1]);
+     if(d<t.dlo)t.dlo=d; if(d>t.dhi)t.dhi=d;
+     hist[bi][Math.max(0,Math.min(DQN-1,Math.round(d)))]+=SR2; } }
  // scale the sampled sums back to tile units, so sx/n is still a centroid and n is still an area
  for(const t of T){ t.sx*=SR2; t.sy*=SR2; t.n*=SR2; }
- // A starter province's level range is its own by definition, not something measured off a curve.
- // Set before _terr is published, because grvLvAtR reads lvmin and dq straight back out of it.
- for(let i=0;i<STARTER_ZONES;i++){ const t=T[i]; t.lvmin=5*i+1; t.lvmax=5*i+5;
+ // The level cuts, by area, inside each province. A province spanning Lv20-22 has three levels and
+ // therefore two cuts; one spanning Lv50-50 has none. Set before _terr is published, because
+ // grvLvAtR reads lvmin and dq straight back out of it.
+ for(let i=0;i<T.length;i++){ const t=T[i];
    if(t.dhi<t.dlo){ t.dlo=0; t.dhi=1; }                                  // province with no land
-   // Quartile cuts by area: each of the five levels gets a fifth of the province's ground.
-   const h=sHist[i], tot=t.n||1, q=[0,0,0,0]; let acc=0, k=0;
-   for(let d=0;d<DQN && k<4;d++){ acc+=h[d];
-     while(k<4 && acc>=tot*(k+1)/5){ q[k]=d; k++; } }
-   for(;k<4;k++) q[k]=DQN;
+   const span=Math.max(1,(t.lvmax-t.lvmin+1)), cuts=span-1;
+   const h=hist[i], tot=t.n||1, q=[]; let acc=0, k=0;
+   for(let d=0;d<DQN && k<cuts;d++){ acc+=h[d];
+     while(k<cuts && acc>=tot*(k+1)/span){ q[k]=d; k++; } }
+   for(;k<cuts;k++) q[k]=DQN;
    t.dq=q; }
  RG._terr=T; return T; }
 // ---- ONE TILE'S CLUMP, WITH NO RASTER ----
@@ -2674,8 +2737,40 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
 function _zoneAtRaw(R,RG,T,tx,ty){
   const cd=gCode(R,tx,ty);
   if(cd===0||cd===T_w||cd===T_b) return -1;
-  const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
-  const st=_onStarter(RG,tx,ty), i0=st?0:STARTER_ZONES, i1=st?STARTER_ZONES:T.length;
+  const isle=isleAt(R,tx,ty)|0;
+  // ---- THE WARP, AND WHY IT SCALES WITH THE ISLAND ----
+  // A province border is the bisector between two seeds, which is a STRAIGHT LINE. What makes these
+  // read as organic frontiers rather than as pie slices is this warp: the point is displaced before
+  // the nearest-seed test, so the bisector bends.
+  //
+  // The amplitude was a fixed ~11 tiles, tuned on a 343-tile island. On island B, which is 2.24x
+  // that, an 11-tile wobble along a 1500-tile border is invisible -- the map came back with the two
+  // large islands cut into clean radial wedges (user: "make sure none of the areas have straight line
+  // borders"). Everything here scales with the island's own radius, so a border wanders in
+  // proportion to the ground it divides.
+  //
+  // THREE TERMS, NOT TWO. The original pair are both high-frequency and give a border its ragged
+  // EDGE; on a long border that reads as a fuzzy straight line, which is still a straight line. The
+  // third is low-frequency and large -- it is what makes the border MEANDER, bending over hundreds of
+  // tiles the way a river or a ridge does, and it is the term that actually answers the complaint.
+  const _I=(RG.isles&&RG.isles[isle])||null;
+  const k=(_I&&_I.r)?(_I.r/343):1;
+  const wx=tx + 7*k*Math.sin(ty*0.21/k+tx*0.05/k) + 4*k*Math.sin(ty*0.61/k)
+              + 20*k*Math.sin(ty*0.021/k+tx*0.011/k),
+        wy=ty + 7*k*Math.cos(tx*0.21/k+ty*0.05/k) + 4*k*Math.cos(tx*0.61/k)
+              + 20*k*Math.cos(tx*0.021/k+ty*0.011/k);
+  // THE SEARCH IS RESTRICTED TO ONE ISLAND'S OWN SEEDS, and it has to be. With a single unrestricted
+  // search, 653 tiles of the starter island's east spill were once claimed by The Verdant Belt --
+  // Lv20 ground paying a main-island loot table, owned by a boss whose lair sat 130 tiles away, so
+  // nothing ever spawned there. With three islands the failure would be far worse: a tile of island
+  // C claimed by island B is Lv50 ground answering Lv30, reachable only by flight and paying the
+  // wrong table.
+  //
+  // THE ISLAND COMES FROM THE TILE BYTE, not from an x-coordinate compare. That is the whole reason
+  // bits 5-6 exist: `x < 352` cannot express a third island, and the two comparisons it replaced
+  // were spread across _onStarter and onMainIsland in different files.
+  const i0=ISLE_Z0[isle]|0, i1=i0+(ISLE_ZONES[isle]|0);
+  if(i1<=i0) return -1;
   let bi=i0,bd=1e18;
   for(let i=i0;i<i1;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
   return bi;
@@ -2721,11 +2816,16 @@ function zoneAt(tx,ty){ return zoneAtIn(curRoom,tx,ty); }
 function grvBandAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return 0;
  const T=_territories(R), zi=zoneAt(tx,ty);
  if(zi>=0) return T[zi].band;
- if(_onBridge(RG,tx,ty)) return 3;                       // bridge/water: theme unused, approximate radially
- // Off-land starter tiles (coast, shallows): mirror the on-land rule -- band from the LEVEL, via
- // the same STARTER_BANDS table, so a beach tile never themes differently from the sand behind it.
- if(_onStarter(RG,tx,ty)) return STARTER_BANDS[Math.max(0,Math.min(STARTER_ZONES-1,Math.floor((grvLvAtR(RG,tx,ty)-1)/5)))];
- const f=Math.min(1,Math.hypot(tx-RG.core.cx,ty-RG.core.cy)/RG.rmax); return Math.max(3,Math.min(8,3+Math.floor(f*6))); }
+ if(_onBridge(RG,tx,ty)) return 3;                       // bridge/water: theme unused
+ // OFF-LAND (coast, shallows): find the nearest province ON THIS ISLAND and wear its band, so a
+ // beach never themes differently from the sand behind it. The old code answered this with a
+ // world-wide radial formula, which on three islands would give island C's shallows island B's
+ // ground -- and the shore is exactly where the two are drawn next to each other.
+ const isle=isleOf(RG,tx,ty), i0=ISLE_Z0[isle]|0, n=ISLE_ZONES[isle]|0;
+ if(!n||!T) return 0;
+ let bi=i0, bd=1e18;
+ for(let i=i0;i<i0+n;i++){ const dx=tx-T[i].cx, dy=ty-T[i].cy, d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
+ return T[bi].band; }
 // zone identity: the clump's name + its actual level range (min..max of the smooth curve within it).
 // Off-land tiles (bridge/coast) have no territory, so fall back to the NEAREST clump — never the
 // old angular-sector guess, which mislabelled the bridge as a random grind zone.
@@ -2753,7 +2853,26 @@ function regionAtPx(px,py){ if(!curRoom) return null;
  for(const rg of curRoom.regions){ if(tx>=rg.x1&&tx<rg.x2&&ty>=rg.y1&&ty<rg.y2) return rg; }
  return null; }
 // true once you have crossed the bridge onto the main island (permadeath territory)
-function onMainIsland(px,py){ const R=curRoom&&curRoom.rings; return !!(R&&R.radial&&px/TILE>R.bridge.x1); }
+// "NOT THE SAFE ISLAND", which now means B or C. Its five consumers all want exactly that -- the
+// permadeath gate, the forge's material pool, the mount roster, the auction -- so the meaning is
+// unchanged and none of them move. It reads the island byte instead of comparing an x coordinate,
+// which is what lets it answer for a third island at all.
+function onMainIsland(px,py){ const R=curRoom&&curRoom.rings;
+  return !!(R&&R.radial&&isleOf(R,px/TILE,py/TILE)!==0); }
+// THE FLIGHT-ONLY ISLAND. New question, new function: "am I on the Lv40-50 island" is not something
+// any existing test could answer, and overloading onMainIsland to mean it would silently change
+// what five other call sites are asking.
+function onFlyingIsle(px,py){ const R=curRoom&&curRoom.rings;
+  return !!(R&&R.radial&&isleOf(R,px/TILE,py/TILE)===2); }
+// THE SAME QUESTION ABOUT A POINT IN THE OVERWORLD, ASKED FROM ANYWHERE. onFlyingIsle reads curRoom,
+// which is right for "where is the player standing" and WRONG for "is this destination on island C" --
+// the fast-travel screen opens from a dungeon and from the Hearth, where curRoom.rings is null, so the
+// gate would have returned false and waved the player through. The selftest caught it as a waypoint
+// that did not look like it was on island C at all.
+function onFlyingIsleAt(px,py){
+  const G=(typeof rooms!=='undefined')?rooms['G']:null;
+  const R=G&&G.rings; if(!R||!R.radial) return false;
+  return isleOf(R,px/TILE,py/TILE)===2; }
 function roomLvAt(sp){
  if(curRoom&&curRoom.rings) return grvLvAt(sp.x,sp.y);
  if(curRoom&&curRoom.regions){

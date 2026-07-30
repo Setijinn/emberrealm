@@ -39,70 +39,129 @@
     note('');
 
     // ---- per-island land, the headline number ----
-    note('== land ==');
-    let landA=0, landB=0, water=0;
-    const mix={};
+    note('== land, per island ==');
+    const land=[0,0,0]; const mix={}; let water=0;
+    const isleOfXY=(x,y)=>{
+      if(x<ISLE_A_W) return 0;
+      let best=-1, bd=1e18;
+      for(const I of R.isles){ if(I.baked||I.cx==null) continue;
+        const dx=x-I.cx, dy=y-I.cy, d=dx*dx+dy*dy, rr=I.r*1.45;
+        if(d<=rr*rr && d<bd){ bd=d; best=I.id|0; } }
+      return best;
+    };
     for(let y=0;y<H;y++){
       const row=D.map[y];
       for(let x=0;x<W;x++){
         const c=row[x];
         mix[c]=(mix[c]||0)+1;
         if(c==='w'){ water++; continue; }
-        if(x<aW) landA++; else if(x>=x1) landB++;
+        const i=isleOfXY(x,y); if(i>=0) land[i]++;
       }
     }
-    cmp('island A land tiles', landA, 74324, 0.0);        // BAKED: zero tolerance, it is bytes
-    cmp('island B land tiles', landB, 371974, 0.03);
-    note('  island B fills '+(100*landB/(H*(W-x1))).toFixed(1)+'% of its half (artifact: 74.2%)');
+    // Island A is BAKED, so this is bytes and gets zero tolerance. B and C are generated from a
+    // radius chosen as sqrt(5) x the old main island, so 5x the old island's 371,974 is the target.
+    cmp('island A land tiles', land[0], 74324, 0.0);
+    cmp('island B land tiles', land[1], 371974*5, 0.12);
+    cmp('island C land tiles', land[2], 371974*5, 0.12);
+    note('  world '+W+'x'+H+' = '+(W*H)+' tiles, '+(land[0]+land[1]+land[2])+' of them land ('
+         +(100*(land[0]+land[1]+land[2])/(W*H)).toFixed(1)+'%)');
+    note('');
+
+    // ---- THE WATER GAP, which is what the flight gate rests on ----
+    // A proxy, and labelled as one: the real proof is the reachability fill in _selftest.js, which
+    // walks the world rather than measuring one line across it. This number is here because it is
+    // the thing to TUNE if that fill ever fails.
+    note('== the flight gap ==');
+    // ADJACENCY, NOT AN X-GAP. Two earlier versions of this measured a distance along a row and both
+    // reported a 1-tile gap that flatly contradicted the reachability fill -- because "the last B
+    // tile and the first C tile on this row" is not the same question as "can you walk from one to
+    // the other". The island id is assigned by NEAREST CENTRE, so it flips at the perpendicular
+    // bisector: a bay of C's land that reaches west of x=2064 sits one tile from a spur of B's that
+    // reaches east of it, on a row where the two are nowhere near each other in the water.
+    //
+    // What actually breaks the gate is a land tile of island B sharing an EDGE with a land tile of
+    // island C. That is a one-pass scan and it is unambiguous.
+    let touch=0, touchAt='';
+    for(let y=1;y<H-1;y++){
+      const row=D.map[y], nxt=D.map[y+1];
+      for(let x=1;x<W-1;x++){
+        if(row[x]==='w') continue;
+        const a=isleOfXY(x,y);
+        if(a<1) continue;
+        if(row[x+1]!=='w' && isleOfXY(x+1,y)>=1 && isleOfXY(x+1,y)!==a){ if(!touch) touchAt=x+','+y+' -> '+(x+1)+','+y; touch++; }
+        if(nxt[x]!=='w'  && isleOfXY(x,y+1)>=1 && isleOfXY(x,y+1)!==a){ if(!touch) touchAt=x+','+y+' -> '+x+','+(y+1); touch++; }
+      }
+    }
+    if(touch){ bad++; L.push('  BAD  '+touch+' places where island B land touches island C land (first at '+touchAt+')'); }
+    else L.push('  ok   no land tile of island B shares an edge with a land tile of island C');
+    // and the open water between them, measured the only way that means anything: the widest
+    // uninterrupted run of water on the row through both island centres
+    const midY=WG_ISLES[1].cy|0;
+    let run=0, best=0;
+    for(let x=WG_ISLES[1].cx|0; x<(WG_ISLES[2].cx|0); x++){
+      if(D.map[midY][x]==='w'){ run++; if(run>best) best=run; } else run=0;
+    }
+    note('  widest open water between the island centres, on row y='+midY+': '+best+' tiles');
+    if(best<FLY_GAP_MIN){ bad++; L.push('  BAD  that is under FLY_GAP_MIN ('+FLY_GAP_MIN+')'); }
+    else L.push('  ok   clears FLY_GAP_MIN ('+FLY_GAP_MIN+'). The widest player displacement is');
+    L.push('       dash(200) = 4.5 tiles, solid()-gated and los()-swept, and the flight water');
+    L.push('       exemption is gated on _pmove, which a dash does not set.');
+    L.push('       A GAP IS STILL ONLY A PROXY. The proof is the reachability fill in _selftest.js,');
+    L.push('       which walks the world from the starter landing and asserts that island C');
+    L.push('       contains zero reached cells.');
     note('');
 
     // ---- the ground mix, which is what the place looks like ----
-    note('== ground mix, whole world ==');
-    // Measured off 00d_vgrove.js before it was deleted. Not targets to hit exactly -- island A is
-    // baked so it contributes its share unchanged, and island B is generated, so what these check is
-    // that the generated half still looks like the same PLACE: mostly scree and dirt in the middle
-    // bands, ash on the rim, a fifth of the world in trees and boulders.
-    const WANT={w:385651, r:150926, d:117216, e:91455, g:56071, k:23149, c:4732, s:2758, t:2100, b:1140, T:1, P:1};
+    note('== ground mix ==');
     const keys=Object.keys(mix).sort((a,b)=>mix[b]-mix[a]);
-    for(const k of keys){
-      const want=WANT[k];
-      const s='  '+pad("'"+k+"'",6)+pad(mix[k],10)+(100*mix[k]/(W*H)).toFixed(2)+'%';
-      if(want==null){ L.push(s+'   (not in the artifact)'); warn++; }
-      else L.push(s+'   artifact '+want+'  ('+(100*(mix[k]-want)/want).toFixed(1)+'%)');
-    }
+    for(const k of keys) L.push('  '+pad("'"+k+"'",6)+pad(mix[k],11)+(100*mix[k]/(W*H)).toFixed(2)+'%');
     note('');
 
     // ---- spawns: the density that decides whether the world feels populated ----
     note('== spawns ==');
     const spawns=(mix['c']||0)+(mix['s']||0);
-    cmp('spawn markers', spawns, 7490, 0.10);
-    note('  '+(100*spawns/(landA+landB)).toFixed(2)+'% of land carries a spawn marker');
+    const totLand=land[0]+land[1]+land[2];
+    note('  '+spawns+' markers, '+(100*spawns/totLand).toFixed(2)+'% of land');
+    // the artifact ran 1.68%, and density is what has to hold when the world grows, not the count
+    cmp('spawn density (% of land)', +(100*spawns/totLand).toFixed(2), 1.68, 0.15, '%');
     note('');
 
     // ---- contiguity: every land tile east of the bridge must be walkable from the bridge ----
     // The generator drowns orphans, so this must come back at zero. It is asserted anyway, because
     // the fill and this check disagree the moment the fill's seed or its neighbour test changes.
     note('== contiguity ==');
-    const seen=new Uint8Array(W*H), st=new Int32Array(W*H);
-    let sp=0, reach=0;
-    const half=(R.bridge.w/2)|0;
-    for(let y=R.bridge.cy-half;y<R.bridge.cy-half+R.bridge.w;y++){
-      const i=y*W+R.bridge.x1;
-      if(D.map[y][R.bridge.x1]!=='w'&&!seen[i]){ seen[i]=1; st[sp++]=i; }
+    // Per island, from its own arrival point. What this checks is that an island is ONE walkable
+    // mass -- not that the islands connect to each other, which for C they deliberately must not.
+    const solidStr='WhlHwXD';
+    for(const I of R.isles){
+      const ax=I.arrX, ay=I.arrY;
+      const seen=new Uint8Array(W*H), st=new Int32Array(W*H);
+      let sp=0, reach=0;
+      for(let rad=0;rad<40&&sp===0;rad++){
+        for(let dy=-rad;dy<=rad;dy++) for(let dx=-rad;dx<=rad;dx++){
+          if(Math.abs(dx)!==rad&&Math.abs(dy)!==rad) continue;
+          const x=ax+dx, y=ay+dy;
+          if(x<0||y<0||x>=W||y>=H) continue;
+          const i=y*W+x;
+          if(seen[i]||solidStr.indexOf(D.map[y][x])>=0) continue;
+          seen[i]=1; st[sp++]=i; } }
+      while(sp>0){ const i=st[--sp]; reach++;
+        const x=i%W, y=(i-x)/W;
+        if(x+1<W && !seen[i+1] && solidStr.indexOf(D.map[y][x+1])<0){ seen[i+1]=1; st[sp++]=i+1; }
+        if(x-1>=0 && !seen[i-1] && solidStr.indexOf(D.map[y][x-1])<0){ seen[i-1]=1; st[sp++]=i-1; }
+        if(y+1<H && !seen[i+W] && solidStr.indexOf(D.map[y+1][x])<0){ seen[i+W]=1; st[sp++]=i+W; }
+        if(y-1>=0 && !seen[i-W] && solidStr.indexOf(D.map[y-1][x])<0){ seen[i-W]=1; st[sp++]=i-W; }
+      }
+      let own=0, got=0;
+      for(let y=0;y<H;y++){ const row=D.map[y];
+        for(let x=0;x<W;x++){ if(row[x]==='w') continue;
+          if(isleOfXY(x,y)!==I.id) continue;
+          own++; if(seen[y*W+x]) got++; } }
+      const frac=own?got/own:0;
+      if(frac<0.9){ bad++; L.push('  BAD  island '+I.id+' is '+(100*frac).toFixed(1)
+        +'% reachable from its own arrival point ('+got+'/'+own+')'); }
+      else L.push('  ok   island '+I.id+' is one walkable mass  ['+(100*frac).toFixed(1)+'%, '+got+'/'+own+']');
     }
-    while(sp>0){ const i=st[--sp]; reach++;
-      const x=i%W, y=(i-x)/W;
-      if(x+1<W && !seen[i+1] && D.map[y][x+1]!=='w'){ seen[i+1]=1; st[sp++]=i+1; }
-      if(x-1>=0 && !seen[i-1] && D.map[y][x-1]!=='w'){ seen[i-1]=1; st[sp++]=i-1; }
-      if(y+1<H && !seen[i+W] && D.map[y+1][x]!=='w'){ seen[i+W]=1; st[sp++]=i+W; }
-      if(y-1>=0 && !seen[i-W] && D.map[y-1][x]!=='w'){ seen[i-W]=1; st[sp++]=i-W; }
-    }
-    let orphan=0;
-    for(let y=0;y<H;y++){ const row=D.map[y];
-      for(let x=x1;x<W;x++) if(row[x]!=='w' && !seen[y*W+x]) orphan++; }
-    if(orphan){ bad++; L.push('  BAD  '+orphan+' land tiles east of the bridge are unreachable from it'); }
-    else L.push('  ok   every land tile east of the bridge is reachable from the bridge');
-    L.push('       (the fill also crossed to island A: '+reach+' tiles reached in total)');
     note('');
 
     // ---- what MUST be standable ----

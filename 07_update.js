@@ -1031,7 +1031,7 @@ function update(dt){
           portalPrompt={kind:'ground',x:La.gate.x,y:La.gate.y,gp:{x:La.gate.x,y:La.gate.y,ring:ring},
             ctx:(typeof GBOSS!=='undefined'&&GBOSS[ring])?GBOSS[ring].dn:'The Dungeon'}; } } }
     if(curRoom.pillars) for(const pl of curRoom.pillars){ const d=Math.hypot(pl.x-player.x,pl.y-player.y);
-      if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl.band)?pl.name:'Attune '+pl.name}; } }
+      if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl)?pl.name:'Attune '+pl.name}; } }
     if(curRoom.npc){ const np=curRoom.npc, d=Math.hypot(np.x-player.x,np.y-player.y);
       if(d<52 && d<_pbest){ _pbest=d; portalPrompt={kind:'npc',x:np.x,y:np.y,np:np,ctx:np.name}; } }
     if(curRoom.switches) for(const sw of curRoom.switches){ if(sw.on) continue;
