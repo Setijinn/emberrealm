@@ -378,6 +378,65 @@
       ok('at the stall the anvil is offered', /THE POUCH/.test(txt2), txt2.slice(0,60));
       document.getElementById('forgeScr').style.display='none';
     }
+
+    // ---------- 11. DENS THAT STAY OPEN ----------
+    // A dungeon used to be reachable only through a 45-second portal at a corpse. Beating a boss's
+    // overworld form now opens its lair gate for good. These assertions exist because the failure
+    // mode is invisible: a door that quietly stops appearing, or one that appears and lets a
+    // pre-ascension hero into the awakened depths.
+    note('');
+    note('== dens ==');
+    if(typeof denOpened==='function' && typeof openDen==='function'){
+      const _saved=(typeof LS!=='undefined')?LS.get('er-dens',[]):[];
+      ok('a den nobody has opened is shut', !denOpened(4));
+      ok('opening one reports that it is new', openDen(4)===true);
+      ok('and it reads open afterwards', denOpened(4)===true);
+      ok('opening it twice is not new again', openDen(4)===false);
+      ok('it persists to storage', (LS.get('er-dens',[])||[]).indexOf(4)>=0);
+      ok('opening one den does not open another', !denOpened(5));
+
+      // THE DOOR IS KEYED BY BOSS ID, which is the whole reason it survives a world rebuild: a
+      // territory index shifts when a territory is added, an identity does not.
+      const G=rooms['G'];
+      let gated=0, walkin=0;
+      if(typeof GBOSS!=='undefined') for(let r=0;r<GBOSS.length;r++){
+        if(GBOSS[r].gate==='none') walkin++; else gated++; }
+      ok('nine awakened depths and four walk-ins', gated===9&&walkin===4, gated+'/'+walkin);
+
+      // Drive the actual prompt: stand at a lair gate whose den is open and it must offer the
+      // dungeon; with the den shut it must offer nothing.
+      if(G&&G.lairs&&G.lairs[4]&&G.lairs[4].gate){
+        const gt=G.lairs[4].gate, _pr=curRoom, _px=player.x, _py=player.y;
+        curRoom=G; player.x=gt.x; player.y=gt.y;
+        portalPrompt=null; portalLock=false;
+        update(0.016);
+        const p1=portalPrompt;
+        ok('an open gate offers its dungeon',
+           !!p1 && p1.kind==='ground' && p1.gp && p1.gp.ring===4,
+           p1?(p1.kind+'/'+(p1.gp?p1.gp.ring:'-')):'none');
+        ok('and names the dungeon it leads to',
+           !!p1 && p1.ctx===GBOSS[4].dn, p1?String(p1.ctx):'none');
+        // a shut den offers nothing from the same spot
+        const keep=LS.get('er-dens',[]).filter(x=>x!==4);
+        LS.set('er-dens',keep); _denSet=null;
+        portalPrompt=null; update(0.016);
+        ok('a gate that was never opened offers nothing',
+           !portalPrompt || portalPrompt.kind!=='ground');
+        LS.set('er-dens',[4]); _denSet=null;
+        // AND THE ASCENSION GATE STILL BITES. Boss 4 is one of the nine, so a hero with no
+        // ascension must be refused even though the door is open -- the door opening and the door
+        // letting you through are separate questions.
+        portalPrompt=null; update(0.016);
+        const _asc=rpg.ascension; rpg.ascension=null;
+        const _room=curRoom;
+        if(portalPrompt) usePortalPrompt();
+        ok('an un-ascended hero is refused at an awakened door', curRoom===_room);
+        rpg.ascension=_asc;
+        curRoom=_pr; player.x=_px; player.y=_py;
+      } else ok('lair 4 has a gate to stand at', false);
+
+      if(typeof LS!=='undefined'){ LS.set('er-dens',_saved); _denSet=null; }
+    } else ok('denOpened/openDen exist', false);
   }
 
   function boot(){

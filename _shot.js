@@ -35,6 +35,7 @@
     // treating it as a layout bug. It was the rig.
     for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr',
                     'hcScr','deathScr','invScr','mapScr','skillScr','statsScr','sheetScr']){
+      if(s===WANT+'Scr') continue;            // never hide the thing we came to photograph
       const el=document.getElementById(s); if(el) el.style.display='none'; }
     document.body.style.background='#0b0910';
   }
@@ -43,6 +44,21 @@
     setup(); hideChrome();
     if(WANT==='forge'){
       openForge();
+    } else if(WANT==='map'){
+      // THE FULL MAP needs a real world, not just a panel: mapTerrain reads rooms['G'] and
+      // _territories(), and drawMap plots lairs, pillars and portals in world coordinates. So put
+      // the hero on the overworld first, then draw ONE frame -- drawMap is normally driven by
+      // mapInt on an interval, which a screenshot never waits for.
+      // `?dens=all` opens every lair gate so the open-door styling can be photographed without
+      // farming thirteen bosses first. It writes only to the throwaway '_shot' account's storage.
+      if(typeof devTeleport==='function') devTeleport('G');
+      if(Q.get('dens')==='all' && typeof openDen==='function'){
+        const n=(typeof GBOSS!=='undefined')?GBOSS.length:0;
+        for(let i=0;i<n;i++) openDen(i); }
+      if(typeof fogReveal==='function' && typeof curRoom!=='undefined')
+        for(let i=0;i<40;i++) fogReveal(curRoom,0.2);      // uncover where we stand, so labels show
+      const ms=document.getElementById('mapScr'); if(ms) ms.style.display='flex';
+      if(typeof drawMap==='function') drawMap();
     } else if(WANT==='dev'){
       // the workbench. openDev builds the tabs; then jump to the requested one.
       if(typeof openDev==='function') openDev();

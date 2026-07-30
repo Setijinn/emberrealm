@@ -858,7 +858,12 @@ function update(dt){
       if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null; ringBossCd[de.ring]=32+Math.random()*20;
         groundPortals.push({x:de.x,y:de.y,ring:de.ring,life:45});
         if(_sim) for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/4.2)+1))));
-        msg('A PORTAL TEARS OPEN',GBOSS[de.ring].dn+' awaits'); }
+        // AND THE LAIR GATE STAYS OPEN FROM NOW ON. The corpse portal above is still the immediate
+        // way in; this is what makes the dungeon somewhere you can come BACK to. Announced only the
+        // first time, because "the way in is open" is news once and noise thereafter.
+        const _newDen=(typeof openDen==='function') && openDen(de.ring);
+        msg('A PORTAL TEARS OPEN',GBOSS[de.ring].dn+' awaits');
+        if(_newDen) msg('THE GATE STANDS OPEN','you can return to '+GBOSS[de.ring].dn+' whenever you like'); }
       else if(curRoom.dungeon && de.boss){
         if(_sim){ const rt2=Math.min(11,Math.round((curRoom.lv||10)/4.2)+2);
           for(let q=0;q<3;q++) loots.push(bagAt(de,mkDrop(rt2))); }   // no tonic: flasks refill themselves
@@ -1013,6 +1018,18 @@ function update(dt){
       if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'portal',x:pt.x,y:pt.y,to:pt.to||'0,0',ctx:pt.label||'Portal'}; } }
     for(const gp of groundPortals){ const d=Math.hypot(gp.x-player.x,gp.y-player.y);
       if(d<44 && d<_pbest){ _pbest=d; portalPrompt={kind:'ground',x:gp.x,y:gp.y,gp:gp,ctx:gp.home?'The Vale':'The Dungeon'}; } }
+    // THE STANDING DOOR at a lair whose boss has been beaten once. It builds a `kind:'ground'`
+    // prompt with a synthetic gp rather than a kind of its own, so the ONE place that decides
+    // whether you may enter a dungeon -- ascension gate included -- stays the same place.
+    // A wider reach than a corpse portal (52 vs 44) because the gate is a landmark you walk up to
+    // rather than a thing you happen to be standing on.
+    if(curRoom.lairs && curRoom.rings && typeof denOpened==='function'){
+      for(const _b in curRoom.lairs){ const La=curRoom.lairs[_b]; if(!La||!La.gate) continue;
+        const ring=_b|0; if(!denOpened(ring)) continue;
+        const d=Math.hypot(La.gate.x-player.x,La.gate.y-player.y);
+        if(d<52 && d<_pbest){ _pbest=d;
+          portalPrompt={kind:'ground',x:La.gate.x,y:La.gate.y,gp:{x:La.gate.x,y:La.gate.y,ring:ring},
+            ctx:(typeof GBOSS!=='undefined'&&GBOSS[ring])?GBOSS[ring].dn:'The Dungeon'}; } } }
     if(curRoom.pillars) for(const pl of curRoom.pillars){ const d=Math.hypot(pl.x-player.x,pl.y-player.y);
       if(d<46 && d<_pbest){ _pbest=d; portalPrompt={kind:'pillar',x:pl.x,y:pl.y,pl:pl,ctx:pillarUnlocked(pl.band)?pl.name:'Attune '+pl.name}; } }
     if(curRoom.npc){ const np=curRoom.npc, d=Math.hypot(np.x-player.x,np.y-player.y);

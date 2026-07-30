@@ -36,10 +36,10 @@ def build():
         f.write(html.replace("</body>", inject + "</body>"))
 
 
-def shoot(idx, hud=False):
+def shoot(idx, hud=False, extra=(), name=None):
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
-    dest = os.path.join(OUT, "z%02d.png" % idx)
+    dest = os.path.join(OUT, (name or ("z%02d" % idx)) + ".png")
     chrome = find_chrome()
     cmd = [
         chrome, "--headless=new", "--disable-gpu",
@@ -50,7 +50,12 @@ def shoot(idx, hud=False):
     ]
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         cmd.append("--no-sandbox")
-    cmd.append("http://localhost:%d/%s?z=%d&hud=%d" % (PORT, PAGE, idx, 1 if hud else 0))
+    # 127.0.0.1, NOT localhost: serve.py binds 127.0.0.1 explicitly and Chrome tries ::1 first,
+    # where nothing is listening -- same trap tools/shot.py documents.
+    url = "http://127.0.0.1:%d/%s?z=%d&hud=%d" % (PORT, PAGE, idx, 1 if hud else 0)
+    for kv in extra:
+        url += "&" + kv
+    cmd.append(url)
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     ok = os.path.exists(dest) and os.path.getsize(dest) > 0
     print("%s  %s" % ("ok " if ok else "FAIL", dest))
@@ -60,8 +65,14 @@ def shoot(idx, hud=False):
 if __name__ == "__main__":
     build()
     arg = sys.argv[1] if len(sys.argv) > 1 else "0"
+    extra = sys.argv[2:]
     if arg == "all":
         for i in range(14):
-            shoot(i)
+            shoot(i, extra=extra)
     else:
-        shoot(int(arg))
+        # a lair shot is not a territory shot -- name the file after what it is
+        nm = None
+        for kv in extra:
+            if kv.startswith("lair="):
+                nm = "lair" + kv.split("=", 1)[1]
+        shoot(int(arg), extra=extra, name=nm)

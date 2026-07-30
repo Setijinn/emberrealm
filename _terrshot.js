@@ -77,7 +77,20 @@
         }
         if(best){ bx=best.x; by=best.y; }
       }
-      const p=openGround(bx,by);
+      let p=openGround(bx,by);
+      // `?lair=N&dens=all` stands at boss N's lair GATE instead of the province centre, which is the
+      // only way to photograph the arena staging: drawLairs only draws it within rx+900 of the lair,
+      // and a province centroid is further off than that once LAIR_NUDGE has pushed the lair clear
+      // of the map label.
+      const LI=Q.get('lair');
+      if(LI!==null && curRoom.lairs && curRoom.lairs[LI|0] && curRoom.lairs[LI|0].gate){
+        const gt=curRoom.lairs[LI|0].gate;
+        if(Q.get('dens')==='all' && typeof openDen==='function'){
+          const n=(typeof GBOSS!=='undefined')?GBOSS.length:0;
+          for(let i=0;i<n;i++) openDen(i); }
+        // stand back from the gate so the whole doorway is in frame rather than under the hero
+        p={x:gt.x-Math.cos(gt.a)*70, y:gt.y-Math.sin(gt.a)*70};
+      }
       player.x=p.x; player.y=p.y;
       const roomBefore=curRoom;
       update(0.016);
@@ -107,12 +120,34 @@
       // trusting this to give it an empty screen.
       if(!HUD){ for(const id of ['hudTop','hudBot','hud','menuBtn','devBtn2','flasks','invBtn']){
           const e=document.getElementById(id); if(e) e.style.display='none'; } }
+      // resize() ends with `cv.width=...` and assigning a canvas width RESETS ITS BITMAP, while
+      // 01_constants.js queues resize() at load and again at +150/+600/+900ms to let mobile viewport
+      // metrics settle -- and this harness runs at load+900. So a settle timer wiping the frame we
+      // just painted was the obvious suspect. Stubbing it is harmless (the canvas is already at its
+      // final size) and it is kept for that reason, but MEASURED: it is NOT the cause. The canvas
+      // is still empty with this in place.
+      window.resize=function(){};
       render();
       // Frame cost, because every one of these ground passes is per-tile per-frame and the honest
       // way to know what a noise octave costs is to time it rather than to reason about it.
       const t0=performance.now(); for(let i=0;i<20;i++) render();
       const ms=(performance.now()-t0)/20;
-      tag('z'+ZI+'  '+t.name+'   band '+band+'   Lv'+lv+'   render '+ms.toFixed(2)+'ms');
+      // THE LABEL CARRIES DIAGNOSTICS, because a black canvas and a correctly-labelled black canvas
+      // look identical and mean completely different things. Buffer size is the first thing to check:
+      // resize() derives it from cv.clientWidth, so a canvas the browser has not laid out yet
+      // renders nothing at all while every number above still reads correctly.
+      const _cv=document.querySelector('canvas');
+      tag('z'+ZI+'  '+t.name+'   band '+band+'   Lv'+lv+'   render '+ms.toFixed(2)+'ms'
+        +'   buf '+(_cv?(_cv.width+'x'+_cv.height):'none')
+        +'   css '+(_cv?(_cv.clientWidth+'x'+_cv.clientHeight):'none')
+        +'   W/H '+(typeof W!=='undefined'?W+'/'+H:'?')
+        // _groundSet[b] is a single Image, not a list -- reading .length here printed 0 for a
+        // perfectly loaded atlas and sent me looking for a loader bug that did not exist.
+        +'   set '+((typeof _groundSet!=='undefined'&&_groundSet[band])?(_groundSet[band].naturalWidth+'w/'+_groundSet[band].complete):'none')
+        +'   terr '+((typeof _terrSet!=='undefined'&&_terrSet[band])?(_terrSet[band].naturalWidth+'w/'+_terrSet[band].complete):'none'));
+      // THIS HARNESS DOES NOT CURRENTLY PRODUCE A PICTURE OF THE GROUND -- see the note in
+      // HANDOFF.md. The label above is trustworthy; the canvas is not. Do not re-add a control blit
+      // here: one was tried and did not appear either, which is the whole point of the finding.
     }catch(e){
       tag('SHOT THREW: '+(e&&e.message));
     }

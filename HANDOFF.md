@@ -66,7 +66,22 @@ project *is*, you are in the wrong file.
   different question from a panel and so a different tool: it puts a hero on real terrain in one of
   the fourteen territories. It stubs `requestAnimationFrame` to zero, because the live loop
   otherwise walked the hero into a portal *after* the harness returned and three shots of the Hearth
-  came back labelled as other zones.
+  came back labelled as other zones. `?lair=N&dens=all` stands at a boss's lair gate instead of the
+  province centre, which is the only way to frame the arena staging.
+- **BUT terrshot's CANVAS IS CURRENTLY A LIAR, AND ITS LABEL IS NOT.** Every shot comes back as a
+  flat `#0b0a10` field — which is `render()`'s own background fill, so render *is* running — with a
+  correct label over the top. Ruled out by measurement, not by argument: the canvas is sized
+  (`buf 1264x625`, matching `W/H`), the ground atlases are loaded AND decoded (`set 128w/true`,
+  `terr 128w/true`), the harness does not throw (it reaches its final `tag()`), and `resize()`
+  wiping the bitmap afterwards is **not** it — stubbing `resize` changes nothing. A raw
+  `ctx.drawImage` control blit with an identity transform, straight after `render()`, **also does not
+  appear**, which is the finding that matters: the failure is not in the tile path, it is that
+  drawing to `ctx` at that moment does not reach the captured frame at all.
+  `render 0.00ms` is a red herring — `--virtual-time-budget` freezes `performance.now()`.
+  Consequences: **do not use a terrshot image as evidence** (the label is fine), and any stage whose
+  verification says "compare terrshot before/after" needs this fixed first. `_terraudit.js` through
+  `tools/audit.py` still reports real numbers, so measurements are unaffected; `tools/shot.py` for
+  DOM panels is unaffected and its screenshots are trustworthy.
 - Windows stdout is cp1252 and **cannot encode the `★` in a relic name**, so any tool that prints
   test output must `sys.stdout.reconfigure(encoding="utf-8")` or it dies on the report while every
   test passes.

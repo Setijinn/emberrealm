@@ -39,6 +39,25 @@ function _pillars(){ if(!_pillarSet) _pillarSet=new Set(LS.get('er-pillars',[]))
 function pillarUnlocked(b){ return _pillars().has(b); }
 function unlockPillar(b){ _pillars().add(b); LS.set('er-pillars',[..._pillarSet]); }
 function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
+
+// ---- dens that stay open ----
+// A DUNGEON USED TO BE A 45-SECOND WINDOW AND NOTHING ELSE. The only entrance in the game was the
+// groundPortal dropped at a slain overworld boss's corpse (07_update), which expired, was cleared
+// by enterRoom on any room change, and was gone for good if you died in it -- so the dungeon behind
+// every boss was a place you could not go back to and nothing on the map said it existed.
+// Beating a boss's OVERWORLD form now opens its lair gate permanently.
+//
+// KEYED BY BOSS ID, deliberately, not by territory index: a boss id is an identity and is stable,
+// while a clump index shifts the moment a territory is added. Same reasoning as the append-only
+// rule on NKIND, and it is why this survives a world rebuild untouched.
+//
+// The ascension gate is NOT weakened by this: the door opening and the door LETTING YOU THROUGH are
+// separate questions, and usePortalPrompt still refuses the awakened depths without an ascension.
+let _denSet=null;
+function _dens(){ if(!_denSet) _denSet=new Set(LS.get('er-dens',[])); return _denSet; }
+function denOpened(b){ return _dens().has(b|0); }
+function openDen(b){ b=b|0; if(_dens().has(b)) return false;
+  _denSet.add(b); LS.set('er-dens',[..._denSet]); return true; }
 // USE-button handler for the portal/pillar prompt (see 07_update portalPrompt detection)
 function usePortalPrompt(){ const p=portalPrompt; if(!p) return; portalPrompt=null;
   // teleports suppress re-prompt; loot doesn't -- and neither does a stall, or closing the shop
@@ -1440,7 +1459,9 @@ function mapTerrain(G,L){
         c.fillStyle='rgba(14,9,16,0.55)'; c.fillRect(px,py,bs,bs); } } }
   // zone name labels \u2014 bands at a representative ring point, grind sectors at their centroid
   c.textAlign='center'; c.textBaseline='middle';
-  if(T) for(const tt of T){ if(tt.n<60) continue;
+  // INDEXED, because a territory's own record does not know whether a boss rules it -- ZBOSS is
+  // keyed by clump index and T is in that same fixed order, so the index is the only way to ask.
+  if(T) for(let ti=0;ti<T.length;ti++){ const tt=T[ti]; if(tt.n<60) continue;
     const lx=L.ox+(tt.sx/tt.n)*s, ly=L.oy+(tt.sy/tt.n)*s;
     const lvs=(tt.lvmax&&tt.lvmax!==tt.lvmin)?('Lv '+tt.lvmin+'-'+tt.lvmax):('Lv '+tt.lvmin);
     c.font='bold 11px "Pixelify Sans",monospace';
@@ -1448,7 +1469,15 @@ function mapTerrain(G,L){
     c.fillStyle='#f4ecdc'; c.fillText(tt.name,lx,ly-5);
     c.font='9px "Pixelify Sans",monospace';
     c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(lvs,lx,ly+7);
-    c.fillStyle='#ffc94d'; c.fillText(lvs,lx,ly+7); }
+    c.fillStyle='#ffc94d'; c.fillText(lvs,lx,ly+7);
+    // A PROVINCE WITH NO LAIR SAYS SO. The Molten Heart carries a name, a level range and its own
+    // loot row while ZBOSS[11] is -1, so it has no boss, no lair and no dungeon -- and the map gave
+    // no hint of that, which reads as a missing boss rather than an empty province. Saying it out
+    // loud is the difference between a gap and a place.
+    const _zb=(typeof ZBOSS!=='undefined')?ZBOSS[ti]:0;
+    if(_zb<0){ c.font='italic 8px "Pixelify Sans",monospace';
+      c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText('no lair',lx,ly+18);
+      c.fillStyle='#8a8494'; c.fillText('no lair',lx,ly+18); } }
   c.textBaseline='alphabetic';
   _mapCache={key:key,cv:off};
   return off;
@@ -1468,10 +1497,80 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  c.textAlign='center';
  c.font='bold 15px "Pixelify Sans",monospace'; c.fillStyle='#e9dfce';
  c.fillText('THE SUNDERED ISLES',MAP_W/2,22);
- // boss lairs \u2014 small pale skull dots
- if(G.lairs) for(const b in G.lairs){ const La=G.lairs[b]; if(!La.spawn) continue; const q=mapPos(G,L,La.spawn.x,La.spawn.y);
-   c.fillStyle='#ded0d4'; c.beginPath(); c.arc(q.x,q.y,2.6,0,6.29); c.fill();
-   c.fillStyle='#20161c'; c.fillRect(q.x-1.1,q.y-0.6,0.9,0.9); c.fillRect(q.x+0.3,q.y-0.6,0.9,0.9); }
+ // boss lairs \u2014 a pale skull dot, and once you have SEEN it, who lives there
+ // AN UNLABELLED 2.6px DOT WAS THE ONLY THING THE MAP SAID ABOUT THIRTEEN BOSSES AND THEIR
+ // DUNGEONS. Naming them is the whole point of this pass: the endgame was on the map the entire
+ // time and unreadable. Gated on fogSeen so it is a record of where you have been rather than a
+ // free atlas -- fogSeen answers true wherever fog is not in use, so nothing is hidden by accident.
+ // A den whose gate stands open is drawn in the portal violet and carries its dungeon's name,
+ // which makes "where can I go back to" a thing you can read off the map.
+ // A LABEL CLAIMS A BOX AND THE NEXT ONE STEPS AROUND IT. The province name is drawn AT a
+ // territory's centroid while its lair is nudged only ~0.35*sqrt(area/pi) off the same point, so at
+ // this scale the two collide constantly -- the first pass wrote "The Landing Sands" straight
+ // through "The Tidewrack", and five other pairs with it. Per-territory offsets would have fixed the
+ // picture and rotted the moment the world is regenerated, so placement is computed instead:
+ // occupied boxes first (the province labels, recomputed from the same formulas mapTerrain uses),
+ // then each lair label takes the first candidate slot that is clear.
+ // _territories() is cached on the room, so asking for it here costs a property read. It is NOT in
+ // scope from mapTerrain -- that T is a local, and reaching for it threw on the first run.
+ const T=(typeof _territories==='function')?_territories(G):null;
+ const _boxes=[];
+ // OVERLAP AREA, not a boolean. A yes/no test can only say "this spot is taken", so when every
+ // candidate is taken -- which the starter island's four-provinces-and-four-lairs corner guarantees
+ // at this scale -- the caller has nothing to choose between and takes the last one, which is how
+ // "The Cairnwright" ended up written across "Sawgrass Flats". Scoring lets the crowded case pick
+ // the least bad spot instead of an arbitrary one.
+ const _over=(x,y,w,h)=>{ let a=0;
+   for(const r of _boxes){
+     const ox=Math.min(x+w/2,r.x+r.w/2+2)-Math.max(x-w/2,r.x-r.w/2-2);
+     const oy=Math.min(y+h/2,r.y+r.h/2+1)-Math.max(y-h/2,r.y-r.h/2-1);
+     if(ox>0&&oy>0) a+=ox*oy; }
+   return a; };
+ const _claim=(x,y,w,h)=>{ _boxes.push({x:x,y:y,w:w,h:h}); };
+ if(T) for(let ti=0;ti<T.length;ti++){ const tt=T[ti]; if(tt.n<60) continue;
+   const lx=L.ox+(tt.sx/tt.n)*L.s, ly=L.oy+(tt.sy/tt.n)*L.s;
+   c.font='bold 11px "Pixelify Sans",monospace';
+   _claim(lx,ly+4,c.measureText(tt.name).width+6,34); }
+ if(G.lairs) for(const b in G.lairs){ const La=G.lairs[b]; if(!La.spawn) continue;
+   const ring=b|0, q=mapPos(G,L,La.spawn.x,La.spawn.y);
+   const seen=(typeof fogSeen!=='function')||fogSeen(G,La.spawn.x,La.spawn.y);
+   const open=(typeof denOpened==='function')&&denOpened(ring);
+   c.fillStyle=open?'#e79bff':'#ded0d4'; c.beginPath(); c.arc(q.x,q.y,2.6,0,6.29); c.fill();
+   c.fillStyle='#20161c'; c.fillRect(q.x-1.1,q.y-0.6,0.9,0.9); c.fillRect(q.x+0.3,q.y-0.6,0.9,0.9);
+   const GB=(typeof GBOSS!=='undefined')?GBOSS[ring]:null;
+   if(!seen||!GB) continue;
+   c.textAlign='center'; c.textBaseline='middle';
+   c.font='bold 9px "Pixelify Sans",monospace';
+   const wN=c.measureText(GB.n).width;
+   c.font='8px "Pixelify Sans",monospace';
+   const wD=GB.dn?c.measureText(GB.dn).width:0;
+   const bw=Math.max(wN,wD)+6, bh=GB.dn?26:13;
+   // above the dot first, then below, then further out, then sideways -- the starter island packs
+   // four provinces and four lairs into one corner and vertical room alone runs out there. First
+   // clear slot wins; if none is clear the SMALLEST overlap wins, so a crowded corner degrades
+   // gracefully instead of stacking two names on the same pixels.
+   let dx=0, dy=-16, best=1e9;
+   for(const cand of [[0,-16],[0,17],[0,-30],[0,31],[0,-44],[0,45],
+                      [-bw*0.6,-16],[bw*0.6,-16],[-bw*0.6,17],[bw*0.6,17],
+                      [-bw*0.6,-30],[bw*0.6,-30],[-bw*0.6,31],[bw*0.6,31]]){
+     const sc=_over(q.x+cand[0],q.y+cand[1],bw,bh);
+     if(sc<best){ best=sc; dx=cand[0]; dy=cand[1]; if(sc===0) break; } }
+   _claim(q.x+dx,q.y+dy,bw,bh);
+   // the LABEL moves; the dot does not. Keeping them in separate variables is what lets the leader
+   // line below actually join the two.
+   const lx2=q.x+dx, ny=q.y+dy-(GB.dn?6:0), dny=q.y+dy+7;
+   // a hairline from the dot to the label, drawn FIRST so the text sits on top of it
+   if(Math.abs(dy)>20||dx!==0){ c.strokeStyle='rgba(222,208,212,0.32)'; c.lineWidth=1;
+     c.beginPath(); c.moveTo(q.x,q.y+(dy<0?-4:4)); c.lineTo(lx2,q.y+dy-(dy<0?-9:9)); c.stroke(); }
+   c.font='bold 9px "Pixelify Sans",monospace';
+   c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.9)';
+   c.strokeText(GB.n,lx2,ny); c.fillStyle='#ded0d4'; c.fillText(GB.n,lx2,ny);
+   if(GB.dn){ c.font='8px "Pixelify Sans",monospace';
+     c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.9)';
+     c.strokeText(GB.dn,lx2,dny);
+     c.fillStyle=open?'#e79bff':'#8a8494'; c.fillText(GB.dn,lx2,dny); }
+   c.textBaseline='alphabetic'; }
+ c.textAlign='center';
  // the infection portal (violet, pulsing)
  if(G.rings.portal){ const q=mapPos(G,L,G.rings.portal.x*TILE,G.rings.portal.y*TILE), pu=0.5+0.5*Math.sin(t/300);
    c.save(); c.globalCompositeOperation='lighter';
@@ -1504,6 +1603,8 @@ function drawMap(){ const G=rooms['G']; if(!G||!G.rings) return;
  c.fillStyle='#cfc8bd'; c.fillText('portal',MAP_PAD+95,fy);
  c.fillStyle='#ded0d4'; c.beginPath(); c.arc(MAP_PAD+152,fy-4,3,0,6.29); c.fill();
  c.fillStyle='#cfc8bd'; c.fillText('boss lair',MAP_PAD+160,fy);
+ c.fillStyle='#e79bff'; c.beginPath(); c.arc(MAP_PAD+226,fy-4,3,0,6.29); c.fill();
+ c.fillStyle='#cfc8bd'; c.fillText('gate open',MAP_PAD+234,fy);
  c.textAlign='right';
  if(curRoom&&curRoom.rings&&curRoom.rings.radial){ const rg=regionAtPx(player.x,player.y);
   const lv=(typeof grvLvAt==='function')?grvLvAt(player.x/TILE,player.y/TILE):null;

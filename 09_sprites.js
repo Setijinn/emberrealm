@@ -1379,6 +1379,23 @@ function drawLairs(){
           emitP(z.x,z.y-10,{vx:(Math.random()*14-7),vy:-26,life:1.1,col:col,sz:2,g:-14,glow:true}); }
       // gateway: two standing flames marking the way in
       if(L.gate){ const gx=L.gate.x, gy=L.gate.y, pa=L.gate.a+1.5708, ox=Math.cos(pa)*26, oy=Math.sin(pa)*26;
+        // A DOOR ONCE THE BOSS HAS BEEN BEATEN. Hung BETWEEN the two flames that already stand here
+        // rather than as new art: a violet rift veil, the same colour language the return portals
+        // and the infection portal use, so "there is a way in here" reads without a legend. Drawn
+        // before the flames so they stay in front of it and the frame keeps its depth.
+        if(typeof denOpened==='function' && denOpened(+b)){
+          const vw=Math.hypot(ox,oy)*0.92, sh=0.5+0.5*Math.sin(_t*2.1);
+          ctx.save(); ctx.translate(gx,gy-14); ctx.rotate(pa);
+          ctx.globalCompositeOperation='lighter';
+          const vg=ctx.createLinearGradient(-vw,0,vw,0);
+          vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(0.5,'rgba(150,74,200,'+(0.30+sh*0.16)+')');
+          vg.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=vg; ctx.fillRect(-vw,-30,vw*2,52);
+          // three slow vertical filaments, so it reads as a surface rather than a flat wash
+          ctx.globalAlpha=0.30+sh*0.20; ctx.strokeStyle='#e79bff'; ctx.lineWidth=1;
+          for(let i=-1;i<=1;i++){ const fx3=i*vw*0.42+Math.sin(_t*1.3+i)*2.2;
+            ctx.beginPath(); ctx.moveTo(fx3,-27); ctx.lineTo(fx3,20); ctx.stroke(); }
+          ctx.restore(); ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; }
         for(const s of [-1,1]){ const fx2=gx+ox*s, fy2=gy+oy*s, fl=0.7+0.3*Math.sin(_t*5+s);
           ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=0.26*fl;
           const g2=ctx.createRadialGradient(fx2,fy2-10,2,fx2,fy2-10,70);

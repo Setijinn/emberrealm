@@ -9,6 +9,10 @@ pixels, which is the only way to actually LOOK at a panel before shipping it.
 
     py tools/shot.py forge 1280 900
     py tools/shot.py dev   390 844  levels
+    py tools/shot.py map   980 700  map  dens=all
+
+Anything after the tab is passed through to the page as extra query args, which is how a shot asks
+for world state it would otherwise have to be earned in-game (every lair gate open, say).
 
 Writes to _shots/<name>.png.
 """
@@ -50,7 +54,7 @@ def chrome():
     sys.exit("no Chrome found")
 
 
-def shoot(what, w, h, tab):
+def shoot(what, w, h, tab, extra=()):
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
     name = "%s_%s_%dx%d" % (what, tab, w, h)
@@ -58,6 +62,8 @@ def shoot(what, w, h, tab):
     # 127.0.0.1, NOT localhost: serve.py binds 127.0.0.1 explicitly, and Chrome resolves localhost
     # to ::1 first, which nothing is listening on -- it lands on the network error page.
     url = "http://127.0.0.1:%d/_shot.html?shot=%s&tab=%s" % (PORT, what, tab)
+    for kv in extra:
+        url += "&" + kv
     # A FRESH PROFILE EVERY RUN. A reused profile keeps Chrome's own HTTP cache, and the thing this
     # tool exists to photograph is CSS -- so a stale stylesheet would be rendered faithfully and the
     # screenshot would be a picture of the previous edit. serve.py sends no-store, but the cheap
@@ -86,5 +92,6 @@ if __name__ == "__main__":
     w = int(sys.argv[2]) if len(sys.argv) > 2 else 1280
     h = int(sys.argv[3]) if len(sys.argv) > 3 else 900
     tab = sys.argv[4] if len(sys.argv) > 4 else what
+    extra = sys.argv[5:]
     build()
-    shoot(what, w, h, tab)
+    shoot(what, w, h, tab, extra)
