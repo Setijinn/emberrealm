@@ -312,7 +312,30 @@ it hands you the prestige caps while there are still levels left to earn.
 - Fixed exclusive affixes no roll can reach; some carry a trait, and set bonuses reuse the `player`
   flag family the ascension capstones already set — **no new combat branches**. Flags read only by
   `12b_abilities` modify one ability rather than always applying, so they are deliberately unused.
-- Six dungeons drop them, two sets each, `relicChanceFor()` returning 0 everywhere else.
+- **Six dungeons drop them, and the gate is DERIVED, not indexed** (2026-07-29). `relicChanceFor` used
+  to read two raw clump indices (`RELIC_ZONE_MIN=7`, `RELIC_ZONE_RIM=9`) through `BOSS_ZONE`, and the
+  comment above them warned exactly what would go wrong — *"nothing here reads a level, so a stale
+  constant would not throw; it would just quietly start paying relics out of Deep Timber"*. It had
+  already half-happened: the file claimed "Lv40 and above" while the Heartwood Hollow, Fogbound Glade
+  and Sunken Warren were all Lv40+ and paid **nothing**, and the `LV40`/`LV50` in the constant names
+  stopped describing the Shattered Vault the moment it became Lv50.
+  It now asks two questions that travel with the data: **does `RELIC_SETS` keep a set here** (the same
+  `setsForRing` the forge reads, so "which dungeons drop relics" and "which can forge them" cannot
+  disagree), and **what level is the dungeon** (`relicDungeonLv`, cached, off `genDungeon`). Stage 10's
+  territory reindex therefore cannot silently move a payout.
+- **ALL NINE ASCENDED DUNGEONS SIT ON `LV_CAP`** (user, 2026-07-29). Clamping at the cap had already
+  put seven there; the Heartwood Hollow (Lv40) and Fogbound Glade (Lv48) still read their territory's
+  `lvmax`. `genDungeon` assigns `LV_CAP` outright now, so "ascended" and "Lv50" are the same statement
+  and cannot drift. Stated cost: `bossPace` saturates at `d=1` for every Lv50 dungeon, so all nine
+  share one pace curve and only mechanics and relic rate separate them — already true of seven.
+  Consequence of deriving the gate: rings 3 and 4 went 0.25% → 1.00%, so all six pay uniformly. That
+  helps, since the forge audit measured the **relic** as the binding half of an SD piece.
+- **`devKillabilitySweep()` is a FUNCTION now**, not a dev-button closure, and the self-test calls it.
+  The rule it guards — *there must be an exit the player can reach* — is the one whose violation made
+  twelve of fifteen anchored fights unkillable, and it was only ever checkable by a human clicking a
+  button. It also no longer assumes a room: it read `if(curRoom && curRoom.dungeon)`, which is fine for
+  someone standing in the world and threw on every fight when run from a harness that never called
+  `play()`. Current: **27/27, worst anchor streak 8.6s of a 12.2s cap.**
 - `RELIC_COL` / `--relic` (#ffd24a) is the one gold for everything relic. The icon stamps **R**
   where ordinary items stamp their tier.
 

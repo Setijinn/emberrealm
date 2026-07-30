@@ -608,6 +608,24 @@
       }
     } else ok('itemUsable/useItem exist', false);
 
+    // ---------- 10d. EVERY FIGHT HAS AN EXIT THE PLAYER CAN REACH ----------
+    // The rule whose violation once made TWELVE of fifteen anchored fights literally unkillable, and
+    // dn5 unfightable at all. It has always been checkable and was only ever reachable by a human
+    // clicking a dev button; now that all nine ascended dungeons sit on the cap -- so every one of
+    // them runs at bossPace's saturated d=1 -- it is exactly the wrong thing to leave to hand-testing.
+    note('');
+    note('== killability ==');
+    if(typeof devKillabilitySweep==='function'){
+      const sw=devKillabilitySweep();
+      ok('every registered fight is killable', sw.ok, sw.fails.length?sw.fails.join(' · '):sw.text);
+      ok('all 27 fights were driven', sw.total===27, sw.total+' keys');
+      // an anchor gate is a TIMED window, so its streak must stay under ANCHOR_WIN plus pace headroom.
+      // A ward gate is uncapped BY DESIGN -- killing the adds is the exit -- so the two are reported
+      // apart; judging a ward fight by ANCHOR_WIN flags dn0 and ow8 on every clean run.
+      ok('worst anchor streak is inside its cap', sw.worstAnchor<=sw.cap,
+         sw.worstAnchor.toFixed(1)+'s of '+sw.cap.toFixed(1)+'s');
+    } else ok('devKillabilitySweep exists', false);
+
     // ---------- 11. DENS THAT STAY OPEN ----------
     // A dungeon used to be reachable only through a 45-second portal at a corpse. Beating a boss's
     // overworld form now opens its lair gate for good. These assertions exist because the failure

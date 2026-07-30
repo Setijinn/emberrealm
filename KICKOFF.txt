@@ -63,7 +63,20 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v550 -> v559)
+ALL NINE ASCENDED DUNGEONS ARE Lv50, AND THE RELIC GATE IS DERIVED (v561).
+- genDungeon assigns LV_CAP outright to every non-starter ring, so "ascended" and
+  "Lv50" are one statement. Only rings 0 (was Lv40) and 1 (was Lv48) moved. The
+  four starter walk-ins keep their island levels: Lv7/12/20/15.
+- relicChanceFor no longer reads raw clump indices. It asks whether RELIC_SETS
+  keeps a set in that dungeon (the same setsForRing the forge reads) and what the
+  dungeon's LEVEL is. Its old constants had already gone stale against their own
+  names, and Stage 10's reindex would have moved payouts silently.
+  Side effect: rings 3 and 4 went 0.25% -> 1.00%, so all six pay uniformly.
+- devKillabilitySweep() is a FUNCTION now and the self-test runs it every build --
+  27/27, worst anchor streak 8.6s of a 12.2s cap. It also stopped assuming a room
+  existed, which is why it threw on all 27 the first time a harness called it.
+
+WHAT SHIPPED BEFORE THAT (v550 -> v559)
 ---------------------------------------------------------------------------
 THE LADDER'S TOP IS NOW T12 -> RELIC -> SD, AND THE FORGE HAS THREE RUNGS
 (user, 2026-07-29). Relics are DROPPED in the ascended dungeons; Scavenged

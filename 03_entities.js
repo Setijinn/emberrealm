@@ -705,12 +705,21 @@ function genDungeon(ring){
    // ascended dungeons came out at Lv53-55 against a hero who can never pass 50, so the whole
    // endgame was fought permanently underlevelled and no amount of playing could fix it.
    //
-   // Clamping at LV_CAP means the top six all land flat on 50, and that is the correct shape
-   // rather than a lost ramp: at the cap, every awakened depth is level-50 content fought by a
-   // level-50 hero, and what separates the Shattered Vault from the Core Sanctum is bossPace, the
-   // mechanics and the relic rate -- none of which are the level. Difficulty at the ceiling is
-   // supposed to come from the fight, not from a number the player is forbidden to match.
-   lv=Math.min(LV_CAP,(_t?_t.lvmax:(_n.lv2!==undefined?_n.lv2:_n.lv))+DUN_STEP);
+   // AND NOW ALL NINE SIT FLAT ON THE CAP (user, 2026-07-29: "the dungeons never got rescaled to all
+   // be level 50 dungeons -- these will all be ascended dungeons"). Clamping at LV_CAP already put
+   // seven of the nine there; the Heartwood Hollow (Lv40) and the Fogbound Glade (Lv48) were the two
+   // still reading their territory's lvmax, because their clumps sit further in. They are LV_CAP now
+   // too, so "ascended" and "Lv50" mean the same thing and neither can drift from the other.
+   //
+   // This is the correct shape rather than a lost ramp: at the cap, every awakened depth is level-50
+   // content fought by a level-50 hero, and what separates the Shattered Vault from the Core Sanctum
+   // is bossPace, the mechanics and the relic rate -- none of which are the level. Difficulty at the
+   // ceiling is supposed to come from the fight, not from a number the player is forbidden to match.
+   //
+   // Worth stating plainly because it IS a real cost: bossPace saturates at d=1 for every Lv50
+   // dungeon, so all nine now share one identical pace curve and only mechanics and relic rate tell
+   // them apart. That was already true of seven of them.
+   lv=LV_CAP;
  }
  // seeded PRNG — every ring gets its OWN layout, stable across visits.
  // MIRRORED 1:1 by scratchpad dun_gen2.py (structural validation) — keep in sync.

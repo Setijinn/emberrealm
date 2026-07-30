@@ -755,17 +755,31 @@ DEV_PANE.bal=function(B){
   //   ward + adds   immunity lasts until the adds die (anchorNoInv=1, wardInv). The streak is
   //                 player-DPS-dependent by design; what must hold is that killing the adds drops
   //                 the ward. Judging these by ANCHOR_WIN flags dn0 and ow8 every time.
-  g.appendChild(_dvBtn('Killability sweep (all fights)',()=>{
+  g.appendChild(_dvBtn('Killability sweep (all fights)',()=>{ devLog(devKillabilitySweep().text); }));
+  B.appendChild(g);
+};
+
+// THE SWEEP IS A FUNCTION, NOT A BUTTON BODY. It was an inline closure inside _dvBtn, which meant the
+// one test that asserts "every fight has an exit the player can reach" -- the rule whose violation
+// once made twelve of fifteen fights literally unkillable -- could only be run by a human clicking a
+// button. Anything the plan verifies by hand will eventually not be verified at all, so this returns
+// a result the harness can assert on and the button just prints it.
+function devKillabilitySweep(){
     // SIM_SECS, not MAXT. This used to be a local `MAXT=600` that SHADOWED the global tier clamp
     // inside this whole function -- harmless while it worked, but the global MAXT now means "the
-    // top rollable tier is Scavenged Dreams" and a reader hitting `MAXT` in a combat sim would
-    // reasonably think the two were related. They never were: 600 is a number of simulated seconds.
+    // top rollable tier is the top of the ordinary ladder" and a reader hitting `MAXT` in a combat
+    // sim would reasonably think the two were related. They never were: 600 is simulated seconds.
     const DT=1/20, SIM_SECS=600, TTK=60, CAP=ANCHOR_WIN*1.35;
     const ks=[]; for(let r=0;r<GBOSS.length;r++) ks.push('ow'+r,'dn'+r); ks.push('arena');
     // the sim clobbers combat state, so take it all back afterwards
     const save={en:enemies.slice(), bar:(typeof bossBar!=='undefined')?bossBar:null,
                 px:player.x, py:player.y, phv:player.hp, room:curRoom};
-    if(curRoom&&curRoom.dungeon&&rooms['G']) curRoom=rooms['G'];
+    // A ROOM IS REQUIRED, AND "no room at all" IS A CASE. This read `if(curRoom && curRoom.dungeon)`,
+    // which was fine for a human clicking the dev button -- they are always standing somewhere -- and
+    // wrong the moment the sweep is run from a harness that never called play(): curRoom stayed null
+    // and every single fight threw reading a property of it. The dungeon FORM is simulated through
+    // e.awk/e.den, not by actually being in a dungeon, so the overworld is the right room either way.
+    if((!curRoom||curRoom.dungeon)&&rooms['G']) curRoom=rooms['G'];
     const fails=[];
     let worstAnchor=0, worstWard=0;
     for(const key of ks){
@@ -815,13 +829,13 @@ DEV_PANE.bal=function(B){
     }
     enemies.length=0; for(const x of save.en) enemies.push(x);
     bossBar=save.bar; player.x=save.px; player.y=save.py; player.hp=save.phv; curRoom=save.room;
-    devLog(fails.length ? (fails.length+'/'+ks.length+' FAILED — '+fails.join(' · '))
+    return {ok:!fails.length, fails:fails, total:ks.length,
+            worstAnchor:worstAnchor, worstWard:worstWard, cap:CAP,
+            text:(fails.length ? (fails.length+'/'+ks.length+' FAILED — '+fails.join(' · '))
                         : (ks.length+'/'+ks.length+' pass · all killable · worst anchor streak '
                            +worstAnchor.toFixed(1)+'s of '+CAP.toFixed(1)+'s cap · worst ward streak '
-                           +worstWard.toFixed(1)+'s (uncapped by design — adds gate it)'));
-  }));
-  B.appendChild(g);
-};
+                           +worstWard.toFixed(1)+'s (uncapped by design — adds gate it)'))};
+}
 
 // ---------------------------------------------------------------------------------
 // openDev (12_devpanel.js) calls devPaintPlus() at the end -- wrapping the function here would not

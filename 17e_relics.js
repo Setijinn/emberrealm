@@ -222,15 +222,22 @@ function activeRelicSet(){
 }
 
 // ---------- drops ----------
-// Dungeons only, Lv40+ only. BOSS_ZONE maps a boss to the territory it rules; territories 7-8 are
-// the Lv39-50 band and 9-13 are the Lv50 rim, which is the whole gate.
-// These are RAW CLUMP INDICES, so they moved when the starter island went from 3 zones to 4 --
-// every main-island territory shifted up by one. Nothing here reads a level, so a stale constant
-// would not throw; it would just quietly start paying relics out of Deep Timber.
-const RELIC_ZONE_MIN=7;          // below this the dungeon drops no relic at all
-const RELIC_ZONE_RIM=9;          // clump 9+ is the Lv50 grind rim
-const RELIC_P_LV40=0.0025;       // Shattered Vault, Windward Roost
-const RELIC_P_LV50=0.01;         // Cinder Crypt, Scorch Barrows, Ashen Keep, Core Sanctum
+// A RELIC DROPS WHERE ITS SET IS KEPT, AND THE GATE IS DERIVED (2026-07-29).
+//
+// This used to be two RAW CLUMP INDICES -- `RELIC_ZONE_MIN=7`, `RELIC_ZONE_RIM=9` -- read through
+// BOSS_ZONE, and the comment above them warned exactly what would happen: "nothing here reads a
+// level, so a stale constant would not throw; it would just quietly start paying relics out of Deep
+// Timber". It had ALREADY half-happened. The file header claimed "Lv40 and above", but the Heartwood
+// Hollow, the Fogbound Glade and the Sunken Warren are all Lv40+ and paid NOTHING, because their
+// clumps sit below index 7; and the `LV40`/`LV50` in these constant names stopped describing the
+// Shattered Vault and the Windward Roost the moment those became Lv50.
+//
+// So the gate now reads what it actually means -- a dungeon pays relics if and only if RELIC_SETS
+// KEEPS a set there, and the rate comes off the dungeon's own LEVEL. Both facts travel with the data,
+// so Stage 10's territory reindex cannot silently move a payout, and no constant here can go stale
+// against a level again.
+const RELIC_P_DEEP=0.01;         // a dungeon at the level cap
+const RELIC_P_SHALLOW=0.0025;    // one below it, if any relic dungeon ever sits below the cap again
 // ---------- INSANE DROP ----------
 // Fired the moment a relic hits the ground, for the player it was rolled for. It names the piece
 // and the set it belongs to, because "which of the four is this" is the first thing you want to
@@ -259,8 +266,23 @@ function insaneDrop(it){
 }
 function relicZoneOf(ring){
   return (typeof BOSS_ZONE!=='undefined' && BOSS_ZONE[ring]!==undefined) ? BOSS_ZONE[ring] : -1; }
+// The dungeon's own level, asked of the thing that decides it rather than looked up in a parallel
+// table. Cached because genDungeon builds a whole dungeon to answer, and relicChanceFor is called on
+// every boss kill and by the audits in tight loops.
+const _relicLvCache={};
+function relicDungeonLv(ring){
+  if(_relicLvCache[ring]!==undefined) return _relicLvCache[ring];
+  let lv=0;
+  try{ if(typeof genDungeon==='function'){ const d=genDungeon(ring); lv=(d&&d.lv)|0; } }catch(e){}
+  _relicLvCache[ring]=lv; return lv;
+}
 function relicChanceFor(ring){
-  const z=relicZoneOf(ring);
-  if(z<RELIC_ZONE_MIN) return 0;
-  return z>=RELIC_ZONE_RIM ? RELIC_P_LV50 : RELIC_P_LV40;
+  // THE SETS ARE THE GATE. setsForRing is the same list the forge reads, so "which dungeons drop
+  // relics" and "which dungeons can forge them" can never disagree -- they are one fact.
+  const sets=(typeof setsForRing==='function')?setsForRing(ring):null;
+  if(!sets || !sets.length) return 0;
+  // and a starter walk-in never pays, whatever else is true of it
+  if(typeof isStarterBoss==='function' && isStarterBoss(ring)) return 0;
+  const lv=relicDungeonLv(ring);
+  return (lv>=((typeof LV_CAP!=='undefined')?LV_CAP:50)) ? RELIC_P_DEEP : RELIC_P_SHALLOW;
 }
