@@ -59,7 +59,12 @@ def rle_row(row):
 def main():
     d = load()
     W, H = d['w'], d['h']
-    x1 = d['rings']['bridge']['x0']          # island A owns everything strictly left of the bridge
+    # THE BRIDGE'S EAST END, NOT ITS WEST. Cutting at x0 guillotines island A: its east shore spills
+    # PAST the bridge line -- 2,085 land tiles of it, in the strip the causeway crosses -- and slicing
+    # there left the island with a razor-straight vertical coast exactly where the bridge starts. It
+    # is the one edge in the world a player is guaranteed to walk along, and it read as a wall.
+    # Baking to x1 keeps the natural coastline; the generator re-stamps the causeway over it anyway.
+    x1 = d['rings']['bridge']['x1']
     rows = d['map']
     assert len(rows) == H and len(rows[0]) == W, 'artifact is not %dx%d' % (W, H)
 

@@ -353,30 +353,59 @@ it hands you the prestige caps while there are still levels left to earn.
   layer, so you must still bump `CACHE` in `sw.js` on every commit.
 
 ### The world's zones
-- **14 territories**, laid down by `_territories()` in a FIXED order that `ZBOSS` and `ZONE_TIERS`
-  are both indexed by: **0-3 starter island, 4-8 inner main, 9-13 grind rim.** Adding one shifts
-  every later index — including the raw numbers in `17e_relics.js` (`RELIC_ZONE_MIN`,
-  `RELIC_ZONE_RIM`), which read a clump index and would silently pay relics out of the wrong band.
-- Every zone is a warped-Voronoi province with irregular borders. The starter island's four are
-  no different from the main island's ten; the two islands just partition over their own seeds so
-  neither bleeds into the other.
-- **The starter island is a west-to-east march.** `rings.starter` is the LANDING on the west shore
-  — it is the level-ramp origin AND the arrival point (`usePortal('G')`), deliberately one value so
-  spawn and Lv1 cannot drift apart. It used to be the island's MIDDLE, which is what made three
-  zones that each spanned Lv1-20: they radiated from the spawn as wedges.
-- **The province owns the level, not a radius.** Each starter province holds exactly five levels and
-  `grvLvAtR` reads the band off the province a tile belongs to. Inside a province the five levels
-  are cut by AREA (a per-province reach histogram split at its own quintiles), because a province is
-  widest through its middle and an even distance split starves its first and last levels.
-- Seeds were measured, not guessed, on four counts: area share, monotonic distance from the landing,
-  contiguity, and **no skips — only CONSECUTIVE provinces may share a border.** That last one is
-  what stops a Lv5 player walking out of the first zone straight into Lv11 ground.
-- `STARTER_ZONES` / `STARTER_BANDS` / `STARTER_SEED` are declared beside `ZBOSS` near the top of
-  `03_entities.js`, NOT next to `_territories` 2000 lines down: `stampLairs()` runs at load and a
-  `const` further down the file is still in its temporal dead zone.
-- **`rings.names` is BAND-indexed, not zone-indexed** (`11_ui.js` reads `names[pl.band]` for fast
-  travel; `02_worldbuild.js` appends the grind name gated on `length===8`). The four starter names
-  live in their own `rings.starterZones`; do not add a ninth entry to `names`.
+- **THREE ISLANDS.** A Lv1-20 (4 provinces, baked), B Lv20-40 (7, one walkable mass across the
+  bridge), C Lv40-50 (4, **reachable only by flying**). The world is 3700x1700 = 6.29M tiles, one
+  6.29 MB `Uint8Array`. B and C are 5x the old main island by area, which is sqrt(5) in radius: r=767.
+- **15 territories**, laid down by `_territories()` in a FIXED order that `ZBOSS` and `ZONE_TIERS`
+  are both indexed by: **0-3 island A, 4-10 island B, 11-14 island C.** Adding one shifts every later
+  index. `ISLE_ZONES` counts them per island and `ISLE_Z0` gives each island's first index; both are
+  derived from `rings.zones`, so adding a province to island B is one row there and nothing else.
+- **`rings.zones` IS THE LEVEL MODEL.** 00c_worldgen.js emits fifteen rows, each with a name, a level
+  range, an art band and an island. `grvLvAtR` reads the range back out of the province the tile
+  belongs to, so **a label can no longer disagree with a level** — which the old world managed:
+  `ZONE_TIERS` claimed Lv20-26/26-32/32-39 while the clumps measured ~35/43/45+, because levels came
+  off a radial curve and the labels were typed separately. The radial model is gone.
+- **Which island a tile is on comes from the TILE BYTE**, bits 5-6, written by `gPack` at load from
+  `_isleIdFor`. `tx < 352` cannot express three islands. `_onStarter`, `onMainIsland` (= "not the
+  safe island", so B **or** C) and `onFlyingIsle` all read it. Use `onFlyingIsleAt` when asking about
+  a POINT rather than about the player — it reads `rooms['G']` directly, and the fast-travel screen
+  opens from rooms where `curRoom.rings` is null.
+- **The island id is NEAREST CENTRE, and it must match the land.** The first version took the first
+  disc that contained the tile, at a generous 1.45x radius, with a comment claiming they were too far
+  apart to overlap. They were not: B's disc reached 175 tiles into C, so C's western strip was
+  labelled island B and would have searched island B's province seeds.
+- **The islands are separated by an enforced CHANNEL, not by hope.** Coastline noise reaches r*1.3,
+  so two islands 1654 apart with r=767 can and did touch — 157 places where B land shared an edge
+  with C land. A tile is land for its island only if it is `CHANNEL` (130) tiles closer to that
+  island's centre than to any other. Measured: 171 tiles of open water, zero adjacency.
+- **The flight gate is proven by a REACHABILITY FILL, not by a gap width.** `_selftest.js` floods the
+  world from the starter landing over every non-solid tile and asserts island C reaches **zero**
+  cells. A gap says nothing about a sandbar the noise left. Belt and braces: `travelTo` refuses a
+  destination on C unless `mountFlyOk()`, and `er-pillars` is keyed by province NAME rather than by
+  band — island C's provinces are band 8, and every save that ever walked the old rim contains band 8.
+- Every zone is a warped-Voronoi province with irregular borders. **The warp scales with the island.**
+  Its amplitude was a fixed ~11 tiles tuned on a 343-tile island; on a 767-tile one that is invisible
+  and the map came back as clean radial wedges. There are three terms: two high-frequency ones fray
+  the EDGE, and a low-frequency one makes the border MEANDER over hundreds of tiles. A fuzzy straight
+  line is still a straight line.
+- **Each island is a march away from where you ARRIVE on it** (`isles[i].arrX/arrY`): the landing for
+  A, the bridge mouth for B, the flight landing for C. Inside a province the levels are cut by AREA
+  (a per-province reach histogram split at its own quantiles), because a province is widest through
+  its middle and an even distance split starves its first and last levels.
+- Seeds are hard-coded integers in `WG_SEEDS`, not computed from angles: they feed `_zoneAtRaw`, which
+  is a per-tile decision. They were laid out so distance from each island's arrival point increases
+  monotonically with level.
+- `STARTER_ZONES` / `STARTER_BANDS` / `STARTER_SEED` / `ISLE_ZONES` / `ISLE_Z0` are declared beside
+  `ZBOSS` near the top of `03_entities.js`, NOT next to `_territories` 2000 lines down: `stampLairs()`
+  runs at load and a `const` further down the file is still in its temporal dead zone.
+- **`rings.names` is BAND-indexed, not zone-indexed** (`11_ui.js` reads `names[pl.band]`). It has ten
+  entries, bands 0-9, and its ranges are DERIVED from `rings.zones` so a label cannot drift. The four
+  starter names also live in `rings.starterZones`.
+- **`rings.core` / `main` / `rmax` / `grindR` are DELETED.** They were the radial level model. Their
+  last reader was `corruptAt`, which normalised distance-from-the-bridge-landing by an rmax of 1300 —
+  so on a 3700-tile world it saturated a third of the way across island B and painted the entire
+  eastern world at full corruption. It measures from the RIFT now, with a `pow(f, 2.4)` falloff so
+  island B keeps a haze and island C carries the stain.
 - **Terrain bands are a SEPARATE index space from zones**, 0-9, and `MOBSPEC` is keyed by it — so a
   zone with no band of its own gets another band's creature roster. The Cairnworks borrowed band 6
   briefly and spawned the Lv39-45 Stonebrow list at Lv12; it has band 9 now.

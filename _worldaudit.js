@@ -60,7 +60,31 @@
     }
     // Island A is BAKED, so this is bytes and gets zero tolerance. B and C are generated from a
     // radius chosen as sqrt(5) x the old main island, so 5x the old island's 371,974 is the target.
-    cmp('island A land tiles', land[0], 74324, 0.0);
+    // ISLAND A IS CHECKED AGAINST ITS OWN BAKE, TILE BY TILE -- not against a count.
+    //
+    // A count is a weak assertion: two different islands can share one. And the number kept moving
+    // for legitimate reasons (the bake was re-cut at the bridge's EAST end, which recovered 3,251
+    // tiles of east shore that a cut at the west end had guillotined into a razor-straight vertical
+    // coast) and for illegitimate ones (island B's field reaching back west over A's water). Only a
+    // byte comparison tells those apart.
+    //
+    // The causeway is the one sanctioned difference: the generator stamps 'b' across the bridge
+    // rows, so those tiles are excluded rather than counted as a mismatch.
+    {
+      const baked=wgRleRows(ISLE_A_RLE, ISLE_A_W, 720);
+      const B=R.bridge, bhalf=(B.w/2)|0;
+      let diff=0, first='';
+      for(let y=0;y<720;y++){
+        const wy=y+ISLE_A_DY, row=D.map[wy], src=baked[y];
+        for(let x=0;x<ISLE_A_W;x++){
+          if(wy>=B.cy-bhalf && wy<B.cy-bhalf+B.w && x>=B.x0 && x<=B.x1) continue;   // the causeway
+          if(row[x]!==src[x]){ if(!diff) first=x+','+wy+' world "'+row[x]+'" vs baked "'+src[x]+'"'; diff++; }
+        }
+      }
+      if(diff){ bad++; L.push('  BAD  island A differs from its bake in '+diff+' tiles (first at '+first+')'); }
+      else L.push('  ok   island A is byte-identical to its bake  ['+ISLE_A_W+' cols x 720 rows]');
+      L.push('       '+land[0]+' land tiles counted in the world (bake: 77575 + the causeway)');
+    }
     cmp('island B land tiles', land[1], 371974*5, 0.12);
     cmp('island C land tiles', land[2], 371974*5, 0.12);
     note('  world '+W+'x'+H+' = '+(W*H)+' tiles, '+(land[0]+land[1]+land[2])+' of them land ('

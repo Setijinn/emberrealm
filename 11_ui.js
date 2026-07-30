@@ -1554,8 +1554,20 @@ function mapLayout(G){ const s=(MAP_W-2*MAP_PAD)/G.w, gridH=G.h*s;
   return {s, ox:MAP_PAD, oy:MAP_TOP, gridH, H:Math.round(MAP_TOP+gridH+MAP_BOT)}; }
 // corruption straight from the room's rings metadata (no curRoom dependency -- the map can be open
 // while you stand in a dungeon). Mirrors corruptAt.
-function _mCorrupt(RG,tx,ty){ if(!RG||!RG.portal) return 0;
-  const dd=Math.hypot(tx-RG.portal.x,ty-RG.portal.y); return Math.max(0,Math.min(1,1-dd/70)); }
+// FOLDED ONTO corruptAt. This was a drifting duplicate: it kept only the rift's local bloom and
+// dropped the world gradient entirely, so the map showed a violet dot at the rift while the ground
+// under the player's feet was stained across two islands. One function, one answer -- and corruptAt
+// takes the rings as an argument through this wrapper because the map draws rooms['G'] whether or
+// not you are standing in it.
+function _mCorrupt(RG,tx,ty){
+  if(!RG||!RG.portal) return 0;
+  const dd=Math.hypot(tx-RG.portal.x,ty-RG.portal.y);
+  const local=Math.max(0,1-dd/70);
+  let grad=0.04;
+  if(!(RG.bridge && typeof _onStarter==='function' && _onStarter(RG,tx,ty))){
+    const span=Math.max(1, RG.portal.x-((RG.bridge&&RG.bridge.x1)||0));
+    grad=0.08+0.72*Math.pow(Math.max(0,Math.min(1,1-dd/span)),2.4); }
+  return Math.max(0,Math.min(1,Math.max(local,grad))); }
 // _mBand / _mZone / _mZoneName / _mBandLabelPos lived here and were DELETED, not updated. They were
 // a second, drifting copy of the band and zone rules -- still hardcoding three starter zones split
 // at f*3, and a grind rim beginning at band 8 -- and nothing had called any of them since mapTerrain
@@ -1609,23 +1621,39 @@ function mapTerrain(G,L){
   c.textAlign='center'; c.textBaseline='middle';
   // INDEXED, because a territory's own record does not know whether a boss rules it -- ZBOSS is
   // keyed by clump index and T is in that same fixed order, so the index is the only way to ask.
+  // A LABEL IS SIZED TO THE GROUND IT NAMES. 11px was fine when the world was 1160 tiles across and
+  // every province drew about 140px wide. On the three-island world the starter island is 352 tiles
+  // of 3700 -- its four provinces render about 37px each -- and four 11px labels at 95px wide piled
+  // into an unreadable stack in the corner of the map. The font scales to the province's own
+  // footprint, with a floor: below the floor the level line is dropped rather than shrunk into
+  // illegibility, because the NAME is what a label is for and the level is on the banner anyway.
   if(T) for(let ti=0;ti<T.length;ti++){ const tt=T[ti]; if(tt.n<60) continue;
     const lx=L.ox+(tt.sx/tt.n)*s, ly=L.oy+(tt.sy/tt.n)*s;
     const lvs=(tt.lvmax&&tt.lvmax!==tt.lvmin)?('Lv '+tt.lvmin+'-'+tt.lvmax):('Lv '+tt.lvmin);
+    // the province's characteristic width on the map, from its area: sqrt(tiles) * px-per-tile
+    const wPx=Math.sqrt(tt.n)*s;
     c.font='bold 11px "Pixelify Sans",monospace';
-    c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(tt.name,lx,ly-5);
-    c.fillStyle='#f4ecdc'; c.fillText(tt.name,lx,ly-5);
-    c.font='9px "Pixelify Sans",monospace';
-    c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(lvs,lx,ly+7);
-    c.fillStyle='#ffc94d'; c.fillText(lvs,lx,ly+7);
+    const tw=c.measureText(tt.name).width;
+    const fs=Math.max(7,Math.min(11,Math.floor(11*Math.min(1,(wPx*1.15)/Math.max(1,tw)))));
+    const tight=fs<=8;
+    c.font='bold '+fs+'px "Pixelify Sans",monospace';
+    const y1=tight?ly:(ly-5);
+    c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(tt.name,lx,y1);
+    c.fillStyle='#f4ecdc'; c.fillText(tt.name,lx,y1);
+    if(!tight){
+      c.font='9px "Pixelify Sans",monospace';
+      c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText(lvs,lx,ly+7);
+      c.fillStyle='#ffc94d'; c.fillText(lvs,lx,ly+7);
+    }
     // A PROVINCE WITH NO LAIR SAYS SO. The Molten Heart carries a name, a level range and its own
     // loot row while ZBOSS[11] is -1, so it has no boss, no lair and no dungeon -- and the map gave
     // no hint of that, which reads as a missing boss rather than an empty province. Saying it out
     // loud is the difference between a gap and a place.
     const _zb=(typeof ZBOSS!=='undefined')?ZBOSS[ti]:0;
-    if(_zb<0){ c.font='italic 8px "Pixelify Sans",monospace';
-      c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText('no lair',lx,ly+18);
-      c.fillStyle='#8a8494'; c.fillText('no lair',lx,ly+18); } }
+    if(_zb<0){ const ny=tight?(ly+10):(ly+18);
+      c.font='italic 8px "Pixelify Sans",monospace';
+      c.lineWidth=3; c.strokeStyle='rgba(0,0,0,0.85)'; c.strokeText('no lair',lx,ny);
+      c.fillStyle='#8a8494'; c.fillText('no lair',lx,ny); } }
   c.textBaseline='alphabetic';
   _mapCache={key:key,cv:off};
   return off;

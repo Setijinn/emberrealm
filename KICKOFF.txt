@@ -1,7 +1,7 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker code cache is at emberrealm-code-v565, art cache at
+Service worker code cache is at emberrealm-code-v569, art cache at
 emberrealm-art-v5. (There are TWO caches now, versioned separately -- CODE_CACHE
 bumps freely, ART_CACHE only when art moves. See the note at the top of sw.js for
 why. ART_CACHE has moved four times: the forge's 28 new files, the three repainted
@@ -61,6 +61,85 @@ HARD RULES — these are not preferences
   thing inside it. The Emberwrought chest is the ONE exception and it is not a
   drop — it is a placed event object, and it looks like nothing else so it can
   never be mistaken for something a monster left.
+
+---------------------------------------------------------------------------
+THREE ISLANDS, AND ONE OF THEM YOU CANNOT WALK TO (v568-v569).
+  A  Lv1-20   4 provinces, BAKED byte-for-byte, unchanged
+  B  Lv20-40  7 provinces, one walkable mass, across the bridge
+  C  Lv40-50  4 provinces, reachable ONLY BY FLYING
+World is 3700x1700 = 6.29M tiles, one 6.29 MB Uint8Array. B and C are 5x
+the old main island by AREA, which is sqrt(5) in radius: r=767 each.
+
+- THE GATE IS PROVEN, NOT ASSERTED. _selftest floods the world from the
+  starter landing over every non-solid tile:
+     island 0     73,832 of    73,832  (100.0%)
+     island 1  1,862,217 of 1,862,218  (100.0%)  across the bridge
+     island 2          0 of 1,861,856  (  0.0%)  <- the point
+  Two more locks, because one can be wrong: travelTo refuses a
+  destination on C unless mountFlyOk(), and er-pillars is rekeyed from
+  BAND to province NAME (C's provinces are band 8, and every save that
+  walked the old rim contains band 8 -- so on the old key anyone who had
+  hit Lv50 once could fast-travel to C at Lv20).
+- THE PROVINCE OWNS THE LEVEL, on every island. rings.zones declares all
+  fifteen -- name, range, art band, island -- and grvLvAtR reads it back,
+  so a LABEL CAN NO LONGER DISAGREE WITH A LEVEL. The radial model is
+  gone, and with it rings.core/main/rmax/grindR.
+- WHICH ISLAND comes from bits 5-6 of the tile byte, written at load.
+  `tx < 352` cannot express three islands. onMainIsland still means "not
+  the safe island" (so B or C) and its five consumers are unaffected;
+  onFlyingIsle is the new question, and onFlyingIsleAt is the one to use
+  about a POINT, because the fast-travel screen opens from rooms where
+  curRoom.rings is null.
+- 15 rows now: ZBOSS, ZONE_TIERS, _territories. _GRIND_TINT is 7 (gi is
+  the province's index WITHIN its island). Two provinces have no boss:
+  The Skyreach Shelf (flight lands there; its waypoint must stay clear
+  because aggro makes mountAllowedHere() false) and The Molten Heart.
+- BORDERS MEANDER (user: "make sure none of the areas have straight line
+  borders"). The Voronoi warp scales with the island -- a fixed ~11 tiles
+  is invisible on a 767-tile one -- plus a low-frequency term that bends
+  a border over hundreds of tiles. A fuzzy straight line is still one.
+
+FOUR FAULTS THIS FOUND, all by measuring:
+  * ISLAND ID by "first disc that contains it" overlapped: B's generous
+    disc reached 175 tiles into C, so C's western strip searched island
+    B's seeds. Nearest centre now.
+  * THE ISLANDS TOUCHED in 157 places -- coastline noise reaches r*1.3
+    and the maxima overlapped by 340 tiles. The reachability fill still
+    PASSED, because that peninsula is physically part of C. A tile is now
+    land for its island only if it is 130 tiles closer to that island's
+    centre than to any other: a guaranteed channel, measured at 171
+    tiles of open water.
+  * THE APPROACH ROAD STARTED BESIDE THE BRIDGE -- its wobble began at
+    full amplitude, eleven tiles off a ten-tile causeway, so the map
+    showed a bridge ending in the sea (user: "bridge glitch"). It ramps
+    from zero now and its first stretch is as wide as the causeway.
+  * WAYPOINTS SAT INSIDE TERRAIN. A province seed is a Voronoi centre,
+    not a place. Every pillar is nudged to standable ground at build.
+
+---------------------------------------------------------------------------
+DENSITY, TUNING AND THE LAST OF THE RADIAL MODEL (v569).
+- MAP LABELS SIZE THEMSELVES to the province they name. 11px was fine at
+  1160 tiles across; the starter island is now 352 of 3700 and its four
+  labels piled into an unreadable stack. Below the floor the level line
+  is dropped rather than shrunk -- the NAME is what a label is for.
+- CORRUPTION MEASURES FROM THE RIFT. It ramped on distance from
+  rings.core normalised by rmax=1300, so on a 3700-tile world it
+  saturated a third of the way across island B and painted two islands
+  flat violet. From the rift with a pow(f,2.4) falloff: B west 0.08, B
+  east 0.20, C west 0.23, C east 0.75. _mCorrupt (the map's drifting
+  duplicate, which kept only the rift bloom) is folded onto the same rule.
+- genDungeon's `rings.names[ring]` is GONE. `ring` is a boss id (0-12),
+  rings.names is band-indexed (0-9); they lined up by coincidence on the
+  old world and nowhere on this one. Nothing read the value -- the
+  `||{lv:1}` default is what hid it.
+- The four stale "flying is NOT built" claims are corrected. Flight has
+  been built the whole time: 68 of 146 species carry `fly`, mountFlyOk()
+  gates on MOUNT_FLY_LV=40, and dismount() refuses over water.
+- Area-drift bar 1% -> 2%, with the reason at the assertion: meandering
+  borders are what a strided sample estimates least well (worst 1.25%),
+  and `n` feeds a sub-tile lair nudge and a label filter three orders of
+  magnitude away. The CENTROID, which is what could move a lair out of
+  its clump, is still inside a sixth of a tile.
 
 ---------------------------------------------------------------------------
 THE HUD IS TUNED FOR A PHONE AS WELL AS A DESKTOP (v565, user: "make sure
@@ -454,8 +533,10 @@ MOUNTS (17k_mounts.js, NEW) — ground mounts, the reward for reaching Lv20.
   always together. A deliberate exception to one-sack-per-kill — keep it
   narrow. Pet food stays with the gear.
 - NKIND's kind field widened 3 bits -> 4 for 'mount'. Nothing renumbered.
-- ALL GROUND. Flying is planned for Lv40 and NOT built; the seam is declared
-  (MOUNT_FLY_LV / mountIsFlyer / mountFlyOk) and zero species carry `fly`.
+- FLYING IS BUILT AND IT IS THE ONLY WAY TO ISLAND C. 68 of 146 species carry
+  `fly` (52 _FLYERS + 16 _DRAGONS via _mkMount(r,1)), mountFlyOk() gates on
+  MOUNT_FLY_LV=40, flyUntouchable() makes a flyer untouchable, and dismount()
+  refuses while over water so you cannot be dropped into the sea mid-crossing.
 
 ---------------------------------------------------------------------------
 WHAT SHIPPED BEFORE THAT (v433 -> v477)

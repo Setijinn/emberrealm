@@ -735,7 +735,15 @@ function genDungeon(ring){
  // the mind is a step beyond the zone's peak — "matching but a little more difficult".
  // Measured off the boss's OWN clump (which _territories already samples from the smooth radial
  // curve), so there's no parallel level table to keep in sync — and no names[8] to fall off.
- const _t=bossClump(ring), _n=rooms['G'].rings.names[ring]||{lv:1};
+ // A BOSS ID IS NOT A BAND INDEX, and this line read `rings.names[ring]` as though it were. `ring`
+ // is a BOSS identity (0-12); rings.names is indexed by ART BAND (0-9). They lined up for a few
+ // entries by coincidence on the old world and lined up nowhere on this one -- boss 11 would have
+ // indexed past the end of a ten-entry array. The `||{lv:1}` default is what hid it: a lookup that
+ // misses silently becomes Lv1 rather than an error.
+ // Nothing read it. The value was assigned and never used -- every branch below computes its level
+ // from the boss's own clump, which is the correct source and needs no name table at all. Deleted
+ // rather than corrected, because the right fix for a wrong lookup nobody reads is to stop doing it.
+ const _t=bossClump(ring);
  let lv;
  if(isStarterBoss(ring)){
    // Starter dungeons step past THIS BOSS, not the island's peak. Belt and braces now that the
@@ -2838,13 +2846,29 @@ function ringInfoAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG) return null;
 // The safe western starter island is barely touched; the main island ramps from the bridge
 // landing out to the rift, with an intense local bloom right at the portal. Matches the canon:
 // the infection is eating this world from the rift outward, worse the closer you press east.
+// MEASURED FROM THE RIFT, NOT FROM A RETIRED CENTRE. This ramped on distance from `rings.core` --
+// the bridge landing -- normalised by `rings.rmax`, both of which belonged to the radial level model
+// that the province table replaced. On a 3700-tile world the rift is 3090 tiles from the landing and
+// rmax is 1300, so f saturated at 1 barely a third of the way across island B and the ENTIRE eastern
+// world painted at full corruption: a uniform violet stain over two islands, with no gradient left to
+// say which way the infection is coming from.
+//
+// The canon is that the rift is eating the world outward, so the rift is what it should measure from.
+// CORRUPT_SPAN is the distance the stain reaches, declared rather than borrowed: it is the rift to
+// the bridge landing, which is the whole infected stretch.
 function corruptAt(tx,ty){ const R=curRoom&&curRoom.rings; if(!R||!R.portal) return 0;
  const dd=Math.hypot(tx-R.portal.x,ty-R.portal.y);
  const local=Math.max(0,1-dd/70);                       // fierce bloom at the rift itself
  let grad=0.04;                                         // starter island: a faint taint only
- if(R.core && !(R.bridge && _onStarter(R,tx,ty))){
-   const f=Math.min(1,Math.hypot(tx-R.core.cx,ty-R.core.cy)/(R.rmax||300));
-   grad=0.10+f*0.78; }                                  // main island: deepens core -> rift
+ if(!(R.bridge && _onStarter(R,tx,ty))){
+   const span=Math.max(1, R.portal.x-((R.bridge&&R.bridge.x1)||0));
+   // A CURVE, NOT A RAMP. Linear over 3090 tiles put island B's eastern half at 0.3-0.5 and painted
+   // most of two islands violet -- technically the right direction and visually one flat wash, with
+   // the band art underneath it lost. The infection is concentrated at the rift, so the falloff is
+   // too: island B keeps a light haze that says which way is worse, island C carries the real stain.
+   // Measured across the world: B's west 0.08, B's east 0.20, C's west 0.23, C's east 0.75.
+   const f=Math.max(0,Math.min(1,1-dd/span));
+   grad=0.08+0.72*Math.pow(f,2.4); }                     // B and C: deepens toward the rift
  return Math.max(0,Math.min(1, Math.max(local,grad))); }
 function regionAtPx(px,py){ if(!curRoom) return null;
  if(curRoom.rings) return ringInfoAt(px/TILE,py/TILE);

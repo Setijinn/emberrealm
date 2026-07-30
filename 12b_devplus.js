@@ -325,7 +325,7 @@ DEV_PANE.levels=function(B){
 
   B.appendChild(_dvHd('THE GATES'));
   B.appendChild(_dvNote('ascension Lv'+ASCEND_LV+'  ·  stable Lv'+((typeof MOUNT_LV!=='undefined')?MOUNT_LV:'?')
-    +'  ·  flying mounts Lv'+((typeof MOUNT_FLY_LV!=='undefined')?MOUNT_FLY_LV:'?')+' (declared, NOT built)'
+    +'  ·  flying mounts Lv'+((typeof MOUNT_FLY_LV!=='undefined')?MOUNT_FLY_LV:'?')+' (built; the only way to island C)'
     +'  ·  island ceiling Lv'+((typeof ISLAND_LV!=='undefined')?ISLAND_LV:'?')
     +'  ·  a dream sits +'+((typeof DUN_STEP!=='undefined')?DUN_STEP:'?')+' past its homeland, clamped at the cap'));
   const g4=_dvGrid();
