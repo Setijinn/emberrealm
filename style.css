@@ -1034,6 +1034,41 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 .fgWhy{ text-align:center; font-size:calc(var(--u)*1.6); color:#9a92a4; line-height:1.25;
   margin-bottom:calc(var(--u)*0.6); }
 .fgWhy.ok{ color:#7dc47a; }
+/* ---- THE BAR: one button and one line of instruction, in place of three paragraphs ---- */
+.fgBar{ display:flex; align-items:center; gap:calc(var(--u)*0.8);
+  margin-bottom:calc(var(--u)*0.6); font-size:calc(var(--u)*1.4); }
+/* 44px is the project's touch-target floor, and a `min-height` in px is right here: the target has to
+   stay thumb-sized even when --u shrinks with the card on a small landscape phone. */
+.fgBtn{ flex:0 0 auto; min-height:44px; padding:calc(var(--u)*0.5) calc(var(--u)*1.4);
+  background:#241a2e; color:#e8c98a; border:2px solid #4a3a58; border-radius:6px;
+  font-family:'Pixelify Sans',monospace; font-size:calc(var(--u)*1.5); cursor:pointer; }
+@media (hover:hover){ .fgBtn:hover{ border-color:#ffc94d; color:#ffe08a; } }
+/* ---- THE RECIPE BOOK, its own page ---- */
+.fgBookHd{ font-family:'Pixelify Sans',monospace; color:#e8c98a; font-size:calc(var(--u)*1.7);
+  margin-bottom:calc(var(--u)*0.2); }
+.fgBookCount{ color:#8a8494; font-size:calc(var(--u)*1.3); margin-bottom:calc(var(--u)*0.6); }
+.fgIng{ white-space:nowrap; }
+/* AN UNDISCOVERED INGREDIENT IS ITS OWN SPRITE, BLACKED OUT -- brightness(0) keeps the silhouette
+   exactly, alpha and all, so the shape still tells you what KIND of thing you are looking for while
+   the material stays unnamed. A separate "unknown" placeholder icon would have thrown that away, and
+   drawing nothing at all would make every unfound recipe look identical. */
+.fgUnk .fgArt{ filter:brightness(0) contrast(0); opacity:.85; }
+.fgUnk{ opacity:.9; }
+/* ---- THE DRAG GHOST ---- pointer-events:none so elementFromPoint under the cursor finds the SLOT
+   and not the thing being dragged, which would make every drop land on itself. */
+#fgGhost{ display:none; position:fixed; z-index:99999; pointer-events:none;
+  transform:translate(-50%,-50%); padding:4px 6px; border-radius:6px;
+  background:#241a2eee; border:2px solid #ffc94d; color:#ffe08a;
+  font-family:'Pixelify Sans',monospace; font-size:13px; text-align:center; max-width:120px; }
+#fgGhost .fgArt{ width:26px!important; height:26px!important; }
+.fgSlot.hot{ border-color:#ffc94d !important; background:#2c2036; }
+/* DRAG IS FOR POINTER DEVICES; TAP IS FOR TOUCH, AND BOTH ARE REAL PATHS.
+   `touch-action:none` on a chip is what lets a finger drag it instead of scrolling -- but #forgeBody
+   is the panel's only scroller and the chips cover most of it, so applying that on a phone would trade
+   "you can drag" for "you cannot scroll the pouch", which is a bad deal for a list of forty-four
+   materials. Gated on (hover:hover) so a mouse gets the drag and a finger keeps the scroll; the click
+   handler fills the first free slot on a tap either way, which is why nothing is lost. */
+@media (hover:hover){ .fgChip{ touch-action:none; } }
 /* THE STRIPS WRAP, they do not scroll sideways. A one-line overflow-x row showed two of the
    thirty-two materials and hid the rest behind a gesture nobody would guess was there. */
 .fgStrip{ display:flex; flex-wrap:wrap; gap:calc(var(--u)*0.6); }
@@ -1052,8 +1087,15 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
    with `tools/audit.py _chipaudit.js` if a name or a size changes. The two-line box is RESERVED
    whether a name wraps or not, so a row of chips keeps a straight baseline instead of going ragged
    where a short name sits beside a long one. */
+/* THREE LINES, TWO RESERVED. The anvil strip shares this class with the pouch, and a GEAR name is
+   longer than a material's -- itemName stacks a rarity prefix, a tier tag and the piece's own name,
+   so "Sage's T12 Hearthfire Robe" needs a third line where "Bog Iron" needs one. Clamping at 2 put an
+   ellipsis back on exactly the chips this rule exists to stop truncating.
+   The RESERVED height stays at two lines so a row of short material names keeps its straight
+   baseline; .fgStrip is a flex row and stretches its children, so a chip that genuinely needs the
+   third line just makes its own row taller and the row stays even. */
 .fgChip b{ font-size:calc(var(--u)*1.2); line-height:1.15;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3;
   overflow:hidden; overflow-wrap:break-word; min-height:calc(var(--u)*2.76); }
 .fgN{ font-size:calc(var(--u)*1.35); color:#8a8494; }
 .fgSets{ display:flex; flex-wrap:wrap; gap:calc(var(--u)*0.6); }

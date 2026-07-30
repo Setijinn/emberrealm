@@ -51,6 +51,14 @@
     setup(); hideChrome();
     if(WANT==='forge'){
       openForge();
+      // `?view=book` photographs the recipe page instead of the anvil. `?found=N` reveals only the
+      // first N materials, which is the only way to SEE the silhouette rule working -- the rig stocks
+      // one of everything, so with nothing withheld every ingredient would be discovered.
+      if(Q.get('found')!==null && typeof matSeenStore==='function'){
+        const keep=+Q.get('found')||0, s=matSeenStore(), m=matStore();
+        MAT_KEYS.forEach((k,i)=>{ if(i>=keep){ delete s[k]; delete m[k]; } });
+      }
+      if(Q.get('view')==='book'){ _forgeView='book'; paintForge(); }
       // `?scroll=end` drops #forgeBody to the bottom. The panel is aspect-pinned with ONE scroller,
       // so the anvil list sits below the fold at any viewport -- and a taller window cannot reach it
       // either, because past square the game shows its portrait gate instead of the game.

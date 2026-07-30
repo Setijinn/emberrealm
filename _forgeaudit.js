@@ -218,62 +218,62 @@
     }
 
     // =============================================================================================
-    hd('THE OTHER HALF OF A RELIC — Scavenged Dreams gear');
+    hd('THE TOP RUNG — what a Scavenged Dreams piece actually costs');
     // =============================================================================================
-    // The anvil takes an SD piece PLUS a seed, and the relic you get takes the SLOT of that piece.
-    // So the seed is only half the wait, and this half has never been measured either.
-    if(typeof rollSoulboundItems==='function' && typeof ZONE_TIERS!=='undefined'){
-      const who={fort:0, cls:(typeof curChar==='function'&&curChar())?curChar().cls:'knight'};
-      function sdRate(label,row_,type,n){
-        let kills=0, sd=0, slots={};
-        for(let i=0;i<n;i++){
-          curRoom=G;
-          const items=rollSoulboundItems({type:type,x:0,y:0},row_,who);
-          kills++;
-          for(const it of items) if(it.t===SD_T){ sd++; slots[it.k]=(slots[it.k]||0)+1; }
+    // REWRITTEN FOR THE 2026-07-29 LADDER SWAP. This section used to measure SD as a DROPPED tier
+    // (rim weights, sbP, SD_DUN_W) and every one of those numbers is now meaningless: SD is crafted
+    // only, and the drop that feeds it is the RELIC.
+    //
+    // Raising one specific piece needs TWO things out of the awakened depths -- a relic of that kind,
+    // and the reagent that kind is made of -- and they fall on independent rolls in the same runs. So
+    // the honest number is not either rate on its own: it is how many clears until you hold BOTH.
+    // That is simulated rather than derived, because "independent" does not mean "add the waits".
+    if(typeof sdMatDropFor==='function' && typeof relicChanceFor==='function' && ascended.length){
+      const _room=curRoom;
+      row('SD_MAT_P (pool of twelve, per ascended clear)', pct(SD_MAT_P));
+      row('reagents in the pool', matPool('sd').length);
+      row('  → a SPECIFIC reagent, per clear', pct(SD_MAT_P/Math.max(1,matPool('sd').length)));
+
+      // measured, against the shipped function rather than the constant
+      const ring=ascended[ascended.length-1];
+      curRoom={dungeon:true, ring:ring, rings:null};
+      let hits=0, N=200000;
+      for(let i=0;i<N;i++) if(sdMatDropFor({type:'B',x:0,y:0})) hits++;
+      row('measured pool rate', pct(hits/N)+'   → 1 in '+f1(N/hits)+' clears');
+
+      // the relic half. relicChanceFor is per-ROLL inside rollRelicItem, so read the six dungeons.
+      const relRings=[]; for(let r=0;r<GBOSS.length;r++) if(relicChanceFor(r)>0) relRings.push(r);
+      row('dungeons that drop relics', relRings.length+'  (rings '+relRings.join(',')+')');
+      for(const r of relRings) row('  ring '+r+' ('+GBOSS[r].dn+')', pct(relicChanceFor(r))+' per roll');
+
+      // THE CHASE, simulated: clear the richest relic dungeon repeatedly and stop when you hold a
+      // relic AND that relic's reagent. 20k runs, capped so a bad seed cannot hang the audit.
+      const best=relRings.reduce((a,b)=>relicChanceFor(b)>relicChanceFor(a)?b:a, relRings[0]);
+      curRoom={dungeon:true, ring:best, rings:null};
+      const pRel=relicChanceFor(best), pMat=SD_MAT_P/Math.max(1,matPool('sd').length);
+      const runs=[]; const CAP=20000;
+      for(let t=0;t<20000;t++){
+        let c=0, haveRel=false, haveMat=false;
+        while(c<CAP && !(haveRel&&haveMat)){
+          c++;
+          if(!haveRel && Math.random()<pRel) haveRel=true;
+          if(!haveMat && Math.random()<pMat) haveMat=true;
         }
-        row(label, (sd/kills===0?'0':pct(sd/kills))+' of kills'+(sd? '   → 1 in '+Math.round(kills/sd):''));
-        return {p:sd/kills, slots:slots};
+        runs.push(c);
       }
-      const rim=ZONE_TIERS[ZONE_TIERS.length-1];
-      row('rim row sb weights', JSON.stringify(rim.sb)+'  sbP='+rim.sbP);
-      const rimTrash=sdRate('  rim trash kill pays an SD piece', rim, 'c', 400000);
-      const rimShoot=sdRate('  rim shooter (sbP×3)',              rim, 's', 400000);
-      // A rim BOSS rolls one guaranteed bound drop (p=1, n=1 outside a dungeon), so it reads the
-      // SD weight of 8 almost directly. This is the open world's real SD source; the trash rows
-      // above are the ones people will actually spend their kills on, which is the comparison.
-      const rimBoss =sdRate('  rim BOSS (one guaranteed bound roll)', rim, 'B', 200000);
-      // an ascended dungeon boss: p=1, two rolls, and the row is augmented with SD_DUN_W
-      if(ascended.length){
-        const r=ascended[ascended.length-1];
-        curRoom={dungeon:true, ring:r, rings:null};
-        let clears=0, sd=0, slots={};
-        for(let i=0;i<200000;i++){
-          const row_=zoneTierRow(0,0);
-          const items=rollSoulboundItems({type:'B',x:0,y:0},row_,who);
-          clears++;
-          for(const it of items) if(it.t===SD_T){ sd++; slots[it.k]=(slots[it.k]||0)+1; }
-        }
-        row('  ascended dungeon BOSS pays SD', pct(sd/clears)+' of clears   ('+(sd/clears).toFixed(3)+' pieces/clear)');
-        const ks=Object.keys(slots);
-        row('  slots an SD piece can land in', ks.length+'  ['+ks.join(',')+']');
-        if(sd&&ks.length){
-          const perSlot=(sd/clears)/ks.length;
-          row('  clears for ANY SD piece (mean)', f1(clears/sd));
-          row('  clears for a SPECIFIC slot (mean)', f1(1/perSlot));
-          say('  That is the number that matters: the relic you forge takes the SLOT of the SD piece');
-          say('  you feed the anvil, so wanting a relic HELM means waiting for an SD helm.');
-          say('');
-          say('  SO WHICH HALF IS THE WAIT? Put the two against each other, in the same unit:');
-          row('    clears for the SEED half', median(totalClearsRef||[0])+' (median)');
-          row('    clears for the SD half, any slot', f1(clears/sd));
-          row('    clears for the SD half, chosen slot', f1(1/perSlot));
-        }
-      }
-      if(rimTrash.p>0) row('  rim trash kills for one SD piece', Math.round(1/rimTrash.p));
-      if(rimShoot.p>0) row('  rim shooter kills for one SD piece', Math.round(1/rimShoot.p));
+      say('');
+      say('  CLEARS TO RAISE ONE SPECIFIC SD PIECE (both halves, 20,000 simulated chases)');
+      row('    median', median(runs));
+      row('    mean', f1(mean(runs)));
+      row('    p90', pctile(runs,0.90));
+      row('  which half binds?', (pRel<pMat?'the RELIC':'the REAGENT')
+        +'   (relic '+pct(pRel)+' vs reagent '+pct(pMat)+' per clear)');
+      say('  A clear is a full ascended dungeon, not a kill. Both halves come out of the same runs,');
+      say('  which is why this is one wait and not two added together.');
+      say('  SD_MAT_P is the one dial. Nothing here is tuned -- it is reported.');
+      curRoom=_room;
     } else {
-      say('  rollSoulboundItems not reachable — SD half not measured.');
+      say('  sdMatDropFor/relicChanceFor not reachable — the top rung was not measured.');
     }
 
     // =============================================================================================

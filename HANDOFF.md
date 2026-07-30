@@ -538,17 +538,62 @@ already has the shape in `player.terrainGhost`, gated on `_pmove`), a decision o
 only water/chasm or everything, and an answer to which enemies can reach a flyer at all.
 
 ### The Forge (`18_forge.js`)
-**The machine takes exactly two things, at every rung.** Two materials join into a better material;
-a Scavenged Dreams piece plus a Riftseed becomes a relic. There is one panel because there is one
-gesture. **Bram joins things; he does not improve them** — the ordinary ladder is found, never made,
-and SD is found too.
+**The machine takes exactly two things, at every rung.** There is one gesture, and now **two pages**:
+the anvil you use and the recipe book you consult.
 
-- **Thirty-two materials, four sources.** `src` on the def is what `matDropFor` reads, so the
+**THREE RUNGS** (user, 2026-07-29):
+
+| | in | out |
+|---|---|---|
+| 1 | two materials | a better material, up to a **Riftseed** |
+| 2 | a **T12** piece + any Riftseed | a **relic**, in a set you pick |
+| 3 | a **relic** + the reagent it is made of | **Scavenged Dreams** |
+
+**"BRAM JOINS THINGS, HE DOES NOT IMPROVE THEM" IS RETIRED**, by the user's decision — rungs 2 and 3
+move a piece up the ladder. What survives is the part that still holds: **the ordinary ladder, T1–T12,
+is found and never made.** Do not re-add the old rule; it is contradicted by the code.
+
+**THE PANEL WAS SIMPLIFIED BECAUSE PLAYERS COULD NOT READ IT** (user, 2026-07-29: *"players aren't
+easily able to understand this"*). What changed is only presentation — the economy was explicitly left
+alone:
+- **No description at all.** Three explanatory paragraphs are gone. A machine that needs three
+  paragraphs is the wrong machine; the anvil page is now two slots, a one-line status, and one line of
+  instruction.
+- **The tree moved behind a `RECIPES` button** (`_forgeView`, `'anvil'`/`'book'`), because reference
+  material and a tool do not belong in one scroller.
+- **AN UNDISCOVERED INGREDIENT IS A SILHOUETTE** — its own sprite at `filter:brightness(0)`, name
+  withheld as `?????`. The shape still says what kind of thing to look for; a generic "unknown" icon
+  would have thrown that away and drawn nothing would make every unfound recipe identical. **Outputs
+  are always legible**: unknowns joining into unknowns teaches nothing.
+- **Discovery is on LOOT, and is never taken back** (user: *"not after you spend it, after you loot it
+  at least one time"*). `matSeen`/`matNote` is a write-once record on the account, set inside `matAdd`.
+  `matCount` cannot answer this — spending your last Bog Iron would re-black a recipe already learned.
+  It falls back to the count so a save predating the record does not show a full pouch as a dark book.
+- **Drag is for pointer devices; tap is for touch, and both are real paths.** Implemented on POINTER
+  events, not HTML5 drag-and-drop, which never fires for touch. `touch-action:none` is what lets a
+  finger drag instead of scroll — gated behind `(hover:hover)`, because `#forgeBody` is the panel's only
+  scroller and the chips cover most of it, so enabling it on a phone would trade "you can drag" for
+  "you cannot scroll forty-four materials". A drag only begins after 8px of movement, so the two
+  gestures cannot fight. Dropping on a *named* slot fills that slot; dropping anywhere else on the
+  anvil fills the first free one.
+
+- **Forty-four materials, five sources.** `src` on the def is what `matDropFor` reads, so the
   comment cannot drift from the behaviour: `starter` (the Lv1–20 island, 3), `main` (Lv20–50, 3),
   `rift` (**post-ascension dungeon bosses only**, 9), `craft` (never dropped — 11 crafted rungs
-  plus 6 generated seeds). The rift pool is the whole content gate on the T14 rung and it is not a
-  new mechanism — those dungeons already refuse to open without an ascension, so gating the
-  material gates the relic for free.
+  plus 6 generated seeds), and `sd` (**the twelve SD reagents**, ascended bosses only). The rift pool
+  is the content gate on the relic rung and it is not a new mechanism — those dungeons already refuse
+  to open without an ascension, so gating the material gates the relic for free.
+- **THE TWELVE SD REAGENTS ARE KEYED TO THE ITEM, NOT THE SLOT** — `SD_MAT_KEY` maps a weapon by its
+  `wt` (7 types), armour by its `mt` (3), plus helm and ring. `sdMatFor(it)` reads the item, so a bow
+  wants its stave and a wand its sliver. They roll on a **separate, independent** pass
+  (`sdMatDropFor`, called beside `matDropFor` in `rollLoot`) rather than sharing `matDropFor`'s
+  single roll — folding them together would make SD farming starve the seed tree the relic half needs.
+  `SD_MAT_P` (0.15 for the pool of twelve) is the one dial. The integrity check asserts every
+  non-legacy `WTYPE` has a reagent, which is what caught `xbow` being written `crossbow`.
+- **MEASURED, not guessed** (`tools/audit.py _forgeaudit.js`): a specific reagent is 1.25%/clear, and
+  raising one specific SD piece takes a **median 110 ascended clears** (mean 135, p90 266). The
+  binding half is the **relic** (1.00%/clear), not the reagent — so tune `relicChanceFor` before
+  `SD_MAT_P` if the top rung ever needs to be faster.
 - **A rift material belongs to ONE boss.** `matDropFor` does not draw that pool at random;
   `riftMatForKill` returns the material carrying the dead boss's `ring`, so a reagent in the pouch
   is a record of which door you got through. Nine ascended bosses, nine signatures — assert that

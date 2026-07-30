@@ -258,6 +258,43 @@ function _checkForge(){
       if(!matForRing(ring)) _iErr('ascended boss '+ring+' ('+gb.n+') drops no crafting material');
     }
   }
+
+  // ---- THE TWELVE SCAVENGED DREAMS REAGENTS ----
+  // A hole here is silent in the worst way: a piece of gear whose reagent does not exist simply can
+  // never be raised, and the player has no way to tell that from "I have not found it yet".
+  if(typeof SD_MAT_KEY!=='undefined' && typeof sdMatFor==='function'){
+    const pool=(typeof matPool==='function')?matPool('sd'):[];
+    // every id the mapping names must be a real material in the 'sd' pool
+    const walk=(v,where)=>{
+      if(typeof v==='string'){
+        if(!MATERIALS[v]) _iErr('SD_MAT_KEY '+where+' names "'+v+'", which is not a material');
+        else if(MATERIALS[v].src!=='sd')
+          _iErr('SD reagent "'+v+'" ('+where+') is src:'+MATERIALS[v].src+', so no ascended boss drops it');
+        return; }
+      for(const k in v) walk(v[k], where+'.'+k);
+    };
+    walk(SD_MAT_KEY,'');
+    // and the reverse: every reagent in the pool must be reachable by some real piece of gear, or it
+    // is a drop that can never be spent
+    const named={};
+    const collect=(v)=>{ if(typeof v==='string'){ named[v]=1; return; } for(const k in v) collect(v[k]); };
+    collect(SD_MAT_KEY);
+    for(const id of pool) if(!named[id])
+      _iErr('SD reagent "'+id+'" is dropped but nothing is made out of it');
+    // EVERY WEAPON TYPE THE GAME CAN ACTUALLY DROP needs one, or that class's relic is a dead end.
+    // Checked against WTYPE rather than a list here, so a new weapon type fails loudly instead of
+    // quietly becoming un-raisable.
+    if(typeof WTYPE!=='undefined') for(const wt in WTYPE){
+      if(WTYPE[wt].legacy) continue;
+      if(!sdMatFor({k:'wpn',wt:wt}))
+        _iErr('weapon type "'+wt+'" has no SD reagent — a relic of that type could never be raised');
+    }
+    for(const mt of ['plate','leather','robe'])
+      if(!sdMatFor({k:'arm',mt:mt}))
+        _iErr('armour material "'+mt+'" has no SD reagent');
+    for(const k of ['helm','ring'])
+      if(!sdMatFor({k:k})) _iErr('slot "'+k+'" has no SD reagent');
+  }
   if(typeof RELIC_SETS!=='undefined' && typeof isSeed==='function' && typeof forgeSetsFor==='function'){
     const relicRings=[]; for(const S of RELIC_SETS) if(relicRings.indexOf(S.ring)<0) relicRings.push(S.ring);
     for(const ring of relicRings){

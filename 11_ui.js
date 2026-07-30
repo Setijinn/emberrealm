@@ -1360,6 +1360,8 @@ function rollLoot(e){
  // purpose -- a material is a unit of work, not a prize -- and which pool a kill pays from is the
  // one place the starter-island / mainland / post-ascension split is decided.
  if(typeof matDropFor==='function'){ const md=matDropFor(e); if(md) extra.push(md); }
+ // the Scavenged Dreams reagents roll SEPARATELY, so farming them cannot starve the seed tree
+ if(typeof sdMatDropFor==='function'){ const sd=sdMatDropFor(e); if(sd) extra.push(sd); }
  const roster=(typeof netLootRoster==='function')?netLootRoster(e.x,e.y):[{id:null,fort:F}];
  // ONE SACK PER KILL (user, 2026-07-26), and the sack you see is the best thing inside it -- which
  // bandOfTier(bagTopTier) already decides, so a relic in the sack makes it a reliquary by itself.

@@ -37,6 +37,24 @@
       // point: the photograph could only show eight of the thirty-two.
       for(const k of MAT_KEYS) matAdd(k,1);
 
+      // AND GEAR, because the anvil strip shares .fgChip with the pouch and a GEAR name is the longer
+      // of the two -- itemName stacks a rarity prefix, a tier tag and the piece's own name. Measuring
+      // only materials is why a clipped "Sage's T12 Hearthfire..." survived a PASSING audit and had to
+      // be caught by eye in a screenshot instead. One relic per slot (the rung-3 input) plus a T12 of
+      // every kind (the rung-2 input) is exactly what the panel can show.
+      {
+        const _ch=(typeof curChar==='function')?curChar():null;
+        if(_ch){
+          _ch.inv=_ch.inv||[];
+          if(typeof RELICS!=='undefined'){
+            const seen={};
+            for(const R of RELICS){ if(seen[R.slot]) continue; seen[R.slot]=1;
+              _ch.inv.push(mkRelicItem(R.id,_ch.cls)); }
+          }
+          for(const k of ['wpn','arm','helm','ring']) _ch.inv.push(mkItem(k,MAXT-1,0,_ch.cls));
+        }
+      }
+
       // atForge() reads curShopNear and has no "I opened it here" latch, on purpose -- so standing
       // at the counter is simply saying where the player is, not faking a predicate.
       curShopNear='bram';
@@ -46,6 +64,7 @@
       const labels=document.querySelectorAll('#forgeScr .fgChip b');
       hd('WHAT IS ON SCREEN');
       row('materials in MAT_KEYS', MAT_KEYS.length);
+      row('gear rows the anvil accepts', (typeof _forgeInvRows==='function')?_forgeInvRows().length:'n/a');
       row('chips painted', chips.length);
       row('labels measured', labels.length);
       if(!labels.length){

@@ -235,42 +235,124 @@
     ok('a join you lack the second half of is refused', !pShort.ok, pShort.why);
     ok('a refused join takes nothing', matCount('emberalloy')===before);
 
-    // THE GEAR RUNG NOW RUNS RELIC -> SD (user, 2026-07-29). Ring 8 is the Core Sanctum, whose two
-    // sets are 'throne' and 'tide'; take a real relic of that dungeon so the seed match is genuine.
+    // ---- RUNG 2: a T12 piece + a Riftseed -> a relic of a set you choose ----
+    // Ring 8 is the Core Sanctum, whose two sets are 'throne' and 'tide'.
     const SEED8=seedIdFor(8);
-    const rel8=relicsForRing(8).filter(r=>r.slot==='helm')[0]||relicsForRing(8)[0];
-    ch.inv.push(mkItem('helm',11,0,'knight'));                    // a T12 -- must NOT be forgeable
-    ch.inv.push(mkRelicItem(rel8.id,'knight'));                   // a relic of the Core Sanctum
+    ch.inv.push(mkItem('helm',MAXT-1,0,'knight'));     // index 0 -- a T12, the body of a relic
+    ch.inv.push(mkItem('helm',5,0,'knight'));          // index 1 -- ordinary, must NOT be an input
     matAdd(SEED8,1);
-    const pT12=forgePlan({kind:'item',i:0},{kind:'mat',id:SEED8});
-    ok('a T12 piece is refused by a Riftseed', !pT12.ok, pT12.why);
-    const pSD=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
-    ok('a relic plus its own seed is ready with nothing to ask', pSD.ok, pSD.ok?pSD.label:pSD.why);
-    ok('and it needs no set chooser -- the relic already IS its set', !pSD.needSet);
-    const rSD=forgeDo({kind:'item',i:1},{kind:'mat',id:SEED8});
-    ok('forging raises the piece in the same satchel slot', rSD.ok, rSD.ok?'':rSD.why);
-    ok('the raised piece sits at SD_T', ch.inv[1] && ch.inv[1].t===SD_T, 't='+(ch.inv[1]&&ch.inv[1].t));
-    // THE SET SURVIVES THE UPGRADE, which is the thing that stops the top rung being a trap
-    ok('it keeps its relic id, so its set bonus still counts',
-       ch.inv[1] && ch.inv[1].relic===rel8.id, 'relic='+(ch.inv[1]&&ch.inv[1].relic));
-    ok('it keeps its exclusive affixes',
-       ch.inv[1] && Array.isArray(ch.inv[1].aff) && ch.inv[1].aff.length>0,
-       'aff='+((ch.inv[1]&&ch.inv[1].aff)?ch.inv[1].aff.length:'none'));
-    ok('and it is still equippable by its maker',
-       typeof canEquip==='function' && canEquip(ch.inv[1],ch), 'mt='+(ch.inv[1]&&ch.inv[1].mt));
+    const pLow=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
+    ok('a mid-tier piece is refused by a Riftseed', !pLow.ok, pLow.why);
+    const pNoSet=forgePlan({kind:'item',i:0},{kind:'mat',id:SEED8});
+    ok('a T12 piece asks which of the two sets', !pNoSet.ok && !!pNoSet.needSet, pNoSet.why);
+    ok('a seed offers only its own dungeon\'s two sets',
+       pNoSet.needSet && pNoSet.needSet.length===2 && pNoSet.needSet.every(s=>s.set.ring===8),
+       (pNoSet.needSet||[]).map(s=>s.set.id).join(','));
+    ok('it does NOT offer all twelve', pNoSet.needSet.length < RELIC_SETS.length,
+       pNoSet.needSet.length+' of '+RELIC_SETS.length);
+    const setId=pNoSet.needSet[0].set.id;
+    const rRel=forgeDo({kind:'item',i:0},{kind:'mat',id:SEED8},{set:setId});
+    ok('forging pays a relic into the same satchel slot',
+       rRel.ok && ch.inv[0] && !!ch.inv[0].relic, rRel.ok?('relic='+ch.inv[0].relic):rRel.why);
+    ok('the forged relic sits at RELIC_T', ch.inv[0] && ch.inv[0].t===RELIC_T, 't='+(ch.inv[0]&&ch.inv[0].t));
+    ok('it belongs to the seed\'s own dungeon', relicRing(ch.inv[0].relic)===8, 'ring '+relicRing(ch.inv[0].relic));
+    ok('and it is equippable by its maker', typeof canEquip==='function' && canEquip(ch.inv[0],ch));
     ok('the seed was spent', matCount(SEED8)===0, SEED8+'='+matCount(SEED8));
+
+    // ---- RUNG 3: that relic + the reagent it is MADE OF -> Scavenged Dreams ----
+    const relIt=ch.inv[0];
+    const need=sdMatFor(relIt);
+    ok('the relic names the reagent it is made of', !!need, need?need.n:'none');
+    ok('and it is keyed to the ITEM, not the slot',
+       sdMatFor({k:'wpn',wt:'bow'}) !== sdMatFor({k:'wpn',wt:'wand'}),
+       (sdMatFor({k:'wpn',wt:'bow'})||{}).n+' vs '+(sdMatFor({k:'wpn',wt:'wand'})||{}).n);
+    // the WRONG reagent is refused by name, so the panel can say what is missing
+    const wrongId=(sdMatFor({k:'wpn',wt:'bow'}).id!==need.id)?sdMatFor({k:'wpn',wt:'bow'}).id
+                                                             :sdMatFor({k:'ring'}).id;
+    matAdd(wrongId,1);
+    const pWrongMat=forgePlan({kind:'item',i:0},{kind:'mat',id:wrongId});
+    ok('the wrong reagent is refused, by name', !pWrongMat.ok && /needs a /.test(pWrongMat.why||''), pWrongMat.why);
+    matAdd(need.id,1);
+    // NOT `before` -- the materials section above already declares that in this same block scope, and
+    // a duplicate `const` is a SyntaxError, which means the whole harness silently never runs and
+    // #testout just keeps saying "pending". Nothing reports a failure; there is simply no report.
+    const statsPre=itemStats(ch.inv[0],'knight');
+    const pSD=forgePlan({kind:'item',i:0},{kind:'mat',id:need.id});
+    ok('a relic plus its own reagent is ready with nothing to ask', pSD.ok, pSD.ok?pSD.label:pSD.why);
+    ok('and needs no set chooser -- the relic already IS its set', !pSD.needSet);
+    const rSD=forgeDo({kind:'item',i:0},{kind:'mat',id:need.id});
+    ok('raising replaces the piece in its own slot', rSD.ok, rSD.ok?'':rSD.why);
+    ok('the raised piece sits at SD_T', ch.inv[0] && ch.inv[0].t===SD_T, 't='+(ch.inv[0]&&ch.inv[0].t));
+    // THE SET SURVIVES THE UPGRADE, which is what stops the top rung being a trap
+    ok('it keeps its relic id, so its set bonus still counts',
+       ch.inv[0] && ch.inv[0].relic===relIt.relic, 'relic='+(ch.inv[0]&&ch.inv[0].relic));
+    ok('it keeps its exclusive affixes',
+       ch.inv[0] && Array.isArray(ch.inv[0].aff) && ch.inv[0].aff.length>0,
+       'aff='+((ch.inv[0]&&ch.inv[0].aff)?ch.inv[0].aff.length:'none'));
     ok('and the raise is a real power step',
-       itemStats(ch.inv[1],'knight').def>itemStats(mkRelicItem(rel8.id,'knight'),'knight').def
-       || itemStats(ch.inv[1],'knight').wis>itemStats(mkRelicItem(rel8.id,'knight'),'knight').wis);
+       itemStats(ch.inv[0],'knight').wis > statsPre.wis,
+       statsPre.wis+' -> '+itemStats(ch.inv[0],'knight').wis);
+    ok('the reagent was spent', matCount(need.id)===0, need.id+'='+matCount(need.id));
     // an already-raised piece has nothing left to do to it
-    matAdd(SEED8,1);
-    const pAgain=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
+    matAdd(need.id,1);
+    const pAgain=forgePlan({kind:'item',i:0},{kind:'mat',id:need.id});
     ok('an SD piece cannot be raised again', !pAgain.ok, pAgain.why);
-    // and a seed only answers for its own dungeon
-    ch.inv.push(mkRelicItem(rel8.id,'knight'));
-    const SEED3=seedIdFor(3); matAdd(SEED3,1);
-    const pWrong=forgePlan({kind:'item',i:2},{kind:'mat',id:SEED3});
-    ok('another dungeon\'s seed cannot raise this relic', !pWrong.ok, pWrong.why);
+    // and the SD reagents fall ONLY from the awakened depths
+    if(typeof sdMatDropFor==='function'){
+      const _room=curRoom;
+      curRoom={dungeon:true, ring:8, rings:null};
+      let hits=0; for(let i=0;i<4000;i++) if(sdMatDropFor({type:'B',x:0,y:0})) hits++;
+      ok('an ascended boss can pay an SD reagent', hits>0, hits+'/4000');
+      curRoom={dungeon:true, ring:9, rings:null};        // ring 9 is a walk-in starter den
+      let starter=0; for(let i=0;i<4000;i++) if(sdMatDropFor({type:'B',x:0,y:0})) starter++;
+      ok('a starter den never pays one', starter===0, starter+'/4000');
+      let trash=0;
+      curRoom={dungeon:true, ring:8, rings:null};
+      for(let i=0;i<4000;i++) if(sdMatDropFor({type:'c',x:0,y:0,elite:1})) trash++;
+      ok('and neither does trash, elite or not', trash===0, trash+'/4000');
+      curRoom=_room;
+    }
+
+    // ---------- 7b. THE RECIPE BOOK'S DISCOVERY RULE ----------
+    // "Not after you spend it, after you loot it at least one time" (user, 2026-07-29). So the book
+    // reveals an ingredient on ACQUISITION and never takes it back -- matCount cannot answer this,
+    // because spending your last one would re-black a recipe you had already learned.
+    note('');
+    note('== recipe book ==');
+    if(typeof matSeen==='function' && typeof matSeenStore==='function'){
+      const s=matSeenStore(), m=matStore();
+      delete s['drakeash']; delete m['drakeash'];
+      ok('an unlooted material is not discovered', !matSeen('drakeash'));
+      matAdd('drakeash',1);
+      ok('looting one discovers it', matSeen('drakeash'));
+      matSpend({drakeash:1});
+      ok('and SPENDING it does not un-discover it', matSeen('drakeash'), 'count='+matCount('drakeash'));
+      ok('the count really did go to zero', matCount('drakeash')===0);
+      // a save from before this record existed must not present a full pouch as a dark book
+      delete s['drakeash']; matAdd('drakeash',1); delete s['drakeash'];
+      ok('a pre-record save falls back to the count', matSeen('drakeash'));
+      // the book renders, hides what is unfound, and never hides an OUTPUT
+      if(typeof _forgeRecipesHtml==='function'){
+        const before=matSeenStore();
+        const saved=Object.assign({},before);
+        for(const k in before) delete before[k];
+        const m2=matStore(); const savedM=Object.assign({},m2);
+        for(const k in m2) delete m2[k];
+        const dark=_forgeRecipesHtml();
+        ok('with nothing found the book hides ingredients', /\?\?\?\?\?/.test(dark));
+        ok('and still names every output', /Emberalloy/.test(dark), 'output visible');
+        ok('it reports how many joins are ready', /0 of \d+ material joins ready/.test(dark),
+           (dark.match(/\d+ of \d+ material joins ready/)||[''])[0]);
+        // now the other end of the rule: mark EVERY material discovered (restoring the prior state
+        // would not do it -- the forge section above spent several, so "before" was never everything)
+        for(const k of MAT_KEYS) before[k]=1;
+        const lit=_forgeRecipesHtml();
+        ok('with everything found nothing is hidden', !/\?\?\?\?\?/.test(lit));
+        for(const k in before) delete before[k];
+        for(const k in saved) before[k]=saved[k];
+        for(const k in savedM) m2[k]=savedM[k];
+      }
+    } else ok('matSeen exists', false);
 
     // ---------- 8. THE SAVE MIGRATION ----------
     // The most destructive thing in the ladder swap: a wrong pass silently rewrites the best gear

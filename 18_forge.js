@@ -131,6 +131,72 @@ const MATERIALS = {
             d:'the half of a seed that every door has in common'},
 };
 
+// ------------------------------------------------------------
+// THE TWELVE SCAVENGED DREAMS REAGENTS (user, 2026-07-29)
+// ------------------------------------------------------------
+// "Each SD craft is going to require a material that's logically used to make whatever said item is."
+// So a reagent is not a generic currency: it is the PART the finished thing is made out of, and it is
+// keyed by what the piece actually is rather than by its slot alone --
+//
+//   a WEAPON by its type   (7)  sword / dagger / bow / crossbow / staff / wand / gauntlet
+//   ARMOUR by its material (3)  plate / leather / robe
+//   a HELM                 (1)
+//   a RING                 (1)
+//
+// Twelve, because that is how many distinct things the game actually makes. `SD_MAT_KEY` below is the
+// mapping and it is the only place that decides it -- sdMatFor() reads the item, never the slot, so a
+// bow and a wand can never share a reagent by accident.
+//
+// STUPID RARE, BY INSTRUCTION. They fall only from the nine ascended dungeon bosses, on their own
+// roll independent of the signature reagent that boss also pays, drawn uniformly from the twelve.
+// SD_MAT_P is the one dial; _forgeaudit.js measures what it actually costs, because a rate this low
+// is exactly the kind of number that should never be guessed at twice.
+//
+// They are `tier:4` and wear SD's own colour, so the pouch sorts them at the very top where they
+// belong -- a player looking at the pouch should be able to see which chips are the rare half.
+const SD_MAT_P = 0.15;                 // per ascended-boss clear, for the POOL of twelve
+const SD_MAT_KEY = {
+  // `xbow`, not `crossbow` -- these are WTYPE's own keys and the integrity check compares against
+  // WTYPE directly, which is what caught the guess.
+  wpn:{sword:'sd_billet', dagger:'sd_tang', bow:'sd_stave', xbow:'sd_spring',
+       staff:'sd_bough', wand:'sd_sliver', gauntlet:'sd_knuckle',
+       // the Monk's retired weapon still exists as `legacy` and a saved relic can carry it, so it
+       // needs a reagent or that one piece would be quietly un-raisable forever
+       fists:'sd_knuckle'},
+  arm:{plate:'sd_blank', leather:'sd_hide', robe:'sd_bolt'},
+  helm:'sd_circlet',
+  ring:'sd_bead',
+};
+(function(){
+  const C=(typeof SD_COL!=='undefined')?SD_COL:'#ff9bf0';
+  const rows=[
+    ['sd_billet', 'Dreamsteel Billet',  '⬛', 'a bar of it, already the length of a blade'],
+    ['sd_tang',   'Silent Tang',         '⌁', 'the part of a knife nobody is meant to see'],
+    ['sd_stave',  'Dreaming Stave',      '⌒', 'still bending toward something it remembers'],
+    ['sd_spring', 'Riftwound Spring',    '⌇', 'wound past where steel should have given up'],
+    ['sd_bough',  'Somnial Bough',       '⑂', 'cut from a tree that was never planted'],
+    ['sd_sliver', 'First-Ember Sliver',  '✧', 'a splinter of the first fire, still lit'],
+    ['sd_knuckle','Oathbound Knuckle',   '⬢', 'it closes into a fist on its own'],
+    ['sd_blank',  'Bastion Blank',       '▮', 'plate cut to shape and not yet hammered'],
+    ['sd_hide',   'Nightmare Hide',      '❋', 'flayed off something that was only ever dreamt'],
+    ['sd_bolt',   'Dreamsilk Bolt',      '❂', 'a bolt of cloth that weighs nothing at all'],
+    ['sd_circlet','Vigil Circlet',       '◌', 'a band for a head that must not sleep'],
+    ['sd_bead',   'Riftglass Bead',      '◦', 'small enough to lose, and impossible to replace'],
+  ];
+  for(const r of rows)
+    MATERIALS[r[0]]={id:r[0], n:r[1], tier:4, src:'sd', col:C, icon:r[2], d:r[3]};
+})();
+// Which reagent a given piece of gear needs. Reads the ITEM, so the answer is about what the thing
+// is made of and not merely which slot it hangs in.
+function sdMatFor(it){
+  if(!it) return null;
+  const m=SD_MAT_KEY[it.k];
+  if(!m) return null;
+  if(typeof m==='string') return MATERIALS[m]||null;
+  const key=(it.k==='wpn')?it.wt:it.mt;
+  return MATERIALS[m[key]]||null;
+}
+
 // ---- THE SIX RIFTSEEDS, one per relic-hosting dungeon ----
 // Generated rather than typed, because a seed is entirely determined by the boss it belongs to:
 // its name, its colour and the sets it can forge all come off GBOSS and RELIC_SETS. Typing six
@@ -222,8 +288,24 @@ function matStore(){ const u=(typeof users!=='undefined'&&curUser)?users[curUser
   return u.mats; }
 function saveMats(){ if(typeof LS!=='undefined'&&typeof users!=='undefined') LS.set('er-users',users); }
 function matCount(id){ const m=matStore(); return (m&&m[id])|0; }
+// ---- DISCOVERY, which is not the same question as "do I hold one" ----
+// The recipe book blacks an ingredient out until the player has held at least one of it, and the
+// count cannot answer that: spend the last Bog Iron and a recipe you had already learned would go
+// dark again, which reads as the book forgetting. So discovery is its own record, on the ACCOUNT
+// alongside the pouch, and it is write-once -- nothing ever removes an id from it.
+function matSeenStore(){ const u=(typeof users!=='undefined'&&curUser)?users[curUser]:null; if(!u) return null;
+  if(!u.matSeen || typeof u.matSeen!=='object') u.matSeen={};
+  return u.matSeen; }
+function matSeen(id){
+  const s=matSeenStore();
+  // matCount is still consulted so a save from before this record existed does not present a pouch
+  // full of materials as a book full of silhouettes
+  return !!(s && s[id]) || matCount(id)>0;
+}
+function matNote(id){ const s=matSeenStore(); if(!s||!MATERIALS[id]) return false;
+  if(s[id]) return false; s[id]=1; return true; }
 function matAdd(id,n){ const m=matStore(); if(!m||!MATERIALS[id]) return 0;
-  m[id]=(m[id]|0)+(n||1); saveMats(); return m[id]; }
+  m[id]=(m[id]|0)+(n||1); matNote(id); saveMats(); return m[id]; }
 // Spend is all-or-nothing on purpose: a craft that took half its inputs and then failed would be
 // the worst bug in the system and the hardest to notice.
 function matSpend(list){ const m=matStore(); if(!m) return false;
@@ -297,6 +379,22 @@ function matDropFor(e){
   const n=(src==='rift') ? 1 : (e.type==='B' ? 2+Math.floor(Math.random()*3) : 1);
   return {k:'mat', m:id, n:n};
 }
+// AN INDEPENDENT SECOND ROLL, not a share of the first. An ascended boss pays its signature reagent
+// AND, rarely, one of the twelve Scavenged Dreams reagents -- folding SD into matDropFor's single roll
+// would have made the two compete, so farming for SD would have starved the seed tree that the relic
+// half depends on. Two rolls, two dials, and neither can crowd the other out.
+// Nothing else in the game pays these: not a rim kill, not an elite, not a starter boss.
+function sdMatDropFor(e){
+  if(!e || e.node || e.type!=='B') return null;
+  if(typeof curRoom==='undefined' || !curRoom || !curRoom.dungeon) return null;
+  const gb=(typeof GBOSS!=='undefined')?GBOSS[curRoom.ring]:null;
+  if(!gb || gb.gate==='none') return null;          // the awakened depths only
+  const F=(typeof player!=='undefined'&&player.fortune)||0;
+  if(Math.random() >= SD_MAT_P*(1+F*0.012)) return null;
+  const pool=matPool('sd');
+  if(!pool.length) return null;
+  return {k:'mat', m:pool[Math.floor(Math.random()*pool.length)], n:1};
+}
 
 // ------------------------------------------------------------
 // WHAT THE ANVIL DOES WITH TWO THINGS
@@ -358,31 +456,55 @@ function forgePlan(A,B,opts){
   if(item.k!=='wpn' && item.k!=='arm' && item.k!=='helm' && item.k!=='ring')
     return {ok:false, why:'That is not something Bram can work.'};
 
-  // THE DIRECTION OF THIS RUNG IS REVERSED (user, 2026-07-29). It used to be SD + seed -> relic,
-  // when SD was the dropped rung and a relic was the crafted top. The user has swapped them: relics
-  // are what the ascended dungeons drop, and Scavenged Dreams is the crafted pinnacle above them. So
-  // the same two slots now run the other way.
+  // ---- rung 2: a T12 piece + a Riftseed -> a RELIC of a set you choose ----
+  // This is the seed's original purpose and it is preserved on purpose. A relic drop is 0.25-1%
+  // spread across forty-eight pieces, so finding the one that completes the set you are actually
+  // wearing is hopeless; crafting is how you aim. WHICH relic is already answered by the two inputs
+  // between them -- the seed's dungeon and the piece's slot -- so the only thing left to ask is which
+  // of that dungeon's two sets you want.
   //
-  // Left un-flipped this rung would have been DEAD rather than merely wrong -- it would still demand
-  // an SD piece, and nothing in the game can produce one any more, so the forge's entire payoff
-  // would have quietly become unreachable with no error to see.
-  //
-  // THE SD PIECE INHERITS THE RELIC'S SET, AFFIX AND TRAIT. Upgrading must never cost you set
-  // progress, or a completed four-piece set would beat four SD pieces and the top rung would be a
-  // trap. It keeps `relic` for exactly that reason -- the id IS the set membership, and every set
-  // bonus already reads it -- so this adds no new combat branch.
-  //
-  // AND THE SEED MUST BE THAT RELIC'S OWN DUNGEON'S. The rule the seeds were built on is that a seed
-  // only answers for the dungeon it came from; feeding the Core Sanctum's seed a Windward Roost relic
-  // would retire that rule for no reason.
+  // THE ORDINARY LADDER IS STILL FOUND, NEVER MADE. This consumes a T12 as the body of the thing and
+  // does not improve a T12 into a better T12; the forge's inputs come off the found ladder and its
+  // outputs never rejoin it.
   if(isSeed(mat.id)){
     const seed=MATERIALS[mat.id];
-    if(!item.relic) return {ok:false, why:'A Riftseed only takes a '+TIER_NAMES[RELIC_T]+' relic.'};
-    if(item.t===SD_T) return {ok:false, why:'That is already '+TIER_NAMES[SD_T]+'.'};
+    if(item.relic) return {ok:false, why:'A relic needs its own reagent, not a seed.'};
+    if(item.t!==MAXT-1)
+      return {ok:false, why:'A Riftseed only takes a '+TIER_NAMES[MAXT-1]+' piece.'};
     if(matCount(mat.id)<1) return {ok:false, why:'You have no '+seed.n+'.'};
-    const ring=(typeof relicRing==='function')?relicRing(item.relic):-1;
-    if(ring>=0 && seed.ring!==ring)
-      return {ok:false, why:'That relic answers to another dungeon. It needs its own seed.'};
+    const sets=forgeSetsFor(item.k, seed.ring);
+    if(!sets.length) return {ok:false, why:'That dungeon has no set with a piece for this slot.'};
+    const pick=o.set||null;
+    // one seed, one dungeon, two sets -- if only one is left unowned there is nothing to ask
+    const open=sets.filter(s=>!s.owned);
+    if(!open.length) return {ok:false, why:'You already carry both of that dungeon’s '+item.k+' relics.', needSet:sets};
+    const chosen = pick ? sets.filter(s=>s.set.id===pick)[0] : (open.length===1?open[0]:null);
+    if(!chosen) return {ok:false, why:'Choose which of the two sets to forge it into.', needSet:sets};
+    if(chosen.owned) return {ok:false, why:'You already carry that relic.', needSet:sets};
+    const cost={}; cost[mat.id]=1;
+    return {ok:true, kind:'relic', cost:cost, relic:chosen.piece.id,
+            label:'★ '+chosen.piece.n, why:'', needSet:sets};
+  }
+
+  // ---- rung 3: a RELIC + the reagent that belongs to what it IS -> SCAVENGED DREAMS ----
+  // The top of the game, and the direction of this rung was reversed on 2026-07-29: it used to be
+  // SD + seed -> relic, when SD was dropped and a relic was crafted. The user swapped them.
+  //
+  // THE REAGENT IS KEYED TO THE ITEM, NOT THE SLOT. "A material logically used to make whatever said
+  // item is" -- so a bow wants its stave and a wand wants its sliver, and sdMatFor reads `wt`/`mt`
+  // rather than `k`. Feeding the wrong one is refused by name, so the panel can say what is missing.
+  //
+  // THE SD PIECE INHERITS THE RELIC'S SET, AFFIX AND TRAIT: `relic` is the set membership, every set
+  // bonus already reads it, and an upgrade that dropped it would make a finished four-piece set beat
+  // four of the best items in the game. No new combat branch.
+  if(MATERIALS[mat.id] && MATERIALS[mat.id].src==='sd'){
+    if(!item.relic) return {ok:false, why:'That reagent only works on a '+TIER_NAMES[RELIC_T]+' relic.'};
+    if(item.t===SD_T) return {ok:false, why:'That is already '+TIER_NAMES[SD_T]+'.'};
+    const need=sdMatFor(item);
+    if(!need) return {ok:false, why:'Nothing is made out of that.'};
+    if(need.id!==mat.id)
+      return {ok:false, why:'That is not what this is made of. It needs a '+need.n+'.'};
+    if(matCount(mat.id)<1) return {ok:false, why:'You have no '+need.n+'.'};
     const cost={}; cost[mat.id]=1;
     const nm=(typeof relicDef==='function'&&relicDef(item.relic))?relicDef(item.relic).n:'the relic';
     return {ok:true, kind:'sd', cost:cost, label:tierTag(SD_T)+' '+nm, why:''};
@@ -410,16 +532,29 @@ function forgeDo(A,B,opts){
   if(!ch||!ch.inv||!ch.inv[idx]) return {ok:false, why:'That piece is no longer in your satchel.'};
   if(!matSpend(plan.cost)) return {ok:false, why:'The pouch came up short.'};
 
-  // THE RELIC IS RAISED IN PLACE, keeping its set, its exclusive affix and its trait, and only its
-  // TIER moves. That is the whole reason to build it this way rather than minting a fresh piece:
-  // `relic` is the set membership, every set bonus reads it, and an upgrade that dropped it would
-  // make a finished four-piece set better than four of the best items in the game.
-  const src=ch.inv[idx];
-  const up=Object.assign({}, src);
-  up.t=SD_T;
-  // A FAILED CRAFT MUST PUT BACK EXACTLY WHAT plan.cost TOOK. An earlier version of this path named
-  // a hard-coded 'riftseed' that no longer existed once seeds became per-dungeon, which would have
+  // BOTH GEAR RUNGS REPLACE THE PIECE IN ITS OWN SATCHEL SLOT, so nothing has to find a free slot and
+  // a full satchel can never eat the result.
+  //
+  // A FAILED CRAFT MUST PUT BACK EXACTLY WHAT plan.cost TOOK. An earlier version of this path named a
+  // hard-coded 'riftseed' that no longer existed once seeds became per-dungeon, which would have
   // minted a reagent out of nothing.
+  if(plan.kind==='relic'){
+    // the T12 body is consumed and the relic takes its place
+    const rel=(typeof mkRelicItem==='function')?mkRelicItem(plan.relic, ch.cls):null;
+    if(!rel){ for(const id in plan.cost) matAdd(id, plan.cost[id]);
+      return {ok:false, why:'That relic could not be shaped.'}; }
+    ch.inv[idx]=rel;
+    if(typeof noteRelicTaken==='function') noteRelicTaken(plan.relic);
+    if(typeof saveRPG==='function') saveRPG();
+    if(typeof msg==='function') msg(TIER_NAMES[RELIC_T].toUpperCase(),
+      (typeof relicDef==='function'&&relicDef(plan.relic))?relicDef(plan.relic).n:'a relic');
+    return {ok:true, kind:'relic', item:rel};
+  }
+
+  // THE RELIC IS RAISED IN PLACE and only its TIER moves -- it keeps its set, its exclusive affix and
+  // its trait. Copied rather than mutated so a mid-flight failure cannot leave a half-changed item.
+  const up=Object.assign({}, ch.inv[idx]);
+  up.t=SD_T;
   if(!up.relic){ for(const id in plan.cost) matAdd(id, plan.cost[id]);
     return {ok:false, why:'That piece lost its relic on the anvil.'}; }
   ch.inv[idx]=up;
@@ -517,9 +652,20 @@ if(typeof window!=='undefined') setTimeout(function(){ try{ migrateForgeTiers();
 //  between a panel you read and a panel you scroll.
 // ============================================================
 let _forgeA=null, _forgeB=null, _forgeSet=null, _forgeWired=false;
+// 'anvil' or 'book'. Two pages in one card: the machine you use, and the reference you consult.
+let _forgeView='anvil';
+// Put a pick in a NAMED slot, which is what a drop on that slot means. _forgePick's "first free slot"
+// rule is right for a tap and wrong for a drag -- if you drag onto the second slot you meant the
+// second slot, even when the first one is empty.
+function _forgePut(which,pick){
+  if(which==='a'){ if(_slotSame(_forgeB,pick)) _forgeB=null; _forgeA=pick; }
+  else { if(_slotSame(_forgeA,pick)) _forgeA=null; _forgeB=pick; }
+  _forgeSet=null;
+}
 
 function openForge(){
   _forgeA=null; _forgeB=null; _forgeSet=null;
+  _forgeView='anvil';       // always open on the machine, never on the reference page
   const el=document.getElementById('forgeScr'); if(!el) return;
   el.style.display='flex';
   paintForge();
@@ -527,20 +673,22 @@ function openForge(){
 // Clearing the slots on the way out matters more than it looks: a slot holds a SATCHEL INDEX, and
 // an index that survives the panel would point at whatever slid into that position next.
 function closeForge(){ const el=document.getElementById('forgeScr'); if(el) el.style.display='none';
-  _forgeA=null; _forgeB=null; _forgeSet=null; }
+  _forgeA=null; _forgeB=null; _forgeSet=null; _forgeView='anvil';
+  const g=document.getElementById('fgGhost'); if(g) g.style.display='none'; }
 
-// Which satchel rows the anvil will even look at: RELICS, and nothing else. It filtered for Scavenged
-// Dreams pieces and explicitly SKIPPED relics (`if(!it||it.relic) continue`) while the rung ran the
-// other way -- so after the swap it would have hidden the one input the forge now needs and shown a
-// list of things it cannot use. Everything else is noise in a list you are trying to pick one
-// specific piece out of.
+// Which satchel rows the anvil will even look at, and there are now TWO kinds of input: a T12 piece
+// (the body of a relic, rung 2) and a RELIC (raised into Scavenged Dreams, rung 3). Everything else
+// is noise in a list you are trying to pick one specific piece out of.
+// It used to filter for SD pieces and explicitly SKIP relics, which after the ladder swap would have
+// hidden the one input the forge needs while listing things it cannot use.
 function _forgeInvRows(){
   const ch=(typeof curChar==='function')?curChar():null;
   const inv=(ch&&ch.inv)?ch.inv:[]; const out=[];
   for(let i=0;i<inv.length;i++){ const it=inv[i];
-    if(!it||!it.relic) continue;
+    if(!it) continue;
     if(it.k!=='wpn'&&it.k!=='arm'&&it.k!=='helm'&&it.k!=='ring') continue;
-    if(it.t===SD_T) continue;                  // already raised; nothing left to do to it
+    if(it.t===SD_T) continue;                          // already the top; nothing left to do to it
+    if(!it.relic && it.t!==MAXT-1) continue;           // ordinary gear below T12 is not an input
     out.push({i:i, it:it}); }
   return out;
 }
@@ -579,9 +727,74 @@ function _forgeSlotHtml(s,which){
   const col=(typeof tierCol==='function')?tierCol(it.t):'#fff';
   return '<div class="fgSlot" data-clear="'+which+'" style="border-color:'+col+'">'
     +'<span class="fgIco" style="color:'+col+'">'+tierTag(it.t)+'</span>'
-    +'<b style="color:'+col+'">'+((typeof itemName==='function')?itemName(it):it.k)+'</b></div>';
+    +'<b style="color:'+col+'">'+_forgeChipName(it)+'</b></div>';
 }
 
+// THE CHIP LABEL FOR A PIECE OF GEAR, and it is deliberately shorter than itemName(). A chip already
+// stamps the tier in its own `.fgIco`, so repeating it in the label spent a whole line saying the same
+// thing twice -- and with the rarity prefix on top, "Lucky T12 Hearthfire Plate Armor" is 32
+// characters that wrap to FOUR lines and clip however high the clamp goes. Dropping the two things the
+// chip is already telling you leaves "Hearthfire Plate Armor", which fits.
+// A relic keeps its own name whole: it is the one thing on the chip worth reading in full.
+function _forgeChipName(it){
+  if(!it) return '';
+  if(it.relic && typeof relicDef==='function'){ const R=relicDef(it.relic); if(R) return '★ '+R.n; }
+  const base=(typeof itemBaseName==='function')?itemBaseName(it):((typeof itemName==='function')?itemName(it):it.k);
+  const tag=(typeof tierTag==='function')?tierTag(it.t):'';
+  return (tag && base.indexOf(tag+' ')===0) ? base.slice(tag.length+1) : base;
+}
+// ============================================================
+//  THE RECIPE BOOK — its own page, not a fold on the anvil
+// ------------------------------------------------------------
+//  The forge shipped with the whole tree inline plus three paragraphs explaining it, and the user's
+//  verdict was that players could not easily understand it. So the anvil page is now ONLY the anvil --
+//  two slots, drag two things in, take one out -- and everything reference-shaped moved behind a
+//  RECIPES button. No description at all: a machine that needs three paragraphs is the wrong machine.
+//
+//  AN UNDISCOVERED INGREDIENT IS A SILHOUETTE (user, 2026-07-29): its sprite in black, with its name
+//  withheld, until the player has LOOTED at least one of it. Not until they hold one -- matSeen is a
+//  write-once record on the account, so spending your last Bog Iron never re-hides a recipe you had
+//  already learned. That makes the book a map of what you have found rather than a wiki page, and it
+//  is why discovery is tracked separately from the count.
+//
+//  The OUTPUT is always legible, deliberately: a book of unknowns joining into unknowns would tell a
+//  player nothing at all. You can always see what a recipe MAKES; what is hidden is what it takes.
+function _forgeIngHtml(def,px){
+  const seen=matSeen(def.id);
+  if(seen) return '<span class="fgIng">'+_matIcoHtml(def,px)
+    +'<span style="color:'+def.col+'">'+def.n+'</span></span>';
+  return '<span class="fgIng fgUnk" title="not found yet">'+_matIcoHtml(def,px)
+    +'<span class="fgDim">?????</span></span>';
+}
+function _forgeRecipesHtml(){
+  let h='<div class="fgBar"><button class="fgBtn" data-view="anvil">‹ THE ANVIL</button></div>';
+  h+='<div class="fgBookHd">THE RECIPE BOOK<span class="embDim"> — what you have not found stays dark</span></div>';
+  let known=0, total=0;
+  let body='';
+  for(const k in MAT_RECIPES){ const r=MAT_RECIPES[k];
+    const A=MATERIALS[r.a], B=MATERIALS[r.b], O=MATERIALS[r.out];
+    if(!A||!B||!O) continue;
+    total++;
+    const can=matCount(r.a)>0&&matCount(r.b)>0; if(can) known++;
+    body+='<div class="fgRec'+(can?' can':'')+'">'
+      +_forgeIngHtml(A,16)+'<span class="fgDim"> + </span>'+_forgeIngHtml(B,16)
+      +'<span class="fgDim"> → </span>'+_matIcoHtml(O,16)
+      +'<b style="color:'+O.col+'">'+O.n+'</b></div>'; }
+  // THE TWO GEAR RUNGS. These take a piece of gear rather than a material, so they are written in
+  // words -- there is no single sprite for "any relic" and pretending otherwise would be a lie.
+  body+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(MAXT-1):'#fff')+'">'
+    +TIER_NAMES[MAXT-1]+' piece</span><span class="fgDim"> + </span>'
+    +'<span style="color:'+RELIC_COL+'">any Riftseed</span>'
+    +'<span class="fgDim"> → </span><b style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">'
+    +'★ a relic, in a set you pick</b></div>';
+  body+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ any relic</span>'
+    +'<span class="fgDim"> + </span>'
+    +'<span style="color:'+((typeof SD_COL!=='undefined')?SD_COL:'#fff')+'">the reagent it is made of</span>'
+    +'<span class="fgDim"> → </span><b style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'
+    +tierTag(SD_T)+' '+TIER_NAMES[SD_T]+'</b></div>';
+  h+='<div class="fgBookCount">'+known+' of '+total+' material joins ready</div>';
+  return h+body;
+}
 function paintForge(){
   const scr=document.getElementById('forgeScr'); if(!scr||scr.style.display==='none') return;
   const body=document.getElementById('forgeBody'); if(!body) return;
@@ -589,6 +802,15 @@ function paintForge(){
   if(!atForge()){
     body.innerHTML='<div class="embEmpty">The forge is cold.<br><span class="embDim">'
       +'Bram works at his stall in the Hearth — walk to it and interact.</span></div>';
+    return; }
+
+  // TWO PAGES, ONE CARD. The anvil is what you use; the book is what you consult. Keeping them in one
+  // scroller was the thing that made the panel unreadable.
+  if(_forgeView==='book'){
+    body.innerHTML=_forgeRecipesHtml();
+    const go=document.getElementById('forgeGo');
+    if(go){ go.disabled=true; go.classList.remove('go'); }
+    _forgeWire(body);
     return; }
 
   const plan=forgePlan(_forgeA,_forgeB,{set:_forgeSet});
@@ -604,6 +826,9 @@ function paintForge(){
     +'<div class="fgOut'+(plan.ok?' on':'')+'">'+(plan.ok?plan.label:'<span class="fgDim">—</span>')+'</div>'
     +'</div>';
   h+='<div class="fgWhy'+(plan.ok?' ok':'')+'">'+(plan.ok?'Bram takes both and sets to work.':plan.why)+'</div>';
+  // The book lives behind a button. One line replaces three paragraphs: what to DO, and where to look.
+  h+='<div class="fgBar"><button class="fgBtn" data-view="book">RECIPES</button>'
+    +'<span class="embDim">Drag two things onto the anvil — or tap them.</span></div>';
 
   // ---- the set chooser, only when rung 3 is otherwise ready ----
   if(plan.needSet && plan.needSet.length){
@@ -628,64 +853,96 @@ function paintForge(){
 
   // ---- the satchel, filtered to what the anvil accepts ----
   const rows=_forgeInvRows();
-  h+='<div class="embSect">ON THE ANVIL <span class="embDim">— relics only</span></div>';
+  h+='<div class="embSect">ON THE ANVIL <span class="embDim">— a '+TIER_NAMES[MAXT-1]
+    +' piece, or a relic to raise</span></div>';
   if(!rows.length) h+='<div class="embEmpty">Nothing in your satchel is ready for the forge.'
-    +'<br><span class="embDim">Relics drop in the ascended dream dungeons. A relic and its own dungeon’s Riftseed become '
-    +TIER_NAMES[SD_T]+'.</span></div>';
+    +'<br><span class="embDim">A '+TIER_NAMES[MAXT-1]+' piece plus a Riftseed becomes a relic of a set you '
+    +'choose. A relic plus the reagent it is made of becomes '+TIER_NAMES[SD_T]+'.</span></div>';
   else { h+='<div class="fgStrip">';
     for(const r of rows){ const col=(typeof tierCol==='function')?tierCol(r.it.t):'#fff';
       const sel=_slotSame(_forgeA,{kind:'item',i:r.i})||_slotSame(_forgeB,{kind:'item',i:r.i});
       h+='<div class="fgChip'+(sel?' on':'')+'" data-inv="'+r.i+'" style="border-color:'+col+'">'
         +'<span class="fgIco" style="color:'+col+'">'+tierTag(r.it.t)+'</span>'
-        +'<b style="color:'+col+'">'+((typeof itemName==='function')?itemName(r.it):r.it.k)+'</b></div>'; }
+        +'<b style="color:'+col+'">'+_forgeChipName(r.it)+'</b></div>'; }
     h+='</div>'; }
-
-  // ---- what the tree looks like. A crafting system nobody can see the shape of is a wiki tab --
-  // but sixteen lines of it is reference material, so it is FOLDED by default. Rendering it open
-  // pushed the pouch and the anvil off the top of a panel whose frame is a fixed percentage inset.
-  h+='<details class="fgBook"><summary>WHAT JOINS WITH WHAT ('+Object.keys(MAT_RECIPES).length+')</summary>';
-  for(const k in MAT_RECIPES){ const r=MAT_RECIPES[k];
-    const A=MATERIALS[r.a], B=MATERIALS[r.b], O=MATERIALS[r.out];
-    const can=matCount(r.a)>0&&matCount(r.b)>0;
-    h+='<div class="fgRec'+(can?' can':'')+'">'
-      +_matIcoHtml(A,14)+'<span style="color:'+A.col+'">'+A.n+'</span> + '
-      +_matIcoHtml(B,14)+'<span style="color:'+B.col+'">'+B.n+'</span>'
-      +' <span class="fgDim">→</span> '+_matIcoHtml(O,14)
-      +'<b style="color:'+O.col+'">'+O.n+'</b></div>'; }
-  // THE GEAR RUNG, WRITTEN THE WAY IT NOW RUNS: relic + its own dungeon's seed -> Scavenged Dreams.
-  h+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ any relic</span>'
-    +' + <span style="color:'+RELIC_COL+'">its own dungeon’s Riftseed</span>'
-    +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'
-    +tierTag(SD_T)+' '+TIER_NAMES[SD_T]+'</b></div>';
-  h+='</details>';
-  // The old blurb told the player "Bram joins things; he does not improve them" and that the ladder
-  // up to SD is found -- both true until the user made SD the crafted top. A retired rule left in
-  // USER-FACING text is worse than one left in a comment: it teaches the wrong model of the game.
-  h+='<div class="embNote">The ordinary ladder, up to <b>'+TIER_NAMES[11]+'</b>, is <b>found</b> and '
-    +'never made. Above it Bram does improve things: a <b>relic</b> drops in the ascended dream '
-    +'dungeons, and he raises one into <b>'+TIER_NAMES[SD_T]+'</b> — the same set, the same trait, '
-    +'a long way further up.<br><br>'
-    +'Every ascended boss drops <b>its own</b> reagent. The first three depths build the '
-    +'<b>Riftheart</b>; the six that host relics each make a <b>Riftseed of their own dungeon</b>, '
-    +'and a seed only ever answers for the dungeon it came from.</div>';
 
   body.innerHTML=h;
 
   const go=document.getElementById('forgeGo');
   if(go){ go.disabled=!plan.ok; go.classList.toggle('go',!!plan.ok); }
+  _forgeWire(body);
+}
 
-  // Delegated and wired ONCE. innerHTML is rebuilt on every repaint, so per-node handlers would be
-  // orphaned every time -- the same trap hudBoosts documents.
-  if(!_forgeWired){
-    body.addEventListener('click',function(ev){
-      const t=ev.target.closest?ev.target.closest('[data-mat],[data-inv],[data-set],[data-clear]'):null;
-      if(!t) return;
-      if(t.hasAttribute('data-clear')){ if(t.getAttribute('data-clear')==='a') _forgeA=null; else _forgeB=null; }
-      else if(t.hasAttribute('data-mat')) _forgePick({kind:'mat', id:t.getAttribute('data-mat')});
-      else if(t.hasAttribute('data-inv')) _forgePick({kind:'item', i:+t.getAttribute('data-inv')});
-      else if(t.hasAttribute('data-set')) _forgeSet=t.getAttribute('data-set');
-      paintForge(); });
-    _forgeWired=true; }
+// Delegated and wired ONCE. innerHTML is rebuilt on every repaint, so per-node handlers would be
+// orphaned every time -- the same trap hudBoosts documents.
+function _forgeWire(body){
+  if(_forgeWired) return;
+  body.addEventListener('click',function(ev){
+    const t=ev.target.closest?ev.target.closest('[data-mat],[data-inv],[data-set],[data-clear],[data-view]'):null;
+    if(!t) return;
+    if(t.hasAttribute('data-view')){ _forgeView=t.getAttribute('data-view'); }
+    else if(t.hasAttribute('data-clear')){ if(t.getAttribute('data-clear')==='a') _forgeA=null; else _forgeB=null; }
+    else if(t.hasAttribute('data-mat')) _forgePick({kind:'mat', id:t.getAttribute('data-mat')});
+    else if(t.hasAttribute('data-inv')) _forgePick({kind:'item', i:+t.getAttribute('data-inv')});
+    else if(t.hasAttribute('data-set')) _forgeSet=t.getAttribute('data-set');
+    paintForge(); });
+
+  // ---- DRAG TWO THINGS ONTO THE ANVIL ----
+  // POINTER EVENTS, NOT HTML5 DRAG-AND-DROP. dragstart/drop does not fire for touch at all, and this
+  // game is played on a phone in landscape -- a drag that only works with a mouse would be a feature
+  // most players never see. Pointer events cover mouse, touch and pen through one path.
+  //
+  // TAP-TO-FILL IS KEPT and is not a fallback: the click handler above still fills the first empty
+  // slot, so on a small screen you never have to drag at all. A drag is recognised only once the
+  // pointer has actually MOVED past a threshold, so the two gestures cannot fight -- below the
+  // threshold the browser delivers its click and the tap path handles it.
+  let _dg=null;
+  const _ghost=()=>{ const g=document.getElementById('fgGhost'); return g; };
+  body.addEventListener('pointerdown',function(ev){
+    const t=ev.target.closest?ev.target.closest('[data-mat],[data-inv]'):null;
+    if(!t) return;
+    _dg={el:t, x0:ev.clientX, y0:ev.clientY, live:false,
+         pick: t.hasAttribute('data-mat') ? {kind:'mat', id:t.getAttribute('data-mat')}
+                                          : {kind:'item', i:+t.getAttribute('data-inv')}};
+  });
+  body.addEventListener('pointermove',function(ev){
+    if(!_dg) return;
+    if(!_dg.live){
+      if(Math.abs(ev.clientX-_dg.x0)<8 && Math.abs(ev.clientY-_dg.y0)<8) return;
+      _dg.live=true;
+      let g=_ghost();
+      if(!g){ g=document.createElement('div'); g.id='fgGhost'; document.body.appendChild(g); }
+      g.innerHTML=_dg.el.innerHTML; g.style.display='block';
+      // the pointer owns the gesture from here, so leaving the chip does not cancel it
+      try{ _dg.el.setPointerCapture(ev.pointerId); }catch(e){}
+    }
+    const g=_ghost();
+    if(g){ g.style.left=(ev.clientX)+'px'; g.style.top=(ev.clientY)+'px'; }
+    // light up whichever slot is under the pointer
+    const over=document.elementFromPoint(ev.clientX,ev.clientY);
+    const slot=over&&over.closest?over.closest('.fgSlot,.fgAnvil'):null;
+    for(const s of body.querySelectorAll('.fgSlot')) s.classList.toggle('hot', !!slot && s.contains(over));
+  });
+  const _end=function(ev){
+    if(!_dg) return;
+    const g=_ghost(); if(g) g.style.display='none';
+    for(const s of body.querySelectorAll('.fgSlot')) s.classList.remove('hot');
+    if(_dg.live){
+      const over=document.elementFromPoint(ev.clientX,ev.clientY);
+      const slot=over&&over.closest?over.closest('[data-clear]'):null;
+      // dropped ON a named slot fills THAT slot; dropped anywhere on the anvil fills the first free
+      // one, which is what someone aiming roughly at the machine means
+      if(slot) _forgePut(slot.getAttribute('data-clear'), _dg.pick);
+      else if(over&&over.closest&&over.closest('.fgAnvil')) _forgePick(_dg.pick);
+      _dg=null; paintForge(); return;
+    }
+    _dg=null;   // never moved: let the click handler deal with it
+  };
+  body.addEventListener('pointerup',_end);
+  body.addEventListener('pointercancel',function(){ const g=_ghost(); if(g) g.style.display='none';
+    for(const s of body.querySelectorAll('.fgSlot')) s.classList.remove('hot'); _dg=null; });
+
+  _forgeWired=true;
 }
 
 if(typeof document!=='undefined'){

@@ -63,7 +63,36 @@ HARD RULES — these are not preferences
   never be mistaken for something a monster left.
 
 ---------------------------------------------------------------------------
-WHAT SHIPPED MOST RECENTLY (v550 -> v555)
+WHAT SHIPPED MOST RECENTLY (v550 -> v559)
+---------------------------------------------------------------------------
+THE LADDER'S TOP IS NOW T12 -> RELIC -> SD, AND THE FORGE HAS THREE RUNGS
+(user, 2026-07-29). Relics are DROPPED in the ascended dungeons; Scavenged
+Dreams is CRAFTED ONLY and is the pinnacle. See the HARD RULES above and the
+forge section of HANDOFF.md -- both were rewritten, not appended to.
+- POWER: relic 2x T12, SD 5x relic (185 -> 370 -> 1850 weapon attack). Applied
+  as a multiplier on the whole stat block, not as a point on the curve, so
+  armour and rings scale with weapons. SD is MEANT to break the game for now.
+- THREE RUNGS: two materials -> a better material; a T12 piece + a Riftseed -> a
+  relic in a set you pick; a relic + the reagent it is made of -> SD.
+- TWELVE SD REAGENTS, keyed to the ITEM and not the slot (a stave for a bow, a
+  sliver for a wand). They roll on their own independent pass so farming them
+  cannot starve the seed tree. SD_MAT_P is the one dial.
+- MEASURED: a specific SD piece is a median 110 ascended clears. The RELIC is
+  the binding half (1.00%/clear vs the reagent's 1.25%), so tune relicChanceFor
+  before SD_MAT_P.
+- THE PANEL WAS SIMPLIFIED because players could not read it: no description at
+  all, the tree moved behind a RECIPES button, and an ingredient you have not
+  LOOTED yet shows as a black silhouette of its own sprite with its name hidden.
+  Discovery is write-once (matSeen) -- spending your last one never re-hides a
+  recipe. Drag two things onto the anvil on a pointer device; tap still works
+  everywhere and is the touch path.
+- MIGRATION: migrateForgeTiers fixes saves BY SHAPE (the `relic` flag, not an
+  index), so it needs no schema marker and handled both swaps. It now also walks
+  EQUIPPED gear, which it never did -- equipped relics had been computing as the
+  wrong tier since the first swap.
+
+---------------------------------------------------------------------------
+WHAT SHIPPED BEFORE THAT (v550 -> v555)
 ---------------------------------------------------------------------------
 THE FORGE CHIP LABELS FIT (v555). They were one nowrap line with an ellipsis, so
 every generated seed read "Riftseed of As..." and the full name lived only in a
