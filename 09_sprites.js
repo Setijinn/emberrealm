@@ -219,8 +219,17 @@ function drawItemIcon(g,it,cw,ch,noTier){ if(!it) return; g.imageSmoothingEnable
    const sc=Math.min((cw-4)/rw,(ch-4)/rh);
    const w=rw*sc, h=rh*sc;
    g.drawImage(real,Math.round((cw-w)/2),Math.round((ch-h)/2),Math.round(w),Math.round(h)); }
- else { const sp=itemSprite(it); if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cw-4)/sp.width,(ch-4)/sp.height)));
-   g.drawImage(sp,Math.round((cw-sp.width*sc)/2),Math.round((ch-sp.height*sc)/2),sp.width*sc,sp.height*sc); } }
+ // THE FALLBACK MUST STILL FILL ITS SLOT. This floored the scale to keep the procedural pixels on a
+ // whole-pixel grid, which is right when the numbers are kind and wrong when they are not: a 20px
+ // icon in a 36px satchel slot floors 1.8 to 1 and draws a 20px blob in the middle of a box nearly
+ // twice its size, with 70% of the slot empty. That is what a stat scroll looked like before its art
+ // loaded -- reported, reasonably, as the sprite being broken. Whole-pixel where it fits, honest
+ // scale where flooring would throw away more than a quarter of the box.
+ else { const sp=itemSprite(it); if(sp&&sp.width){
+   const raw=Math.min((cw-4)/sp.width,(ch-4)/sp.height);
+   const sc=(Math.floor(raw)>=1 && Math.floor(raw)/raw>0.75) ? Math.floor(raw) : Math.max(0.5,raw);
+   g.drawImage(sp,Math.round((cw-sp.width*sc)/2),Math.round((ch-sp.height*sc)/2),
+               Math.round(sp.width*sc),Math.round(sp.height*sc)); } }
  if(!noTier) drawItemTier(g,it,cw,ch); }
 // Tier is the only power axis now, so it has to be readable wherever an item is shown -- satchel,
 // equipment doll, sack panel, compare, shop. Stamped INTO the icon rather than added as a badge
@@ -893,9 +902,14 @@ function drawLootBag(lb,pn){
     g.addColorStop(0,col+'77'); g.addColorStop(1,col+'00');
     ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(lb.x,lb.y+5,16,8,0,0,6.29); ctx.fill();
     shadow(lb.x,lb.y+7,8);
-    const sp=scrollSpr(st), bob=Math.sin(t*2.4+lb.x*0.03)*1.4;
+    // the real parchment if it has loaded, the 20px procedural roll until then. This drew the
+    // procedural one FOREVER -- a scroll on the ground and the same scroll in the satchel were two
+    // different pictures, and the ground one was the placeholder.
+    const art=(typeof scrollArtImg==='function')?scrollArtImg(st):null;
+    const sp=art||scrollSpr(st), bob=Math.sin(t*2.4+lb.x*0.03)*1.4;
+    const sc=art?(30/(sp.width||sp.naturalWidth||64)):1.7;   // ~30px on the ground either way
     ctx.save(); ctx.imageSmoothingEnabled=false; ctx.shadowColor=col; ctx.shadowBlur=6*pulse;
-    blit(sp,lb.x,lb.y-2+bob,1.7,false); ctx.restore();
+    blit(sp,lb.x,lb.y-2+bob,sc,false); ctx.restore();
     return; }
   // The SACK is chosen by the bag's tier band; rarity only tints the border square and the glow.
   // (All sacks — the chest is retired: progression reads through material and ornament, not shape.)

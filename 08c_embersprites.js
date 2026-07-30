@@ -211,7 +211,8 @@ function _nTiers(){ return (typeof ART_TIERS!=='undefined')?ART_TIERS:12; }
 // twelve more images cost nothing until one actually drops.
 const _relicArt={};
 function relicArtImg(id){ if(typeof window==='undefined'||!id) return null;
-  if(_relicArt[id]===undefined){ const i=new Image(); i.src='assets/items/relic_'+id+'.png'; _relicArt[id]=i; }
+  if(_relicArt[id]===undefined){ const i=new Image(); i.onload=artArrived;
+    i.src='assets/items/relic_'+id+'.png'; _relicArt[id]=i; }
   const im=_relicArt[id]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 // FORGE MATERIALS (18_forge.js). Lazy per material, like the relics: twenty-odd images cost
 // nothing until one is actually in a pouch.
@@ -223,12 +224,47 @@ function relicArtImg(id){ if(typeof window==='undefined'||!id) return null;
 // than filling its bounding box; it caches per (src,colour), so this is per-sprite work, not
 // per-frame.
 const _matArt={};
+// AN IMAGE THAT ARRIVES AFTER THE PANEL WAS PAINTED IS AN IMAGE NOBODY SEES.
+//
+// Every lazy image in this project returns null on its first call and relies on the NEXT draw picking
+// it up. On the canvas that is free -- there is another frame in 16ms. A DOM panel is painted ONCE,
+// when it opens, so whatever had not loaded by that instant stays a placeholder for as long as the
+// panel is open. That is not a hypothetical: the first time you open the satchel holding a stat
+// scroll, item_scroll.png is still in flight, so you get the 20px procedural roll -- and it is the
+// scroll's own art that never appears, in the panel where the scroll actually lives.
+//
+// One callback, coalesced into a single frame so a burst of twenty loads costs one repaint, and it
+// only touches a panel that is actually on screen.
+let _artRepaintQ=0;
+function artArrived(){
+  if(_artRepaintQ||typeof document==='undefined') return;
+  _artRepaintQ=1;
+  const go=()=>{ _artRepaintQ=0;
+    // NOT offsetParent. Every one of these panels is position:fixed, and a fixed element's
+    // offsetParent is ALWAYS null -- so the first version of this test answered "not visible" for
+    // all of them and the hook did nothing at all, silently, which is indistinguishable from the
+    // bug it was written to fix. A laid-out box has a width; that is the question.
+    const vis=(id)=>{ const e=document.getElementById(id);
+      return !!e && e.style.display!=='none' && e.getBoundingClientRect().width>0; };
+    try{
+      if(vis('invScr')   && typeof paintInv==='function')       paintInv();
+      if(vis('bagScr')   && typeof paintBagPanel==='function')   paintBagPanel();
+      if(vis('vaultScr') && typeof paintVault==='function')      paintVault();
+      if(vis('forgeScr') && typeof paintForge==='function')      paintForge();
+      if(vis('aucScr')   && typeof paintAuction==='function')    paintAuction();
+      if(vis('stableScr')&& typeof paintStable==='function')     paintStable();
+      if(vis('wrdScr')   && typeof paintWardrobe==='function')   paintWardrobe();
+    }catch(e){}
+  };
+  if(typeof requestAnimationFrame==='function') requestAnimationFrame(go); else setTimeout(go,16);
+}
 function matArtImg(id){
   if(typeof window==='undefined'||!id) return null;
   const d=(typeof matDef==='function')?matDef(id):null;
   // a seed loads the shared sprite and is tinted on the way out
   const file=(d&&d.seed)?'mat_seed':('mat_'+id);
-  if(_matArt[file]===undefined){ const i=new Image(); i.src='assets/items/'+file+'.png'; _matArt[file]=i; }
+  if(_matArt[file]===undefined){ const i=new Image(); i.onload=artArrived;
+    i.src='assets/items/'+file+'.png'; _matArt[file]=i; }
   const im=_matArt[file];
   // A LAZY IMAGE RETURNS NULL ON THE FIRST CALL because that call only starts the load. Callers
   // must fall back rather than concluding the art is missing -- see the trap list in HANDOFF.md.
@@ -241,7 +277,8 @@ function matArtImg(id){
 const _boostArt={};
 function boostArtImg(bt){ if(typeof window==='undefined'||!bt) return null;
   const d=(typeof boostDef==='function')?boostDef(bt):null; if(!d) return null;
-  if(_boostArt[bt]===undefined){ const i=new Image(); i.src='assets/items/'+d.spr+'.png'; _boostArt[bt]=i; }
+  if(_boostArt[bt]===undefined){ const i=new Image(); i.onload=artArrived;
+    i.src='assets/items/'+d.spr+'.png'; _boostArt[bt]=i; }
   const im=_boostArt[bt]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 
 // A SCROLL AND PET FOOD WERE THE LAST TWO THINGS DRAWN ENTIRELY IN CODE (user, 2026-07-29: "make sure
@@ -249,17 +286,51 @@ function boostArtImg(bt){ if(typeof window==='undefined'||!bt) return null;
 // were the only items in the game that could not be drawn wrong -- and also the only ones that could
 // never look like anything.
 //
-// ONE SCROLL SPRITE, TINTED PER STAT, the same trick the six Riftseeds play: nine near-identical rolls
-// of parchment would be nine generations spent drawing the same object in different inks. The stat
-// colour goes on at 0.30 -- lighter than a seed's 0.42, because parchment should still read as paper.
+// ONE SCROLL SPRITE, SEALED PER STAT. Nine near-identical rolls of parchment would be nine
+// generations spent drawing the same object in different inks, so there is one sprite -- but the stat
+// does NOT go on as a wash any more.
+//
+// IT USED TO BE _tintImg(im, col, 0.30), the same trick the six Riftseeds play, and for a Riftseed it
+// is right: a seed IS its dungeon's colour and the whole object should read as that colour. A scroll is
+// paper. A 30% wash over the whole sprite drags the parchment off white without ever making the stat
+// obvious, and in a 40px satchel slot the result was a pale square with a dot in it -- which is exactly
+// what it was reported as. The first sprite behind it did not help: a plain low-contrast cream tube
+// filling 40% of its canvas, no outline and no seal.
+//
+// So: real parchment art with a NEUTRAL ivory seal, and the stat colour painted onto the seal alone.
+// The paper stays paper, and the one thing that identifies which scroll this is becomes the brightest
+// mark on it. The seal sits dead centre in the art -- deliberately, so this stays a fraction of the
+// sprite's own size rather than nine hard-coded coordinates.
 const _scrollArt={};
+const _scrollSealed={};
 function scrollArtImg(st){
   if(typeof window==='undefined') return null;
-  if(_scrollArt.im===undefined){ const i=new Image(); i.src='assets/items/item_scroll.png'; _scrollArt.im=i; }
+  if(_scrollArt.im===undefined){ const i=new Image(); i.onload=artArrived;
+    i.src='assets/items/item_scroll.png'; _scrollArt.im=i; }
   const im=_scrollArt.im;
   if(!im||!im.complete||!im.naturalWidth) return null;      // lazy: null on the first call, by design
   const col=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].col:null;
-  return (col&&typeof _tintImg==='function') ? _tintImg(im,col,0.30,0) : im;
+  if(!col) return im;
+  if(_scrollSealed[st]) return _scrollSealed[st];
+  const c=document.createElement('canvas');
+  c.width=im.naturalWidth; c.height=im.naturalHeight;
+  const g=c.getContext('2d'); g.imageSmoothingEnabled=false;
+  g.drawImage(im,0,0);
+  // a faint wash so the paper picks up a hint of the stat and two scrolls never look identical at a
+  // glance across a full satchel -- but an eighth of what it was, so parchment still reads as paper
+  g.globalCompositeOperation='source-atop'; g.globalAlpha=0.10; g.fillStyle=col;
+  g.fillRect(0,0,c.width,c.height); g.globalAlpha=1;
+  g.globalCompositeOperation='source-over';
+  // the seal: the stat's colour at full strength, a dark rim so it reads against cream, and a
+  // highlight so it looks like wax rather than a sticker
+  const cx=c.width/2, cy=c.height/2, r=Math.max(3,Math.round(c.width*0.135));
+  g.fillStyle='rgba(0,0,0,0.55)'; g.beginPath(); g.arc(cx,cy+1,r+1.5,0,6.29); g.fill();
+  g.fillStyle=col;                g.beginPath(); g.arc(cx,cy,r,0,6.29); g.fill();
+  g.fillStyle='rgba(0,0,0,0.22)'; g.beginPath(); g.arc(cx,cy+r*0.35,r*0.78,0,6.29); g.fill();
+  g.fillStyle='rgba(255,255,255,0.34)';
+  g.beginPath(); g.ellipse(cx-r*0.30,cy-r*0.34,r*0.34,r*0.26,0,0,6.29); g.fill();
+  _scrollSealed[st]=c;
+  return c;
 }
 // FOOD IS FIVE DISTINCT SPRITES, not one tinted, because its five tiers are five different THINGS on
 // the shared rarity ladder -- kibble, meat, fruit, honeycomb, a radiant star-fruit -- and the whole
@@ -268,7 +339,8 @@ const _foodArt={};
 function foodArtImg(t){
   if(typeof window==='undefined') return null;
   const i=Math.max(0,Math.min(4,t|0));
-  if(_foodArt[i]===undefined){ const im=new Image(); im.src='assets/items/food_'+i+'.png'; _foodArt[i]=im; }
+  if(_foodArt[i]===undefined){ const im=new Image(); im.onload=artArrived;
+    im.src='assets/items/food_'+i+'.png'; _foodArt[i]=im; }
   const im=_foodArt[i]; return (im&&im.complete&&im.naturalWidth)?im:null;
 }
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;

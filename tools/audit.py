@@ -13,6 +13,7 @@ what tools/selftest.py is for.
 USAGE
     py tools/serve.py                    # in another shell, or the fetch()es 404
     py tools/audit.py _forgeaudit.js
+    py tools/audit.py _fitaudit.js size=667x375
     py tools/audit.py _lvaudit.js
 """
 
@@ -44,12 +45,16 @@ def build(script):
     return name
 
 
-def run(page):
+def run(page, size="1280,720"):
     chrome = find_chrome()
     profile = fresh_profile("audit")          # never reuse: see fresh_profile
     cmd = [
         chrome, "--headless=new", "--disable-gpu",
         "--user-data-dir=" + profile,
+        # SIZE MATTERS TO AN AUDIT, NOT JUST TO A SCREENSHOT. This is a mobile-first PWA and every
+        # headless run this harness had ever done was an implicit 800x600 desktop window, so a panel
+        # that overflows a phone in landscape measured as fitting. `size=WxH` as a trailing argument.
+        "--window-size=" + size,
         # an audit runs millions of simulated kills, so it needs a great deal more simulated time
         # than the self-test's 40s budget
         "--virtual-time-budget=600000",
@@ -75,6 +80,10 @@ if __name__ == "__main__":
     script = sys.argv[1]
     if not os.path.exists(os.path.join(ROOT, script)):
         sys.exit("no such audit script: %s" % script)
+    size = "1280,720"
+    for kv in sys.argv[2:]:
+        if kv.startswith("size="):
+            size = kv.split("=", 1)[1].replace("x", ",")
     page = build(script)
-    print("built %s around %s" % (page, script))
-    run(page)
+    print("built %s around %s at %s" % (page, script, size))
+    run(page, size)
