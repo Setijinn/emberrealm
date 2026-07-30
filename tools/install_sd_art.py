@@ -68,6 +68,27 @@ JOBS = {
 }
 
 
+# THE LAST TWO THINGS IN THE GAME THAT HAD NO FILE AT ALL (user: "make sure everything has sprites").
+# A stat scroll and pet food were drawn entirely in code by scrollSpr() and foodSpr() in 09_sprites.js.
+# The sprite audit could not see them, because a procedural shape never asks for a path -- which is
+# why _spriteaudit.js reporting "0 missing" was true and still not the whole answer.
+#   item_scroll  ONE sprite for all nine stats, tinted by STAT_META colour at 0.30 -- the Riftseed
+#                trick. Nine rolls of parchment would be nine generations of the same object in
+#                different inks. Prompted BLANK on purpose ("NO text, NO writing, NO runes") so the
+#                tint has somewhere to land and no fake glyphs read as a language.
+#   food_0..4    FIVE distinct sprites, not one tinted, because the five tiers are five different
+#                things on the shared rarity ladder and telling them apart at a glance is the point:
+#                kibble, meat on the bone, a ripe fruit, a glowing honeycomb, a radiant star-fruit.
+MISC_JOBS = {
+    "item_scroll": "68a83070-31fd-4739-867d-810b72aef7a7",
+    "food_0":      "039e89c4-4a0c-4c4a-9f27-431d517b589f",
+    "food_1":      "b290fb63-a344-457b-b73e-0051eb7678c0",
+    "food_2":      "cda2c89d-e54a-49c6-9595-e1a60c06db49",
+    "food_3":      "b74e6fc7-46af-4833-a42d-3de77a0db602",
+    "food_4":      "cba0768b-092c-4170-83ee-871e5a4e62e8",
+}
+
+
 def fetch(job_id, tries=40, wait=8):
     """The endpoint 423s (or 404s) while the job is still running. Wait it out."""
     last = None
@@ -99,8 +120,10 @@ def main():
     if not os.path.isdir(OUT):
         sys.exit("no %s" % OUT)
     got = skipped = failed = 0
-    for name, job in sorted(JOBS.items()):
-        path = os.path.join(OUT, "mat_" + name + ".png")
+    todo = [("mat_" + k, v) for k, v in sorted(JOBS.items())]
+    todo += sorted(MISC_JOBS.items())          # these carry their own final names
+    for name, job in todo:
+        path = os.path.join(OUT, name + ".png")
         if os.path.exists(path) and not force:
             skipped += 1
             continue
@@ -113,7 +136,7 @@ def main():
         with open(path, "wb") as f:
             f.write(blob)
         got += 1
-        print("  %-24s %6d bytes" % ("mat_" + name + ".png", len(blob)))
+        print("  %-24s %6d bytes" % (name + ".png", len(blob)))
     print("installed %d, skipped %d, failed %d" % (got, skipped, failed))
     return 1 if failed else 0
 

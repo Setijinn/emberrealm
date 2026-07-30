@@ -244,10 +244,43 @@ function boostArtImg(bt){ if(typeof window==='undefined'||!bt) return null;
   if(_boostArt[bt]===undefined){ const i=new Image(); i.src='assets/items/'+d.spr+'.png'; _boostArt[bt]=i; }
   const im=_boostArt[bt]; return (im&&im.complete&&im.naturalWidth)?im:null; }
 
+// A SCROLL AND PET FOOD WERE THE LAST TWO THINGS DRAWN ENTIRELY IN CODE (user, 2026-07-29: "make sure
+// everything has sprites"). Both had a procedural shape in 09_sprites.js and no file at all, so they
+// were the only items in the game that could not be drawn wrong -- and also the only ones that could
+// never look like anything.
+//
+// ONE SCROLL SPRITE, TINTED PER STAT, the same trick the six Riftseeds play: nine near-identical rolls
+// of parchment would be nine generations spent drawing the same object in different inks. The stat
+// colour goes on at 0.30 -- lighter than a seed's 0.42, because parchment should still read as paper.
+const _scrollArt={};
+function scrollArtImg(st){
+  if(typeof window==='undefined') return null;
+  if(_scrollArt.im===undefined){ const i=new Image(); i.src='assets/items/item_scroll.png'; _scrollArt.im=i; }
+  const im=_scrollArt.im;
+  if(!im||!im.complete||!im.naturalWidth) return null;      // lazy: null on the first call, by design
+  const col=(typeof STAT_META!=='undefined'&&STAT_META[st])?STAT_META[st].col:null;
+  return (col&&typeof _tintImg==='function') ? _tintImg(im,col,0.30,0) : im;
+}
+// FOOD IS FIVE DISTINCT SPRITES, not one tinted, because its five tiers are five different THINGS on
+// the shared rarity ladder -- kibble, meat, fruit, honeycomb, a radiant star-fruit -- and the whole
+// point of the ladder is that you can tell at a glance which one you just found.
+const _foodArt={};
+function foodArtImg(t){
+  if(typeof window==='undefined') return null;
+  const i=Math.max(0,Math.min(4,t|0));
+  if(_foodArt[i]===undefined){ const im=new Image(); im.src='assets/items/food_'+i+'.png'; _foodArt[i]=im; }
+  const im=_foodArt[i]; return (im&&im.complete&&im.naturalWidth)?im:null;
+}
 function itemArtImg(it){ if(!it||typeof _itemArt==='undefined') return null;
   if(it.relic){ const r=relicArtImg(it.relic); if(r) return r; }   // its own art wins outright
   // a draught has no tier and no band -- its own bottle is the whole identity
   if(it.k==='boost'){ return boostArtImg(it.bt); }
+  // NEITHER OF THESE IS ON THE TIER LADDER, so both have to be routed out BEFORE the band maths
+  // below -- exactly as 'boost' and 'mat' already are. A scroll's `st` is a stat id and food's `t` is
+  // a food tier on the rarity ladder; feeding either to the tier-band division lands on sprite 0 of
+  // a set it does not belong to.
+  if(it.k==='scroll'){ return scrollArtImg(it.st); }
+  if(it.k==='food'){ return foodArtImg(it.t); }
   // nor does a material: it is not on the tier ladder at all, so the band maths below would divide
   // by a tier it does not have and land on sprite 0 of a set it does not belong to
   if(it.k==='mat'){ return matArtImg(it.m); }

@@ -608,6 +608,53 @@
       }
     } else ok('itemUsable/useItem exist', false);
 
+    // ---------- 10c2. A TINTED SPRITE STILL DRAWS ----------
+    // itemArtImg tints two kinds of item -- a Riftseed and a stat scroll -- and a tint returns a
+    // CANVAS, which has `width` but no `naturalWidth`. drawItemIcon read naturalWidth outright, so the
+    // scale came out NaN and drawImage silently drew nothing: every Riftseed rendered BLANK in the
+    // satchel and the sack panel. Nothing threw, and the forge panel hid it by using an <img> tag.
+    // This asserts pixels, because that is the only thing that could have caught it.
+    note('');
+    note('== tinted item art ==');
+    if(typeof drawItemIcon==='function' && typeof _tintImg==='function'){
+      const paint=(it)=>{
+        const c=document.createElement('canvas'); c.width=44; c.height=38;
+        const g=c.getContext('2d');
+        drawItemIcon(g,it,44,38,true);
+        const d=g.getImageData(0,0,44,38).data;
+        let n=0; for(let i=3;i<d.length;i+=4) if(d[i]>8) n++;
+        return n;
+      };
+      // a plain gear icon is the control: if this is blank the harness itself is wrong
+      ok('an ordinary item draws pixels', paint(mkItem('wpn',5,0,'knight'))>0);
+      // EVERY ITEM MUST DRAW BEFORE ITS ART HAS LOADED, which is the case that was broken. A lazy
+      // image returns null on its first call, so this is the state a player is actually in the first
+      // time a material drops -- and materials were the one kind with no procedural fallback at all.
+      const seedId=(typeof seedIdFor==='function')?seedIdFor(8):null;
+      if(seedId) ok('a Riftseed draws before its art loads', paint({k:'mat',m:seedId})>0,
+                    paint({k:'mat',m:seedId})+' opaque px');
+      ok('an ordinary material draws too', paint({k:'mat',m:'bogiron'})>0,
+         paint({k:'mat',m:'bogiron'})+' opaque px');
+      ok('a scroll draws', paint({k:'scroll',st:'atk'})>0, paint({k:'scroll',st:'atk'})+' opaque px');
+      ok('pet food draws', paint({k:'food',t:2})>0, paint({k:'food',t:2})+' opaque px');
+      // AND THEN THE REAL ART PATH, once the files have actually decoded. This is the half that
+      // catches the tinted-canvas bug: a tint returns a canvas with `width` and no `naturalWidth`, so
+      // measuring it wrongly yields NaN and drawImage silently draws nothing.
+      const load=(src)=>new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=src; });
+      await Promise.all(['assets/items/mat_seed.png','assets/items/item_scroll.png',
+                         'assets/items/food_2.png','assets/items/mat_bogiron.png'].map(load));
+      if(typeof _tintImg==='function'){
+        const im=await load('assets/items/mat_seed.png');
+        if(im){
+          const t=_tintImg(im,'#ff9bf0',0.42,0);
+          ok('a tint returns something with measurable size',
+             (t.naturalWidth||t.width)>0, 'w='+(t.naturalWidth||t.width)+' (naturalWidth='+t.naturalWidth+')');
+          ok('and it is a CANVAS, which is why naturalWidth alone was not enough',
+             t.naturalWidth===undefined || t===im, 'naturalWidth='+t.naturalWidth);
+        }
+      }
+    } else ok('drawItemIcon/_tintImg exist', false);
+
     // ---------- 10d. EVERY FIGHT HAS AN EXIT THE PLAYER CAN REACH ----------
     // The rule whose violation once made TWELVE of fifteen anchored fights literally unkillable, and
     // dn5 unfightable at all. It has always been checkable and was only ever reachable by a human

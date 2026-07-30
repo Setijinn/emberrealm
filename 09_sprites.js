@@ -206,8 +206,18 @@ function drawItemIcon(g,it,cw,ch,noTier){ if(!it) return; g.imageSmoothingEnable
      const w=ei.naturalWidth*sc, h=ei.naturalHeight*sc;
      g.drawImage(ei,Math.round((cw-w)/2),Math.round((ch-h)/2),Math.round(w),Math.round(h)); return; } }
  const real=(typeof itemArtImg==='function')?itemArtImg(it):null;
- if(real){ const sc=Math.min((cw-4)/real.naturalWidth,(ch-4)/real.naturalHeight);
-   const w=real.naturalWidth*sc, h=real.naturalHeight*sc;
+ // A TINTED SPRITE IS A CANVAS, AND A CANVAS HAS NO naturalWidth. This read `real.naturalWidth`
+ // outright, which is fine for an Image and `undefined` for the canvas _tintImg returns -- and
+ // undefined makes the scale NaN, so drawImage is handed four NaNs and draws NOTHING, in silence.
+ // itemArtImg tints two kinds of thing: a Riftseed (shared sprite, dungeon colour) and now a stat
+ // scroll (shared parchment, stat colour). So every Riftseed has been rendering BLANK in the satchel,
+ // the sack panel and the equipment doll -- everywhere that goes through drawItemIcon. The forge panel
+ // hid it, because _matIcoHtml builds an <img src> tag instead and never comes through here.
+ // `||.width` covers both, and it is the same trap as sizing by naturalWidth instead of the opaque
+ // bounding box: the value is there, it is just under a different name.
+ if(real){ const rw=real.naturalWidth||real.width, rh=real.naturalHeight||real.height;
+   const sc=Math.min((cw-4)/rw,(ch-4)/rh);
+   const w=rw*sc, h=rh*sc;
    g.drawImage(real,Math.round((cw-w)/2),Math.round((ch-h)/2),Math.round(w),Math.round(h)); }
  else { const sp=itemSprite(it); if(sp&&sp.width){ const sc=Math.max(1,Math.floor(Math.min((cw-4)/sp.width,(ch-4)/sp.height)));
    g.drawImage(sp,Math.round((cw-sp.width*sc)/2),Math.round((ch-sp.height*sc)/2),sp.width*sc,sp.height*sc); } }
@@ -268,7 +278,33 @@ function itemSprite(it){ if(!it) return null;
  if(it.k==='ring') return ringSpr(it.st,it.t);
  if(it.k==='food') return foodSpr(it.t||0);
  if(it.k==='scroll') return scrollSpr(it.st);
+ if(it.k==='mat') return matSpr(it.m);
  return null; }
+// PROCEDURAL MATERIAL ICON, and the reason it exists is that materials were the ONE item kind with no
+// fallback at all: itemSprite returned null for 'mat', and matArtImg -- like every lazy image in this
+// project -- returns null on its FIRST call, because that call only starts the load. So the first time
+// a material appeared in a sack or the satchel it drew literally nothing, and the same was true
+// permanently for a Riftseed, whose tinted canvas drawItemIcon could not measure either.
+// The forge panel never showed it: _matIcoHtml builds an <img> tag with an onerror that swaps in the
+// glyph, so the pouch had a fallback and nothing else did.
+// This is that same idea on a canvas -- the material's own colour and its own glyph -- so every layer
+// degrades the way HANDOFF says every layer must.
+const _matSprCache={};
+function matSpr(id){
+ if(!id) return null;
+ if(_matSprCache[id]) return _matSprCache[id];
+ const d=(typeof matDef==='function')?matDef(id):null;
+ const col=(d&&d.col)||'#cfc8bd', ico=(d&&d.icon)||'?';
+ const S=20, cv=document.createElement('canvas'); cv.width=cv.height=S; const g=cv.getContext('2d');
+ g.imageSmoothingEnabled=false;
+ // a rounded lozenge in the material's colour, darker at the base so it beds rather than floats
+ g.fillStyle=col; g.beginPath(); g.ellipse(10,10,6.5,7.5,0,0,6.29); g.fill();
+ g.fillStyle='rgba(0,0,0,0.30)'; g.beginPath(); g.ellipse(10,14,5.5,3.2,0,0,6.29); g.fill();
+ g.fillStyle='rgba(255,255,255,0.30)'; g.beginPath(); g.ellipse(8,7,2.6,3.0,0,0,6.29); g.fill();
+ g.fillStyle='rgba(0,0,0,0.55)'; g.font='bold 9px monospace';
+ g.textAlign='center'; g.textBaseline='middle';
+ g.fillText(ico,10,10.5);
+ _matSprCache[id]=cv; return cv; }
 // procedural per-stat scroll icon: a rolled parchment with a stat-coloured wax seal + rune.
 const _scrollCache={};
 function scrollSpr(st){ if(_scrollCache[st]) return _scrollCache[st];
