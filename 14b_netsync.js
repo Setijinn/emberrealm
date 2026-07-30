@@ -463,6 +463,12 @@ function netOnMessage(d, fromId){
 function _netDispatch(d, fromId){
   const asClient=(typeof netIsClient==='function')&&netIsClient();
   const asHost  =(typeof netIsHost==='function')&&netIsHost();
+  // ping / pong / handover. Handled BEFORE the role tests, because a handover message has to reach a
+  // peer that is about to change role -- gating it on the role it currently holds is how an election
+  // message gets dropped by the one peer that needed it.
+  if(d.t==='pg'||d.t==='pn'||d.t==='HO'){
+    if(typeof coopNotePing==='function') return coopNotePing(d, fromId);
+    return true; }
   if(d.t==='W'){ if(!asClient) return true; netApplyWorld(d); return true; }
   if(d.t==='H'){ if(!asHost) return true; netHostTakeHit(d); return true; }
   if(d.t==='A'){ if(!asHost) return true; netHostApplyStatus(d); return true; }

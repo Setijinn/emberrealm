@@ -121,5 +121,18 @@ $s('devMenuBtn').addEventListener('click',()=>{ if(!curRoom){
 // boot
 refreshUserList();
 const lastU=LS.get('er-last',null);
-if(lastU&&users[lastU]){curUser=lastU;openMenu();}else show('loginScr');
+if(lastU&&users[lastU]){
+  curUser=lastU;
+  // AND RESTORE isAdmin WITH IT. This line set curUser and nothing else, so a remembered session
+  // logged you back into the admin account with isAdmin still false -- and every dev control is
+  // gated on that flag: `$s('devMenuBtn').style.display=isAdmin?'':'none'` on the menu and
+  // `if(isAdmin)$s('devBtn2').style.display='flex'` in game. The workbench simply was not there
+  // after a reload, and the only way back was to log out and type the password again.
+  //
+  // THE ACCOUNT NAME IS THE AUTHORITY, and that is not a new hole: er-last already restores ANY
+  // account without re-asking for its password, so admin behaving differently was the anomaly. The
+  // password is what created the session; this is the same session.
+  isAdmin=(String(lastU).toLowerCase()==='admin');
+  openMenu();
+} else show('loginScr');
 requestAnimationFrame(loop);

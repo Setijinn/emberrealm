@@ -40,6 +40,23 @@ try{
     for(let x=x0;x<=x1;x++) s+=D.map[y][x];
     L.push(('y'+y).padEnd(7)+s);
   }
+  // THE PLAYER SPAWN. 02_worldbuild reads the 'P' marker into r.px/r.py and that is where every new
+  // character arrives -- so if it is wet, the game opens with the hero standing in the sea.
+  let px=-1, py=-1;
+  for(let y=0;y<D.h && px<0;y++){ const i=D.map[y].indexOf('P'); if(i>=0){ px=i; py=y; } }
+  const solidS='WhlHwXD';
+  L.push('');
+  if(px<0) L.push('SPAWN: no P marker in the map at all');
+  else {
+    const c=D.map[py][px];
+    L.push('SPAWN: P at '+px+','+py+'  tile "'+c+'"  '+(solidS.indexOf(c)<0?'standable':'NOT STANDABLE'));
+    let land=0, wet=0;
+    for(let dy=-6;dy<=6;dy++) for(let dx=-6;dx<=6;dx++){
+      const ch=(D.map[py+dy]||'')[px+dx]||'w';
+      if(ch==='w'||ch==='W') wet++; else land++; }
+    L.push('       within 6 tiles: '+land+' land, '+wet+' water');
+  }
+  L.push('');
   // where does island A's land actually stop on each bridge row?
   for(let y=B.cy-half; y<B.cy-half+B.w; y++){
     let lastA=-1;

@@ -26,6 +26,11 @@ function _coopReset(keepAuto){ const au=keepAuto?coop.auto:true; _coopEpoch++;
         auto:au,pub:false,_trying:false}; }
 // ---- public server auto-connect (claim the server id, else join whoever holds it) ----
 function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) return;
+  // A HANDOVER IS IN PROGRESS AND I AM NOT THE ONE ELECTED. Racing for the id here is exactly the
+  // rule the election replaces -- it would hand the relay to whoever reconnects fastest. Wait; the
+  // lock expires on its own, so a handover that never completes degrades to the old race rather
+  // than to a session with no host at all.
+  if(typeof _hostClaimLock!=='undefined' && performance.now() < _hostClaimLock) return;
   coop._trying=true;
   const ep=_coopEpoch;                       // this attempt belongs to THIS epoch and no other
   const stale=()=>_coopEpoch!==ep;
@@ -177,3 +182,168 @@ function _coopPanel(){ const el=document.getElementById('coopBody'); if(!el) ret
     +(coop.err?'<div class="mnote" style="color:#c04a3d">last error: '+coop.err+'</div>':'');
 }
 function _coopMsg(t){ if(typeof msg==='function') msg('CO-OP',t); }
+
+
+// ===================================================================================================
+//  WHO SHOULD BE THE RELAY (user, 2026-07-30: "automatically detect the user with the best
+//  connection and make them host")
+// ---------------------------------------------------------------------------------------------------
+//  WHAT IT WAS. Whoever grabbed the fixed PeerJS id first. `new Peer(COOP_PUB_ID)` succeeds for
+//  exactly one browser and fails with 'unavailable-id' for everyone else, so the host was the person
+//  who happened to press play first -- which is uncorrelated with anything that matters. The host is
+//  the RELAY: every client's snapshot passes through it, so a host on a bad line degrades the session
+//  for everybody while four people on fibre watch.
+//
+//  WHAT DECIDES IT NOW. Every peer scores its own link and reports it in the presence packet it is
+//  already sending eight times a second. The host compares, and if someone is clearly and durably
+//  better it hands the relay over.
+//
+//  THE SCORE, and why these terms. Lower is better; it is a latency in milliseconds with penalties.
+//    * measured RTT to the host        the only end-to-end number that exists, and the one that
+//                                      actually describes the path the packets take
+//    * navigator.connection.rtt        where the browser will say. Not everywhere -- Safari and
+//                                      Firefox do not implement it -- so it is a bonus term, never
+//                                      the basis
+//    * downlink                        a host relays N-1 streams; bandwidth is what it runs out of
+//    * saveData / cellular             a metered or mobile link should not be volunteering to relay
+//  A peer that cannot measure anything scores WORSE than one that can, deliberately: an unknown link
+//  is not a good link, and this must never promote someone on the strength of missing data.
+//
+//  HYSTERESIS IS THE WHOLE DESIGN. A handover costs a reconnect for everyone, so it must never fire
+//  on noise. Three guards, all of them necessary:
+//    MARGIN   the challenger must be 35% better, not merely better
+//    WINDOW   sustained across HOST_SAMPLES consecutive comparisons, not one lucky sample
+//    COOLDOWN no second handover for HOST_COOLDOWN after one, so two similar peers cannot ping-pong
+//
+//  AND THE HANDOVER IS DIRECTED, not a race. Freeing COOP_PUB_ID and letting everyone scramble for it
+//  would hand the relay to whoever reconnects fastest -- the same "first past the post" rule this
+//  replaces. The host announces {t:'HO', to:<id>} first: everyone else sets a claim lock and stays
+//  off the id, the elected peer claims it, and the lock expires on its own if the elected peer never
+//  arrives, so a failed handover degrades to the old race rather than to nobody hosting.
+// ===================================================================================================
+const HOST_MARGIN   = 0.65;    // challenger must score below 65% of the host's score
+const HOST_SAMPLES  = 8;       // consecutive comparisons it must win (~8s at the presence rate)
+const HOST_COOLDOWN = 45000;   // ms before another handover may fire
+const HOST_CLAIM_LOCK = 9000;  // ms a non-elected peer stays off COOP_PUB_ID during a handover
+
+coop.link = {score:9999, rtt:0, pingT:0, lastPong:0};
+let _hostWins = {};            // peer id -> consecutive comparisons won
+let _hostLastSwap = 0;
+let _hostClaimLock = 0;        // performance.now() until which we must NOT claim the server id
+
+// My own link score. Measured, with the unmeasurable penalised rather than assumed good.
+function coopLinkScore(){
+  const c = (typeof navigator!=='undefined' && navigator.connection) ? navigator.connection : null;
+  // the host measures no RTT to itself; it is judged on what the browser reports plus a small
+  // credit for already holding the relay (see HOST_MARGIN -- the challenger has to beat that too)
+  let score = coop.host ? 40 : (coop.link.rtt || 400);
+  if(c){
+    if(typeof c.rtt==='number' && c.rtt>0) score = score*0.6 + c.rtt*0.4;
+    if(typeof c.downlink==='number' && c.downlink>0) score += Math.max(0, 60 - c.downlink*6);
+    if(c.saveData) score += 250;
+    if(c.effectiveType && c.effectiveType!=='4g') score += 200;
+  } else {
+    score += 120;              // nothing to measure with: an unknown link is not a good link
+  }
+  if(!coop.host && !coop.link.lastPong) score += 300;   // never heard back at all
+  coop.link.score = Math.round(score);
+  return coop.link.score;
+}
+
+// RTT: the host stamps each presence packet, a client answers, the host records the round trip. It
+// rides the packets that already flow, so it costs no extra traffic.
+function coopNotePing(d, fromId){
+  const now = performance.now();
+  if(d.t==='pg'){                       // a ping from the host -> answer it
+    for(const c of coop.conns) if(c.open){ try{ c.send({t:'pn', k:d.k, id:coop.id, sc:coopLinkScore()}); }catch(e){} }
+    return true;
+  }
+  if(d.t==='pn'){                       // a client's answer -> record its round trip
+    const p = coop.peers[fromId] || (coop.peers[fromId]={});
+    p.rtt = Math.max(1, Math.round(now - (d.k||now)));
+    p.score = d.sc|0;
+    p.ts = now;
+    return true;
+  }
+  if(d.t==='HO'){                       // the host is handing the relay over
+    _hostHandover(d);
+    return true;
+  }
+  return false;
+}
+
+// Every peer runs this; only the host acts on it.
+function coopElectTick(){
+  if(!coop.on || !coop.pub) return;
+  coopLinkScore();
+  if(!coop.host) return;
+  const now = performance.now();
+  // ping every client, so their RTT is fresh rather than remembered
+  for(const c of coop.conns) if(c.open){ try{ c.send({t:'pg', k:now}); }catch(e){} }
+  if(now - _hostLastSwap < HOST_COOLDOWN) return;
+  const mine = coop.link.score;
+  let best=null, bestId=null;
+  for(const id in coop.peers){
+    const p = coop.peers[id];
+    if(!p || typeof p.score!=='number') continue;
+    if(now - (p.ts||0) > 4000) continue;                 // stale: they may already be gone
+    if(best===null || p.score < best){ best=p.score; bestId=id; }
+  }
+  if(bestId===null){ _hostWins={}; return; }
+  if(best < mine*HOST_MARGIN){
+    _hostWins[bestId] = (_hostWins[bestId]|0) + 1;
+    for(const k in _hostWins) if(k!==bestId) _hostWins[k]=0;
+    if(_hostWins[bestId] >= HOST_SAMPLES){
+      _hostWins = {}; _hostLastSwap = now;
+      _coopMsg('handing the relay to a better connection');
+      // tell EVERYONE, so the ones who are not elected stay off the id
+      for(const c of coop.conns) if(c.open){ try{ c.send({t:'HO', to:bestId, by:coop.id}); }catch(e){} }
+      // give the announcement a moment to land before releasing the id
+      setTimeout(()=>{ _hostStepDown(); }, 400);
+    }
+  } else {
+    _hostWins = {};
+  }
+}
+
+// I am the outgoing host: drop the relay and come back as an ordinary client.
+function _hostStepDown(){
+  if(!coop.host) return;
+  _hostClaimLock = performance.now() + HOST_CLAIM_LOCK;   // do not immediately re-claim it myself
+  try{ coop.peer && coop.peer.destroy(); }catch(e){}
+  coop.peer=null; coop.conns=[]; coop.host=false; coop.on=false; coop.id=null;
+  _coopEpoch++;                                           // invalidate anything in flight
+  coop._trying=false;
+  _coopPanel();
+  // the in-game keepalive below will reconnect us as a client once the new host holds the id
+}
+
+// A handover was announced. Either it is me -- claim the id after the old host lets go -- or it is
+// not, in which case stay off it for a while so the elected peer wins uncontested.
+function _hostHandover(d){
+  const me = coop.id;
+  if(d.to && me && d.to===me){
+    _hostClaimLock = 0;
+    setTimeout(()=>{
+      try{ coop.peer && coop.peer.destroy(); }catch(e){}
+      coop.peer=null; coop.conns=[]; coop.on=false; coop.host=false;
+      _coopEpoch++; coop._trying=false;
+      _coopMsg('you are the relay now');
+      _pubAttempt();
+    }, 700);
+  } else {
+    _hostClaimLock = performance.now() + HOST_CLAIM_LOCK;
+  }
+}
+// A readable line for the co-op panel and the dev workbench: who is relaying and how everyone scores.
+function coopLinkReport(){
+  const rows=[];
+  rows.push((coop.host?'me (relay)':'me')+'  score '+coop.link.score
+            +(coop.link.rtt?('  rtt '+coop.link.rtt+'ms'):''));
+  for(const id in coop.peers){ const p=coop.peers[id];
+    if(!p||typeof p.score!=='number') continue;
+    rows.push(String(id).slice(0,6)+'  score '+p.score+(p.rtt?('  rtt '+p.rtt+'ms'):''));
+  }
+  return rows;
+}
+setInterval(coopElectTick, 1000);

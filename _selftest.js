@@ -915,6 +915,24 @@
       if(typeof LS!=='undefined'){ LS.set('er-dens',_saved); _denSet=null; }
     } else ok('denOpened/openDen exist', false);
 
+    // ---------- 10e. A REMEMBERED SESSION KNOWS WHAT IT IS ----------
+    // er-last logs you back in on reload without a password. It restored curUser and NOTHING ELSE,
+    // so a remembered admin session came back with isAdmin false -- and every dev control is gated
+    // on that flag, so the workbench simply was not there and the only way back was to log out and
+    // type the password again. The invariant is one line and holds for both login paths.
+    note('');
+    note('== the remembered session ==');
+    if(typeof isAdmin!=='undefined' && typeof curUser!=='undefined'){
+      const shouldBe=(String(curUser||'').toLowerCase()==='admin');
+      ok('isAdmin agrees with the account that is logged in', isAdmin===shouldBe,
+         'curUser='+curUser+'  isAdmin='+isAdmin);
+      // and the flag is what actually drives the buttons, so a rename of either would be caught
+      const dm=document.getElementById('devMenuBtn');
+      if(dm) ok('the menu\u2019s DEV button follows it',
+                (getComputedStyle(dm).display!=='none')===isAdmin || !inGame===false,
+                'display='+getComputedStyle(dm).display);
+    } else ok('isAdmin and curUser exist', false);
+
     // ---------- 11a. THREE ISLANDS, AND ONE OF THEM YOU CANNOT WALK TO ----------
     // THE FLIGHT GATE, PROVEN THE ONLY WAY IT CAN BE: a flood fill from the starter island's landing
     // over every non-solid tile, asserting that island C contains ZERO reached cells. A gap width is
