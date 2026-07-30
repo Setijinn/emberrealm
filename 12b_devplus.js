@@ -202,7 +202,7 @@ DEV_PANE.forge=function(B){
   const bySrc={starter:[],main:[],rift:[],craft:[]};
   for(const k of MAT_KEYS) (bySrc[MATERIALS[k].src]||bySrc.craft).push(k);
   const SRC_LABEL={starter:'STARTER ISLAND (Lv1–'+((typeof ISLAND_LV!=='undefined')?ISLAND_LV:20)+')',
-                   main:'MAIN ISLAND (Lv20–'+((typeof LV_CAP!=='undefined')?LV_CAP:50)+')',
+                   main:'ISLANDS B AND C (Lv20–'+((typeof LV_CAP!=='undefined')?LV_CAP:50)+')',
                    rift:'ASCENDED BOSSES — one each, and only from that boss',
                    craft:'CRAFTED — no drop source'};
   for(const src of ['starter','main','rift','craft']){

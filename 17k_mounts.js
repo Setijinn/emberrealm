@@ -518,10 +518,19 @@ function mountLevelOk(){ const u=mountStore(); if(!u) return false;
 //
 // ACCOUNT-LEVEL, like the mounts themselves: bought once, kept through permadeath. Re-learning a
 // lesson every run would make the price a tax on dying rather than a thing you buy.
+// PRICED AGAINST THE GLORY FORMULA, NOT GUESSED (user, 2026-07-30: "the prices for learning are
+// going to be steeper"). Glory is paid ONCE, on permanent death, from GLORY in 11_ui.js -- so a
+// price is honestly measured in RUNS, and these are what a run actually pays:
+//   a modest Lv20 death   500 mobs, 30 elites, 3 bosses, 1 dungeon, 10% fog, 19 levels   ~1,050
+//   a strong Lv40 death   2,000 mobs, 150 elites, 8 bosses, 4 dungeons, 25% fog          ~3,150
+//   a Lv50 death with two relics                                                         ~5,000
+// At 900 and 4,200 the two books were one modest run and one strong run: a formality. At 3,500 and
+// 30,000 the riding lesson is three early runs and flight is six to ten good ones -- which is the
+// right weight for the thing that opens an entire island.
 const LESSONS = {
-  ride: { id:'ride', n:'The Saddle-Wright\u2019s Primer', cost:900,  lv:MOUNT_LV,
+  ride: { id:'ride', n:'The Saddle-Wright\u2019s Primer', cost:3500,  lv:MOUNT_LV,
           d:'Girth, gait and the trick of staying on. Lets you ride any mount you own.' },
-  fly:  { id:'fly',  n:'On Thermals and Tether',          cost:4200, lv:MOUNT_FLY_LV,
+  fly:  { id:'fly',  n:'On Thermals and Tether',          cost:30000, lv:MOUNT_FLY_LV,
           d:'Reading the air, and the long fall if you read it wrong. Lets you ride a flyer.' }
 };
 function lessonStore(){ const u=mountStore(); if(!u) return null;

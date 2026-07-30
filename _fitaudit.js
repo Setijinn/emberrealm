@@ -67,8 +67,11 @@
     ['loadScr',   ()=>openLoadout()],
     ['petScr',    ()=>openPets()],
     ['statsScr',  ()=>openStats()],
-    ['sheetScr',  ()=>{ const f=(typeof openSheet==='function')?openSheet:null; if(f) f();
-                        const e=document.getElementById('sheetScr'); if(e) e.style.display='flex'; }],
+    // NO sheetScr. It does not exist in index.html -- the only trace of it is a guarded
+    // `if($s('sheetScr'))` in 11_ui.js and a name in _shot.js's hide list, both of which are
+    // defensive and harmless. Listing it here reported MISSING at every viewport forever, which is
+    // an audit crying wolf about a panel that was never built.
+
     ['bagScr',    ()=>{ // a loot bag needs a bag: build one holding a spread of real gear
                         const bag={x:0,y:0,items:[]};
                         if(typeof mkItem==='function') for(let t=3;t<=8;t++) bag.items.push(mkItem('wpn',t,0,'knight'));
@@ -143,6 +146,17 @@
       // buttons as sitting on top of the next section's heading. Nothing is visible there.
       if(e.closest('details:not([open])')) return;
       const r=e.getBoundingClientRect();
+      // AND NEITHER IS A ROW SCROLLED OUT OF ITS OWN LIST. getBoundingClientRect reports where an
+      // element WOULD be, not whether its scroller is showing it -- so the loot bag's fifth row,
+      // clipped by overflow:auto, measured as sitting across TAKE ALL. Anything outside the client
+      // box of a scrolling ancestor is not on screen.
+      for(let a=e.parentElement; a && a!==document.body; a=a.parentElement){
+        const as=getComputedStyle(a);
+        if(as.overflowY!=='auto' && as.overflowY!=='scroll'
+           && as.overflowX!=='auto' && as.overflowX!=='scroll') continue;
+        const ar=a.getBoundingClientRect();
+        if(r.bottom<=ar.top+1 || r.top>=ar.bottom-1 || r.right<=ar.left+1 || r.left>=ar.right-1) return;
+      }
       if(r.width<4||r.height<4) return;
       if(r.right<0||r.bottom<0||r.left>innerWidth||r.top>innerHeight) return;
       els.push({e:e,r:r,t:t.slice(0,22)});

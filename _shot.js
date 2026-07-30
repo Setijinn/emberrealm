@@ -44,7 +44,7 @@
     // showed "hero name" and "ENTER THE REALM" ghosted behind the recipe list and I spent a while
     // treating it as a layout bug. It was the rig.
     for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr',
-                    'hcScr','deathScr','invScr','mapScr','skillScr','statsScr','sheetScr']){
+                    'hcScr','deathScr','invScr','mapScr','skillScr','statsScr','sheetScr','bagScr']){
       if(s===WANT+'Scr') continue;            // never hide the thing we came to photograph
       if(WANT==='panel' && s===(Q.get('id')||'')) continue;
       const el=document.getElementById(s); if(el) el.style.display='none'; }
@@ -68,6 +68,18 @@
       // either, because past square the game shows its portrait gate instead of the game.
       if(Q.get('scroll')==='end'){ const b=document.getElementById('forgeBody');
         if(b){ void b.offsetHeight; b.scrollTop=b.scrollHeight; } }
+    } else if(WANT==='bag'){
+      // A LOOT BAG NEEDS A BAG. openBagPanel takes one, so it cannot be reached through the generic
+      // ?fn= path -- and the sack panel is where a player meets every drop in the game.
+      const items=[];
+      if(typeof mkItem==='function') for(let t=3;t<=9;t++) items.push(mkItem(t%2?'wpn':'arm',t,0,'knight'));
+      if(typeof mkRelicItem==='function' && typeof RELICS!=='undefined' && RELICS.length)
+        items.push(mkRelicItem(RELICS[0].id,'knight'));
+      // NOT bagAt(): it calls nearestStandable(), which reads curRoom, and the rig is not in a room --
+      // the shot came back as a stack trace on a black screen. openBagPanel only needs the items.
+      const lb={x:0, y:0, items:items, life:900};
+      if(typeof openBagPanel==='function') openBagPanel(lb);
+      const bs=document.getElementById('bagScr'); if(bs) bs.style.display='flex';
     } else if(WANT==='panel'){
       // ANY PANEL, BY ID AND OPENER. _fitaudit measures every screen; this photographs whichever one
       // it flagged, because a number can say two boxes overlap and cannot say whether that reads as

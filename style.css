@@ -458,15 +458,19 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  display:flex;flex-direction:column;gap:6px;}   /* header + map + CLOSE always reachable */
 #mapCard #shHead span{font-family:'Pixelify Sans',monospace;font-size:16px;color:#ffc94d;}
 
-#invCard{position:relative;width:min(96vw,760px);max-height:96vh;display:flex;padding:0;
+#invCard{position:relative;
+ --vH: min(96vh, 620px);
+ --vW: min(96vw, 980px);
+ --u:  calc(var(--vH) / 100);
+ width:var(--vW); height:var(--vH); max-height:none; display:flex; padding:0;
  background:url(assets/ui/equip_panel_wide2.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
 /* PADDING IN PERCENT, BECAUSE THE FRAME IT CLEARS IS IN PERCENT. equip_panel_wide2.png is stretched
    to 100% 100% of the card, so its carved border is a fraction of the card's width -- while these
    insets were a fixed 40/62/42px, which matches the art at 760px wide and nowhere else. On a 667px
    phone the card is 640px and the fixed inset was overshooting the border by ~10px on every side, of
    a 360px-tall scroller. The percentages below reproduce 40/62/42 exactly at 760px. */
-#invInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:5.3% 8.2% 5.5%;
- display:flex;flex-direction:column;}
+#invInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;
+ padding: calc(var(--vH)*0.080) calc(var(--vW)*0.090) calc(var(--vH)*0.080);}
 #invInner::-webkit-scrollbar{width:5px;} #invInner::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
 #invTitle{font-family:'Pixelify Sans',monospace;font-size:20px;color:#ffce7a;text-align:center;
  text-shadow:0 2px 3px #000;letter-spacing:.06em;margin-bottom:4px;}
@@ -498,12 +502,40 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #invActs{display:flex;gap:8px;margin:8px 0 4px;}
 #invActs .mbtn{flex:1;}
 /* ---- BAG PANEL: what a sack holds, each piece measured against what you wear ---- */
-#bagCard{position:relative;width:min(94vw,660px);max-height:92vh;display:flex;padding:0;
+/* THE WIDE FRAME, MEASURED. equip_panel_wide2.png is 688x384 and its carved field starts about 9%
+   in from each side and 8% down from the top and bottom -- so, exactly like the portrait frame, the
+   inset is a fraction of each RENDERED axis and the fixed 52/52/44px padding it had could only be
+   right at one card size. Sized from --vW/--vH it holds at any shape, including a sideways phone,
+   where this card is now the width of the screen instead of a 660px box in a 667px window. */
+#bagCard{position:relative;
+ --vH: min(92vh, 560px);
+ --vW: min(94vw, 900px);
+ --u:  calc(var(--vH) / 100);
+ width:var(--vW); height:var(--vH); max-height:none; display:flex; padding:0;
  background:url(assets/ui/equip_panel_wide2.png) center/100% 100% no-repeat;
  filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
 /* the frame art has a carved top bar — clear it or the subtitle sits half behind the woodwork */
-#bagInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:52px 52px 44px;
- display:flex;flex-direction:column;}
+/* THE FRAME IS THE BOUNDARY AND #bagList IS THE ONLY SCROLLER -- the forge's proven pattern.
+   While #bagInner itself scrolled, `flex:1 1 auto; min-height:0` on the list resolved against the
+   inner's CONTENT height rather than against the card, so the list simply grew and its last row sat
+   across EQUIP BEST. A flex child cannot be told to fill a parent that has no height of its own. */
+#bagInner{flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;
+ padding: calc(var(--vH)*0.080) calc(var(--vW)*0.090) calc(var(--vH)*0.080);}
+/* THE CHROME IS PINNED AND THE LIST IS THE ONLY THING THAT GIVES -- the same fault the bounty board
+   had. Flex items shrink by default, so on a short screen TAKE ALL and LEAVE were squeezed while the
+   row list kept its height, and their labels rendered outside their own boxes on top of the rows.
+   _fitaudit caught it as "vs T1 Cracked Sword" over "TAKE ALL". */
+#bagInner>#bagTitle,#bagInner>#bagSub,#bagInner>#bagActs{ flex:0 0 auto; }
+/* THE BAG ALREADY HAD A CORNER X (#bagX, class tabX) and a LEAVE button in the footer as well, so it
+   carried two ways out of the same panel -- and the redundant one is what _fitaudit caught sitting on
+   top of TAKE ALL on a short screen. The X stays; LEAVE goes. EQUIP BEST and TAKE ALL are the
+   ACTIONS and keep the footer to themselves, which is also what makes the footer fit. */
+#bagScr #bagLeave{ display:none !important; }
+/* A little room under the last row, so a row that lands exactly at the fold cannot graze the footer
+   buttons -- the audit caught "T4 Steel Bow" sitting across EQUIP BEST at desktop size. */
+#bagList{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; padding-bottom:6px; }
+#bagList::-webkit-scrollbar{width:5px;}
+#bagList::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
 #bagInner::-webkit-scrollbar{width:5px;} #bagInner::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
 #bagTitle{font-family:'Pixelify Sans',monospace;font-size:20px;color:#ffce7a;text-align:center;
  text-shadow:0 2px 3px #000;letter-spacing:.06em;}
@@ -782,6 +814,14 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  overflow-y:auto;overflow-x:hidden;}
 #dmdRows::-webkit-scrollbar,#wrdRows::-webkit-scrollbar,#bntRows::-webkit-scrollbar{width:5px;}
 #dmdRows::-webkit-scrollbar-thumb,#wrdRows::-webkit-scrollbar-thumb,#bntRows::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
+/* NO #bagClose EXISTS. This styled an id the markup does not have -- the sack's close is #bagX with
+   class tabX, and its footer button is #bagLeave -- so the whole block was inert and the LEAVE bar
+   stayed exactly where it was. Written from the id list rather than from the markup, which is the
+   difference between a rule and a wish. What it was trying to do is done above, next to #bagActs.
+   The footer's two remaining buttons are the ACTIONS (EQUIP BEST, TAKE ALL) and share the row. */
+#bagScr #bagActs{ justify-content:center; margin:calc(var(--u)*1.6) 0 0; }
+#bagScr #bagActs .mbtn{ flex:1 1 0; min-width:0; }
+
 /* THE LESSON SHELF at the top of the stable. A row of shopcards rather than a bespoke widget,
    because they ARE purchases and the player has met that row in four other panels. It is removed
    entirely once both books are read -- a shelf of things you already own is furniture. */
@@ -940,7 +980,10 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
    The panel itself is a plain .scr rather than a framed card, so "fill the screen" here means
    dropping the fixed widths: #devTabs and #devBody were min(96vw,860px), which on a 1280px desktop
    left 400px of empty gutter beside a list that was scrolling. */
-#devScr{ position:relative; }
+/* NO `position:relative` HERE. .scr is already position:fixed with inset:0, which is both a fixed
+   overlay AND a containing block for the absolutely-positioned X below -- so this line bought
+   nothing and cost the panel its fixing: it grew to its content instead of to the viewport, 1388px
+   tall on a 375px screen, and _fitaudit reported it CLIPPED by 1013px. */
 #devScr #dResume{
   position:absolute; z-index:4; top:calc(6px + env(safe-area-inset-top,0px)); right:8px;
   width:34px; height:34px; min-width:0; min-height:0; padding:0; margin:0; border-radius:9px;
