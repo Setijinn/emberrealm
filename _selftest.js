@@ -902,7 +902,179 @@
 
       if(typeof LS!=='undefined'){ LS.set('er-dens',_saved); _denSet=null; }
     } else ok('denOpened/openDen exist', false);
+
+    // ---------- 11b. THE MAP AND ITS FOG SURVIVE A NINE-TIMES-LARGER WORLD ----------
+    // A SIZE THAT FAILS SILENTLY IS THE WHOLE POINT OF THIS SECTION. The old scale formula's 0.62
+    // floor made the fog canvas 2232x1389 on a 3600-wide world -- ~12.4 MB of RGBA that the phone
+    // this PWA targets has to hold, written to a ~5 MB localStorage as a PNG inside a catch{} that
+    // ate the failure. Nothing about that is visible from a passing test suite, so it is asserted
+    // as ARITHMETIC on the projected size rather than discovered after the resize.
+    note('');
+    note('== fog / minimap size invariance ==');
+    if(typeof miniScaleFor==='function'){
+      const cells=(w,h)=>{ const sc=miniScaleFor({w:w,h:h});
+        const cw=Math.max(1,Math.round(w*sc)), chh=Math.max(1,Math.round(h*sc));
+        return {s:sc, w:cw, h:chh, n:cw*chh}; };
+      const now=cells(1160,720), big=cells(3600,2160), huge=cells(6000,4000);
+      note('  today  1160x720  -> s='+now.s.toFixed(3)+'  canvas '+now.w+'x'+now.h
+           +'  '+now.n+' cells  ~'+(now.n*5/1048576).toFixed(2)+' MB (canvas+array)');
+      note('  three-isle 3600x2160 -> s='+big.s.toFixed(3)+'  canvas '+big.w+'x'+big.h
+           +'  '+big.n+' cells  ~'+(big.n*5/1048576).toFixed(2)+' MB');
+      note('  absurd 6000x4000 -> s='+huge.s.toFixed(3)+'  canvas '+huge.w+'x'+huge.h
+           +'  '+huge.n+' cells  ~'+(huge.n*5/1048576).toFixed(2)+' MB');
+      // the budget is a CEILING, so every size at or above it must land on it, not near it
+      ok('the budget bounds the canvas at every size',
+         now.n<=FOG_PX_BUDGET*1.02 && big.n<=FOG_PX_BUDGET*1.02 && huge.n<=FOG_PX_BUDGET*1.02,
+         now.n+' / '+big.n+' / '+huge.n+' vs '+FOG_PX_BUDGET);
+      // AND IT MUST NOT COLLAPSE THE MAP EITHER. A budget with no lower bound would happily render a
+      // 9x world into the same pixels as a 1x one and call it fitted -- so the big world must still
+      // spend most of the budget it is given, or the picture is a smear rather than a map.
+      ok('a bigger world still fills the budget', big.n>FOG_PX_BUDGET*0.9, big.n+' cells');
+      // 0.62 px/tile is kept for the case it was written for -- a 42-tile Hearth -- and nothing else
+      ok('the small-room floor survives', miniScaleFor({w:42,h:34})>=0.62,
+         miniScaleFor({w:42,h:34}).toFixed(2)+' px/tile');
+      ok('the small-room floor cannot beat the budget', miniScaleFor({w:3600,h:2160})<0.62,
+         miniScaleFor({w:3600,h:2160}).toFixed(3)+' px/tile');
+      ok('the 8 px/tile ceiling survives', miniScaleFor({w:20,h:20})===8);
+      // THE OLD FORMULA, KEPT AS A WITNESS. If someone reinstates it this fails, rather than the
+      // memory quietly reappearing on somebody's phone months later.
+      const oldS=Math.min(8,Math.max(0.62,760/Math.max(3600,2160)));
+      const oldN=Math.round(3600*oldS)*Math.round(2160*oldS);
+      note('  the formula this replaced would have given s='+oldS.toFixed(3)+'  '
+           +Math.round(3600*oldS)+'x'+Math.round(2160*oldS)+'  ~'+(oldN*5/1048576).toFixed(1)+' MB');
+      ok('the regression it fixes is measurably real', oldN>FOG_PX_BUDGET*6, oldN+' cells');
+    } else ok('miniScaleFor exists', false);
+
+    // The real canvas, on the real overworld, plus what it costs to store. A phone is the budget
+    // that matters: the canvas is RGBA in GPU-backed memory, _fogA is one byte per cell on the heap,
+    // and the PNG is UTF-16 in localStorage -- so all three are reported in the units they are paid in.
+    if(typeof fogInit==='function' && rooms['G']){
+      const G=rooms['G'];
+      const _rm=curRoom; curRoom=G;
+      _fogKey=null; fogInit(G);
+      ok('the overworld fog canvas exists', !!_fogCv && _fogCv.width>0);
+      if(_fogCv){
+        const url=_fogCv.toDataURL('image/png');
+        note('  fog canvas '+_fogCv.width+'x'+_fogCv.height
+             +'  _fogA '+_fogA.byteLength+' B ('+(_fogA.byteLength/1048576).toFixed(2)+' MB)'
+             +'  RGBA ~'+((_fogCv.width*_fogCv.height*4)/1048576).toFixed(2)+' MB'
+             +'  dataURL '+url.length+' chars (~'+(url.length*2/1024).toFixed(0)+' KB stored)');
+        ok('the array mirrors the canvas exactly',
+           _fogA.byteLength===_fogCv.width*_fogCv.height
+           && _fogAW===_fogCv.width && _fogAH===_fogCv.height);
+        // localStorage is ~5 MB of UTF-16 for the WHOLE origin, and fog shares it with saves, the
+        // Vault, dens and pillars. A quarter of it is as much as one canvas may ever claim.
+        ok('the saved fog fits the quota with room to spare', url.length*2 < 1250*1024,
+           (url.length*2/1024).toFixed(0)+' KB of a ~5 MB origin');
+        // headroom on a mid-range phone for the two live copies together
+        ok('fog memory is inside a phone budget',
+           (_fogCv.width*_fogCv.height*5) < 4*1048576,
+           ((_fogCv.width*_fogCv.height*5)/1048576).toFixed(2)+' MB');
+      }
+      // THE KEY CARRIES THE SHAPE, so a 1160x720 fog PNG can never be stretched over a 3600x2160
+      // canvas and hand the player a scaled ghost of somewhere else that looks explored.
+      const slot=_fogSlot(G);
+      ok('the fog key names the world shape', slot.indexOf(':'+G.w+'x'+G.h)>0, slot);
+      ok('a different shape is a different key',
+         _fogSlot({w:3600,h:2160,key:'G',rings:G.rings})!==slot);
+      // AND THE PRE-SHAPE KEY IS NOT READ. Poison the legacy stem with an image that would uncover
+      // the whole map, then init: the map must come back fully fogged and the dead key must be gone.
+      if(typeof localStorage!=='undefined'){
+        const stem=slot.slice(0,slot.lastIndexOf(':'));
+        let wrote=false;
+        try{ const c2=document.createElement('canvas'); c2.width=8; c2.height=8;
+             localStorage.setItem(stem,c2.toDataURL('image/png')); wrote=true; }catch(e){}
+        if(wrote){
+          _fogKey=null; fogInit(G);
+          await new Promise(r=>setTimeout(r,150));        // an onload would land inside this window
+          ok('a pre-shape fog key is deleted, not read', localStorage.getItem(stem)===null);
+          let dark=0, seen=0;
+          for(let i=0;i<_fogA.length;i+=997){ seen++; if(_fogA[i]>200) dark++; }
+          ok('the map came back fogged, not ghost-revealed', dark>seen*0.95,
+             dark+' of '+seen+' sampled cells still dark');
+        } else ok('a legacy fog key could be staged', false, 'localStorage refused the write');
+      }
+      // Walking reveals, and what it reveals is what fogSeen reports -- the array and the canvas
+      // cannot disagree, because one destination-out arithmetic writes both.
+      if(typeof fogReveal==='function' && typeof fogSeen==='function' && typeof player!=='undefined' && player){
+        const _px=player.x, _py=player.y;
+        // FROM A FOGGED MAP, NOT FROM WHATEVER THE EARLIER SECTIONS LEFT. The killability sweep and
+        // the den tests both drive update(), which reveals -- so asserting "unseen" against the
+        // running state made this pass or fail depending on where those left the player standing.
+        _fogKey=null; fogInit(G);
+        player.x=((G.px||G.w/2))*TILE; player.y=((G.py||G.h/2))*TILE;
+        ok('the ground under you is unseen before you walk it', !fogSeen(G,player.x,player.y));
+        fogReveal(G,0.016);
+        ok('walking reveals where you stand', fogSeen(G,player.x,player.y));
+        ok('and not the far side of the world', !fogSeen(G,(G.w-4)*TILE,(G.h-4)*TILE));
+        player.x=_px; player.y=_py;
+      }
+      curRoom=_rm; _fogKey=null;
+    } else ok('fogInit and the overworld exist', false);
+
+    // ---------- 11c. THE TOP STRIP FITS THE SCREEN IT IS ON ----------
+    // THE BUG THIS SECTION EXISTS FOR SHIPPED. drawStatusBanner reserved the right-hand side of the
+    // strip with `W - 240*us`, a typed guess at how wide the DOM button row is. The row is a flex row
+    // of up to nine buttons that does not shrink with the screen: at 667px wide it reaches x=125, so
+    // the zone plaque was drawn UNDERNEATH it and the zone name bled out between two buttons. Every
+    // screenshot this project had ever taken was 1280x720, where the guess happens to hold.
+    note('');
+    note('== HUD geometry ==');
+    if(typeof hudBounds==='function' && typeof miniRect==='function'){
+      const HB=hudBounds(), MR=miniRect();
+      const us=(typeof UIS!=='undefined')?UIS:1;
+      note('  viewport '+W+'x'+H+'  UIS '+us+'  DPR '+(typeof DPR!=='undefined'?DPR:'?'));
+      note('  button row occupies the right '+HB.right+' px, down to y='+Math.round(HB.bottom)
+           +'   minimap '+MR.w+'x'+MR.h+' at '+MR.x+','+MR.y);
+      note('  safe strip between them: '+Math.round(W-HB.right-(MR.x+MR.w))+' px');
+      // MEASURED, NOT FALLEN BACK TO. The fallback is the old constant, so a hudBounds that quietly
+      // stopped measuring would reintroduce exactly the bug above and still look plausible here.
+      const el=document.getElementById('hudTop');
+      const real=el?el.getBoundingClientRect():null;
+      ok('hudBounds measures the real button row', !!real && real.width>0
+         && Math.abs(HB.right-(W-real.left))<2, real?('row left '+Math.round(real.left)+', W-left '+Math.round(W-real.left)+', reported '+HB.right):'no #hudTop');
+      ok('the button row and the minimap do not overlap', MR.x+MR.w <= W-HB.right,
+         'minimap ends '+(MR.x+MR.w)+', row starts '+(W-HB.right));
+      // the minimap is bounded by the SHORT axis as well as by a CSS px size, or it is 39% of a
+      // phone's height while being 20% of a desktop's
+      ok('the minimap is bounded by the short screen axis',
+         MR.w<=Math.round(Math.min(W,H)*MINI_MAX_FRAC)+1, MR.w+' px of '+Math.min(W,H));
+      ok('the minimap never exceeds its tuned size', MR.w<=Math.round(MINI_BASE*us)+1,
+         MR.w+' px, base '+Math.round(MINI_BASE*us));
+      // and the same bound, checked as arithmetic at sizes this window cannot be resized to
+      const fr=(w,h)=>Math.min(148, w*0.30, h*0.30)/Math.min(w,h);
+      note('  minimap share of the short axis: 1280x720 '+(fr(1280,720)*100).toFixed(0)
+           +'%, 844x390 '+(fr(844,390)*100).toFixed(0)+'%, 667x375 '+(fr(667,375)*100).toFixed(0)
+           +'%  (was 20% / 38% / 39%)');
+      ok('a phone gets a proportional panel, not a desktop one', fr(667,375)<=0.31 && fr(1280,720)<=0.21);
+      // the invalidation hook exists, or a rotation leaves the canvas measuring the old layout
+      ok('resize invalidates the measurement', typeof hudBoundsInvalidate==='function');
+    } else ok('hudBounds and miniRect exist', false);
+
+    // The compass range is DERIVED from how far apart the lairs actually are, because 3000 px only
+    // ever meant "0.59 of the closest pair" -- and on a five-times-larger island the same 3000 would
+    // put us straight back in the state it was raised to fix.
+    if(typeof bcRange==='function' && rooms['G']){
+      const _rm=curRoom; curRoom=rooms['G']; rooms['G']._bcRange=0;
+      const r=bcRange();
+      // print the spacing the ratio is measured against, so the number in 09d's comment can never
+      // drift away from the world again without the harness saying so
+      const LL=[]; for(const k in rooms['G'].lairs){ const l=rooms['G'].lairs[k]; if(l&&l.cx!=null) LL.push(l); }
+      let cl=Infinity, fa=0;
+      for(let i=0;i<LL.length;i++) for(let j=i+1;j<LL.length;j++){
+        const d=Math.hypot(LL[i].cx-LL[j].cx, LL[i].cy-LL[j].cy);
+        if(d<cl) cl=d; if(d>fa) fa=d; }
+      note('  '+LL.length+' lairs: closest pair '+Math.round(cl)+' px, furthest '+Math.round(fa)+' px');
+      note('  boss compass range '+r+' px = '+(r/TILE).toFixed(0)+' tiles ('
+           +BC_RANGE_FRAC+' of the closest lair pair)');
+      ok('the compass range reproduces the measured 3000 px on this world',
+         Math.abs(r-3000)<200, r+' px');
+      ok('the compass range has a floor', BC_RANGE_MIN===1800);
+      ok('BC_RANGE the raw constant is gone', typeof BC_RANGE==='undefined');
+      curRoom=_rm;
+    } else ok('bcRange exists', false);
   }
+
 
   function boot(){
     run().catch(e=>{ fail++; L.push('  FAIL  harness threw: '+(e&&e.stack||e)); }).then(dump);

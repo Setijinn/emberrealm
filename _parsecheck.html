@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><title>parse check</title>
+<!-- THE ONE BLIND SPOT IN THE SELF-TEST, AND IT COSTS AN HOUR EVERY TIME.
+     _selftest.js parse-checks every file index.html loads, with `new Function(src)`. It cannot
+     parse-check ITSELF: a syntax error there means the script never runs, #testout is never written,
+     and tools/selftest.py prints the literal word "pending" with no other clue. That has now happened
+     twice -- once a duplicate `const`, once a top-level `await` left outside run() by an edit that
+     landed in the wrong brace -- and both times the first instinct was to go looking at the game.
+     node is not installed on this machine, so Chrome's own parser is the only one available.
+
+     Usage:  py tools/serve.py    (in another shell)
+             chrome --headless=new --dump-dom http://localhost:10500/_parsecheck.html
+             ...or just open it. It prints OK or the exact SyntaxError.
+     ?f=<path> checks any other file: ?f=11_ui.js -->
+<pre id="o" style="font:13px monospace;color:#0f0;background:#000;padding:8px">pending</pre>
+<script>
+const F=new URLSearchParams(location.search).get('f')||'_selftest.js';
+document.title='parse '+F;
+fetch(F).then(r=>r.ok?r.text():Promise.reject(new Error('HTTP '+r.status))).then(t=>{
+  let out='OK  '+F+'  ('+t.length+' bytes)';
+  // new Function() wraps the source in a NON-async function body, so a top-level `await` is reported
+  // here as a syntax error -- which is correct for this project: every file is a classic script.
+  try{ new Function(t); }catch(e){ out='SYNTAX  '+F+'\n'+e.message; }
+  document.getElementById('o').textContent=out;
+}).catch(e=>{ document.getElementById('o').textContent='FETCH  '+F+'\n'+e.message; });
+</script>

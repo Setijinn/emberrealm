@@ -842,6 +842,30 @@ two south-east jobs running at once.
 **Two independently generated textures will not tone-match.** The two grass tiles came out with
 means of (41,86,14) and (66,143,49) and read as a quilt. Gain-match the second to the first.
 
+**EVERY SCREENSHOT WAS 1280x720, SO NOTHING IN THE HARNESS HAD EVER SEEN A PHONE.** This is a
+mobile-first PWA. `tools/terrshot.py` hard-coded `--window-size=1280,720` and headless Chrome always
+answers yes to `matchMedia('(pointer:fine)')`, so every shot was a desktop window in **pcmode** --
+where `#hudBot` folds up into the top-right row. A phone in landscape is a different layout with
+different collisions, and two of them had shipped: the zone plaque drawn *underneath* the button row,
+and a minimap taking 39% of the screen height. Neither is visible at 1280x720 and neither is visible
+to a passing test suite. `terrshot.py` now takes `size=667x375` and `touch=1`; use both.
+
+**A REUSED CHROME PROFILE PHOTOGRAPHS THE PREVIOUS EDIT.** index.html registers a cache-first
+service worker that precaches the whole file list on install. A fixed `--user-data-dir` keeps that
+worker and its populated cache, so anything changed *after* the last `CODE_CACHE` bump is invisible:
+the page loads the old code and renders it perfectly. A banner-position fix came back looking like a
+CSS rule that had not applied. `tools/shot.py` had already worked this out and written it down; every
+harness now shares `fresh_profile()` from `tools/selftest.py`. If a tool ever grows its own profile
+path again, this trap comes straight back.
+
+**THE SELF-TEST CANNOT PARSE-CHECK ITSELF, AND ITS FAILURE MODE IS THE WORD "pending".** A syntax
+error in `_selftest.js` means the script never runs, `#testout` is never written, and the runner
+prints `pending` with nothing else. It has happened twice -- a duplicate `const`, and a top-level
+`await` left outside `run()` by an edit that landed one brace too late (`new Function(src)` wraps the
+source in a NON-async body, which is what catches that one). node is not installed here, so use
+`_parsecheck.html`: open it, or `--dump-dom` it, and it prints the exact SyntaxError. `?f=<path>`
+checks any other file.
+
 **Verify the server is actually serving before navigating.** `py -m http.server ... && echo serving`
 after a failed command prints the echo and starts nothing — I spent several probes debugging an
 empty page. Fetch the URL and check the byte count.

@@ -1812,8 +1812,23 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
   // was a gold price, which has been unspendable and unearnable since gold was wiped. The auction
   // still values items, so show THAT -- what the house would ask for it, not what you could get.
   if(typeof itemGlory==='function') html+=' · worth '+itemGlory(it)+'✦ at auction';
-  if(it.k!=='pot'&&!canEquip(it,ch)) html+=' · <span style="color:#c04a3d">wrong class</span>';
-  if(it.k!=='pot'){ const s2=itemStats(it,ch.cls); let sl='';
+  // "wrong class" IS ABOUT EQUIPMENT and belongs only to something that could be worn. canEquip is
+  // false for every consumable too, so a scroll -- which has no class and never did -- read
+  // "Scroll of Vitality · worth 48✦ at auction · wrong class" next to a working USE button.
+  if(it.k!=='pot'&&!itemUsable(it)&&!canEquip(it,ch))
+    html+=' · <span style="color:#c04a3d">wrong class</span>';
+  // A SCROLL'S STATS ARE NOT itemStats. It grants a permanent training step, so the numbers that
+  // matter are which stat, how much, and how much room is left before the cap refuses it -- which is
+  // also the only warning the player gets before pressing USE on something that cannot be spent.
+  if(itemUsable(it) && it.k==='scroll' && typeof trainCap==='function' && rpg && rpg.train){
+    const st=it.st, M=STAT_META[st]||{col:'#d8cfb8',s:st};
+    const have=rpg.train[st]||0, cap=trainCap(ch.cls,st,rpg.prestige||0);
+    const step=(typeof TRAIN_STEP!=='undefined'&&TRAIN_STEP[st])||1;
+    html+='<div class="istats"><span style="color:'+M.col+'">+'+step+' '+M.s+'</span>'
+        + ' <span style="color:#8a8494">trained '+have+'/'+cap+'</span>'
+        + (have>=cap?' <span style="color:#c04a3d">at its cap</span>':'')+'</div>';
+  }
+  if(it.k!=='pot'&&!itemUsable(it)){ const s2=itemStats(it,ch.cls); let sl='';
    for(const k of STATS){ if(s2[k]) sl+='<span style="color:'+STAT_META[k].col+'">+'+s2[k]+' '+STAT_META[k].s+'</span> '; }
    html+='<div class="istats">'+sl+'</div>'; }
   $s('invSel').innerHTML=html;

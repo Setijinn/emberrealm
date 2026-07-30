@@ -48,7 +48,9 @@ function resize(){
   DPR = Math.min(devicePixelRatio||1, 2);
   cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0); ctx.imageSmoothingEnabled=false;
-  document.getElementById('rotate').style.display = H>W ? 'flex':'none'; }
+  document.getElementById('rotate').style.display = H>W ? 'flex':'none';
+  // the DOM button rows just moved, and the canvas measures them to keep the top strip clear
+  if(typeof hudBoundsInvalidate==='function') hudBoundsInvalidate(); }
 resize(); addEventListener('resize',resize);
 // re-measure once the mobile viewport settles (address bar collapse etc.)
 addEventListener('load',()=>{ resize(); setTimeout(resize,150); setTimeout(resize,600); });

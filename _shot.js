@@ -64,6 +64,21 @@
       // either, because past square the game shows its portrait gate instead of the game.
       if(Q.get('scroll')==='end'){ const b=document.getElementById('forgeBody');
         if(b){ void b.offsetHeight; b.scrollTop=b.scrollHeight; } }
+    } else if(WANT==='inv'){
+      // THE SATCHEL, WITH A SCROLL SELECTED. The third action button (USE) only exists for a
+      // consumable, so photographing the row that proves it needs a scroll in the bag AND that
+      // scroll to be the selected slot -- an empty selection paints no buttons at all.
+      const ch2=curChar();
+      if(typeof rollScrollStat==='function'){
+        ch2.inv.push({k:'scroll', st:rollScrollStat()});
+        ch2.inv.push({k:'scroll', st:rollScrollStat()});
+      }
+      if(typeof openInv==='function') openInv();
+      const iv=document.getElementById('invScr'); if(iv) iv.style.display='flex';
+      // select the scroll: it is the last thing pushed, so the last index
+      const want=(Q.get('sel')!==null)?(+Q.get('sel')):(ch2.inv.length-1);
+      if(typeof invSelIdx!=='undefined'){ try{ eval('invSelIdx='+(want|0)); }catch(e){} }
+      if(typeof paintInv==='function') paintInv();
     } else if(WANT==='map'){
       // THE FULL MAP needs a real world, not just a panel: mapTerrain reads rooms['G'] and
       // _territories(), and drawMap plots lairs, pillars and portals in world coordinates. So put

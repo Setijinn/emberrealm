@@ -50,6 +50,21 @@ CHROMES = [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 ]
 
+# A FRESH PROFILE EVERY RUN, for every harness that drives Chrome.
+#
+# THIS IS NOT PARANOIA, IT COST A SCREENSHOT. index.html registers a service worker whose fetch
+# handler is cache-first, and it precaches the whole file list on install. A reused --user-data-dir
+# keeps that installed worker AND its populated cache, so any edit made after the cache version was
+# last bumped is invisible: the page loads the previous code, renders it perfectly, and the tool
+# reports on something that is no longer on disk. A terrain shot came back showing the old banner
+# position for exactly this reason, and looked like a CSS rule that had not applied.
+#
+# tools/shot.py already did this and wrote down why (a stale stylesheet photographed faithfully).
+# The same guarantee belongs to every tool here, so it lives in one place.
+def fresh_profile(prefix):
+    return tempfile.mkdtemp(prefix="emberrealm_%s_" % prefix)
+
+
 INJECT = (
     '<pre id="testout" style="position:fixed;left:0;top:0;z-index:99999;'
     'background:#000;color:#0f0;font:12px monospace;white-space:pre-wrap">pending</pre>\n'
@@ -87,7 +102,7 @@ def find_chrome():
 
 def run():
     chrome = find_chrome()
-    profile = os.path.join(tempfile.gettempdir(), "emberrealm_selftest_profile")
+    profile = fresh_profile("selftest")
     # --headless=new is required: the old headless mode was removed and exits 21 with no output.
     cmd = [
         chrome, "--headless=new", "--disable-gpu",

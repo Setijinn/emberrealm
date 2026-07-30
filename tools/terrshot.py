@@ -9,6 +9,14 @@ USAGE
     py tools/serve.py                      # in another shell
     py tools/terrshot.py 0                     # one territory by index
     py tools/terrshot.py all                   # every territory, into shots/
+    py tools/terrshot.py 0 hud=1               # with the HUD, so the minimap is in frame
+    py tools/terrshot.py 0 hud=1 size=390x844  # at a phone viewport
+
+SIZE IS A REAL TEST, NOT A CONVENIENCE. This is a mobile-first PWA whose HUD scales through UIS,
+and every screenshot this tool has ever taken was 1280x720 -- so nothing in the harness has ever
+looked at the layout the majority of players actually get. `size=` drives the same frame at a phone
+viewport, and the filename records it so a desktop and a phone shot of the same ground sit side by
+side rather than overwriting each other.
 """
 
 import io
@@ -18,7 +26,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from selftest import find_chrome, PORT, ROOT
+from selftest import find_chrome, fresh_profile, PORT, ROOT
 
 PAGE = "_terrshot_run.html"
 OUT = os.path.join(ROOT, "shots")
@@ -36,15 +44,18 @@ def build():
         f.write(html.replace("</body>", inject + "</body>"))
 
 
-def shoot(idx, hud=False, extra=(), name=None):
+def shoot(idx, hud=False, extra=(), name=None, size="1280,720"):
     if not os.path.isdir(OUT):
         os.makedirs(OUT)
-    dest = os.path.join(OUT, (name or ("z%02d" % idx)) + ".png")
+    stem = name or ("z%02d" % idx)
+    if size != "1280,720":
+        stem += "_" + size.replace(",", "x")
+    dest = os.path.join(OUT, stem + ".png")
     chrome = find_chrome()
     cmd = [
         chrome, "--headless=new", "--disable-gpu",
-        "--user-data-dir=" + os.path.join(tempfile.gettempdir(), "emberrealm_terrshot_profile"),
-        "--window-size=1280,720",
+        "--user-data-dir=" + fresh_profile("terrshot"),   # never reuse: see fresh_profile
+        "--window-size=" + size,
         "--virtual-time-budget=30000",
         "--screenshot=" + dest,
     ]
@@ -65,14 +76,26 @@ def shoot(idx, hud=False, extra=(), name=None):
 if __name__ == "__main__":
     build()
     arg = sys.argv[1] if len(sys.argv) > 1 else "0"
-    extra = sys.argv[2:]
+    extra = list(sys.argv[2:])
+    # hud= and size= are ours; everything else is passed through to the page untouched
+    hud = False
+    size = "1280,720"
+    passthru = []
+    for kv in extra:
+        if kv.startswith("hud="):
+            hud = kv.split("=", 1)[1] not in ("0", "", "no", "false")
+        elif kv.startswith("size="):
+            size = kv.split("=", 1)[1].replace("x", ",")
+        else:
+            passthru.append(kv)
+    extra = passthru
     if arg == "all":
         for i in range(14):
-            shoot(i, extra=extra)
+            shoot(i, hud=hud, extra=extra, size=size)
     else:
         # a lair shot is not a territory shot -- name the file after what it is
         nm = None
         for kv in extra:
             if kv.startswith("lair="):
                 nm = "lair" + kv.split("=", 1)[1]
-        shoot(int(arg), extra=extra, name=nm)
+        shoot(int(arg), hud=hud, extra=extra, name=nm, size=size)

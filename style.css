@@ -41,14 +41,37 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
        a hard 0.25s cut on both edges is the flicker, not the text itself
    A `quiet` variant is available for routine notices (see msg's `kind` argument): same position,
    smaller, dimmer, shorter. Nothing is forced to use it -- it is opt-in per call site. */
+/* ONE CAP, THREE PANELS. The stable, the Vault and the forge all pin to the same 448x600 frame art
+   and each carried its own copy of the same expression, so a tuning change had to be made in three
+   places -- and the 432px in it was a PHONE'S cap applied to every screen. On a 1280px-wide desktop
+   that is 34% of the window: the panel sat in a narrow column with two thirds of the screen empty
+   around it and a third of its own available height unused.
+   Raising the WIDTH cap changes nothing on a phone, where 94vh binds first and always did. It lets a
+   desktop spend the height it has. Everything inside these panels is sized in --u (a hundredth of the
+   card's height), so the whole panel scales up rather than reflowing into a different layout. */
+:root{ --pinW: min(95vw, 620px); }
+
 #msg{position:fixed;left:0;right:0;top:22%;text-align:center;color:#ffc94d;font-size:24px;
   letter-spacing:.06em;pointer-events:none;text-shadow:0 2px 8px #000;opacity:0;
-  transition:opacity .38s ease-out;z-index:6;}
+  transition:opacity .38s ease-out;z-index:6;padding:0 12px;box-sizing:border-box;}
 #msg.show{opacity:1;transition:opacity .16s ease-in;}
-#msg small{display:block;font-size:14px;color:#d8d2c8;margin-top:4px;}
+/* THE SUB LINE HAS A WIDTH. left:0/right:0 with no cap meant a boss's tagline wrapped only at the
+   viewport edge -- on a 667x375 phone that is one line running from under the minimap to off the
+   right edge, straight through the fight. Capped, it wraps into a readable block instead. */
+#msg small{display:block;font-size:14px;color:#d8d2c8;margin:4px auto 0;max-width:min(620px,84vw);}
 /* routine notices: present, readable, and not competing with the fight */
 #msg.quiet{font-size:16px;color:#e8dcc0;letter-spacing:.04em;top:26%;}
 #msg.quiet small{font-size:12px;}
+/* A PHONE IN LANDSCAPE IS SHORT, NOT NARROW, and 22% of 375px lands the banner inside the minimap's
+   corner. It drops below the panel and shrinks with the screen, because the same 24px that reads as
+   a title on a 720px-tall desktop is a third of the vertical space here. Keyed on height: this is a
+   landscape-only game, so height is the axis that actually varies between a phone and a desktop. */
+@media (max-height:470px){
+  #msg{top:36%;font-size:19px;}
+  #msg small{font-size:12px;max-width:min(620px,78vw);}
+  #msg.quiet{top:40%;font-size:15px;}
+  #msg.quiet small{font-size:11px;}
+}
 
 .scr{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#1a1520,#0b0a10 70%);z-index:20;
  display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#d8d2c8;padding:16px;overflow-y:auto;}
@@ -129,7 +152,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    Locking the card to the art's own aspect and paying every inset as a fraction of it is what the
    vault already proved, so the stable does the same and inherits the phone sizes with it. */
 #stableScr>#shopCard{
-  --vH: min(94vh, calc(min(95vw,432px) * 600 / 448));
+  --vH: min(94vh, calc(var(--pinW) * 600 / 448));
   --vW: calc(var(--vH) * 448 / 600);
   --u:  calc(var(--vH) / 100);
   width:var(--vW); height:var(--vH); max-height:none;
@@ -417,7 +440,12 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 
 #invCard{position:relative;width:min(96vw,760px);max-height:96vh;display:flex;padding:0;
  background:url(assets/ui/equip_panel_wide2.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
-#invInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:40px 62px 42px;
+/* PADDING IN PERCENT, BECAUSE THE FRAME IT CLEARS IS IN PERCENT. equip_panel_wide2.png is stretched
+   to 100% 100% of the card, so its carved border is a fraction of the card's width -- while these
+   insets were a fixed 40/62/42px, which matches the art at 760px wide and nowhere else. On a 667px
+   phone the card is 640px and the fixed inset was overshooting the border by ~10px on every side, of
+   a 360px-tall scroller. The percentages below reproduce 40/62/42 exactly at 760px. */
+#invInner{flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;padding:5.3% 8.2% 5.5%;
  display:flex;flex-direction:column;}
 #invInner::-webkit-scrollbar{width:5px;} #invInner::-webkit-scrollbar-thumb{background:#5a4326;border-radius:3px;}
 #invTitle{font-family:'Pixelify Sans',monospace;font-size:20px;color:#ffce7a;text-align:center;
@@ -828,7 +856,7 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
         left over, showing fewer rows and scrolling. Nothing is allowed to push the panel taller
         than its own frame at any size. */
 #vaultScr>#shopCard{
-  --vH: min(94vh, calc(min(95vw,432px) * 600 / 448));
+  --vH: min(94vh, calc(var(--pinW) * 600 / 448));
   --vW: calc(var(--vH) * 448 / 600);
   --u:  calc(var(--vH) / 100);
   width:var(--vW); height:var(--vH); max-height:none;
@@ -980,7 +1008,7 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
    section headers sat on top of the strips. Nothing in here is allowed to push the panel taller
    than its own border at any viewport. */
 #forgeScr>#shopCard{
-  --vH: min(94vh, calc(min(95vw,432px) * 600 / 448));
+  --vH: min(94vh, calc(var(--pinW) * 600 / 448));
   --vW: calc(var(--vH) * 448 / 600);
   --u:  calc(var(--vH) / 100);
   width:var(--vW); height:var(--vH); max-height:none;

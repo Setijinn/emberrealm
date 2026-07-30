@@ -21,6 +21,12 @@
   // it is applied outside the atlas fallback branch, so it lands on the newer terr_N atlases too,
   // whether or not those needed correcting.
   const NOTONE=Q.get('nt')==='1';
+  // `?touch=1` PHOTOGRAPHS THE LAYOUT A PHONE ACTUALLY GETS. inputMode is decided by
+  // matchMedia('(pointer:fine)'), which headless Chrome always answers yes to -- so every shot this
+  // tool has ever taken was in pcmode, where #hudBot folds up into the top-right row. On a real
+  // phone that row sits bottom-right and the thumb stick is live, which is a different layout with
+  // different collisions. Narrowing the window is not enough to see it; the mode has to be forced.
+  const TOUCH=Q.get('touch')==='1';
   const tag=(s)=>{ const el=document.getElementById('shotlabel'); if(el) el.textContent=s; };
 
   function openGround(cx,cy){
@@ -45,6 +51,8 @@
       users['_shot']={pass:'x',chars:[{name:'Shot',cls:'knight',inv:[],
         rpg:{lvl:50,xp:0,wpn:8,arm:8,helm:8}}],cur:0,mats:{},vault:[]};
       curUser='_shot';
+      // before play(), so the very first layout is the one being photographed
+      if(TOUCH && typeof _setMode==='function') _setMode('touch');
       play();                       // a real run, so every system is in the state it ships in
       devTeleport('G');             // the radial overworld
       // FREEZE THE WORLD, NOT THE FRAMES. The live loop must not keep simulating underneath the

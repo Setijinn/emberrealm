@@ -24,7 +24,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from selftest import find_chrome, PORT, ROOT   # one Chrome-discovery rule, not two
+from selftest import find_chrome, fresh_profile, PORT, ROOT   # one Chrome-discovery rule, not two
 
 
 def build(script):
@@ -46,7 +46,7 @@ def build(script):
 
 def run(page):
     chrome = find_chrome()
-    profile = os.path.join(tempfile.gettempdir(), "emberrealm_audit_profile")
+    profile = fresh_profile("audit")          # never reuse: see fresh_profile
     cmd = [
         chrome, "--headless=new", "--disable-gpu",
         "--user-data-dir=" + profile,

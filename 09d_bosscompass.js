@@ -20,7 +20,31 @@
 // lairs is 5103px apart, so at 1800 the two-marker cap could never engage and you only ever got a
 // marker once you were nearly standing on the lair. At 3000 you pick one up around halfway
 // between two, which is when "which way, and am I ready" is an actual question.
-const BC_RANGE   = 3000;   // px: past this, no marker at all
+// DERIVED FROM THE WORLD, NOT TYPED, because the number 3000 only means anything relative to how far
+// apart the lairs actually are. At five times the island size the same 3000 would put us straight back
+// in the state it was raised to fix, giving you a marker only once you are nearly standing on the lair.
+// Expressed as the RATIO, it reproduces the hand-tuned 3000 on today's world and follows the world
+// when it grows.
+// THE 5103 ABOVE IS STALE and is kept only because it records why 3000 was chosen. Re-measured from
+// R.lairs cx/cy at load (the harness prints it): the closest pair is 4622px, not 5103 -- the earlier
+// figure predates LAIR_NUDGE moving anchors off their coastlines. 3000/4622 = 0.65, so that is the
+// ratio, and the selftest asserts it still lands on 3000 rather than trusting this comment.
+// Measured once and cached on the room: lair positions are fixed at load by stampLairs.
+const BC_RANGE_FRAC = 0.65;
+const BC_RANGE_MIN  = 1800;      // px: below this a marker is useless however small the world is
+function bcRange(){
+  const R=(typeof curRoom!=='undefined')?curRoom:null;
+  if(!R||!R.lairs) return 3000;
+  if(R._bcRange) return R._bcRange;
+  const L=[]; for(const k in R.lairs){ const l=R.lairs[k]; if(l&&l.cx!=null) L.push(l); }
+  let closest=Infinity;
+  for(let i=0;i<L.length;i++) for(let j=i+1;j<L.length;j++){
+    const d=Math.hypot(L[i].cx-L[j].cx, L[i].cy-L[j].cy);
+    if(d<closest) closest=d; }
+  // one lair or none: nothing to be halfway between, so fall back to the measured original
+  R._bcRange = isFinite(closest) ? Math.max(BC_RANGE_MIN, Math.round(closest*BC_RANGE_FRAC)) : 3000;
+  return R._bcRange;
+}
 const BC_MAX     = 2;      // never more than two on screen, nearest first
 const BC_NEAR    = 700;    // px: inside this it is "close" and the marker goes bright
 const BC_MARGIN  = 34;     // px from the screen edge to the marker's centre
@@ -35,7 +59,7 @@ function bossCompassTargets(){
   for(const k in curRoom.lairs){
     const L=curRoom.lairs[k]; if(!L) continue;
     const d=Math.hypot(L.cx-player.x, L.cy-player.y);
-    if(d>BC_RANGE) continue;
+    if(d>bcRange()) continue;
     // "Is there a fight here?" is NOT ringBossAlive() -- a lair boss only exists as an entity
     // while you are standing near it, so that is false almost always and every marker drew dim.
     // The real signal is the respawn cooldown: a lair you just cleared is on the clock, everything
@@ -88,7 +112,7 @@ function drawBossCompass(){
     // Floor the alpha well above "did I imagine that". The first pass faded to 0.22 for a lair on
     // respawn cooldown and 0.50 at the edge of range, which on a bright overworld read as nothing.
     const near=t.d<BC_NEAR;
-    const a=t.alive ? (near?1.0:0.72+0.28*(1-Math.min(1,t.d/BC_RANGE))) : 0.42;
+    const a=t.alive ? (near?1.0:0.72+0.28*(1-Math.min(1,t.d/bcRange()))) : 0.42;
     ctx.save();
     ctx.globalAlpha=a;
     // the arrow: a small triangle pointing the way, drawn OUTSIDE the portrait

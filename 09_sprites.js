@@ -748,6 +748,34 @@ function coopTag(){
   if(coop.auto&&coop._trying) return '⚔ connecting…';
   return '';
 }
+// WHERE THE DOM CHROME ACTUALLY IS. The HUD's buttons are real elements in two flex rows, so the
+// canvas has no idea how wide they are -- and everything that draws in the top strip was guessing
+// with a typed constant. It guessed a row 240px wide; on a 667px-wide phone the row reaches 535px,
+// which is how the zone plaque ended up drawn underneath it.
+//
+// getBoundingClientRect forces a layout flush, so it is NOT called per frame: the row changes only
+// when the window resizes or a button appears (the mount button, the dev button, the shop button),
+// none of which happen mid-frame. Re-measured a few times a second, which is free, and invalidated
+// outright by resize().
+let _hudB=null, _hudBT=0;
+function hudBoundsInvalidate(){ _hudB=null; }
+function hudBounds(){
+  const now=(typeof performance!=='undefined')?performance.now():0;
+  if(_hudB && now-_hudBT<400) return _hudB;
+  const us=(typeof UIS!=='undefined')?UIS:1;
+  // the fallback is the old constant, so a headless or pre-layout call is no worse than before
+  let right=Math.round(240*us), bottom=Math.round(44*us);
+  try{
+    // #hudBot is either inside #hudTop (pcmode) or its own bottom-right row (touch), and either way
+    // it is not in the top strip -- so #hudTop's own rect is the whole question.
+    const top=document.getElementById('hudTop');
+    if(top){ const r=top.getBoundingClientRect();
+      if(r.width>0){ right=Math.max(0,W-r.left); bottom=Math.max(bottom,r.bottom); } }
+  }catch(e){}
+  _hudB={right:right, bottom:bottom};
+  _hudBT=now;
+  return _hudB;
+}
 function drawStatusBanner(){
   if(!rpg||!curRoom) return;
   const us=(typeof UIS!=='undefined')?UIS:1;
@@ -758,17 +786,37 @@ function drawStatusBanner(){
   const busy=!!(typeof bossBar!=='undefined'&&bossBar)
     || !!(curRoom.dungeon&&curRoom.objs&&curRoom.objs.some(x=>!x.done))
     || !!(curRoom.arena&&typeof arenaWave!=='undefined'&&arenaWave);
-  // horizontal safe zone: clear of the minimap on the left and the DOM button row on the right
-  const loX=Math.round(170*us), hiX=W-Math.round(240*us);
-  const cx=Math.max(loX+40, Math.min(hiX-40, (loX+hiX)/2));
+  // horizontal safe zone: clear of the minimap on the left and the DOM button row on the right.
+  // MEASURED, NOT TYPED. `W-240*us` assumed the button row is 240px wide; it is a flex row of up to
+  // nine buttons whose width does not shrink with the screen, so at 667px wide it reached x=125 and
+  // the plaque was drawn UNDERNEATH it -- the zone name bleeding out between two buttons, which is
+  // the state a phone in landscape actually shipped in. hudBounds asks the row how wide it is.
+  const HB=(typeof hudBounds==='function')?hudBounds():{right:Math.round(240*us)};
+  const MR=(typeof miniRect==='function')?miniRect():{x:0,w:Math.round(160*us)};
+  const gap=Math.round(10*us);
+  let loX=MR.x+MR.w+gap, hiX=W-HB.right-gap;
+  // If the two ends have closed on each other there is no safe zone at all -- a narrow phone with
+  // every button showing. Falling through with hiX<loX drew a negative-width plaque, so the banner
+  // gives up its plaque and takes the compact line instead, which fits under anything.
+  const cramped=(hiX-loX)<Math.round(150*us);
+  const cx=cramped ? Math.round(W/2) : Math.max(loX+40, Math.min(hiX-40, (loX+hiX)/2));
   ctx.save(); ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-  if(busy){
+  if(busy||cramped){
     // compact: one line, pinned above whatever owns the strip
     const fs=Math.max(10,Math.round(11*us));
     ctx.font='bold '+fs+'px "Pixelify Sans",monospace';
     const t=zn+'  ·  Lv '+rpg.lvl+hc+(cp?'  ·  '+cp:'');
-    ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillText(t,cx+1,fs+2);
-    ctx.fillStyle='#c9b98a'; ctx.fillText(t,cx,fs+1);
+    // A CRAMPED SCREEN HAS NO ROOM IN THE STRIP AT ALL, so the line goes UNDER the button row rather
+    // than behind it, and is centred in what is left to the right of the minimap.
+    let ly=fs+1, lx=cx;
+    if(cramped){
+      ly=Math.round(hudBounds().bottom)+fs+Math.round(3*us);
+      lx=Math.round((Math.min(W-6,loX)+W)/2);
+      const tw=ctx.measureText(t).width;
+      lx=Math.max(Math.round(loX+tw/2), Math.min(Math.round(W-6-tw/2), lx));
+    }
+    ctx.fillStyle='rgba(0,0,0,.7)'; ctx.fillText(t,lx+1,ly+1);
+    ctx.fillStyle='#c9b98a'; ctx.fillText(t,lx,ly);
     ctx.restore(); ctx.textAlign='left'; return;
   }
   const f1=Math.max(12,Math.round(15*us)), f2=Math.max(9,Math.round(11*us));

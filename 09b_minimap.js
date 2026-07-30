@@ -74,10 +74,32 @@ function _miniId(R){ if(!R._mapId) R._mapId=(R.key||'?')+':'+(++_mapSeq); return
 // panning and zooming cost one drawImage instead of re-rasterising terrain every frame.
 // Scale is chosen from the room's SIZE: at a fixed 0.62 px/tile a 42-tile Hearth is a 26px
 // thumbnail, which is not a map of anything.
+// A TOTAL-PIXEL BUDGET, NOT A PER-TILE FLOOR, and this one fails SILENTLY at the three-island size.
+//
+// It read `min(8, max(0.62, 760/max(w,h)))`. The 760 term is the intent -- fit the long side into 760
+// px -- but the 0.62 FLOOR overrides it the moment a room is bigger than ~1225 tiles across. At 3600
+// wide, 760/3600 = 0.211 clamps up to 0.62 and the canvas becomes 2232x1389: 3.1M cells where today's
+// is 359k. That is ~12.4 MB of RGBA backing store, and _fogA grows with it.
+//
+// AND THE CONSEQUENCE IS INVISIBLE. fogReveal writes _fogCv.toDataURL('image/png') into localStorage
+// every six seconds inside a bare try/catch. Blow the ~5 MB origin quota and the write throws, the
+// catch eats it, and fog persistence simply stops -- with no error, no symptom, and nothing to notice
+// until a reload comes back to a black map. So the budget is expressed as the thing that actually
+// matters (how many cells exist) and the floor only applies where it was ever needed: small rooms,
+// where 0.62 px/tile really would draw a 26px thumbnail of a 42-tile Hearth.
+const FOG_PX_BUDGET=360000;     // ~= today's overworld canvas, which is the size that is known to work
+function miniScaleFor(R){
+  const w=Math.max(1,R.w|0), h=Math.max(1,R.h|0);
+  // the budget, then the same 8 px/tile ceiling as before, then a floor that only a SMALL room can
+  // reach -- 0.62 is kept for exactly the case it was written for and can no longer override the budget
+  const byBudget=Math.sqrt(FOG_PX_BUDGET/(w*h));
+  const s=Math.min(8, byBudget);
+  return (w*h < FOG_PX_BUDGET) ? Math.min(8, Math.max(0.62, s)) : s;
+}
 function miniTerrain(R){
   const key=_miniId(R)+':'+R.w+'x'+R.h;
   if(_miniCache && _miniCache.key===key) return _miniCache.cv;
-  const s=Math.min(8, Math.max(0.62, 760/Math.max(R.w,R.h)));
+  const s=miniScaleFor(R);
   const cv=document.createElement('canvas');
   cv.width=Math.max(1,Math.round(R.w*s)); cv.height=Math.max(1,Math.round(R.h*s));
   const c=cv.getContext('2d');
@@ -124,7 +146,7 @@ function miniTerrain(R){
 // grow with how much of the world you have seen. Persisted per character, because exploration you
 // paid for should still be there tomorrow.
 const FOG_REVEAL_TILES = 22;
-let _fogCv=null, _fogCtx=null, _fogKey=null, _fogDirty=0, _fogSaveT=0;
+let _fogCv=null, _fogCtx=null, _fogKey=null, _fogDirty=0, _fogSaveT=0, _fogWarned=0;
 // COVERAGE, MIRRORED IN A TYPED ARRAY. fogSeen used to answer by reading the fog canvas --
 // getImageData(x,y,1,1) -- and drawMinimap calls it once per boss, lair, portal, loot bag, enemy
 // and objective node, every frame. That is 20-40 synchronous canvas readbacks per frame, each one
@@ -133,10 +155,27 @@ let _fogCv=null, _fogCtx=null, _fogKey=null, _fogDirty=0, _fogSaveT=0;
 // the identical destination-out arithmetic, so the two cannot disagree.
 let _fogA=null, _fogAW=0, _fogAH=0;
 
+// THE KEY CARRIES THE WORLD'S SHAPE. A saved fog PNG is drawn for one canvas size, and fogInit
+// restores it with drawImage(im,0,0,w,h) -- which STRETCHES whatever it finds to the current canvas. So
+// a fog image from the 1160x720 world would be scaled over the three-island one and uncover a scaled
+// ghost of somewhere else: a map that looks explored and does not match the ground. Putting w+h in the
+// key means an old image is never even looked at, rather than being found and misread.
 function _fogSlot(R){
   const ch=(typeof curChar==='function')?curChar():null;
   const u=(typeof curUser!=='undefined')?curUser:null;
-  return 'er-fog:'+((u&&u.name)||u||'u')+':'+((ch&&ch.name)||'c')+':'+((R&&R.key)||'G');
+  const shape=(R?((R.w|0)+'x'+(R.h|0)):'0x0');
+  return 'er-fog:'+((u&&u.name)||u||'u')+':'+((ch&&ch.name)||'c')+':'+((R&&R.key)||'G')+':'+shape;
+}
+// Old fog under the pre-shape key is dead weight in a ~5 MB quota that the fog itself is trying to fit
+// inside, so it is removed rather than orphaned. Runs once per slot, and only for keys that belong to
+// THIS user and character -- never a blind sweep of localStorage.
+function _fogDropLegacy(R){
+  try{
+    const ch=(typeof curChar==='function')?curChar():null;
+    const u=(typeof curUser!=='undefined')?curUser:null;
+    const stem='er-fog:'+((u&&u.name)||u||'u')+':'+((ch&&ch.name)||'c')+':'+((R&&R.key)||'G');
+    if(localStorage.getItem(stem)!==null) localStorage.removeItem(stem);
+  }catch(e){}
 }
 // Only the OVERWORLD's exploration is worth keeping: it is one persistent place you map over many
 // runs. A dungeon is a new layout every time, so remembering the last one's fog would uncover a
@@ -155,6 +194,7 @@ function fogInit(R){
   if(_fogUsed(R)){ _fogCtx.fillStyle=(R.dungeon?'#06050c':'#05050a'); _fogCtx.fillRect(0,0,_fogCv.width,_fogCv.height); }
   _fogKey=key;
   if(!_fogPersist(R)) return;
+  _fogDropLegacy(R);
   try{ const st=localStorage.getItem(_fogSlot(R));
     if(st){ const im=new Image();
       im.onload=()=>{ if(_fogCtx){ _fogCtx.globalCompositeOperation='copy';
@@ -200,7 +240,21 @@ function fogReveal(R,dt){
   _fogDirty=1;
   _fogSaveT-=dt||0.016;
   if(_fogDirty && _fogSaveT<=0){ _fogSaveT=6;      // throttled: a dataURL every frame would stutter
-    try{ localStorage.setItem(_fogSlot(R), _fogCv.toDataURL('image/png')); _fogDirty=0; }catch(e){}
+    // A BARE catch{} HERE IS HOW FOG PERSISTENCE DIES QUIETLY. Blow the ~5 MB origin quota and this
+    // throws, the catch eats it, and exploration silently stops being saved -- no error, no symptom,
+    // nothing to notice until a reload comes back to a black map. It still must not throw into the
+    // frame, so the failure is caught and REPORTED, once, with the size that did not fit.
+    try{ localStorage.setItem(_fogSlot(R), _fogCv.toDataURL('image/png')); _fogDirty=0; _fogWarned=0; }
+    catch(e){
+      if(!_fogWarned){ _fogWarned=1;
+        let kb=-1; try{ kb=Math.round(_fogCv.toDataURL('image/png').length/1024); }catch(_){}
+        const m='fog could not be saved ('+kb+' KB, '+_fogCv.width+'x'+_fogCv.height+') — '
+               +'exploration will not persist: '+(e&&e.name||e);
+        if(typeof console!=='undefined') console.warn(m);
+        if(typeof msg==='function') msg('MAP NOT SAVED','the fog of war is too large to store');
+      }
+      _fogSaveT=30;          // stop hammering a quota that is not going to change in six seconds
+    }
   }
 }
 function fogSeen(R,wx,wy){
@@ -211,9 +265,16 @@ function fogSeen(R,wx,wy){
   return _fogA[y*_fogAW+x] < 130;      // same threshold the readback used
 }
 
+// A CSS-PIXEL SIZE IS NOT A SIZE ON A PHONE. 148px is 11% of a 1280x720 desktop's width and 20% of
+// its height; on a 667x375 phone in landscape the same panel is 22% and 39% -- a fifth of the screen,
+// covering ground the player is walking into. The panel is bounded by the SHORT axis as well, so the
+// desktop keeps the size it was tuned at and a small screen gets a panel in proportion to itself.
+const MINI_MAX_FRAC = 0.30;       // of min(W,H)
 function miniRect(){
   const u=(typeof UIS!=='undefined')?UIS:1;
-  const sz=Math.round(MINI_BASE*u), pad=Math.round(MINI_PAD*u);
+  const short=Math.min((typeof W!=='undefined'?W:1280),(typeof H!=='undefined'?H:720));
+  const sz=Math.max(72,Math.round(Math.min(MINI_BASE*u, short*MINI_MAX_FRAC)));
+  const pad=Math.round(MINI_PAD*u);
   // the zoom buttons scale WITH the panel rather than off a fixed 26px, or shrinking the map
   // leaves two buttons nearly as wide as it is
   return {x:pad, y:pad, w:sz, h:sz, btn:Math.round(sz*0.125)};

@@ -1,11 +1,11 @@
 Continue work on EmberRealm (this repo: Setijinn/emberrealm) — a static-PWA pixel-art
 RPG, plain numbered JS files, no build step.
 
-Service worker code cache is at emberrealm-code-v554, art cache at
-emberrealm-art-v3. (There are TWO caches now, versioned separately -- CODE_CACHE
+Service worker code cache is at emberrealm-code-v565, art cache at
+emberrealm-art-v5. (There are TWO caches now, versioned separately -- CODE_CACHE
 bumps freely, ART_CACHE only when art moves. See the note at the top of sw.js for
-why. ART_CACHE has moved twice: the forge's 28 new files, and the three repainted
-ground atlases.)
+why. ART_CACHE has moved four times: the forge's 28 new files, the three repainted
+ground atlases, the twelve SD reagents, and the sprite sweep.)
 
 FIRST, READ THESE
   1. This file, all of it. It is current.
@@ -61,6 +61,91 @@ HARD RULES — these are not preferences
   thing inside it. The Emberwrought chest is the ONE exception and it is not a
   drop — it is a placed event object, and it looks like nothing else so it can
   never be mistaken for something a monster left.
+
+---------------------------------------------------------------------------
+THE HUD IS TUNED FOR A PHONE AS WELL AS A DESKTOP (v565, user: "make sure
+everything is tuned for both pc and mobile").
+Three things were broken on a phone in landscape and invisible at 1280x720,
+which is the only size any screenshot had ever been taken at:
+- THE ZONE PLAQUE WAS DRAWN UNDER THE BUTTON ROW. drawStatusBanner reserved the
+  right of the strip with `W - 240*us` -- a typed guess. The row is a flex row of
+  up to nine buttons that does not shrink with the screen: at 667px wide it
+  reaches x=125, so the plaque sat behind it with the zone name bleeding out
+  between two buttons. hudBounds() measures #hudTop instead (cached 400ms,
+  invalidated by resize), and a screen with no safe strip left falls back to the
+  compact one-line form placed BELOW the row rather than behind it.
+- THE MINIMAP WAS 39% OF THE SCREEN HEIGHT. MINI_BASE is 148 CSS px, which is 20%
+  of a 720-tall desktop and 39% of a 375-tall phone. miniRect now also bounds it
+  by MINI_MAX_FRAC (0.30) of the short axis: desktop unchanged, phone 112px.
+- THE BOSS TAGLINE RAN EDGE TO EDGE THROUGH THE MINIMAP. #msg had no width cap
+  and a fixed 24/14px, so a boss's description wrapped only at the viewport edge.
+  It has a max-width now, and under 470px tall it drops to 36% and shrinks.
+Also: a scroll in the satchel read "wrong class" (canEquip is false for every
+consumable, and that string is about equipment) and showed an empty stat block.
+It now reads "+2 SPD  trained 0/8", which is also the only warning before USE.
+- PANELS: the stable, the Vault and the forge all pin to the same 448x600 frame
+  art and each carried its own copy of `min(95vw,432px)` -- a phone's cap applied
+  to every screen, leaving a 432px column in a 1280px window with a third of its
+  own height unused. One :root --pinW now, raised to 620px. Nothing changes on a
+  phone (94vh binds there and always did); a desktop panel goes 432x578 ->
+  505x677. #invInner's padding is a percentage now, for the reason HANDOFF gives
+  about stretched frame art.
+- HARNESS: terrshot.py takes `size=WxH` and `touch=1` (headless Chrome always
+  reports pointer:fine, so every shot until now was pcmode); _shot.js can shoot
+  the satchel with a scroll selected; every tool uses fresh_profile() because a
+  reused profile serves the service worker's copy of the PREVIOUS edit; and
+  _parsecheck.html exists because the self-test cannot parse-check itself and its
+  failure mode is the single word "pending".
+
+---------------------------------------------------------------------------
+FOG AND THE MINIMAP NO LONGER SCALE WITH THE WORLD (v565).
+The resize to three islands would have broken fog SILENTLY, which is why this
+landed before it and not after.
+- miniTerrain's scale was `max(0.62, 760/max(w,h))`. The 760 is the intent; the
+  0.62 FLOOR overrode it above ~1225 tiles across. At 3600 wide the fog canvas
+  would have been 2232x1339 -- 3.0M cells, ~14.3 MB of RGBA on a phone -- and
+  fogReveal writes it to localStorage as a PNG every six seconds inside a bare
+  catch{}. Quota blows, the catch eats it, persistence stops with no symptom
+  until a reload comes back to a black map. It is a total-pixel budget now:
+  FOG_PX_BUDGET 360000, which is what today's overworld already produces.
+  MEASURED: 1160x720 -> 762x473 (360426 cells, 1.72 MB, 24 KB stored);
+  3600x2160 -> 775x465 (360375); 6000x4000 -> 735x490 (360150). Flat.
+- The fog KEY carries the room's shape, and the pre-shape key is DELETED rather
+  than orphaned in a quota the fog is trying to fit inside. Without it a
+  1160x720 fog PNG would be drawImage'd across the new canvas and uncover a
+  scaled ghost of somewhere else -- a map that looks explored and is not.
+- The setItem failure warns ONCE with the size that did not fit and backs off to
+  30s, instead of silently retrying every six seconds forever.
+- BC_RANGE=3000 is derived now, not typed: 0.65 of the closest lair pair, cached
+  per room. Its own comment recorded a 5103px measurement that had gone stale --
+  re-measured, the closest pair is 4622px, so the ratio reproduces the tuned
+  3000px (68 tiles) today and follows the world when it grows.
+- The self-test is 273 checks. The new ones assert the budget at three sizes,
+  that a bigger world still SPENDS it (a budget with no lower bound would render
+  a 9x world into the same pixels and call it fitted), that a poisoned pre-shape
+  key is deleted and not read, and that hudBounds is measuring rather than
+  falling back to its constant.
+
+---------------------------------------------------------------------------
+THE TILE GRID IS ONE Uint8Array, AND TWO WHOLE-MAP RASTERS ARE CHUNKED
+(v562-v564). Both were done while the world was still small enough to diff
+exhaustively, which was the point of the ordering.
+- R.cells is one flat Uint8Array per room: 5 low bits tile code, bits 5-6 island
+  id. Code 0 is reserved INVALID so a missed write is detectable. R.grid is
+  DELETED, not shimmed -- a subarray shim would have kept every `c === 'w'`
+  compiling and permanently false, and every `grid[ty][tx] = 'F'` coercing to 0,
+  across ~60 sites. Go through gAt/gCode/gSet/isleAt.
+  PROVEN BYTE-NEUTRAL: a whole-map fingerprint before and after matches exactly
+  (f60a9d2a). Four rooms disagreed at first over 'B', a spawn marker the build
+  sweep consumes, so it is absent from built rooms and present in raw maps.
+- zoneAt and _bandBlendMap rasterise 64x64 chunks on demand with an LRU bound,
+  replacing 3 x 8MB whole-map arrays. Both differentials are in the self-test:
+  all 835,200 tiles identical, chunked vs whole-map.
+- Territory aggregates come from a stride-2 pass (stride 4 drifted 1.009 tiles /
+  1.78%, over the bar; 2 gives 0.461 / 0.73%) and record a witness tile, which
+  made inClump() O(1) and deleted its full-map scan.
+- CAUGHT BY A PHOTOGRAPH, NOT BY 247 PASSING CHECKS: one leftover `zg` in
+  miniTerrain. The harness never paints a minimap. Take the picture.
 
 ---------------------------------------------------------------------------
 ALL NINE ASCENDED DUNGEONS ARE Lv50, AND THE RELIC GATE IS DERIVED (v561).
