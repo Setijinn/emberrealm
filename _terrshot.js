@@ -48,13 +48,25 @@
       curUser='_shot';
       play();                       // a real run, so every system is in the state it ships in
       devTeleport('G');             // the radial overworld
-      // STOP THE LIVE LOOP BEFORE DRIVING ANYTHING. loop() re-arms itself through rAF and keeps
-      // running update()+render() underneath the harness, so "place the player, step 30 frames,
-      // screenshot" was never the whole story: the live loop went on walking the hero into a
-      // portal AFTER the harness had returned, and three shots of the Hearth came back labelled
-      // as overworld provinces. No-oping rAF lets the current frame finish and never schedules
-      // another, so from here the only thing advancing the world is this file.
-      window.requestAnimationFrame=function(){ return 0; };
+      // FREEZE THE WORLD, NOT THE FRAMES. The live loop must not keep simulating underneath the
+      // harness -- it walked the hero into a portal AFTER the harness returned and three shots of
+      // the Hearth came back labelled as overworld provinces. The original fix was to no-op
+      // requestAnimationFrame, and it is why this tool produced a black picture for its whole life:
+      //
+      //   A 2D CANVAS ONLY REACHES THE SCREENSHOT THROUGH A COMPOSITED FRAME. Killing rAF kills
+      //   loop(), and with it every future frame, so `chrome --screenshot` captured a compositor
+      //   frame from BEFORE the harness drew. The canvas bitmap was correct the entire time --
+      //   getImageData at the centre read (60,64,86) while the PNG showed near-black, and
+      //   elementFromPoint confirmed nothing was covering it. The DOM label appeared because text
+      //   paints on its own path, which is exactly what made the failure look like a render bug.
+      //   tools/shot.py never had this problem because it never touched rAF.
+      //
+      // So: leave rAF alone and stub UPDATE instead. loop() keeps calling render() and keeps
+      // producing real frames; nothing advances the simulation. The harness drives the placement
+      // frames it needs through a private reference to the real one.
+      const _upd=(typeof update==='function')?update:null;
+      window.update=function(){};
+      const _step=(dt)=>{ if(_upd) _upd(dt); };
       const T=_territories(curRoom);
       const t=T[Math.max(0,Math.min(T.length-1,ZI))];
       // `?ox=&oy=` walk the sample point across the SAME province, in tiles. Standing still and
@@ -88,12 +100,13 @@
         if(Q.get('dens')==='all' && typeof openDen==='function'){
           const n=(typeof GBOSS!=='undefined')?GBOSS.length:0;
           for(let i=0;i<n;i++) openDen(i); }
-        // stand back from the gate so the whole doorway is in frame rather than under the hero
-        p={x:gt.x-Math.cos(gt.a)*70, y:gt.y-Math.sin(gt.a)*70};
+        // stand back from the gate so the whole doorway is in frame rather than under the hero.
+        // The camera centres on the player, so this offset is also how far off-centre the gate sits.
+        p={x:gt.x-Math.cos(gt.a)*150, y:gt.y-Math.sin(gt.a)*150};
       }
       player.x=p.x; player.y=p.y;
       const roomBefore=curRoom;
-      update(0.016);
+      _step(0.016);
       // re-check the room did not change under the placement -- crossing a boundary teleports the
       // player thousands of px and every frame after it is of somewhere else entirely
       if(curRoom!==roomBefore){ tag('ROOM CHANGED — placement rejected'); return; }
@@ -110,7 +123,7 @@
       // back showing the Hearth's cobbles while the numbers underneath them were reported as a
       // 167% improvement in terrain variation. A shot of the wrong room is worse than no shot.
       for(let i=0;i<30;i++){
-        update(0.016);
+        _step(0.016);
         if(curRoom!==roomBefore){ tag('ROOM CHANGED at settle frame '+i+' — placement rejected'); return; }
       }
       const band=grvBandAt(player.x/TILE, player.y/TILE);
@@ -120,34 +133,42 @@
       // trusting this to give it an empty screen.
       if(!HUD){ for(const id of ['hudTop','hudBot','hud','menuBtn','devBtn2','flasks','invBtn']){
           const e=document.getElementById(id); if(e) e.style.display='none'; } }
-      // resize() ends with `cv.width=...` and assigning a canvas width RESETS ITS BITMAP, while
-      // 01_constants.js queues resize() at load and again at +150/+600/+900ms to let mobile viewport
-      // metrics settle -- and this harness runs at load+900. So a settle timer wiping the frame we
-      // just painted was the obvious suspect. Stubbing it is harmless (the canvas is already at its
-      // final size) and it is kept for that reason, but MEASURED: it is NOT the cause. The canvas
-      // is still empty with this in place.
-      window.resize=function(){};
+      // render() here is for the frame-cost measurement below and to get one frame in immediately;
+      // the live loop is what actually keeps the composited frame current for the screenshot.
+      // NOTE: resize() ends with `cv.width=...`, which resets the bitmap, and 01_constants queues it
+      // at +150/+600/+900ms. That was a suspect and is NOT a problem while the loop runs, because
+      // the next frame repaints straight over it. Do not stub resize -- it also owns the portrait
+      // gate, and stubbing it was measured to fix nothing.
       render();
       // Frame cost, because every one of these ground passes is per-tile per-frame and the honest
       // way to know what a noise octave costs is to time it rather than to reason about it.
       const t0=performance.now(); for(let i=0;i<20;i++) render();
       const ms=(performance.now()-t0)/20;
-      // THE LABEL CARRIES DIAGNOSTICS, because a black canvas and a correctly-labelled black canvas
-      // look identical and mean completely different things. Buffer size is the first thing to check:
-      // resize() derives it from cv.clientWidth, so a canvas the browser has not laid out yet
-      // renders nothing at all while every number above still reads correctly.
+      // `?diag=1` ADDS THE FIELDS THAT FOUND THE BLANK-CANVAS BUG. Kept, opt-in, because a dead
+      // canvas and a correctly-labelled dead canvas are indistinguishable without them:
+      //   buf/css/W-H  drawing buffer vs laid-out element -- resize() derives one from the other,
+      //                so an unlaid-out canvas draws nothing while every name still reads right
+      //   set/terr     atlas naturalWidth and .complete, because drawAtlas silently returns false
+      //                unless BOTH hold. (_groundSet[b] is one Image, not a list -- reading .length
+      //                printed 0 for a perfectly good atlas and cost a detour.)
+      //   top          elementFromPoint at screen centre. Every overlay here is a translucent
+      //                near-black panel, so one left visible looks exactly like a dead canvas.
+      //   px           getImageData at the canvas centre -- THE decisive field. It read (60,64,86)
+      //                while the PNG was near-black, which proved the bitmap was correct and the
+      //                fault was that no composited frame ever reached the screenshot.
       const _cv=document.querySelector('canvas');
-      tag('z'+ZI+'  '+t.name+'   band '+band+'   Lv'+lv+'   render '+ms.toFixed(2)+'ms'
-        +'   buf '+(_cv?(_cv.width+'x'+_cv.height):'none')
-        +'   css '+(_cv?(_cv.clientWidth+'x'+_cv.clientHeight):'none')
-        +'   W/H '+(typeof W!=='undefined'?W+'/'+H:'?')
-        // _groundSet[b] is a single Image, not a list -- reading .length here printed 0 for a
-        // perfectly loaded atlas and sent me looking for a loader bug that did not exist.
-        +'   set '+((typeof _groundSet!=='undefined'&&_groundSet[band])?(_groundSet[band].naturalWidth+'w/'+_groundSet[band].complete):'none')
-        +'   terr '+((typeof _terrSet!=='undefined'&&_terrSet[band])?(_terrSet[band].naturalWidth+'w/'+_terrSet[band].complete):'none'));
-      // THIS HARNESS DOES NOT CURRENTLY PRODUCE A PICTURE OF THE GROUND -- see the note in
-      // HANDOFF.md. The label above is trustworthy; the canvas is not. Do not re-add a control blit
-      // here: one was tried and did not appear either, which is the whole point of the finding.
+      let _lab='z'+ZI+'  '+t.name+'   band '+band+'   Lv'+lv+'   render '+ms.toFixed(2)+'ms';
+      if(Q.get('diag')==='1'){
+        _lab+='   buf '+(_cv?(_cv.width+'x'+_cv.height):'none')
+          +'   css '+(_cv?(_cv.clientWidth+'x'+_cv.clientHeight):'none')
+          +'   W/H '+(typeof W!=='undefined'?W+'/'+H:'?')
+          +'   set '+((typeof _groundSet!=='undefined'&&_groundSet[band])?(_groundSet[band].naturalWidth+'w/'+_groundSet[band].complete):'none')
+          +'   terr '+((typeof _terrSet!=='undefined'&&_terrSet[band])?(_terrSet[band].naturalWidth+'w/'+_terrSet[band].complete):'none')
+          +'   top '+(function(){ try{ const e=document.elementFromPoint((_cv?_cv.clientWidth:1264)/2,
+                (_cv?_cv.clientHeight:625)/2); return e?(e.tagName+'#'+(e.id||'-')):'null'; }catch(e){ return 'err'; } })()
+          +'   px '+(function(){ try{ const d=ctx.getImageData(Math.round((_cv?_cv.width:0)/2),
+                Math.round((_cv?_cv.height:0)/2),1,1).data; return d[0]+','+d[1]+','+d[2]; }catch(e){ return 'err'; } })(); }
+      tag(_lab);
     }catch(e){
       tag('SHOT THREW: '+(e&&e.message));
     }

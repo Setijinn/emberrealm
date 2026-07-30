@@ -68,20 +68,23 @@ project *is*, you are in the wrong file.
   otherwise walked the hero into a portal *after* the harness returned and three shots of the Hearth
   came back labelled as other zones. `?lair=N&dens=all` stands at a boss's lair gate instead of the
   province centre, which is the only way to frame the arena staging.
-- **BUT terrshot's CANVAS IS CURRENTLY A LIAR, AND ITS LABEL IS NOT.** Every shot comes back as a
-  flat `#0b0a10` field — which is `render()`'s own background fill, so render *is* running — with a
-  correct label over the top. Ruled out by measurement, not by argument: the canvas is sized
-  (`buf 1264x625`, matching `W/H`), the ground atlases are loaded AND decoded (`set 128w/true`,
-  `terr 128w/true`), the harness does not throw (it reaches its final `tag()`), and `resize()`
-  wiping the bitmap afterwards is **not** it — stubbing `resize` changes nothing. A raw
-  `ctx.drawImage` control blit with an identity transform, straight after `render()`, **also does not
-  appear**, which is the finding that matters: the failure is not in the tile path, it is that
-  drawing to `ctx` at that moment does not reach the captured frame at all.
-  `render 0.00ms` is a red herring — `--virtual-time-budget` freezes `performance.now()`.
-  Consequences: **do not use a terrshot image as evidence** (the label is fine), and any stage whose
-  verification says "compare terrshot before/after" needs this fixed first. `_terraudit.js` through
-  `tools/audit.py` still reports real numbers, so measurements are unaffected; `tools/shot.py` for
-  DOM panels is unaffected and its screenshots are trustworthy.
+- **A CANVAS ONLY REACHES A SCREENSHOT THROUGH A COMPOSITED FRAME — SO NEVER KILL `requestAnimationFrame`
+  IN A SHOT RIG.** This is the trap that made `terrshot.py` return a flat near-black picture for its
+  entire life, and it is the most expensive kind of bug: everything downstream reported success.
+  The rig stubbed rAF to stop the live loop walking the hero somewhere else mid-shot, which also
+  stopped `loop()` — and with no further frames, `chrome --screenshot` captured a compositor frame
+  from *before* the harness drew. The canvas bitmap was correct the whole time: `getImageData` at the
+  centre read `(60,64,86)` while the PNG was `#0b0a10`, and `elementFromPoint` confirmed
+  `CANVAS#cv` was on top with nothing covering it. The DOM label appeared because text paints on its
+  own path, which is exactly what made it look like a renderer fault.
+  **The fix is to freeze the WORLD, not the FRAMES**: stub `update` (keeping a private reference for
+  the placement frames the rig drives itself) and leave rAF alone, so `loop()` keeps rendering and
+  compositing while the simulation stands still. `tools/shot.py` never had this bug because it never
+  touched rAF. Also ruled out by measurement and worth not re-testing: canvas size, atlas load and
+  decode (`drawAtlas` returns false unless `.complete` AND `.naturalWidth`), and `resize()` wiping
+  the bitmap via `cv.width=` (stubbing it fixed nothing). `render 0.00ms` is a red herring —
+  `--virtual-time-budget` freezes `performance.now()`. Run with `?diag=1` to get all of those fields
+  back in the label.
 - Windows stdout is cp1252 and **cannot encode the `★` in a relic name**, so any tool that prints
   test output must `sys.stdout.reconfigure(encoding="utf-8")` or it dies on the report while every
   test passes.
