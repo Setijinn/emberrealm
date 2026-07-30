@@ -129,13 +129,43 @@ function rollScrollStat(){ const ch=curChar();
 // deliberately cut from 12 to 6 to set that budget -- "permanent training should polish a finished
 // character, not build a second one on top". Halving the DROP RATE doubles the grind and leaves
 // the ceiling exactly where that decision put it.
-function scrollDropFor(e){ if(!e) return null; const lv=e.lv||1; if(lv<22) return null;
+// SCROLLS ARE AN ELITE HUNT NOW (user, 2026-07-29): "elites at good rates, bosses drop several more
+// and trash drops none ever."
+//
+//   TRASH        never. Not a low rate -- zero, at every level, elite or not.
+//   ELITE        SCROLL_P_ELITE, the reliable source. An elite is ~1 spawn in 13 (ELITE_P) and reads
+//                as a gold ring on the ground, so this makes "go and find the gold one" the activity.
+//   BOSS         SCROLL_P_BOSS to pay at all, and then SEVERAL at once, so a boss is a windfall
+//                rather than a better trash kill.
+//
+// Gated on SCROLL_LV rather than the old lv<22, because the thing being gated is the Lv40-50 stretch
+// the user named, not "past the starter island".
+//
+// WHY THE RATE AND NOT THE CAPS. Changing how long a stat takes to max can be done two ways and they
+// are not equivalent: raising trainCap lengthens the grind AND raises the permanent power ceiling,
+// because every scroll invested is a flat TRAIN_STEP forever. TRAIN_BASE was cut from 12 to 6 to set
+// that budget -- "permanent training should polish a finished character, not build a second one on
+// top". Moving the DROP RATE leaves the ceiling exactly where that decision put it.
+const SCROLL_LV=40;             // the Lv40-50 stretch, and nothing below it
+const SCROLL_P_ELITE=0.20;      // per elite kill
+const SCROLL_P_BOSS=0.60;       // per boss kill, and it pays SCROLL_BOSS_N when it does
+const SCROLL_BOSS_N=[2,4];      // inclusive range: "several more"
+function scrollDropFor(e){
+  if(!e || e.node) return null;
+  const lv=e.lv||1; if(lv<SCROLL_LV) return null;
   const F=(typeof player!=='undefined'&&player.fortune)||0;
-  // HALVED (user: endgame grind ~2x). Rate, not caps -- see the note above scrollDropFor.
-  let ch = (e.type==='B') ? 0.05+Math.min(0.17,(lv-20)*0.0035)
-                          : 0.005+Math.min(0.010,(lv-20)*0.00025);
-  ch*=1+F*0.006;
-  return (Math.random()<ch) ? {k:'scroll',st:rollScrollStat()} : null; }
+  const boss=(e.type==='B');
+  // TRASH IS ZERO AND IS RETURNED BEFORE ANY ROLL, so no future edit to the maths can leak one back
+  // in. An elite is still a chaser or a shooter, so this order matters: elite is checked first.
+  if(!boss && !e.elite) return null;
+  const p=(boss?SCROLL_P_BOSS:SCROLL_P_ELITE)*(1+F*0.006);
+  if(Math.random()>=p) return null;
+  if(!boss) return {k:'scroll', st:rollScrollStat()};
+  // a boss pays several, and each picks its own stat -- one boss handing over four of the same scroll
+  // would be worse than four separate drops, since a stat stops taking them at its cap
+  const n=SCROLL_BOSS_N[0]+Math.floor(Math.random()*(SCROLL_BOSS_N[1]-SCROLL_BOSS_N[0]+1));
+  const out=[]; for(let i=0;i<n;i++) out.push({k:'scroll', st:rollScrollStat()});
+  return out; }
 
 // ------------------------------- Attributes screen -------------------------------
 function updateStatsBtn(){ const b=document.getElementById('statsBtn'); if(!b) return;

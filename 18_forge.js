@@ -171,7 +171,12 @@ const SD_MAT_KEY = {
   const C=(typeof SD_COL!=='undefined')?SD_COL:'#ff9bf0';
   const rows=[
     ['sd_billet', 'Dreamsteel Billet',  '⬛', 'a bar of it, already the length of a blade'],
-    ['sd_tang',   'Silent Tang',         '⌁', 'the part of a knife nobody is meant to see'],
+    // "Silent Tang" was the first name and it had to change for an ART reason, which is worth
+    // recording: a tang IS sword-shaped, so PixelLab returned a complete sword with a hilt and
+    // crossguard twice, through negatives stated three ways. HANDOFF's rule is to describe anatomy
+    // rather than the name -- and the real fix was to change the SUBJECT, not the prompt. A fang has
+    // a silhouette nothing can confuse for a sword and still obviously means "dagger".
+    ['sd_tang',   'Whisper Fang',        '⌁', 'pulled from something that bit first and asked later'],
     ['sd_stave',  'Dreaming Stave',      '⌒', 'still bending toward something it remembers'],
     ['sd_spring', 'Riftwound Spring',    '⌇', 'wound past where steel should have given up'],
     ['sd_bough',  'Somnial Bough',       '⑂', 'cut from a tree that was never planted'],

@@ -1106,8 +1106,12 @@ function bagBound(lb){ return !!bagBandRec(lb).bound; }
 // bag UI existed but most players never saw it.
 // An EGG is deliberately NOT junk: it is the rarest thing a normal kill can pay out, and it
 // deserves the panel, the name and the picture rather than vanishing into a counter as you jog by.
+// A SCROLL IS NO LONGER JUNK (user, 2026-07-29). It used to dissolve into a per-stat counter the
+// moment you walked over the sack, so a stat scroll -- the thing that raises a permanent cap -- was
+// vacuumed up in silence like a coin. It is a carried item you choose to consume now, so it gets the
+// panel, the name and the picture, for exactly the reason the egg does.
 function bagAuto(lb){ const its=bagItems(lb); if(!its.length) return true;
- const junk=it=>it&&(it.k==='coin'||it.k==='scroll');   // 'pot' dropped: potions no longer spawn
+ const junk=it=>it&&it.k==='coin';   // 'pot' dropped: potions no longer spawn
  return its.length===1 && junk(its[0]); }
 
 function bagAt(e,items){
@@ -1170,10 +1174,16 @@ function awardItem(it,x,y){
   if(typeof msg==='function') msg('★ '+R.n, _S?('a piece of '+_S.n):'a relic');
     texts.push({x:px,y:py-14,txt:'★ '+R.n,col:tierCol(RELIC_T),life:2.2});
     /* falls through: a relic goes into the satchel like any other item */ }
-  if(it.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,it.st,1);
+  // A SCROLL IS CARRIED NOW, NOT BANKED ON PICKUP (user, 2026-07-29). This branch used to call
+  // grantScroll and `return true`, so the item never reached the satchel at all: it dissolved into
+  // rpg.scrolls[st] before the satchel-full check below, and the player never held the thing.
+  // It falls through to the ordinary satchel push instead, so it takes a slot, shows its name and
+  // picture, and waits for you to decide -- which is the whole point of making it a choice.
+  // rpg.scrolls still exists and is still the bank; USE is what fills it, via applyScroll.
+  if(it.k==='scroll'){
     const col=(typeof STAT_META!=='undefined'&&STAT_META[it.st])?STAT_META[it.st].col:'#e6c76a';
     texts.push({x:px,y:py-14,txt:'📜 '+((typeof scrollName==='function')?scrollName(it.st):'Scroll'),col:col,life:1.5});
-    return true; }
+    /* falls through: a scroll goes into the satchel like any other item */ }
   if(ch.inv.length>=20){ texts.push({x:player.x,y:player.y-30,txt:'satchel full',col:'#c04a3d',life:1.1}); return false; }
   ch.inv.push(it); texts.push({x:px,y:py-14,txt:itemName(it),col:itemRarCol(it),life:1.3}); return true;
 }
@@ -1342,7 +1352,11 @@ function rollLoot(e){
  // the coin and the scroll ride in the same public sack as the gear rather than each getting one
  const extra=[];
  if(Math.random() < (e.type==='B'?0.10:0.006)) extra.push({k:'coin'});
- if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e); if(sc) extra.push(sc); }  // max-stat scrolls
+ // max-stat scrolls. A BOSS PAYS SEVERAL, so this returns an item OR an array -- pushing the array
+ // itself would have put one nested object in the sack and every reader would have seen a single
+ // item with no `k`, which draws as nothing and takes as nothing.
+ if(typeof scrollDropFor==='function'){ const sc=scrollDropFor(e);
+   if(Array.isArray(sc)){ for(const s of sc) extra.push(s); } else if(sc) extra.push(sc); }
  if(typeof petOnKill==='function') petOnKill(e);         // incubation ticks + active pet gains XP per kill
  // CREATURES GET THEIR OWN SACK (user, 2026-07-27), and share it with each other. An egg used to
  // ride with the gear; it goes in the carrier now, together with any mount, so the two things whose
@@ -1802,8 +1816,57 @@ function paintInv(){ const ch=curChar(); if(!ch||!rpg)return;
   $s('invSel').innerHTML=html;
  } else $s('invSel').textContent='Tap an item';
  $s('invEquip').style.display = (it&&canEquip(it,ch)) ? '' : 'none';
+ // USE is shown only for something this hero can actually consume RIGHT NOW. A scroll whose stat is
+ // already at its cap is deliberately still shown -- pressing it explains why it refused, which is
+ // more use than a button that silently is not there.
+ const _u=$s('invUse'); if(_u) _u.style.display = (it&&itemUsable(it)) ? '' : 'none';
  $s('invDrop').style.display = it? '':'none';
 }
+// WHAT COUNTS AS CONSUMABLE FROM THE SATCHEL. A predicate rather than a list at the call site, so the
+// second consumable is one line here -- the same shape as isCreatureItem. Today it is scrolls alone:
+// every other consumable in this game lives in a counter somewhere else (flasks on the HUD, food in
+// the pet panel, materials in the pouch), which is why the satchel never had a USE button before.
+function itemUsable(it){ return !!it && it.k==='scroll'; }
+// Consume one from the satchel. Returns {ok, why} so the caller can say what happened; a refusal must
+// never eat the item, which is the whole difference between this and the old auto-bank on pickup.
+function useItem(idx){
+  const ch=curChar(); if(!ch||!ch.inv) return {ok:false, why:'nothing to use'};
+  const it=ch.inv[idx]; if(!itemUsable(it)) return {ok:false, why:'that is not something you can use'};
+  if(it.k==='scroll'){
+    if(typeof trainCap!=='function' || typeof applyScroll!=='function')
+      return {ok:false, why:'training is unavailable'};
+    const cap=trainCap(ch.cls,it.st,rpg.prestige||0);
+    if(!rpg.train) { if(typeof initTrain==='function') initTrain(rpg); }
+    const inv=(rpg.train&&rpg.train[it.st])||0;
+    // AT THE CAP IT REFUSES AND KEEPS THE SCROLL. It must NOT quietly file it to the Vault registry:
+    // the registry is for the BANK (rpg.scrolls), and silently teleporting a carried item into
+    // account storage is exactly the kind of invisible move this whole change exists to undo.
+    if(inv>=cap) return {ok:false, why:(typeof STAT_META!=='undefined'&&STAT_META[it.st]?STAT_META[it.st].n:it.st)
+      +' is already at this hero’s cap ('+inv+'/'+cap+')'};
+    // grantScroll then applyScroll: the bank is still the mechanism that raises a stat, and going
+    // through it means the cap logic, the recalc and the save all stay in one place.
+    if(typeof grantScroll==='function') grantScroll(rpg,it.st,1);
+    const got=applyScroll(rpg,it.st,1);
+    if(!got){ if(rpg.scrolls) rpg.scrolls[it.st]=Math.max(0,(rpg.scrolls[it.st]||0)-1);
+      return {ok:false, why:'that stat would not take it'}; }
+    ch.inv.splice(idx,1);
+    if(typeof saveRPG==='function') saveRPG();
+    return {ok:true, why:(typeof STAT_META!=='undefined'&&STAT_META[it.st]?STAT_META[it.st].n:it.st)
+      +' '+((rpg.train[it.st])||0)+'/'+cap};
+  }
+  return {ok:false, why:'nothing happened'};
+}
+if($s('invUse')) $s('invUse').addEventListener('click',function(){
+  const ch=curChar(); if(!ch) return;
+  const it=ch.inv[invSelIdx]; if(!it) return;
+  const nm=itemName(it), r=useItem(invSelIdx);
+  if(r.ok){ invSelIdx=-1; navigator.vibrate&&navigator.vibrate(12);
+    msg(nm,r.why);
+    if(typeof recalcStats==='function') recalcStats();
+    if(typeof hudRPG==='function') hudRPG();
+    if(typeof updateStatsBtn==='function') updateStatsBtn(); }
+  else { navigator.vibrate&&navigator.vibrate(20); msg('NOT YET',r.why); }
+  paintInv(); });
 $s('invBtn').addEventListener('click',openInv);
 if($s('coopBtn')) $s('coopBtn').addEventListener('click',function(){ if(typeof openCoop==='function') openCoop(); });
 if($s('coopX')) $s('coopX').addEventListener('click',function(){ $s('coopScr').style.display='none'; });

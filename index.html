@@ -364,6 +364,11 @@
    <div class="mnote" id="invSel" style="min-height:24px;color:#d8d2c8;">Tap an item</div>
    <div id="invActs">
     <button class="mbtn dev" id="invEquip">Equip</button>
+    <!-- USE is for a CONSUMABLE in the satchel, which until 2026-07-29 nothing was: every consumable
+         in this game lived in a counter somewhere else (flasks on the HUD, food in the pet panel,
+         materials in the pouch) and the satchel held only gear. A stat scroll is the first one you
+         carry and choose, so this is the first third button these actions have ever had. -->
+    <button class="mbtn dev" id="invUse">Use</button>
     <!-- no Sell: gold is gone, nothing buys items back, and the button did nothing but destroy
          what you tapped it on -- a second Discard wearing a word that promised payment -->
     <button class="mbtn dev" id="invDrop">Discard</button>

@@ -536,6 +536,78 @@
       document.getElementById('forgeScr').style.display='none';
     }
 
+    // ---------- 10c. SCROLLS ARE CARRIED, AND CHOSEN ----------
+    // "Elites at good rates, bosses drop several more and trash drops none ever" (user, 2026-07-29),
+    // and the scroll became an item you hold instead of a counter you never see.
+    note('');
+    note('== stat scrolls ==');
+    if(typeof scrollDropFor==='function'){
+      const _room2=curRoom; curRoom=null;
+      const rate=(e,n)=>{ let hits=0, items=0;
+        for(let i=0;i<n;i++){ const r=scrollDropFor(e);
+          if(!r) continue; hits++; items+=Array.isArray(r)?r.length:1; }
+        return {p:hits/n, per:hits?items/hits:0}; };
+      // TRASH IS EXACTLY ZERO, at the top of the level range and with Fortune irrelevant. Not "low".
+      const trash=rate({type:'c',lv:50},20000);
+      ok('trash never drops a scroll', trash.p===0, (trash.p*100).toFixed(3)+'%');
+      const shooter=rate({type:'s',lv:50},20000);
+      ok('nor does a shooter', shooter.p===0, (shooter.p*100).toFixed(3)+'%');
+      const elite=rate({type:'c',lv:50,elite:1},20000);
+      ok('an elite pays at a good rate', elite.p>0.15&&elite.p<0.26, (elite.p*100).toFixed(1)+'%');
+      ok('and pays exactly one', Math.abs(elite.per-1)<0.001, elite.per.toFixed(2));
+      const boss=rate({type:'B',lv:50},20000);
+      ok('a boss pays often', boss.p>0.5, (boss.p*100).toFixed(1)+'%');
+      ok('and pays SEVERAL when it does', boss.per>1.9&&boss.per<4.1, boss.per.toFixed(2)+' per drop');
+      // the level gate is the Lv40-50 stretch, not "past the starter island"
+      ok('nothing below Lv40 pays', rate({type:'B',lv:39},4000).p===0);
+      ok('and a Lv40 boss does', rate({type:'B',lv:40},4000).p>0);
+      // a boss's several must not all be the same stat, or a capped stat wastes the whole windfall
+      let multi=0;
+      for(let i=0;i<400;i++){ const r=scrollDropFor({type:'B',lv:50});
+        if(Array.isArray(r)&&r.length>1){ const s={}; for(const x of r) s[x.st]=1;
+          if(Object.keys(s).length>1) multi++; } }
+      ok('a boss drop spreads across stats', multi>0, multi+'/400 had two or more distinct stats');
+      curRoom=_room2;
+    } else ok('scrollDropFor exists', false);
+    // A SCROLL IS NO LONGER JUNK: it must open the sack rather than being vacuumed up on walk-over.
+    if(typeof bagAuto==='function')
+      ok('a lone scroll sack is not auto-collected',
+         !bagAuto({items:[{k:'scroll',st:'atk'}]}));
+    if(typeof bagAuto==='function')
+      ok('a lone coin sack still is', bagAuto({items:[{k:'coin',t:0}]}));
+    // ---- carried, and consumed by choice ----
+    if(typeof itemUsable==='function' && typeof useItem==='function'){
+      ok('a scroll is usable', itemUsable({k:'scroll',st:'atk'}));
+      ok('gear is not', !itemUsable(mkItem('wpn',5,0,'knight')));
+      const ch2=curChar();
+      if(ch2){
+        if(typeof initTrain==='function') initTrain(rpg);
+        // pick a stat with room left, so the happy path is actually reachable
+        let st=null;
+        for(const s of (typeof SCROLL_STATS!=='undefined'?SCROLL_STATS:['atk']))
+          if(((rpg.train&&rpg.train[s])||0) < trainCap(ch2.cls,s,rpg.prestige||0)){ st=s; break; }
+        if(st){
+          const was=(rpg.train[st]||0), n0=ch2.inv.length;
+          ch2.inv.push({k:'scroll',st:st});
+          const r=useItem(ch2.inv.length-1);
+          ok('using a scroll raises its stat', r.ok && rpg.train[st]===was+1,
+             r.ok?(was+' -> '+rpg.train[st]):r.why);
+          ok('and consumes exactly the one item', ch2.inv.length===n0, 'inv '+n0+' -> '+ch2.inv.length);
+          // AT THE CAP IT REFUSES AND KEEPS THE SCROLL. It must not silently file it to the Vault.
+          const cap=trainCap(ch2.cls,st,rpg.prestige||0);
+          rpg.train[st]=cap;
+          ch2.inv.push({k:'scroll',st:st});
+          const idx2=ch2.inv.length-1, n1=ch2.inv.length;
+          const r2=useItem(idx2);
+          ok('a capped stat refuses', !r2.ok, r2.why);
+          ok('and the scroll is still in the satchel', ch2.inv.length===n1 && ch2.inv[idx2]
+             && ch2.inv[idx2].k==='scroll');
+          rpg.train[st]=was;
+          ch2.inv.splice(idx2,1);
+        } else ok('a stat with room to train exists', false);
+      }
+    } else ok('itemUsable/useItem exist', false);
+
     // ---------- 11. DENS THAT STAY OPEN ----------
     // A dungeon used to be reachable only through a 45-second portal at a corpse. Beating a boss's
     // overworld form now opens its lair gate for good. These assertions exist because the failure

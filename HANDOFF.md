@@ -645,6 +645,27 @@ alone:
   field on the wire is **2 bits** and `LOOT_BANDS` has exactly four rows. A fifth would silently
   alias to band 0 on an older peer.
 
+### Stat scrolls — carried, and chosen (`16_maxstats.js`)
+**A SCROLL IS AN ITEM YOU HOLD NOW** (user, 2026-07-29). It used to dissolve into `rpg.scrolls[st]` the
+instant you walked over the sack — `awardItem` called `grantScroll` and returned before the satchel
+push, and `bagAuto` classed it as **junk** alongside coins, so the sack never even opened. The thing
+that raises a permanent stat cap was vacuumed up in silence.
+- It falls through to the ordinary satchel push, takes a slot, and shows its name and picture.
+- **`invUse` is the first third button `#invActs` has ever had.** Nothing in the satchel was ever
+  consumable before: every other consumable in this game lives in a counter somewhere else — flasks on
+  the HUD, food in the pet panel, materials in the pouch. `itemUsable(it)` is the predicate, kept as a
+  predicate so the second consumable is one line.
+- **At the cap it REFUSES and keeps the scroll.** It must not quietly file it to the Vault registry:
+  the registry is for the *bank* (`rpg.scrolls`), and silently teleporting a carried item into account
+  storage is the exact invisible move this change exists to undo. `useItem` returns `{ok, why}` so the
+  button can say why.
+- **The rates: trash never, elites well, bosses several.** `SCROLL_LV` (40) gates the Lv40-50 stretch
+  the user named rather than "past the starter island". Trash returns `null` **before any roll**, so no
+  later edit to the maths can leak one back in. A boss returns an ARRAY, and each entry rolls its own
+  stat — four of the same scroll would be worse than four drops, because a stat stops taking them at
+  its cap. `rollLoot` spreads that array; pushing it whole would put one nested object in the sack that
+  draws as nothing and takes as nothing.
+
 ### The Vault (`17j_vault.js`) and the Scroll Registry
 Account-wide storage reached from the strongbox in the VAULT room. 60 gear slots paged 20 at a
 time, plus a SCROLLS tab holding surplus stat scrolls as a per-stat tally. `applyScroll`
