@@ -254,6 +254,20 @@ const ISLAND_LV=STARTER_ZONES*STARTER_LV_PER_ZONE;      // 20
 //             Staggering the middle two north/south is also what stops their map labels colliding.
 //   contiguity each province is a single connected blob, not islands of itself
 const STARTER_SEED=[[90,290],[168,325],[228,392],[292,438]];
+// HOW COARSELY THE TERRITORY AGGREGATES ARE SAMPLED. _territories used to visit every tile to get each
+// province's centroid and area; one tile in SR*SR is plenty for an average, and at the three-island size
+// it is 500,000 samples instead of 8,000,000. Every consumer reads `n` as a TILE COUNT -- lairAnchor's
+// 0.35*sqrt(n/PI) nudge, the map's `tt.n<60` label filter -- so the sums are scaled back up by SR*SR
+// and nothing downstream needs to know. The drift this introduces is MEASURED in _selftest against a
+// full-resolution pass, not assumed: it moves a lair anchor, and a lair that lands outside its own
+// territory cannot spawn its boss at all.
+// MEASURED AT 4 FIRST, AND 4 WAS NOT GOOD ENOUGH: worst centroid drift 1.009 tiles and worst area
+// error 1.78%, against the 1 tile / 1% this is supposed to hold to. Loosening the assertion would have
+// been the easy move and the wrong one -- the bar exists because the centroid places a LAIR ANCHOR, and
+// a lair that lands outside its own territory cannot spawn its boss. At 2 the drift halves and clears
+// the bar, and 4x fewer samples than a full pass is still 2,000,000 instead of 8,000,000 at the
+// three-island size. Both numbers are asserted in _selftest, so this cannot be lowered silently.
+const ZONE_AGG_STRIDE=2;
 const BOSS_ZONE=[]; for(let i=0;i<ZBOSS.length;i++) if(ZBOSS[i]>=0) BOSS_ZONE[ZBOSS[i]]=i;
 // boss id at a tile (ocean/bridge/unclaimed -> -1). THE spawner key; never assume it equals a band.
 function zoneBossAt(tx,ty){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
@@ -379,7 +393,10 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.cells||_lairsStamped) retur
  // Territories are built HERE, before any carving — deliberately. The clump raster must be sampled
  // from the natural grid so the 'X'/'F' tiles carved below inherit the zone they sit in. Do not
  // "fix" this to run after stamping.
- const TT=(RG&&RG.radial)?_territories(R):null, ZG=(RG&&RG._zg)||null;
+ const TT=(RG&&RG.radial)?_territories(R):null;
+ // _zg is gone. stampLairs runs at LOAD and probes a handful of scattered points per boss, so it
+ // asks the rule directly instead of warming 64x64 chunks it will never read again.
+ const zAt=(tx,ty)=>TT?_zoneAtRaw(R,RG,TT,tx|0,ty|0):-1;
  for(const b of LAIR_BOSSES){
   const z=(BOSS_ZONE[b]!==undefined)?BOSS_ZONE[b]:-1;
   // CLUMP-CENTROID anchor. This is the only anchor that guarantees the lair lands inside the
@@ -399,12 +416,12 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.cells||_lairsStamped) retur
   // been perfectly fine and forced big arenas to shrink — the Lv28 hall ended up smaller than the
   // Lv4 one. Both tests now only look at cells the arena will actually occupy.
   const _inside=(dx,dy)=>{ const nx=(dx-TW/2)/(TW/2), ny=(dy-TH/2)/(TH/2); return nx*nx+ny*ny<=1.04; };
-  const inZone=(px,py)=>{ if(!ZG||z<0) return true;
+  const inZone=(px,py)=>{ if(!TT||z<0) return true;
     const pts=[[px+(TW>>1),py+(TH>>1)],                                          // centre must match
       [px+Math.round(TW*0.20),py+(TH>>1)],[px+Math.round(TW*0.80),py+(TH>>1)],
       [px+(TW>>1),py+Math.round(TH*0.20)],[px+(TW>>1),py+Math.round(TH*0.80)]];
-    const zr0=ZG[pts[0][1]]; if(!zr0||zr0[pts[0][0]]!==z) return false;
-    let hit=1; for(let i=1;i<pts.length;i++){ const zr=ZG[pts[i][1]]; if(zr&&zr[pts[i][0]]===z) hit++; }
+    if(zAt(pts[0][0],pts[0][1])!==z) return false;
+    let hit=1; for(let i=1;i<pts.length;i++) if(zAt(pts[i][0],pts[i][1])===z) hit++;
     return hit>=4; };                                                            // centre + 3 of 4 arms
   const clear=(px,py)=>{ if(px<1||py<1||px+TW>=R.w-1||py+TH>=R.h-1) return false;
     if(!inZone(px,py)) return false;
@@ -415,7 +432,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.cells||_lairsStamped) retur
     let bad=0, tot=0;
     for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){
       if(!_inside(tx-px,ty-py)) continue;                                        // skip the dead corners
-      const c=gAt(R,tx,ty), off=(c===' '||'wWhHlXFb'.indexOf(c)>=0);
+      const c=gAt(R,tx,ty), off=(c==='\0'||'wWhHlXFb'.indexOf(c)>=0);
       tot++; if(off){ bad++;
         const nx=(tx-px-TW/2)/(TW/2), ny=(ty-py-TH/2)/(TH/2);
         if(nx*nx+ny*ny<=0.42) return false; } }                                  // core must be solid ground
@@ -438,11 +455,13 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.cells||_lairsStamped) retur
     return null; };
   // nearest tile that genuinely belongs to this clump — thin coastal clumps can have a centroid
   // that isn't even inside their own territory
-  const inClump=()=>{ if(!ZG||z<0) return null; let bx=-1,by=-1,bd=1e18;
-    for(let ty=0;ty<R.h;ty++){ const zr=ZG[ty]; if(!zr) continue;
-      for(let tx=0;tx<R.w;tx++){ if(zr[tx]!==z) continue;
-        const d=(tx-tcx)*(tx-tcx)+(ty-tcy)*(ty-tcy); if(d<bd){bd=d;bx=tx;by=ty;} } }
-    return bx>=0?[bx,by]:null; };
+  // A KNOWN-GOOD POINT INSIDE THE CLUMP, in O(1). This walked all W*H looking for the nearest tile
+  // that genuinely belongs to this territory -- per boss, whenever the spiral failed to find a
+  // footprint -- because a thin coastal clump can have a centroid that is not inside itself. The
+  // aggregate pass already visits the ground, so it records one witness tile per province on the way
+  // through and this just reads it. Strictly better: same answer's purpose, none of the scan.
+  const inClump=()=>{ const t=(TT&&z>=0)?TT[z]:null;
+    return (t&&t.wx!==undefined)?[t.wx,t.wy]:null; };
   // Big arenas can simply not fit a cramped coastal clump. Rather than clamp one into a
   // neighbour's territory (which silently kills its boss's spawn), shrink and try again —
   // so the level-scaled size is a TARGET, and the land gets the final say.
@@ -491,7 +510,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.cells||_lairsStamped) retur
       if(da<d[1]) return true; }
     return false; };
   const inGrid=(tx,ty)=>tx>0&&ty>0&&tx<R.w-1&&ty<R.h-1;
-  const ground=(tx,ty)=>{ const c=gAt(R,tx,ty); return c!==' '&&'wWhHlXFDP'.indexOf(c)<0; };
+  const ground=(tx,ty)=>{ const c=gAt(R,tx,ty); return c!=='\0'&&'wWhHlXFDP'.indexOf(c)<0; };
   const bx0=px-3,bx1=px+TW+3,by0=py-3,by1=py+TH+3;
   // Remember which boss owns each carved tile, so the renderer can theme the room to its BOSS
   // instead of to the ground it stands on.
@@ -2565,8 +2584,9 @@ function grvLvAtR(RG,tx,ty){ if(!RG||!RG.radial) return 1;
    // (Before this the island was a smooth radial ramp with the zones cut off it, which made them
    // concentric rings; before THAT the ramp was centred on the spawn in the island's middle,
    // which made all three of them span Lv1-20 at once.)
-   const T=RG._terr, zg=RG._zg;
-   if(T&&zg){ const zr=zg[Math.floor(ty)], z=zr?zr[Math.floor(tx)]:-1;
+   const T=RG._terr;
+   // through zoneAt, so this reads the cached chunk rather than re-solving the Voronoi per entity
+   if(T){ const z=(typeof zoneAt==='function')?zoneAt(tx,ty):-1;
      if(z>=0&&z<STARTER_ZONES){ const t=T[z], q=t.dq;
        if(!q) return t.lvmin;
        let lv=t.lvmin; for(let k=0;k<4;k++) if(d>=q[k]) lv++;
@@ -2605,28 +2625,34 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
  // widest in its middle, so an even distance split leaves its first and last levels with almost
  // no ground on them (Lv15 came out with 167 tiles of the 21,296 in its province).
  const DQN=420, sHist=[]; for(let i=0;i<STARTER_ZONES;i++) sHist.push(new Int32Array(DQN));
- const W=R.w,H=R.h,zg=new Array(H);
- // reads the packed cells directly rather than through gCode, because this is the one full-world
- // pass in the game and the bounds are already known to be in range -- one array index per tile.
- const CL=R.cells;
- for(let ty=0;ty<H;ty++){ const o=ty*W, zr=new Int8Array(W); zg[ty]=zr;
-   for(let tx=0;tx<W;tx++){ const cd=CL[o+tx]&T_MASK;
-     if(cd===0||cd===T_w||cd===T_b){ zr[tx]=-1; continue; }
-     // Same warped-Voronoi rule on both islands -- only the candidate seeds differ. Restricting
-     // the search to one island's own seeds is what stops them bleeding into each other: with a
-     // single unrestricted search, 653 tiles of the starter island's east spill were claimed by
-     // The Verdant Belt -- Lv20 ground paying a main-island loot table, owned by a boss whose lair
-     // sat 130 tiles away, so nothing ever spawned there.
-     const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
-     const st=_onStarter(RG,tx,ty), i0=st?0:STARTER_ZONES, i1=st?STARTER_ZONES:T.length;
-     let bi=i0,bd=1e18;
-     for(let i=i0;i<i1;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
-     zr[tx]=bi; const t=T[bi];
+ const W=R.w,H=R.h;
+ // ---- THE AGGREGATES, ON A STRIDE ----
+ // This pass used to visit every tile AND build a full W*H raster (`_zg`). The raster is gone -- zoneAt
+ // rasterises 64x64 chunks on demand now -- but the aggregates still need to see the ground: a
+ // province's centroid places its map label and its lair anchor, and its area gates both.
+ //
+ // ONE TILE IN SIXTEEN IS ENOUGH FOR AN AVERAGE, and at the three-island size the difference is
+ // 8,000,000 samples against 500,000. `n` is scaled back up by the stride squared so every consumer
+ // that reads it as a TILE COUNT -- lairAnchor's 0.35*sqrt(n/PI) nudge, the map's `tt.n<60` label
+ // filter -- keeps its meaning without knowing this happened. The drift is measured, not assumed:
+ // _selftest compares centroid and area against a full-resolution pass.
+ const SR=ZONE_AGG_STRIDE, SR2=SR*SR;
+ for(let ty=0;ty<H;ty+=SR){
+   for(let tx=0;tx<W;tx+=SR){
+     const bi=_zoneAtRaw(R,RG,T,tx,ty);
+     if(bi<0) continue;
+     const t=T[bi];
      t.sx+=tx; t.sy+=ty; t.n++;
-     if(st){ // how far this province reaches, so its five levels can be spread across it
+     // A WITNESS TILE, kept so inClump() never has to scan the world again. One known-good point
+     // inside the province answers "where is this clump" in O(1); the old fallback walked all W*H,
+     // per boss, whenever the spiral failed to find a footprint.
+     if(t.wx===undefined){ t.wx=tx; t.wy=ty; }
+     if(_onStarter(RG,tx,ty)){ // how far this province reaches, so its five levels can be spread
        const d=Math.hypot(tx-S.cx,ty-S.cy); if(d<t.dlo)t.dlo=d; if(d>t.dhi)t.dhi=d;
-       sHist[bi][Math.max(0,Math.min(DQN-1,Math.round(d)))]++; }
+       sHist[bi][Math.max(0,Math.min(DQN-1,Math.round(d)))]+=SR2; }
      else { const lv=grvLvAtR(RG,tx,ty); if(lv<t.lvmin)t.lvmin=lv; if(lv>t.lvmax)t.lvmax=lv; } } }
+ // scale the sampled sums back to tile units, so sx/n is still a centroid and n is still an area
+ for(const t of T){ t.sx*=SR2; t.sy*=SR2; t.n*=SR2; }
  // A starter province's level range is its own by definition, not something measured off a curve.
  // Set before _terr is published, because grvLvAtR reads lvmin and dq straight back out of it.
  for(let i=0;i<STARTER_ZONES;i++){ const t=T[i]; t.lvmin=5*i+1; t.lvmax=5*i+5;
@@ -2637,13 +2663,60 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
      while(k<4 && acc>=tot*(k+1)/5){ q[k]=d; k++; } }
    for(;k<4;k++) q[k]=DQN;
    t.dq=q; }
- RG._zg=zg; RG._terr=T; return T; }
+ RG._terr=T; return T; }
+// ---- ONE TILE'S CLUMP, WITH NO RASTER ----
+// This is the whole-map pass's rule lifted out verbatim, so the chunked raster, the aggregate pass and
+// every direct caller cannot drift apart -- there is one copy of "which province is this".
+// Restricting the seed search to one island's own seeds is what stops them bleeding into each other:
+// with a single unrestricted search, 653 tiles of the starter island's east spill were claimed by The
+// Verdant Belt -- Lv20 ground paying a main-island loot table, owned by a boss whose lair sat 130 tiles
+// away, so nothing ever spawned there.
+function _zoneAtRaw(R,RG,T,tx,ty){
+  const cd=gCode(R,tx,ty);
+  if(cd===0||cd===T_w||cd===T_b) return -1;
+  const wx=tx+7*Math.sin(ty*0.21+tx*0.05)+4*Math.sin(ty*0.61), wy=ty+7*Math.cos(tx*0.21+ty*0.05)+4*Math.cos(tx*0.61);
+  const st=_onStarter(RG,tx,ty), i0=st?0:STARTER_ZONES, i1=st?STARTER_ZONES:T.length;
+  let bi=i0,bd=1e18;
+  for(let i=i0;i<i1;i++){ const dx=wx-T[i].cx,dy=wy-T[i].cy,d=dx*dx+dy*dy; if(d<bd){bd=d;bi=i;} }
+  return bi;
+}
+// ---- THE CHUNKED ZONE RASTER ----
+// zoneAt is called from the tile loop, the spawner, every loot roll and both maps, so it has to be an
+// array read rather than four trig calls and fifteen squared distances. It just no longer rasterises
+// the WHOLE world to get one: a 64x64 chunk is filled the first time it is touched and cached, so a
+// session pays only for the ground it actually visits. Post-first-touch this is one index computation
+// and one array read -- the same cost as the _zg it replaces.
+// Int8 is deliberate: clump indices are small and -1 means water, so the store stays 4 KB a chunk.
+const ZONE_CHUNK=64;
+const ZONE_CHUNK_CAP=256;            // 256 * 4 KB = 1 MB, bounded; the world has thousands
+function _zoneChunk(R,RG,T,ccx,ccy){
+  if(!RG._zc){ RG._zc={m:new Map(), order:[]}; }
+  const store=RG._zc, key=ccx+','+ccy;
+  const hit=store.m.get(key); if(hit) return hit;
+  const x0=ccx*ZONE_CHUNK, y0=ccy*ZONE_CHUNK;
+  const w=Math.min(ZONE_CHUNK,R.w-x0), h=Math.min(ZONE_CHUNK,R.h-y0);
+  const a=new Int8Array(ZONE_CHUNK*ZONE_CHUNK);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) a[y*ZONE_CHUNK+x]=_zoneAtRaw(R,RG,T,x0+x,y0+y);
+  const c={x0:x0,y0:y0,w:w,h:h,a:a};
+  store.m.set(key,c); store.order.push(key);
+  while(store.order.length>ZONE_CHUNK_CAP) store.m.delete(store.order.shift());
+  return c;
+}
 // tx/ty arrive as FLOAT tile coords from every entity-position caller (px/TILE), so they MUST be
 // floored — an unfloored _zg[222.3] is undefined, which silently returned -1 and made every such
 // lookup fall through to the coarse radial approximation instead of the real clump.
-function zoneAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return -1;
+// THE ROOM IS AN ARGUMENT, and it has to be. zoneAt reads curRoom, which is right for everything that
+// asks about where an entity is standing -- but the FULL MAP draws rooms['G'] whether or not you are in
+// it, and opening the map inside a dungeon makes curRoom the dungeon. That was invisible while the map
+// read RG._zg off the G room directly; routing it through a curRoom-based zoneAt would have returned -1
+// for every tile and drawn the whole world in band 0. So the map and minimap pass their room in.
+function zoneAtIn(R,tx,ty){
+ const RG=R&&R.rings; if(!RG||!RG.radial) return -1;
  _territories(R); const x=Math.floor(tx), y=Math.floor(ty);
- const zr=RG._zg&&RG._zg[y]; return (zr&&x>=0&&x<zr.length)?zr[x]:-1; }
+ if(x<0||y<0||x>=R.w||y>=R.h) return -1;
+ const c=_zoneChunk(R,RG,RG._terr,(x/ZONE_CHUNK)|0,(y/ZONE_CHUNK)|0);
+ return c.a[(y-c.y0)*ZONE_CHUNK+(x-c.x0)]; }
+function zoneAt(tx,ty){ return zoneAtIn(curRoom,tx,ty); }
 // THEME band from the clump the tile sits in (drives tileset/tone/tree/boulder + map colour).
 function grvBandAt(tx,ty){ const R=curRoom, RG=R&&R.rings; if(!RG||!RG.radial) return 0;
  const T=_territories(R), zi=zoneAt(tx,ty);

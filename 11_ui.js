@@ -1496,15 +1496,18 @@ function mapTerrain(G,L){
   const off=document.createElement('canvas'); off.width=MAP_W; off.height=L.H;
   const c=off.getContext('2d'); const RG=G.rings, s=L.s;
   c.fillStyle='#0b0a10'; c.fillRect(0,0,MAP_W,L.H);
-  const T=(typeof _territories==='function')?_territories(G):null, zg=RG._zg;
-  const zAt=(tx,ty)=>{ const zr=zg&&zg[ty]; return (zr&&tx>=0&&tx<zr.length)?zr[tx]:-1; };
+  const T=(typeof _territories==='function')?_territories(G):null;
+  // _zg is gone; zoneAt reads a cached 64x64 chunk. The loop below is strided, so it warms only
+  // the chunks this picture covers -- and the cache is LRU-bounded, so a full-map draw of the
+  // three-island world cannot pin every chunk it touched.
+  const zAt=(tx,ty)=>(typeof zoneAtIn==='function')?zoneAtIn(G,tx,ty):-1;
   // STRIDE. The minimap scales the world down, so many tiles share one map pixel and drawing
   // every one is wasted work — at 1160x720 that was ~2.5M canvas ops and a 1.7s freeze the
   // first time the map opened. Sample a fixed budget of cells instead, drawing each as a
   // step-sized block: the picture is the same, and the cost stops tracking world size.
   const step=Math.max(1,Math.ceil(Math.sqrt((G.w*G.h)/250000))), bs=s*step+0.6;
   for(let ty=0;ty<G.h;ty+=step){
-    for(let tx=0;tx<G.w;tx+=step){ const ch=gAt(G,tx,ty); if(ch===' ') continue;
+    for(let tx=0;tx<G.w;tx+=step){ const ch=gAt(G,tx,ty); if(ch==='\0') continue;
       const px=L.ox+tx*s, py=L.oy+ty*s;
       if(ch==='w'){ c.fillStyle=MAP_OCEAN; c.fillRect(px,py,bs,bs); continue; }
       if(ch==='b'){ c.fillStyle=MAP_BRIDGE; c.fillRect(px,py,bs,bs); continue; }

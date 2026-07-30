@@ -183,7 +183,11 @@ function _checkTierLadder(){
       if((z.pub||[]).some(r=>r[0]>=SD_T))
         _iErr('ZONE_TIERS['+i+'] pays Scavenged Dreams in a PUBLIC sack — SD must be soulbound');
     });
-    if(!sdZones) _iWarn('no ZONE_TIERS row names SD_T — Scavenged Dreams can only drop in ascended dungeons');
+    // NO ROW MAY NAME SD AT ALL NOW. This warned when NO row named SD_T, back when SD was a dropped
+    // tier and a table that granted it nowhere meant the rim had lost its reason to exist. Since the
+    // 2026-07-29 swap SD is CRAFTED ONLY, so the warning had inverted: it was firing on the correct
+    // state and telling the reader to go and add the very entry that would leak the top rung.
+    if(sdZones) _iErr(sdZones+' ZONE_TIERS row(s) name SD_T — Scavenged Dreams is crafted only and no drop table may pay it');
   }
   // the two shelves that draw their own tiers must both stop below SD
   if(typeof AUC_TMAX!=='undefined' && AUC_TMAX>=SD_T)

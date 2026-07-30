@@ -124,6 +124,90 @@ function _bandBlendMap(R){
   RG._bbm={w:W,h:H,nb:nbb,wt:wt};
   return RG._bbm;
 }
+
+// ============================================================
+//  THE SAME BLEND, ONE CHUNK AT A TIME
+// ------------------------------------------------------------
+//  _bandBlendMap above allocates about TEN arrays of W*H: band, nbb, wt, tmp, plus two `.slice()`
+//  per dilation step. At the current 835,200 tiles that is ~8 MB of scratch and a visible hitch on
+//  first entry; at the three-island ~8M it is ~80 MB and a stall. It is also almost entirely wasted --
+//  a frame reads a couple of hundred tiles.
+//
+//  So the identical algorithm runs over a 64x64 CHUNK with an APRON of context around it, and the
+//  chunk is cached. The apron is DERIVED, never typed, because getting it wrong is invisible: too
+//  small and only tiles near a chunk's edge come out different, which reads as a faint grid on the
+//  ground that no one can place.
+//
+//    seed        needs the 4-neighbourhood                        1
+//    dilation    BAND_BLEND_STEPS passes, each reading 4-neighbours  + STEPS
+//    blur        2 passes, each 3-tap in x then 3-tap in y        + 2 per pass
+//    hole fill   one more 4-neighbour read                        + 1
+//
+//  That is a Chebyshev radius, and it is deliberately generous rather than exact: the differential
+//  check in _selftest.js compares every tile of the whole-map build against the chunked one, so a
+//  too-large apron costs a little compute and a too-small one FAILS LOUDLY instead of shipping.
+const BAND_BLUR_PASSES=2;
+const BAND_BLEND_APRON = 1 + BAND_BLEND_STEPS + 2*BAND_BLUR_PASSES + 1;
+const BAND_CHUNK=64;
+const BAND_CHUNK_CAP=96;             // ~96 * (82*82*3) bytes ~= 1.9 MB, bounded
+function _bandBlendChunk(R,ccx,ccy){
+  const RG=R&&R.rings; if(!RG) return null;
+  if(!RG._bbc){ RG._bbc={m:new Map(), order:[]}; }
+  const store=RG._bbc, key=ccx+','+ccy;
+  const hit=store.m.get(key); if(hit) return hit;
+
+  const W=R.w|0, H=R.h|0, A=BAND_BLEND_APRON;
+  // the padded window, clamped to the room
+  const x0=Math.max(0,ccx*BAND_CHUNK-A), y0=Math.max(0,ccy*BAND_CHUNK-A);
+  const x1=Math.min(W,(ccx+1)*BAND_CHUNK+A), y1=Math.min(H,(ccy+1)*BAND_CHUNK+A);
+  const w=x1-x0, h=y1-y0, n=w*h;
+  const band=new Uint8Array(n), nbb=new Uint8Array(n), wt=new Uint8Array(n);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) band[y*w+x]=(grvBandXY(x0+x,y0+y)|0)+1;
+  // From here this is _bandBlendMap's body verbatim, over (w,h) instead of (W,H). The 1..h-1 bounds
+  // are the SAME bounds it uses, which is why a tile on the room's true edge gets no blend either
+  // way -- that is existing behaviour, preserved rather than improved, so the two can be compared.
+  for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){
+    const i=y*w+x, b=band[i];
+    const c=[band[i-1],band[i+1],band[i-w],band[i+w]];
+    for(let k=0;k<4;k++) if(c[k]&&c[k]!==b){ nbb[i]=c[k]; wt[i]=255; break; }
+  }
+  for(let s=1;s<=BAND_BLEND_STEPS;s++){
+    const tgt=Math.round(255*Math.pow(BAND_BLEND_FALL,s));
+    const src=wt.slice(), sn=nbb.slice();
+    for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){
+      const i=y*w+x; if(src[i]) continue;
+      const j=(src[i-1]&&i-1)||(src[i+1]&&i+1)||(src[i-w]&&i-w)||(src[i+w]&&i+w);
+      if(!j) continue;
+      if(sn[j]===band[i]) continue;
+      nbb[i]=sn[j]; wt[i]=tgt;
+    }
+  }
+  const tmp=new Uint8Array(n);
+  for(let pass=0;pass<BAND_BLUR_PASSES;pass++){
+    for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){ const i=y*w+x; tmp[i]=(wt[i-1]+wt[i]+wt[i+1])/3; }
+    for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){ const i=y*w+x; wt[i]=(tmp[i-w]+tmp[i]+tmp[i+w])/3; }
+  }
+  for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){
+    const i=y*w+x;
+    if(wt[i] && !nbb[i]){
+      const nn=nbb[i-1]||nbb[i+1]||nbb[i-w]||nbb[i+w];
+      if(nn && nn!==band[i]) nbb[i]=nn; else wt[i]=0;
+    }
+  }
+  const c={x0:x0,y0:y0,w:w,h:h,nb:nbb,wt:wt};
+  store.m.set(key,c); store.order.push(key);
+  // LRU, or a session that walks the whole world keeps every chunk it ever touched
+  while(store.order.length>BAND_CHUNK_CAP) store.m.delete(store.order.shift());
+  return c;
+}
+// The one thing the renderer asks. Returns the neighbouring BAND (0-based, -1 for none) and the mix
+// weight, which is exactly what the whole-map read site computed inline.
+function bandBlendAt(R,x,y){
+  const c=_bandBlendChunk(R,(x/BAND_CHUNK)|0,(y/BAND_CHUNK)|0);
+  if(!c) return null;
+  const i=(y-c.y0)*c.w+(x-c.x0);
+  return {nb:c.nb[i]-1, wt:c.wt[i]};
+}
 function grvBandXY(x,y){
   if(typeof grvBandAt!=='function') return 0;
   const wx=x+(vnoise(x+311,y+97,BAND_WARP_SC)-0.5)*BAND_WARP;
@@ -1170,9 +1254,13 @@ function drawTileG(x,y){
     // built once per room, so the two materials genuinely interpenetrate and the join reads as a
     // gradient. With the warp in grvBandXY the boundary is ragged in plan and soft in section.
     if(!window._noBlend){
-      const BM=_bandBlendMap(curRoom);
+      // ONE CHUNK, NOT THE WHOLE WORLD. _bandBlendMap built ~10 arrays of W*H on first entry to a
+      // room -- fine at 835k tiles, an ~80 MB stall at the three-island size, and nearly all of it
+      // wasted on tiles no frame will read. bandBlendAt computes the same values over a 64x64 window
+      // with a derived apron, caches it, and is asserted tile-for-tile against the whole-map build.
+      const BM=bandBlendAt(curRoom,x,y);
       if(BM){
-        const i=y*BM.w+x, nbBand=BM.nb[i]-1, w=BM.wt[i];
+        const nbBand=BM.nb, w=BM.wt;
         if(w>0 && nbBand>=0 && nbBand!==bd){
           ctx.save();
           ctx.globalAlpha=Math.min(0.66,(w/255)*0.62);

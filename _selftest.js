@@ -621,7 +621,7 @@
     note('== packed grid ==');
     if(typeof gAt==='function' && typeof T_CHARS!=='undefined'){
       ok('the tile alphabet fits in 5 bits', T_CHARS.length<=32, T_CHARS.length+' codes');
-      ok('code 0 is reserved as INVALID', T_CHARS[0]===' ');
+      ok('code 0 is reserved as INVALID', T_CHARS[0]==='\0');
       // round-trip every character through the accessors
       let rt=true;
       const probe=rooms['0,0'];
@@ -642,21 +642,142 @@
       for(const k of keys){ const R=rooms[k];
         for(let i=0;i<R.cells.length;i++){ tiles++; if((R.cells[i]&T_MASK)===0) bad++; } }
       ok('no tile decodes to INVALID', bad===0, bad+' of '+tiles.toLocaleString());
-      // THE FINGERPRINT
+      // THE FINGERPRINT, PER ROOM, and the split matters.
+      //
+      // 22 of the 24 rooms have NO LAIR in them, so nothing in Stage 6 or Stage 7 may move a single one
+      // of their tiles. Their hashes were measured before the Uint8Array packing and are pinned here
+      // individually -- that is a provable claim about authored data surviving two refactors.
+      //
+      // 'G' IS EXCLUDED ON PURPOSE, and not to make a test pass. stampLairs anchors each arena on its
+      // province's CENTROID, and Stage 7 samples that centroid on a stride rather than visiting every
+      // tile -- so anchors shift by a fraction of a tile and the 'X'/'F' cells they carve shift with
+      // them. Pinning G would mean re-pinning it on every future change to the aggregates, and it would
+      // conflate "the terrain is wrong" with "a lair moved by half a tile". What is asserted about G
+      // instead is the thing that actually matters and is checked above: every lair still sits inside
+      // its own territory, and every province's centroid and area are within a tile and 1%.
+      //
+      // 'DUN' is excluded for a different reason: it is REGENERATED per boss ring, so which dungeon is
+      // resident depends on what was generated last, and its hash is not a property of the world.
+      const PINNED={
+        '0,0':'a0233d27','1,0':'8bee32e8','2,0':'a9719398','2,-1':'a36415f4','3,0':'d365fc5a',
+        '4,0':'6dac2129','5,0':'19df95c3','6,0':'02a5d6b7','7,0':'e5c2d1f0','8,0':'e55aee8e',
+        '9,0':'b274709d','10,0':'403606c9','11,0':'f1b667a1','12,0':'05d30e05','13,0':'ebc91218',
+        '14,0':'7032b2d1','15,0':'73474397','16,0':'064485bb',
+        'ARENA':'e95fa6a9','COSMETICS':'01397713','GUILD':'a4c8533d','VAULT':'4e1d922f',
+      };
       const fnv=(s)=>{ let h=0x811c9dc5>>>0;
         for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
         return ('00000000'+h.toString(16)).slice(-8); };
-      let whole='';
-      for(const k of keys){ const R=rooms[k]; let s='';
-        for(let y=0;y<R.h;y++){ let ln=''; for(let x=0;x<R.w;x++) ln+=gAt(R,x,y); s+=ln; }
-        whole+=k+':'+fnv(s)+';'; }
-      const world=fnv(whole);
-      ok('the world hashes exactly as it did before the packing', world==='f60a9d2a',
-         world+' over '+tiles.toLocaleString()+' tiles in '+keys.length+' rooms');
+      const hashRoom=(R)=>{ let s='';
+        for(let y=0;y<R.h;y++){ let ln=''; for(let x=0;x<R.w;x++) ln+=gAt(R,x,y); s+=ln; } return fnv(s); };
+      let moved=[], checked=0;
+      for(const k of keys){ if(PINNED[k]===undefined) continue;
+        checked++;
+        const h=hashRoom(rooms[k]);
+        if(h!==PINNED[k]) moved.push(k+' '+PINNED[k]+'->'+h); }
+      ok('every lairless room is byte-identical to its pre-packing hash',
+         moved.length===0 && checked===22, checked+' rooms checked'+(moved.length?('  MOVED: '+moved.join(' ')):''));
+      note('  G hash (moves with a lair anchor, by design): '+hashRoom(rooms['G']));
       // R.grid must be GONE, not shimmed: a subarray shim would keep every `c==='w'` compiling and
       // permanently false, which is the failure mode this conversion was shaped to avoid.
       ok('R.grid is gone rather than shimmed', rooms['0,0'].grid===undefined);
     } else ok('the grid accessors exist', false);
+
+    // ---------- 10b3. THE CHUNKED BLEND IS THE SAME BLEND ----------
+    // A differential, deliberately run while the world is still small enough that the whole-map build
+    // can be computed at all -- which is the entire reason Stage 7 comes before the resize. Too small
+    // an apron only changes tiles near a chunk edge, which on the ground reads as a faint grid nobody
+    // can place; here it is an exact count.
+    note('');
+    note('== chunked band blend ==');
+    if(typeof _bandBlendMap==='function' && typeof bandBlendAt==='function' && rooms['G']){
+      const G=rooms['G'];
+      ok('the apron is derived, not typed',
+         BAND_BLEND_APRON === 1+BAND_BLEND_STEPS+2*BAND_BLUR_PASSES+1, 'apron='+BAND_BLEND_APRON);
+      const t0=performance.now();
+      const BM=_bandBlendMap(G);              // the reference: ~10 arrays of W*H
+      const tWhole=performance.now()-t0;
+      ok('the whole-map reference builds', !!BM, BM?(BM.w+'x'+BM.h):'null');
+      let diffNb=0, diffWt=0, worstWt=0, firstAt='';
+      const t1=performance.now();
+      for(let y=0;y<G.h;y++) for(let x=0;x<G.w;x++){
+        const i=y*BM.w+x;
+        const a={nb:BM.nb[i]-1, wt:BM.wt[i]};
+        const b=bandBlendAt(G,x,y);
+        if(!b){ diffNb++; continue; }
+        if(a.nb!==b.nb){ if(!diffNb&&!diffWt) firstAt=x+','+y+' nb '+a.nb+' vs '+b.nb; diffNb++; }
+        if(a.wt!==b.wt){ if(!diffNb&&!diffWt) firstAt=x+','+y+' wt '+a.wt+' vs '+b.wt; diffNb+=0; diffWt++;
+          const d=Math.abs(a.wt-b.wt); if(d>worstWt) worstWt=d; }
+      }
+      const tChunk=performance.now()-t1;
+      ok('every tile agrees on the neighbouring band', diffNb===0,
+         diffNb+' of '+(G.w*G.h).toLocaleString()+(firstAt?('  first: '+firstAt):''));
+      ok('every tile agrees on the blend weight', diffWt===0,
+         diffWt+' differ, worst delta '+worstWt+(firstAt?('  first: '+firstAt):''));
+      // and the chunk store must stay bounded, or walking the world leaks every chunk it touched
+      const st=G.rings&&G.rings._bbc;
+      ok('the chunk cache is LRU-bounded', !!st && st.m.size<=BAND_CHUNK_CAP,
+         st?(st.m.size+' of '+BAND_CHUNK_CAP+' chunks'):'no store');
+      note('  whole-map build '+tWhole.toFixed(0)+'ms · '+(G.w*G.h).toLocaleString()
+        +' chunked reads '+tChunk.toFixed(0)+'ms (virtual time, so treat as relative only)');
+    } else ok('_bandBlendMap and bandBlendAt exist', false);
+
+    // ---------- 10b4. THE CHUNKED ZONE RASTER, AND WHAT THE STRIDE COSTS ----------
+    // Two separate questions, and only one of them is exact.
+    //   the RASTER must be identical: zoneAt now fills 64x64 chunks on demand instead of one W*H pass
+    //   the AGGREGATES are SAMPLED, so their drift has to be measured and shown to be small enough
+    // The second one matters more than it looks: a province's centroid places its lair anchor, and a
+    // lair that lands outside its own territory cannot spawn its boss at all.
+    note('');
+    note('== chunked zone raster ==');
+    if(typeof zoneAtIn==='function' && typeof _zoneAtRaw==='function' && rooms['G']){
+      const G=rooms['G'], RG=G.rings, T=_territories(G);
+      let diff=0, first='';
+      for(let y=0;y<G.h;y++) for(let x=0;x<G.w;x++){
+        const a=_zoneAtRaw(G,RG,T,x,y), b=zoneAtIn(G,x,y);
+        if(a!==b){ if(!diff) first=x+','+y+' raw '+a+' vs chunk '+b; diff++; }
+      }
+      ok('every tile agrees with the un-rastered rule', diff===0,
+         diff+' of '+(G.w*G.h).toLocaleString()+(first?('  first: '+first):''));
+      ok('the zone chunk cache is LRU-bounded',
+         RG._zc && RG._zc.m.size<=ZONE_CHUNK_CAP, RG._zc?(RG._zc.m.size+' of '+ZONE_CHUNK_CAP):'none');
+      // THE MAP MUST NOT DEPEND ON curRoom. Opening the map inside a dungeon makes curRoom the
+      // dungeon; a curRoom-based lookup would return -1 for every tile and draw the world in band 0.
+      const _cr=curRoom; curRoom=rooms['DUN']||null;
+      let ok2=0; for(let i=0;i<200;i++){ const x=(i*37)%G.w, y=(i*53)%G.h;
+        if(zoneAtIn(G,x,y)===_zoneAtRaw(G,RG,T,x,y)) ok2++; }
+      curRoom=_cr;
+      ok('the map can ask about G while standing in a dungeon', ok2===200, ok2+'/200');
+
+      // ---- the aggregate drift, measured against a FULL-RESOLUTION pass ----
+      const ex=T.map(()=>({sx:0,sy:0,n:0}));
+      for(let y=0;y<G.h;y++) for(let x=0;x<G.w;x++){
+        const z=_zoneAtRaw(G,RG,T,x,y); if(z<0) continue;
+        ex[z].sx+=x; ex[z].sy+=y; ex[z].n++;
+      }
+      let worstCen=0, worstArea=0, tinyMissed=0;
+      for(let i=0;i<T.length;i++){
+        if(!ex[i].n || !T[i].n){ if(ex[i].n!==T[i].n) tinyMissed++; continue; }
+        const cxE=ex[i].sx/ex[i].n, cyE=ex[i].sy/ex[i].n;
+        const cxS=T[i].sx/T[i].n,  cySS=T[i].sy/T[i].n;
+        const d=Math.hypot(cxE-cxS,cyE-cySS); if(d>worstCen) worstCen=d;
+        const ae=Math.abs(T[i].n-ex[i].n)/ex[i].n; if(ae>worstArea) worstArea=ae;
+      }
+      ok('no province is lost by the stride', tinyMissed===0, tinyMissed+' mismatched presence');
+      ok('sampled centroids land within a tile', worstCen<1.0, 'worst '+worstCen.toFixed(3)+' tiles');
+      ok('sampled areas are within 1%', worstArea<0.01, 'worst '+(worstArea*100).toFixed(2)+'%');
+      // and the consequence that actually matters
+      let outside=0;
+      if(G.lairs) for(const b in G.lairs){ const La=G.lairs[b]; if(!La||!La.spawn) continue;
+        const z=zoneAtIn(G,(La.spawn.x/TILE)|0,(La.spawn.y/TILE)|0);
+        if(typeof BOSS_ZONE!=='undefined' && BOSS_ZONE[b|0]!==undefined && z!==BOSS_ZONE[b|0]) outside++; }
+      ok('every lair still sits inside its own territory', outside===0, outside+' misplaced');
+      // the witness tile that replaced inClump's full-map scan must actually be in its clump
+      let badW=0;
+      for(let i=0;i<T.length;i++){ if(T[i].wx===undefined) continue;
+        if(_zoneAtRaw(G,RG,T,T[i].wx,T[i].wy)!==i) badW++; }
+      ok('each province witness tile is inside that province', badW===0, badW+' wrong');
+    } else ok('zoneAtIn and _zoneAtRaw exist', false);
 
     // ---------- 10c2. A TINTED SPRITE STILL DRAWS ----------
     // itemArtImg tints two kinds of item -- a Riftseed and a stat scroll -- and a tint returns a
