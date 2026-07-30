@@ -147,13 +147,19 @@ function _checkTierLadder(){
     _iErr('SD_T points at "'+TIER_NAMES[SD_T]+'", not Scavenged Dreams');
   if(TIER_NAMES[RELIC_T]!=='Riftforged')
     _iErr('RELIC_T points at "'+TIER_NAMES[RELIC_T]+'", not Riftforged');
-  if(RELIC_T!==SD_T+1) _iErr('RELIC_T ('+RELIC_T+') must sit directly above SD_T ('+SD_T+')');
-  if(TIER_NAMES.length!==RELIC_T+1)
-    _iErr('TIER_NAMES has '+TIER_NAMES.length+' entries; RELIC_T is '+RELIC_T+' — the ladder has a gap or a tail');
-  // MAXT is the clamp on every random draw and must land exactly on SD: one lower and the Lv50 rim
-  // can never pay the tier its table names, one higher and a relic becomes rollable.
-  if(MAXT-1!==SD_T) _iErr('MAXT-1 is '+(MAXT-1)+' but SD_T is '+SD_T+
-    ' — a random draw can '+(MAXT-1>SD_T?'reach a RELIC':'never reach Scavenged Dreams'));
+  // THE ORDER IS T12 -> RELIC -> SD (user, 2026-07-29). SD is the crafted pinnacle and the relic is
+  // the drop that feeds it, so SD sits directly ABOVE the relic -- the reverse of the previous shape.
+  if(SD_T!==RELIC_T+1) _iErr('SD_T ('+SD_T+') must sit directly above RELIC_T ('+RELIC_T+')');
+  if(TIER_NAMES.length!==SD_T+1)
+    _iErr('TIER_NAMES has '+TIER_NAMES.length+' entries; SD_T is '+SD_T+' — the ladder has a gap or a tail');
+  // MAXT is the clamp on every random draw, and NEITHER top rung is rollable now: a relic is built by
+  // mkRelicItem at its own per-dungeon rate and SD only by the forge. So MAXT-1 must land on the top
+  // of the ORDINARY ladder -- one higher and a weighted row's overflow tail starts paying relics.
+  if(MAXT-1!==RELIC_T-1) _iErr('MAXT-1 is '+(MAXT-1)+' but the ordinary ladder tops out at '+(RELIC_T-1)+
+    ' — a random draw can '+(MAXT-1>=RELIC_T?'reach a CRAFTED rung':'never reach the top found tier'));
+  // and the art divisor must still be independent of both
+  if(typeof ART_TIERS!=='undefined' && ART_TIERS!==RELIC_T)
+    _iErr('ART_TIERS ('+ART_TIERS+') should equal the number of tiers the sprites were drawn for ('+RELIC_T+')');
   // the art divisor must NOT follow the ladder, or every tier re-maps onto the wrong sprite
   if(typeof ART_TIERS!=='undefined'){
     if(ART_TIERS!==12) _iErr('ART_TIERS is '+ART_TIERS+', not 12 — every item sprite has re-mapped');

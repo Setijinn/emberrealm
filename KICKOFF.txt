@@ -41,7 +41,17 @@ HARD RULES — these are not preferences
 - NOTHING MAY SIT ABOVE Lv50. levelUp stops at LV_CAP and there is no prestige
   level, so content that computes its own level must land on or under it. Six
   ascended dungeons were at Lv53-55 and could only ever be fought underlevelled.
-- SCAVENGED DREAMS IS WRITTEN "SD", NEVER "T13". Go through tierTag().
+- THE LADDER'S TOP IS T12 -> RELIC -> SD (user, 2026-07-29). Relics (index 12) are
+  DROPPED in the ascended dungeons; SCAVENGED DREAMS (index 13) is CRAFTED ONLY,
+  from a relic plus its own dungeon's Riftseed, and nothing drops it. This pair has
+  now swapped TWICE -- read SD_T/RELIC_T, never a literal 12 or 13, because a stale
+  index is still a valid index and fails silently.
+- BOTH TOP RUNGS ARE WRITTEN AS TAGS: "SD" and "RF". Go through tierTag(). "T13" is
+  not a string this game produces at all, which is what keeps the old "SD is never
+  written T13" rule true now that the relic sits at 12.
+- MAXT IS 12 AND NOTHING RANDOM MAY REACH EITHER CRAFTED RUNG. mkItem clamps to
+  MAXT-1 (the top of the ordinary ladder). Only mkRelicItem, forgeDo and mkTopItem
+  build one. No ZONE_TIERS row may name index 12 or 13.
 - Do NOT build player-to-player auction listings. The peer-to-peer architecture
   cannot host them honestly — no escrow, no persistence, client-editable glory.
 - Do NOT attempt to collect real money for diamonds client-side.

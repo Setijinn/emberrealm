@@ -7,25 +7,31 @@
 //  is one panel instead of a workbench with tabs: a player who has used the Fusion Altar already
 //  knows how this works.
 //
-//  THE LADDER ABOVE T12, AND WHERE EACH RUNG COMES FROM.
+//  THE LADDER ABOVE T12, AND WHERE EACH RUNG COMES FROM (user, 2026-07-29).
 //    T1-T12               found anywhere the zone tables say so
-//    SCAVENGED DREAMS     DROPPED, and only in the highest-level areas and the ASCENDED DREAM
-//                         DUNGEONS (user, 2026-07-28). The forge does NOT make it. Written "SD",
-//                         never "T13" — it is named for what it is, gear scavraged out of a dead
-//                         god's dream, and a number would say nothing.
-//    T14 Riftforged       relics. THIS is what the forge makes, out of an SD piece and a Riftseed.
+//    RIFTFORGED           the relics. DROPPED, in the six ascended dungeons at their own rates.
+//    SCAVENGED DREAMS     the pinnacle, and CRAFTED ONLY. Nothing in the game drops it. Written
+//                         "SD" — it is named for what it is, carried out of a dead god's dream,
+//                         and a number would say nothing.
 //
-//  So the forge has exactly two jobs: join materials into better materials, and turn a Scavenged
-//  Dreams piece into a relic. It never touches the ordinary ladder.
+//  SD AND RIFTFORGED HAVE SWAPPED, and this pair has now moved twice. The first change inserted SD
+//  underneath the relics as a dropped rung; the user has since made SD the crafted top and the relic
+//  the drop that feeds it. So the forge's gear rung runs the other way: a RELIC plus its own
+//  dungeon's Riftseed is raised into Scavenged Dreams.
 //
-//  Relics used to sit where SD sits now and moved up a rung to make room. The name went with them,
-//  so a saved relic still reads 'Riftforged' — it changes its index, and migrateForgeTiers() moves
-//  it.
+//  THE OLD "BRAM JOINS THINGS, HE DOES NOT IMPROVE THEM" RULE IS RETIRED, deliberately and by the
+//  user's decision, and it is retired here rather than left standing next to code that contradicts
+//  it. The forge now moves a piece up the ladder. What survives of the rule is the part that still
+//  matters: the ORDINARY ladder, T1-T12, is still found and never made.
 //
-//  WHY A RELIC STILL CANNOT LEAK INTO A DROP TABLE. mkItem() clamps t to MAXT-1, which is SD_T, so
-//  the highest thing any roll can produce is a Scavenged Dreams piece. T14 is above the clamp and
-//  the only functions that build one are mkRelicItem and forgeDo — neither reachable from rollLoot,
-//  rollBagSlots, auctionListings or a shop row. The integrity check asserts it.
+//  RAISING A RELIC KEEPS ITS SET. The SD piece carries the same `relic` id, the same exclusive affix
+//  and the same trait, and only its tier moves -- otherwise a finished four-piece set would beat four
+//  of the best items in the game and the top rung would be a trap.
+//
+//  WHY NEITHER TOP RUNG CAN LEAK INTO A DROP TABLE. mkItem() clamps t to MAXT-1, which is the top of
+//  the ORDINARY ladder (T12) now that MAXT is back to 12 — so no weighted roll, overflow tail, chest
+//  or auction row can reach index 12 or 13. The only things that build one are mkRelicItem (at the
+//  per-dungeon relic rate), forgeDo, and mkTopItem for the workbench. The integrity check asserts it.
 //
 //  MATERIALS ARE ACCOUNT-LEVEL, like pets, mounts and the Vault, and for the reason the starter
 //  island exists at all: it was the one stretch of the game that produced nothing permanent. A
@@ -346,34 +352,40 @@ function forgePlan(A,B,opts){
             label:MATERIALS[r.out].n, why:''};
   }
 
-  // ---- the gear rung: a Scavenged Dreams piece plus the Riftseed ----
+  // ---- the gear rung: a RELIC plus the Riftseed of its own dungeon -> SCAVENGED DREAMS ----
   const item = ia||ib, mat = (A.kind==='mat')?A:(B.kind==='mat'?B:null);
   if(!item || !mat) return {ok:false, why:'The anvil takes one piece and one reagent.'};
-  if(item.relic) return {ok:false, why:'A relic is already the last thing this forge can make.'};
   if(item.k!=='wpn' && item.k!=='arm' && item.k!=='helm' && item.k!=='ring')
     return {ok:false, why:'That is not something Bram can work.'};
 
-  // SD + a Riftseed -> a relic (T14). The ONLY thing the forge does to a piece of gear: the
-  // ordinary ladder is found, not made, and Scavenged Dreams is found too. Bram joins, he does not
-  // upgrade. WHICH relic is decided by the seed's dungeon and the item's slot, so the two inputs
-  // between them already answer it -- the only thing left to choose is which of that dungeon's two
-  // sets you want.
+  // THE DIRECTION OF THIS RUNG IS REVERSED (user, 2026-07-29). It used to be SD + seed -> relic,
+  // when SD was the dropped rung and a relic was the crafted top. The user has swapped them: relics
+  // are what the ascended dungeons drop, and Scavenged Dreams is the crafted pinnacle above them. So
+  // the same two slots now run the other way.
+  //
+  // Left un-flipped this rung would have been DEAD rather than merely wrong -- it would still demand
+  // an SD piece, and nothing in the game can produce one any more, so the forge's entire payoff
+  // would have quietly become unreachable with no error to see.
+  //
+  // THE SD PIECE INHERITS THE RELIC'S SET, AFFIX AND TRAIT. Upgrading must never cost you set
+  // progress, or a completed four-piece set would beat four SD pieces and the top rung would be a
+  // trap. It keeps `relic` for exactly that reason -- the id IS the set membership, and every set
+  // bonus already reads it -- so this adds no new combat branch.
+  //
+  // AND THE SEED MUST BE THAT RELIC'S OWN DUNGEON'S. The rule the seeds were built on is that a seed
+  // only answers for the dungeon it came from; feeding the Core Sanctum's seed a Windward Roost relic
+  // would retire that rule for no reason.
   if(isSeed(mat.id)){
     const seed=MATERIALS[mat.id];
-    if(item.t!==SD_T) return {ok:false, why:'A Riftseed only takes a '+TIER_NAMES[SD_T]+' piece.'};
+    if(!item.relic) return {ok:false, why:'A Riftseed only takes a '+TIER_NAMES[RELIC_T]+' relic.'};
+    if(item.t===SD_T) return {ok:false, why:'That is already '+TIER_NAMES[SD_T]+'.'};
     if(matCount(mat.id)<1) return {ok:false, why:'You have no '+seed.n+'.'};
-    const sets=forgeSetsFor(item.k, seed.ring);
-    if(!sets.length) return {ok:false, why:'That dungeon has no set with a piece for this slot.'};
-    const pick=o.set||null;
-    // one seed, one dungeon, two sets -- if only one is left unowned there is nothing to ask
-    const open=sets.filter(s=>!s.owned);
-    if(!open.length) return {ok:false, why:'You already carry both of that dungeon’s '+item.k+' relics.', needSet:sets};
-    const chosen = pick ? sets.filter(s=>s.set.id===pick)[0] : (open.length===1?open[0]:null);
-    if(!chosen) return {ok:false, why:'Choose which of the two sets to forge it into.', needSet:sets};
-    if(chosen.owned) return {ok:false, why:'You already carry that relic.', needSet:sets};
+    const ring=(typeof relicRing==='function')?relicRing(item.relic):-1;
+    if(ring>=0 && seed.ring!==ring)
+      return {ok:false, why:'That relic answers to another dungeon. It needs its own seed.'};
     const cost={}; cost[mat.id]=1;
-    return {ok:true, kind:'relic', cost:cost, relic:chosen.piece.id,
-            label:'★ '+chosen.piece.n, why:'', needSet:sets};
+    const nm=(typeof relicDef==='function'&&relicDef(item.relic))?relicDef(item.relic).n:'the relic';
+    return {ok:true, kind:'sd', cost:cost, label:tierTag(SD_T)+' '+nm, why:''};
   }
   return {ok:false, why:'That reagent does nothing to a piece of gear.'};
 }
@@ -398,17 +410,23 @@ function forgeDo(A,B,opts){
   if(!ch||!ch.inv||!ch.inv[idx]) return {ok:false, why:'That piece is no longer in your satchel.'};
   if(!matSpend(plan.cost)) return {ok:false, why:'The pouch came up short.'};
 
-  // the Scavenged Dreams piece is consumed and a relic takes its place in the same satchel slot
-  const rel=(typeof mkRelicItem==='function')?mkRelicItem(plan.relic, ch.cls):null;
-  // put back exactly what was taken. Hard-coding 'riftseed' here refunded a reagent that no longer
-  // exists once seeds became per-dungeon, which would have quietly minted one out of nothing.
-  if(!rel){ for(const id in plan.cost) matAdd(id, plan.cost[id]);
-    return {ok:false, why:'That relic could not be shaped.'}; }
-  ch.inv[idx]=rel;
-  if(typeof noteRelicTaken==='function') noteRelicTaken(plan.relic);
+  // THE RELIC IS RAISED IN PLACE, keeping its set, its exclusive affix and its trait, and only its
+  // TIER moves. That is the whole reason to build it this way rather than minting a fresh piece:
+  // `relic` is the set membership, every set bonus reads it, and an upgrade that dropped it would
+  // make a finished four-piece set better than four of the best items in the game.
+  const src=ch.inv[idx];
+  const up=Object.assign({}, src);
+  up.t=SD_T;
+  // A FAILED CRAFT MUST PUT BACK EXACTLY WHAT plan.cost TOOK. An earlier version of this path named
+  // a hard-coded 'riftseed' that no longer existed once seeds became per-dungeon, which would have
+  // minted a reagent out of nothing.
+  if(!up.relic){ for(const id in plan.cost) matAdd(id, plan.cost[id]);
+    return {ok:false, why:'That piece lost its relic on the anvil.'}; }
+  ch.inv[idx]=up;
   if(typeof saveRPG==='function') saveRPG();
-  if(typeof msg==='function') msg('RIFTFORGED', (typeof relicDef==='function'&&relicDef(plan.relic))?relicDef(plan.relic).n:'a relic');
-  return {ok:true, kind:'relic', item:rel};
+  if(typeof msg==='function') msg(tierTag(SD_T)+' — '+TIER_NAMES[SD_T].toUpperCase(),
+    (typeof relicDef==='function'&&relicDef(up.relic))?relicDef(up.relic).n:'raised out of the dream');
+  return {ok:true, kind:'sd', item:up};
 }
 
 // ------------------------------------------------------------
@@ -429,18 +447,56 @@ function atForge(){
 }
 
 // ------------------------------------------------------------
-// SAVE MIGRATION — relics moved from index 12 to index 13
+// SAVE MIGRATION — the top two rungs have swapped twice now
 // ------------------------------------------------------------
-// Anything carrying `relic` was built at the old RELIC_T and must move with the band, or it reads
-// as an Emberforged and prices, colours and sorts as one. Runs over every character's satchel, the
-// account Vault and the equipped-affix record. Idempotent: an already-migrated relic is at
-// RELIC_T and is skipped, so running it twice costs nothing.
+// FIXED BY SHAPE, NOT BY ARITHMETIC, and that is the whole reason this survives being run again.
+// A blind numeric swap (12<->13) would undo itself on the second run and would need a schema marker
+// to be safe. Keying off the `relic` FLAG needs no marker: "a relic sits at RELIC_T" is true
+// whatever RELIC_T happens to be, so the same two rules carried relics 12->13 in the first swap and
+// carry them 13->12 in this one.
+//
+//   a relic   -> RELIC_T, always. It is the flag that identifies it, never the index.
+//   index 12  -> SD_T, but ONLY without a relic flag. Pre-swap that meant Scavenged Dreams; a
+//                post-swap relic also sits at 12 and the flag is what tells the two apart.
+//
+// Idempotent: run it twice and the second pass matches nothing. A relic is already at RELIC_T, and a
+// migrated SD piece is at 13 so the `t===12` test misses it.
+//
+// EQUIPPED GEAR IS MIGRATED TOO, WHICH IT WAS NOT BEFORE. equipItem stores the tier as a bare number
+// in rpg.wpn/arm/helm and rpg.ring.t, with the relic id off in rpg.eqAff[slot].rel -- so the old
+// version's comment claimed it covered "the equipped-affix record" while the code only walked inv
+// and the Vault. An equipped relic therefore kept a stale index through the FIRST swap and has been
+// displaying and computing as the wrong tier ever since. Both swaps are repaired by the same pass.
 function migrateForgeTiers(){
   if(typeof users==='undefined'||!users) return 0;
   let n=0;
-  const fix=(it)=>{ if(it && it.relic && it.t!==RELIC_T){ it.t=RELIC_T; n++; } };
+  const fix=(it)=>{
+    if(!it) return;
+    if(it.relic){ if(it.t!==RELIC_T){ it.t=RELIC_T; n++; } return; }
+    if(it.t===12 && SD_T!==12){ it.t=SD_T; n++; }
+  };
+  // the equipped slots, where the tier is a loose number and the relic id lives somewhere else
+  const fixEq=(rp)=>{
+    if(!rp) return;
+    const aff=rp.eqAff||{};
+    for(const sl of ['wpn','arm','helm']){
+      if(typeof rp[sl]!=='number') continue;
+      const rel=aff[sl]&&aff[sl].rel;
+      if(rel){ if(rp[sl]!==RELIC_T){ rp[sl]=RELIC_T; n++; } }
+      else if(rp[sl]===12 && SD_T!==12){ rp[sl]=SD_T; n++; }
+    }
+    if(rp.ring && typeof rp.ring.t==='number'){
+      const rel=aff.ring&&aff.ring.rel;
+      if(rel){ if(rp.ring.t!==RELIC_T){ rp.ring.t=RELIC_T; n++; } }
+      else if(rp.ring.t===12 && SD_T!==12){ rp.ring.t=SD_T; n++; }
+    }
+  };
   for(const name in users){ const u=users[name]; if(!u) continue;
-    if(Array.isArray(u.chars)) for(const c of u.chars){ if(c&&Array.isArray(c.inv)) c.inv.forEach(fix); }
+    if(Array.isArray(u.chars)) for(const c of u.chars){
+      if(!c) continue;
+      if(Array.isArray(c.inv)) c.inv.forEach(fix);
+      fixEq(c.rpg);
+    }
     if(Array.isArray(u.vault)) u.vault.forEach(fix);
   }
   if(n && typeof LS!=='undefined') LS.set('er-users',users);
@@ -473,16 +529,18 @@ function openForge(){
 function closeForge(){ const el=document.getElementById('forgeScr'); if(el) el.style.display='none';
   _forgeA=null; _forgeB=null; _forgeSet=null; }
 
-// Which satchel rows the anvil will even look at: Scavenged Dreams pieces and nothing else, because
-// that is the only gear the forge has any use for. Everything else is noise in a list you are
-// trying to pick one specific piece out of.
+// Which satchel rows the anvil will even look at: RELICS, and nothing else. It filtered for Scavenged
+// Dreams pieces and explicitly SKIPPED relics (`if(!it||it.relic) continue`) while the rung ran the
+// other way -- so after the swap it would have hidden the one input the forge now needs and shown a
+// list of things it cannot use. Everything else is noise in a list you are trying to pick one
+// specific piece out of.
 function _forgeInvRows(){
   const ch=(typeof curChar==='function')?curChar():null;
   const inv=(ch&&ch.inv)?ch.inv:[]; const out=[];
   for(let i=0;i<inv.length;i++){ const it=inv[i];
-    if(!it||it.relic) continue;
+    if(!it||!it.relic) continue;
     if(it.k!=='wpn'&&it.k!=='arm'&&it.k!=='helm'&&it.k!=='ring') continue;
-    if(it.t!==SD_T) continue;
+    if(it.t===SD_T) continue;                  // already raised; nothing left to do to it
     out.push({i:i, it:it}); }
   return out;
 }
@@ -570,9 +628,10 @@ function paintForge(){
 
   // ---- the satchel, filtered to what the anvil accepts ----
   const rows=_forgeInvRows();
-  h+='<div class="embSect">ON THE ANVIL <span class="embDim">— '+TIER_NAMES[SD_T]+' pieces only</span></div>';
+  h+='<div class="embSect">ON THE ANVIL <span class="embDim">— relics only</span></div>';
   if(!rows.length) h+='<div class="embEmpty">Nothing in your satchel is ready for the forge.'
-    +'<br><span class="embDim">'+TIER_NAMES[SD_T]+' gear drops in the highest-level areas and the ascended dream dungeons.</span></div>';
+    +'<br><span class="embDim">Relics drop in the ascended dream dungeons. A relic and its own dungeon’s Riftseed become '
+    +TIER_NAMES[SD_T]+'.</span></div>';
   else { h+='<div class="fgStrip">';
     for(const r of rows){ const col=(typeof tierCol==='function')?tierCol(r.it.t):'#fff';
       const sel=_slotSame(_forgeA,{kind:'item',i:r.i})||_slotSame(_forgeB,{kind:'item',i:r.i});
@@ -593,16 +652,22 @@ function paintForge(){
       +_matIcoHtml(B,14)+'<span style="color:'+B.col+'">'+B.n+'</span>'
       +' <span class="fgDim">→</span> '+_matIcoHtml(O,14)
       +'<b style="color:'+O.col+'">'+O.n+'</b></div>'; }
-  h+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'+TIER_NAMES[SD_T]+' piece</span>'
-    +' + <span style="color:'+RELIC_COL+'">any Riftseed</span>'
-    +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ that dungeon’s relic, T'+(RELIC_T+1)+'</b></div>';
+  // THE GEAR RUNG, WRITTEN THE WAY IT NOW RUNS: relic + its own dungeon's seed -> Scavenged Dreams.
+  h+='<div class="fgRec"><span style="color:'+((typeof tierCol==='function')?tierCol(RELIC_T):'#fff')+'">★ any relic</span>'
+    +' + <span style="color:'+RELIC_COL+'">its own dungeon’s Riftseed</span>'
+    +' <span class="fgDim">→</span> <b style="color:'+((typeof tierCol==='function')?tierCol(SD_T):'#fff')+'">'
+    +tierTag(SD_T)+' '+TIER_NAMES[SD_T]+'</b></div>';
   h+='</details>';
-  h+='<div class="embNote">Bram joins things; he does not improve them. The ladder up to '
-    +TIER_NAMES[SD_T]+' is <b>found</b>, never made — and '+TIER_NAMES[SD_T]+' only falls in the '
-    +'highest-level areas and the ascended dream dungeons.<br><br>'
+  // The old blurb told the player "Bram joins things; he does not improve them" and that the ladder
+  // up to SD is found -- both true until the user made SD the crafted top. A retired rule left in
+  // USER-FACING text is worse than one left in a comment: it teaches the wrong model of the game.
+  h+='<div class="embNote">The ordinary ladder, up to <b>'+TIER_NAMES[11]+'</b>, is <b>found</b> and '
+    +'never made. Above it Bram does improve things: a <b>relic</b> drops in the ascended dream '
+    +'dungeons, and he raises one into <b>'+TIER_NAMES[SD_T]+'</b> — the same set, the same trait, '
+    +'a long way further up.<br><br>'
     +'Every ascended boss drops <b>its own</b> reagent. The first three depths build the '
     +'<b>Riftheart</b>; the six that host relics each make a <b>Riftseed of their own dungeon</b>, '
-    +'and a seed can only ever forge the two sets that dungeon keeps.</div>';
+    +'and a seed only ever answers for the dungeon it came from.</div>';
 
   body.innerHTML=h;
 

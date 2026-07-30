@@ -42,15 +42,35 @@
 
     // ---------- 3. THE LADDER ----------
     note('== tier ladder ==');
-    ok('MAXT is 13', MAXT===13, 'MAXT='+MAXT);
-    ok('SD_T is 12', SD_T===12, 'SD_T='+SD_T);
-    ok('RELIC_T is 13', RELIC_T===13, 'RELIC_T='+RELIC_T);
-    ok('MAXT-1 lands exactly on SD', MAXT-1===SD_T);
+    // THE TOP IS T12 -> RELIC -> SD (user, 2026-07-29). The pair swapped: relics are the drop, SD is
+    // the crafted pinnacle, and MAXT came back down because neither is rollable.
+    ok('MAXT is 12', MAXT===12, 'MAXT='+MAXT);
+    ok('RELIC_T is 12', RELIC_T===12, 'RELIC_T='+RELIC_T);
+    ok('SD_T is 13', SD_T===13, 'SD_T='+SD_T);
+    ok('SD sits above the relic', SD_T===RELIC_T+1);
+    ok('MAXT-1 lands on the top of the ORDINARY ladder', MAXT-1===11, 'MAXT-1='+(MAXT-1));
+    ok('neither crafted rung is rollable', MAXT-1<RELIC_T && MAXT-1<SD_T);
     ok('TIER_NAMES[SD_T] is Scavenged Dreams', TIER_NAMES[SD_T]==='Scavenged Dreams', TIER_NAMES[SD_T]);
     ok('TIER_NAMES[RELIC_T] is Riftforged', TIER_NAMES[RELIC_T]==='Riftforged', TIER_NAMES[RELIC_T]);
-    ok('ladder has no tail', TIER_NAMES.length===RELIC_T+1, 'len='+TIER_NAMES.length);
-    ok('SD is written "SD", not "T13"', tierTag(SD_T)==='SD', tierTag(SD_T));
+    ok('ladder has no tail', TIER_NAMES.length===SD_T+1, 'len='+TIER_NAMES.length);
+    ok('SD is written "SD"', tierTag(SD_T)==='SD', tierTag(SD_T));
+    // 'T13' must not be a string this game can produce -- the old hard rule said SD is never written
+    // T13, and giving the relic rung a tag rather than a number keeps that literally true.
+    ok('the relic rung is written "RF", not "T13"', tierTag(RELIC_T)==='RF', tierTag(RELIC_T));
+    ok('nothing anywhere on the ladder reads "T13"',
+       TIER_NAMES.every((_,i)=>tierTag(i)!=='T13'),
+       TIER_NAMES.map((_,i)=>tierTag(i)).join(','));
     ok('ordinary tiers still read T<n>', tierTag(0)==='T1' && tierTag(11)==='T12', tierTag(0)+'/'+tierTag(11));
+    // THE POWER STEP, which is the whole point of the two top rungs (relic 2x T12, SD 5x relic)
+    {
+      const w12=gearBaseStats('wpn',11).atk, wRf=gearBaseStats('wpn',RELIC_T).atk, wSd=gearBaseStats('wpn',SD_T).atk;
+      ok('a relic is 2x the top found tier', Math.abs(wRf/w12-2.0)<0.02, w12+' -> '+wRf);
+      ok('SD is 5x a relic', Math.abs(wSd/wRf-5.0)<0.02, wRf+' -> '+wSd);
+      ok('and 10x the top found tier', Math.abs(wSd/w12-10.0)<0.02, w12+' -> '+wSd);
+      // the multiplier must land on the WHOLE block, or armour and rings become sidegrades up top
+      const a12=gearBaseStats('arm',11,'plate').def, aSd=gearBaseStats('arm',SD_T,'plate').def;
+      ok('the step applies to armour too', Math.abs(aSd/a12-10.0)<0.05, a12+' -> '+aSd);
+    }
     // the art divisor must NOT have followed the ladder up
     ok('ART_TIERS frozen at 12', typeof ART_TIERS!=='undefined' && ART_TIERS===12, 'ART_TIERS='+ART_TIERS);
     ok('_nTiers() returns 12, not MAXT', typeof _nTiers==='function' && _nTiers()===12, '_nTiers()='+(typeof _nTiers==='function'?_nTiers():'n/a'));
@@ -64,8 +84,15 @@
     let worst=-1;
     for(let i=0;i<4000;i++){ const it=mkItem(['wpn','arm','helm','ring'][i&3], 40, 0, 'knight');
       if(it.t>worst) worst=it.t; }
-    ok('mkItem never exceeds SD even when asked for T44', worst<=SD_T, 'highest t seen = '+worst);
-    ok('mkItem can be pushed to SD by an explicit request', worst===SD_T, 'highest t seen = '+worst);
+    ok('mkItem cannot reach either crafted rung even when asked for T44',
+       worst<RELIC_T, 'highest t seen = '+worst);
+    ok('mkItem still reaches the top of the ordinary ladder', worst===MAXT-1, 'highest t seen = '+worst);
+    // mkTopItem is the sanctioned way in, and it must refuse to be a back door to anything lower
+    if(typeof mkTopItem==='function'){
+      ok('mkTopItem makes a relic-tier piece', (mkTopItem('wpn',RELIC_T,'knight')||{}).t===RELIC_T);
+      ok('mkTopItem makes an SD piece', (mkTopItem('wpn',SD_T,'knight')||{}).t===SD_T);
+      ok('mkTopItem refuses the ordinary ladder', mkTopItem('wpn',11,'knight')===null);
+    }
 
     // the auction shelf, across a year of periods
     let aucMax=-1;
@@ -76,36 +103,50 @@
         try{ for(const l of auctionListings()) if(l.item && l.item.t>aucMax) aucMax=l.item.t; }catch(e){}
       }
       window.auctionPeriod=realPeriod;
-      ok('auction never stocks SD over 365 periods', aucMax<SD_T, 'highest shelf tier = '+aucMax);
+      ok('auction never stocks a crafted rung over 365 periods', aucMax<RELIC_T, 'highest shelf tier = '+aucMax);
     }
-    // the event chest
+    // the event chest. relicP:0 turns off the relic it grants ON PURPOSE, so anything at or above
+    // RELIC_T here came out of the ordinary gear rolls, which is the leak being tested for.
     let chestMax=-1;
     if(typeof rollEventChest==='function'){
       for(let i=0;i<600;i++) for(const it of rollEventChest(50,'knight',{relicP:0}))
         if(it.t>chestMax) chestMax=it.t;
-      ok('event chest never pays SD', chestMax<SD_T, 'highest chest tier = '+chestMax);
+      ok('event chest gear rolls never reach a crafted rung', chestMax<RELIC_T, 'highest chest tier = '+chestMax);
     }
-    // pickWeighted's overflow tail must not manufacture SD out of a T12 row
+    // pickWeighted's overflow tail adds a step ABOVE the row's ceiling, so a T12 row is exactly the
+    // case that could tail into the relic band
     if(typeof pickWeighted==='function'){
       let ovf=-1;
       for(let i=0;i<20000;i++){ const t=pickWeighted([[10,45],[11,55]],200); if(t>ovf) ovf=t; }
-      ok('a T11/T12 row cannot overflow into SD', ovf<SD_T, 'highest = '+ovf);
-      let sdrow=-1;
-      for(let i=0;i<20000;i++){ const t=pickWeighted([[10,42],[11,50],[12,8]],200); if(t>sdrow) sdrow=t; }
-      ok('a row that names SD can reach SD and no further', sdrow===SD_T, 'highest = '+sdrow);
+      ok('a T11/T12 row cannot overflow into the relic band', ovf<RELIC_T, 'highest = '+ovf);
+      // and a row that names 12 outright -- which no shipped row does any more -- is still clamped
+      let bad=-1;
+      for(let i=0;i<20000;i++){ const t=pickWeighted([[10,42],[11,50],[12,8]],200); if(t>bad) bad=t; }
+      ok('even a row naming index 12 is clamped off the relic band', bad<RELIC_T, 'highest = '+bad);
     }
 
-    // ---------- 5. WHERE SD ACTUALLY FALLS ----------
-    note('== SD sources ==');
+    // ---------- 5. NEITHER CRAFTED RUNG MAY BE NAMED BY A ZONE ROW ----------
+    note('== drop tables ==');
     if(typeof ZONE_TIERS!=='undefined'){
-      const sdZones=[], pubLeak=[];
+      const named=[];
       ZONE_TIERS.forEach((z,i)=>{
-        if((z.sb||[]).some(r=>r[0]===SD_T)) sdZones.push(i);
-        if((z.pub||[]).some(r=>r[0]>=SD_T)) pubLeak.push(i);
+        if((z.sb||[]).some(r=>r[0]>=RELIC_T)) named.push('sb'+i);
+        if((z.pub||[]).some(r=>r[0]>=RELIC_T)) named.push('pub'+i);
       });
-      ok('SD is soulbound everywhere it drops', pubLeak.length===0, pubLeak.join(',')||'no public SD');
-      ok('SD falls only in the Lv50 rim (zones 9-13)',
-         sdZones.length===5 && sdZones[0]===9 && sdZones[4]===13, 'zones '+sdZones.join(','));
+      // The five rim rows carried [12,8] for dropped SD. Index 12 is the RELIC band now, so leaving
+      // them would have paid relics out of the ordinary soulbound channel on a rim trash kill.
+      ok('no zone row names a crafted rung', named.length===0, named.join(',')||'none');
+      ok('public rows still cap at PUB_TMAX',
+         ZONE_TIERS.every(z=>(z.pub||[]).every(r=>r[0]<=PUB_TMAX)));
+    }
+    // the SD injector is gone, not zeroed: a weight of 0 is still a table entry naming index 12
+    ok('_sdAugmentRow is retired', typeof _sdAugmentRow==='undefined');
+    ok('SD_DUN_W is retired', typeof SD_DUN_W==='undefined');
+    // the reliquary sack must still point at relics, which is the band that has now moved twice
+    if(typeof LOOT_BANDS!=='undefined' && typeof bandOfTier==='function'){
+      ok('LOOT_BANDS still has exactly four rows (2 bits on the wire)', LOOT_BANDS.length===4, 'len='+LOOT_BANDS.length);
+      ok('a relic lands in the reliquary band', bandOfTier(RELIC_T)===LOOT_BANDS.length-1, 'band '+bandOfTier(RELIC_T));
+      ok('a T12 does NOT', bandOfTier(11)===LOOT_BANDS.length-2, 'band '+bandOfTier(11));
     }
 
     // ---------- 6. THE MATERIAL TREE ----------
@@ -194,51 +235,85 @@
     ok('a join you lack the second half of is refused', !pShort.ok, pShort.why);
     ok('a refused join takes nothing', matCount('emberalloy')===before);
 
-    // the gear rung. Ring 8 is the Core Sanctum: two sets, 'throne' and 'tide'.
+    // THE GEAR RUNG NOW RUNS RELIC -> SD (user, 2026-07-29). Ring 8 is the Core Sanctum, whose two
+    // sets are 'throne' and 'tide'; take a real relic of that dungeon so the seed match is genuine.
     const SEED8=seedIdFor(8);
-    ch.inv.push(mkItem('helm',11,0,'knight'));            // a T12 -- must NOT be forgeable
-    ch.inv.push({k:'helm', mt:'plate', t:SD_T, rar:3, aff:[]});   // a Scavenged Dreams helm
+    const rel8=relicsForRing(8).filter(r=>r.slot==='helm')[0]||relicsForRing(8)[0];
+    ch.inv.push(mkItem('helm',11,0,'knight'));                    // a T12 -- must NOT be forgeable
+    ch.inv.push(mkRelicItem(rel8.id,'knight'));                   // a relic of the Core Sanctum
     matAdd(SEED8,1);
     const pT12=forgePlan({kind:'item',i:0},{kind:'mat',id:SEED8});
     ok('a T12 piece is refused by a Riftseed', !pT12.ok, pT12.why);
-    const pNoSet=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
-    ok('an SD piece asks which of the two sets', !pNoSet.ok && !!pNoSet.needSet, pNoSet.why);
-    ok('a seed offers only its own dungeon\'s two sets',
-       pNoSet.needSet && pNoSet.needSet.length===2 && pNoSet.needSet.every(s=>s.set.ring===8),
-       (pNoSet.needSet||[]).map(s=>s.set.id).join(','));
-    ok('it does NOT offer all twelve', pNoSet.needSet.length < RELIC_SETS.length,
-       pNoSet.needSet.length+' of '+RELIC_SETS.length);
-    const setId=pNoSet.needSet[0].set.id;
-    const pRel=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8},{set:setId});
-    ok('with a set chosen the forge is ready', pRel.ok, pRel.ok?pRel.label:pRel.why);
-    const rRel=forgeDo({kind:'item',i:1},{kind:'mat',id:SEED8},{set:setId});
-    ok('forging pays a relic into the same satchel slot',
-       rRel.ok && ch.inv[1] && !!ch.inv[1].relic, rRel.ok?('relic='+ch.inv[1].relic):rRel.why);
-    ok('the forged relic sits at T14', ch.inv[1] && ch.inv[1].t===RELIC_T, 't='+(ch.inv[1]&&ch.inv[1].t));
-    ok('the forged relic belongs to the seed\'s own dungeon',
-       relicRing(ch.inv[1].relic)===8, 'ring '+relicRing(ch.inv[1].relic));
-    ok('the forged relic is equippable by its maker',
+    const pSD=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
+    ok('a relic plus its own seed is ready with nothing to ask', pSD.ok, pSD.ok?pSD.label:pSD.why);
+    ok('and it needs no set chooser -- the relic already IS its set', !pSD.needSet);
+    const rSD=forgeDo({kind:'item',i:1},{kind:'mat',id:SEED8});
+    ok('forging raises the piece in the same satchel slot', rSD.ok, rSD.ok?'':rSD.why);
+    ok('the raised piece sits at SD_T', ch.inv[1] && ch.inv[1].t===SD_T, 't='+(ch.inv[1]&&ch.inv[1].t));
+    // THE SET SURVIVES THE UPGRADE, which is the thing that stops the top rung being a trap
+    ok('it keeps its relic id, so its set bonus still counts',
+       ch.inv[1] && ch.inv[1].relic===rel8.id, 'relic='+(ch.inv[1]&&ch.inv[1].relic));
+    ok('it keeps its exclusive affixes',
+       ch.inv[1] && Array.isArray(ch.inv[1].aff) && ch.inv[1].aff.length>0,
+       'aff='+((ch.inv[1]&&ch.inv[1].aff)?ch.inv[1].aff.length:'none'));
+    ok('and it is still equippable by its maker',
        typeof canEquip==='function' && canEquip(ch.inv[1],ch), 'mt='+(ch.inv[1]&&ch.inv[1].mt));
     ok('the seed was spent', matCount(SEED8)===0, SEED8+'='+matCount(SEED8));
-    // and it cannot be made twice
-    ch.inv.push({k:'helm', mt:'plate', t:SD_T, rar:3, aff:[]});
+    ok('and the raise is a real power step',
+       itemStats(ch.inv[1],'knight').def>itemStats(mkRelicItem(rel8.id,'knight'),'knight').def
+       || itemStats(ch.inv[1],'knight').wis>itemStats(mkRelicItem(rel8.id,'knight'),'knight').wis);
+    // an already-raised piece has nothing left to do to it
     matAdd(SEED8,1);
-    const pDupe=forgePlan({kind:'item',i:2},{kind:'mat',id:SEED8},{set:setId});
-    ok('the same relic cannot be forged twice', !pDupe.ok, pDupe.why);
-    // a seed from another dungeon cannot reach this one's sets
+    const pAgain=forgePlan({kind:'item',i:1},{kind:'mat',id:SEED8});
+    ok('an SD piece cannot be raised again', !pAgain.ok, pAgain.why);
+    // and a seed only answers for its own dungeon
+    ch.inv.push(mkRelicItem(rel8.id,'knight'));
     const SEED3=seedIdFor(3); matAdd(SEED3,1);
-    const pWrong=forgePlan({kind:'item',i:2},{kind:'mat',id:SEED3},{set:setId});
-    ok('a seed cannot forge another dungeon\'s set', !pWrong.ok, pWrong.why);
+    const pWrong=forgePlan({kind:'item',i:2},{kind:'mat',id:SEED3});
+    ok('another dungeon\'s seed cannot raise this relic', !pWrong.ok, pWrong.why);
 
     // ---------- 8. THE SAVE MIGRATION ----------
+    // The most destructive thing in the ladder swap: a wrong pass silently rewrites the best gear
+    // every save owns. Driven over a synthetic save rather than reasoned about, and run TWICE --
+    // idempotency is the property that makes a schema marker unnecessary.
+    //
+    // The fixture is a POST-FIRST-SWAP save, which is what real saves actually look like: relics at
+    // the old index 13, Scavenged Dreams at the old index 12, and an ordinary T12 that must not move.
+    // `users` is a lexical `let`, so this mutates the object rather than rebinding the name.
     note('== migration ==');
-    users['_m']={chars:[{cls:'knight', inv:[{k:'helm',mt:'plate',t:12,relic:'gate_helm',rar:5,aff:[]}]}],
-                 cur:0, vault:[{k:'wpn',wt:'sword',t:12,relic:'pyre_wpn',rar:5,aff:[]}]};
+    const _relA='gate_helm', _relB='pyre_wpn';
+    users['_m']={cur:0,
+      chars:[{cls:'knight',
+        inv:[{k:'helm',mt:'plate',t:13,relic:_relA,rar:5,aff:[]},   // relic at the OLD index
+             {k:'arm', mt:'plate',t:12,rar:3,aff:[]},               // SD at the OLD index
+             {k:'ring',st:'luck', t:11,rar:2,aff:[]}],              // ordinary, must not move
+        // EQUIPPED GEAR, which the old migration never walked at all: the tier is a bare number on
+        // rpg and the relic id lives off in eqAff, so an equipped relic kept a stale index through
+        // the FIRST swap and has been computing as the wrong tier ever since.
+        rpg:{wpn:13, arm:12, helm:11, ring:{st:'luck',t:12},
+             eqAff:{wpn:{r:5,a:null,rel:_relB}, arm:{r:0,a:null,rel:null},
+                    ring:{r:0,a:null,rel:null}}}
+      }],
+      vault:[{k:'wpn',wt:'sword',t:13,relic:_relB,rar:5,aff:[]},
+             {k:'helm',mt:'plate',t:12,rar:3,aff:[]}]};
     const moved=migrateForgeTiers();
-    ok('migration moves old relics off index 12', moved>=2, moved+' moved');
-    ok('a migrated satchel relic is at T14', users['_m'].chars[0].inv[0].t===RELIC_T);
-    ok('a migrated vault relic is at T14', users['_m'].vault[0].t===RELIC_T);
+    const _mc=users['_m'].chars[0], _mr=_mc.rpg;
+    ok('migration moved something', moved>=7, moved+' moved');
+    ok('a satchel relic lands on RELIC_T', _mc.inv[0].t===RELIC_T, 't='+_mc.inv[0].t);
+    ok('a satchel SD piece lands on SD_T', _mc.inv[1].t===SD_T, 't='+_mc.inv[1].t);
+    ok('an ordinary T12 is left alone', _mc.inv[2].t===11, 't='+_mc.inv[2].t);
+    ok('a vault relic lands on RELIC_T', users['_m'].vault[0].t===RELIC_T, 't='+users['_m'].vault[0].t);
+    ok('a vault SD piece lands on SD_T', users['_m'].vault[1].t===SD_T, 't='+users['_m'].vault[1].t);
+    ok('an EQUIPPED relic is migrated', _mr.wpn===RELIC_T, 'wpn='+_mr.wpn);
+    ok('an EQUIPPED SD piece is migrated', _mr.arm===SD_T, 'arm='+_mr.arm);
+    ok('an equipped ordinary tier is left alone', _mr.helm===11, 'helm='+_mr.helm);
+    ok('an equipped ring follows the same rule', _mr.ring.t===SD_T, 'ring='+_mr.ring.t);
+    // AND AGAIN -- a second pass must be a complete no-op, or the swap bounces every time the game
+    // loads and the ladder oscillates for the life of the save.
+    const _snap=JSON.stringify(users['_m']);
     ok('migration is idempotent', migrateForgeTiers()===0);
+    ok('and the save is byte-identical after a second pass', JSON.stringify(users['_m'])===_snap);
+    delete users['_m'];
 
     // ---------- 9. THE WIRE ----------
     note('== co-op packing ==');

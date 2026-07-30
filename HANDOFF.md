@@ -101,31 +101,50 @@ is live as soon as `index.html` lists it.
 
 **Tier is the only power axis.** Rarity sets border colour and affix count, nothing else.
 
-**THE LADDER HAS FOURTEEN RUNGS AND THREE OF THEM HAVE RULES.**
+**THE LADDER HAS FOURTEEN RUNGS AND THE TOP TWO ARE T12 → RELIC → SD** (user, 2026-07-29).
 
 | rung | where it comes from |
 |---|---|
 | T1–T12 | found, wherever `ZONE_TIERS` says |
-| **Scavenged Dreams** (index 12) | **dropped**, and only in the Lv50 rim and the ascended dream dungeons |
-| **T14 Riftforged** (index 13) | relics. Forged from an SD piece, or found at the dungeon rates |
+| **Riftforged** (index 12) | relics. **Dropped**, in the six ascended dungeons at `relicChanceFor` rates |
+| **Scavenged Dreams** (index 13) | **crafted only.** A relic + its own dungeon's Riftseed. Nothing drops it |
 
-**Scavenged Dreams is written `SD`, never `T13`.** It is named for what it is — carried out of a
-dead god's dream — and a number would say nothing. `tierTag(t)` owns that spelling; never build
-`'T'+(t+1)` by hand or the two spellings drift.
+**THIS PAIR HAS NOW SWAPPED TWICE, so read the constants and never a literal.** The first change
+inserted SD *underneath* the relics as a dropped rung; the user then made SD the crafted pinnacle and
+the relic the drop that feeds it. Every place that hard-coded `12` or `13` had to move both times —
+`LOOT_BANDS`' reliquary row, `CHEST_TMAX`, the `ZONE_TIERS` rim rows, `recalcStats`' equip clamp — and
+each one fails *silently* when stale, because an index is still a valid index.
 
-**`MAXT` MOVED TO 13 AND THAT WAS DELIBERATE.** The old invariant said it must stay 12, and the
-reason was real: `_nTiers()` divided the sprite bands by it, so raising it re-mapped every item in
-the game onto the wrong art. `MAXT` was doing two jobs — *how high can a roll go* and *how many
-tiers were the sprites drawn for* — and those stopped being the same number the moment SD became
-rollable. The second is **`ART_TIERS`** now, frozen at 12 forever because it is a fact about the
-files on disk. `_nTiers()` reads `ART_TIERS`; **do not make it read `MAXT` again, or
-`TIER_NAMES.length` either** — both of those grow.
+**BOTH TOP RUNGS WEAR A TAG, NOT A NUMBER: `SD` and `RF`.** That is what keeps the old rule
+"Scavenged Dreams is written `SD`, never `T13`" literally true now that the relic sits at index 12 —
+**`T13` is not a string this game produces at all.** `tierTag(t)` owns both spellings; never build
+`'T'+(t+1)` by hand.
 
-With that split, `MAXT-1` lands exactly on `SD_T`: a random draw can reach Scavenged Dreams and can
-**never** reach a relic. Three things could have leaked SD and all three are now closed —
-`pickWeighted` clamps to the *row's* own ceiling rather than `MAXT-1` (so a T12 row cannot overflow
-into SD by accident), and the auction and the event chest carry `AUC_TMAX` / `CHEST_TMAX`. A row may
-only pay SD if it **names** SD.
+**`MAXT` IS THE CLAMP ON EVERY RANDOM DRAW AND IT IS BACK TO 12.** It went to 13 when SD was
+rollable; neither top rung is rollable now, so `MAXT-1` lands on index 11 — the top of the *ordinary*
+ladder. A relic is built only by `mkRelicItem` at its own per-dungeon rate, SD only by `forgeDo`, and
+`mkTopItem` is the one sanctioned back door (the dev workbench). `mkItem` **cannot** reach either, and
+that clamp is the guarantee.
+
+`ART_TIERS` is **not** `MAXT` and never was after the first split: it is frozen at 12 because it is a
+fact about the files on disk. `_nTiers()` reads `ART_TIERS`; **do not make it read `MAXT` again, or
+`TIER_NAMES.length` either** — one shrinks and the other grows.
+
+**Four things could leak a crafted rung and all four are closed.** `pickWeighted` clamps to
+`min(row max + 1, MAXT-1)` — its overflow tail adds a step *above* the row's ceiling, which is
+exactly how a T12 row would have tailed into the relic band. `CHEST_TMAX` is `MAXT-1` (it read
+`SD_T-1`, which *became* the relic band on the swap). `AUC_TMAX` sits lower still. And no
+`ZONE_TIERS` row may name index 12 or 13 at all — the five rim rows carried `[12,8]` for dropped SD
+and had to lose it, or a rim trash kill would pay relics out of the ordinary soulbound channel.
+`_sdAugmentRow` and `SD_DUN_W` are **deleted, not zeroed**: a weight of 0 is still an entry naming
+index 12.
+
+**THE POWER STEP IS A MULTIPLIER, NOT A POINT ON THE CURVE.** `gearBaseStats` runs the quadratic at
+`min(t, ART_TIERS-1)` and then applies `TOP_MUL` — relic ×2, SD ×10 — to the **whole stat block**, so
+armour and rings scale with weapons instead of becoming sidegrades at the top. Weapon attack reads
+185 → 370 → 1850. A Lv50 hero's own attack is ~235, so a full SD set is roughly a 5× character-power
+step, and that is **intended**: SD is meant to break the game until there is content that can survive
+it. See the raids note below for why that content cannot exist yet.
 
 **NOTHING MAY SIT ABOVE `LV_CAP`.** 50 is a hard ceiling — `levelUp` stops there and there is no
 prestige level — so any content that computes its own level must land on or under it. Six ascended
@@ -272,12 +291,21 @@ it hands you the prestige caps while there are still levels left to earn.
 - `bagVerdict()` rates a piece for the sack panel. The panel's sort is a **VIEW** — `bagTakeOne`
   splices the bag by index, so sorting the array itself makes every button take the wrong piece.
 
-### Relics — T14 Riftforged
-- Forty-eight relics in **twelve four-piece sets** (`17e_relics.js`). `RELIC_T` (13) is the index
-  of the 14th `TIER_NAMES` entry. Relics used to sit at index 12 and moved up a rung when
-  Scavenged Dreams was inserted underneath them; the *name* went with them, so a saved relic still
-  reads 'Riftforged'. `migrateForgeTiers()` (`18_forge.js`) moves the index on anything older,
-  across every character's satchel and the account Vault, and is idempotent.
+### Relics — Riftforged (index 12), and Scavenged Dreams above them
+- Forty-eight relics in **twelve four-piece sets** (`17e_relics.js`). `RELIC_T` is **12** again: they
+  moved up to 13 when SD was inserted underneath them as a dropped rung, and came back down when the
+  user made SD the crafted top. The *name* travels with the index, so a saved relic always reads
+  'Riftforged' whatever the number is.
+- **`migrateForgeTiers()` (`18_forge.js`) FIXES SAVES BY SHAPE, NOT BY ARITHMETIC**, which is why one
+  function has handled both swaps and needs no schema marker: a relic goes to whatever `RELIC_T` is
+  (the `relic` flag identifies it, never the index), and an item at index 12 *without* that flag was a
+  pre-swap SD piece and goes to `SD_T`. A blind 12↔13 swap would undo itself on the second run.
+  It walks satchels, the Vault **and equipped gear** — that last one was missing, so `equipItem`'s
+  bare tier numbers in `rpg.wpn/arm/helm` and `rpg.ring.t` were never migrated by the *first* swap
+  either, and equipped relics had been computing as the wrong tier ever since.
+- **Raising a relic keeps its set.** `forgeDo` copies the piece and moves only `t`, so `relic`, the
+  exclusive affix and the trait all survive — otherwise a finished four-piece set would beat four SD
+  pieces and the top rung would be a trap.
 - A relic is an **ordinary item** with `relic:id` — same equip path, satchel, compare and icon.
   Its id rides in `rpg.eqAff[slot].rel`.
 - It drops **shaped for its finder** (their class's `wt`/`mt`), so `canEquip` just works.
@@ -741,6 +769,14 @@ extend** — the UI, buy path, price rules and ledger all work unchanged. Real l
 
 **Diamonds cannot collect real money client-side.** Build the currency, catalogue, gating and UI;
 stub the purchase. `diamondPacks()` is the one function a payment provider would replace.
+
+**TEN-PLAYER RAIDS CANNOT RUN ON THIS ARCHITECTURE** (raised 2026-07-29, when SD was made
+game-breaking on the understanding that raids would later scale against relic/SD gear). Co-op is
+peer-to-peer WebRTC with an *elected host*, verified with two clients: there is no authority to hold
+ten players, no state that outlives the host's tab, and every save is client-side and editable — the
+same three reasons the auction cannot escrow. It is a fine goal, but it needs a server, and until one
+exists **do not design content that depends on it**. What SD's power step actually implies today is
+that the Lv50 content becomes a victory lap once you are wearing it, which was the accepted trade.
 
 ---
 

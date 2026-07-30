@@ -187,17 +187,19 @@ DEV_PANE.forge=function(B){
     B.appendChild(gg);
   }
 
-  // ---- the SD gear the forge actually consumes ----
-  B.appendChild(_dvHd('SCAVENGED DREAMS GEAR — the only thing the anvil takes'));
+  // ---- the two crafted rungs. mkItem CANNOT reach either: its clamp is MAXT-1, the top of the
+  // ordinary ladder, which is the guarantee that stops a loot table paying one. mkTopItem is the
+  // sanctioned way in, so these buttons went from silently handing out T12 to doing what they say.
+  B.appendChild(_dvHd('THE CRAFTED RUNGS — '+tierTag(RELIC_T)+' feeds the anvil, '+tierTag(SD_T)+' comes off it'));
   const g2=_dvGrid();
   for(const k of ['wpn','arm','helm','ring']){
     g2.appendChild(_dvBtn(tierTag(SD_T)+' '+k,()=>{ const ch=_dvCh(); ch.inv=ch.inv||[];
       if(ch.inv.length>=20) throw new Error('satchel full');
-      ch.inv.push(mkItem(k,SD_T,0,ch.cls)); saveRPG();
+      ch.inv.push(mkTopItem(k,SD_T,ch.cls)); saveRPG();
       devLog('+ '+tierTag(SD_T)+' '+k+' to satchel'); }));
   }
   g2.appendChild(_dvBtn('Sack of all four',()=>{ const ch=_dvCh();
-    _dvSack(['wpn','arm','helm','ring'].map(k=>mkItem(k,SD_T,0,ch.cls)),tierTag(SD_T)+' set'); }));
+    _dvSack(['wpn','arm','helm','ring'].map(k=>mkTopItem(k,SD_T,ch.cls)),tierTag(SD_T)+' set'); }));
   B.appendChild(g2);
 
   // ---- seeds: straight to the end of the tree ----

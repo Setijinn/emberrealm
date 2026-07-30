@@ -550,39 +550,50 @@ function noteRelicTaken(id){ if(!rpg) return;
   if(rpg.relics.indexOf(id)<0){ rpg.relics.push(id);
     if(typeof runNote==='function') runNote('relics'); } }
 function legById(id){ return LEGENDS.filter(function(L){return L.id===id;})[0]||null; }
-// THE LADDER.
+// THE LADDER. Three rungs at the top and the order is T12 -> RELIC -> SD (user, 2026-07-29).
 //   index 0-11   T1-T12, the ordinary ladder, found anywhere the zone tables say so
-//   index 12     SCAVENGED DREAMS -- displayed as "SD", never as "T13" (user, 2026-07-28).
-//                DROPPED, not crafted: the highest-level areas and the ASCENDED DREAM DUNGEONS
-//                only. It is named for where it comes from -- what you carry out of a dead god's
-//                dream -- which is why it wears a tag instead of a number.
-//   index 13     T14 Riftforged, relics. Forged from an SD piece, or found at the dungeon rates.
+//   index 12     RIFTFORGED, the relics. DROPPED, in the six ascended dungeons at their own rates.
+//   index 13     SCAVENGED DREAMS, the pinnacle. CRAFTED ONLY -- a relic plus the material that
+//                belongs to the kind of thing you are making. Nothing drops it, ever.
 //
-// Relics used to sit at index 12 and moved up when Scavenged Dreams was inserted underneath them.
-// The NAME went with them, so a saved relic still reads 'Riftforged'; migrateForgeTiers() in
-// 18_forge.js moves the index on anything built before the change.
-const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire','Scavenged Dreams','Riftforged'];
-// MAXT IS THE CLAMP ON EVERY RANDOM DRAW, and it moved from 12 to 13 when Scavenged Dreams became
-// a DROPPED tier rather than a crafted one. That is a deliberate change to a documented invariant,
-// so here is why it is still safe:
-//   * The reason MAXT had to stay 12 was that _nTiers() divided the art bands by it, so raising it
-//     re-mapped every existing tier onto the wrong sprite. That job is now ART_TIERS (below), a
-//     frozen constant, because "how many tiers were the sprites drawn for" is not the same question
-//     as "how high can a roll go" and MAXT was answering both.
-//   * MAXT-1 is now 12 == SD_T, so ONLY a table that explicitly names tier 12 can pay one out.
-//     ZONE_TIERS does that in the top rows and nowhere else; the auction and the event chest carry
-//     their own lower ceilings (AUC_TMAX / CHEST_TMAX) so neither can reach it.
-//   * T14 is still above the clamp and still unreachable by any roll, exactly as before.
-const MAXT=13;
-const SD_T=12;                       // 0-based index of Scavenged Dreams. Displayed "SD".
-const RELIC_T=13;                    // 0-based index of the Riftforged band == T14
+// SD AND RIFTFORGED SWAPPED PLACES, and this is the second time this pair has moved. The first time
+// SD was inserted UNDERNEATH the relics as a dropped rung; the user has now made SD the crafted top
+// and relics the drop that feeds it, so relics come back down to 12 and SD goes up to 13.
+//
+// BOTH TOP RUNGS WEAR A TAG INSTEAD OF A NUMBER, and that is what keeps the old hard rule
+// "Scavenged Dreams is written SD, never T13" literally true through the swap: 'T13' is not a
+// string this game produces at all now. tierTag() owns both spellings. SD is named for where it
+// comes from -- what you carry out of a dead god's dream -- and a relic is named for the rift.
+//
+// A SAVED ITEM'S TIER IS FIXED BY SHAPE, NOT BY ARITHMETIC. migrateForgeTiers() in 18_forge.js
+// keys off the `relic` flag rather than off any particular index, so it moves relics to whatever
+// RELIC_T currently is and a pre-swap SD piece (index 12, no relic flag) up to SD_T. That makes it
+// idempotent without a schema marker, and it is why the same function handled the FIRST swap too.
+const TIER_NAMES=['Cracked','Worn','Iron','Steel','Tempered','Runed','Ember','Obsidian','Storm-forged','Dragonbone','Mythril','Hearthfire','Riftforged','Scavenged Dreams'];
+// MAXT IS THE CLAMP ON EVERY RANDOM DRAW, and it comes back DOWN to 12 now that neither top rung is
+// a random drop. MAXT-1 is 11 == T12 Hearthfire, so the very best a roll can produce anywhere in the
+// game is the top of the ORDINARY ladder:
+//   * a RELIC is not a roll. rollRelicItem() builds one directly at its own per-dungeon rate, and
+//     mkRelicItem is the only thing that stamps `relic`.
+//   * SCAVENGED DREAMS is not a drop at all. forgeDo() is the only thing that can make one.
+//   * ART_TIERS (below) still owns the sprite-band division, so lowering MAXT does not re-map art.
+//     The two questions -- how high can a roll go, how many tiers were the sprites drawn for -- were
+//     split apart when MAXT last moved, which is exactly what makes this safe to move again.
+// Anything that used to name tier 12 in a weighted row had to go with it, or a rim kill would pay a
+// relic out of the ordinary loot channel: the SD entries in ZONE_TIERS' top rows, _sdAugmentRow and
+// SD_DUN_W are all gone, and AUC_TMAX / CHEST_TMAX sit lower still.
+const MAXT=12;
+const RELIC_T=12;                    // 0-based index of Riftforged. Displayed "RF".
+const SD_T=13;                       // 0-based index of Scavenged Dreams. Displayed "SD".
 // THE NUMBER OF TIERS THE ITEM ART WAS DRAWN FOR. Frozen at 12 forever: it is a fact about the
 // files on disk, not about the ladder. _nTiers() reads this so the ladder can grow without every
 // sword changing which sprite it uses.
 const ART_TIERS=12;
-// How a tier is WRITTEN. Scavenged Dreams is the one rung with a tag instead of a number, so every
-// place that used to build 'T'+(t+1) by hand goes through here or the two spellings drift apart.
-function tierTag(t){ return (t===SD_T) ? 'SD' : 'T'+((t|0)+1); }
+// How a tier is WRITTEN. BOTH top rungs wear a tag instead of a number, so 'T13' is not a string
+// this game produces at all -- which is what keeps the old "SD is never written T13" rule true now
+// that the relic rung sits at index 12. Every place that used to build 'T'+(t+1) by hand comes
+// through here or the spellings drift apart.
+function tierTag(t){ return (t===SD_T) ? 'SD' : (t===RELIC_T) ? 'RF' : 'T'+((t|0)+1); }
 function classWT(cls){ return WTYPE[CWEAP[cls]]||WTYPE.sword; }
 function weaponAt(cls,t){ t=Math.max(0,Math.min(MAXT-1,t)); const wt=classWT(cls);
  return {n:TIER_NAMES[t]+' '+wt.n, add:Math.round(t*t*1.35+t*2),
@@ -594,13 +605,21 @@ function tierCost(t){return t===0?0:Math.round(30*Math.pow(1.9,t));}
 // the ground at a glance. It is yellower than the T12 orange (#ff9c50) so the two never blur.
 // `--relic` in style.css is this same value; change both together.
 const RELIC_COL='#ffd24a';
-// THE CRAFTED TIER NEEDS ITS OWN COLOUR. Emberforged sits between the T12 orange and the relic
-// gold, and if it borrowed either one the two rungs of the forge would be indistinguishable in
-// every list -- which is the exact failure the relic gold was chosen to avoid against T12. This is
-// a hotter, redder orange than #ff9c50: the heat rises through the top of the ladder, then turns
-// gold at the relic. Keep all three distinct if any of them ever changes.
-const FORGE_COL='#ff6a3d';
-function tierCol(t){ return t>=13?RELIC_COL:t>=12?FORGE_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
+// SCAVENGED DREAMS SITS ABOVE THE GOLD NOW, so it needs a colour that reads as beyond it rather
+// than as another warm step below it. The old FORGE_COL was a hotter orange chosen to sit BETWEEN
+// T12 and the relic gold, which was right while the crafted rung was underneath the relics and is
+// exactly wrong now -- an orange above gold reads as a downgrade.
+// Dream-light: a luminous magenta, in the violet family this game already uses for the rift, the
+// portals and the nightmare roster, and deliberately clear of every neighbour it could be confused
+// with -- epic violet #a06bff, mythical red #ff4d5e, T10-11 #c07ad4, T12 orange #ff9c50 and the
+// relic gold #ffd24a. Keep all of those distinct if any one of them changes.
+const SD_COL='#ff9bf0';
+// Kept as an alias because the forge panel and its stylesheet still speak of "the forge colour",
+// and because a dangling reference in a panel is a silently-dropped declaration, not an error.
+const FORGE_COL=SD_COL;
+// ORDER MATTERS AND IT IS DESCENDING. Testing t>=12 before t>=13 would hand SD the relic gold and
+// nothing would look wrong until you put the two side by side.
+function tierCol(t){ return t>=SD_T?SD_COL:t>=RELIC_T?RELIC_COL:t>=11?'#ff9c50':t>=9?'#c07ad4':t>=6?'#7ab8d4':t>=3?'#7dc47a':'#cfc8bd'; }
 
 // ============================================================
 // LOOT TIERS BY AREA (user, 2026-07-26)
@@ -632,16 +651,17 @@ const ZONE_TIERS=[
  // At a 5% T12 weight that took a 118-boss median to complete — the right shape but one notch too
  // slow, so T12 is worth a quarter of this zone's bound drops. The grind ring still leads it.
  /* 8  Cinderwatch        Lv45-50 */ {pub:[[7,100]],                  sb:[[9,35],[10,40],[11,25]],  sbP:0.0045, gear:1.10},
- // THE Lv50 RIM IS WHERE SCAVENGED DREAMS FALLS IN THE OPEN (user, 2026-07-28) -- these five rows
- // and the ascended dream dungeons, and nowhere else in the game. The weight is deliberately small
- // against T11/T12: this is the rim's reason to keep existing after a hero is already fully geared,
- // so it has to be a thing you go back for rather than a thing you finish. `12` is SD_T; it is
- // written as a literal here for the same reason every other tier in this table is.
- /* 9  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
- /* 10 Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
- /* 11 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
- /* 12 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
- /* 13 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,42],[11,50],[12,8]],  sbP:0.0060, gear:1.10},
+ // NO ROW MAY NAME A TIER ABOVE 11 ANY MORE (user, 2026-07-29). These five rows used to carry
+ // `[12,8]` because Scavenged Dreams was DROPPED here; SD is crafted-only now and index 12 is the
+ // relic band, so leaving the entry in place would have paid RELICS out of the ordinary soulbound
+ // channel on a rim trash kill -- the exact leak `pickWeighted`'s row-ceiling clamp was built to
+ // close, walked straight through the front door by a stale literal. The rim's reason to exist after
+ // a hero is fully geared is now the relic hunt in the ascended dungeons.
+ /* 9  The Ashfall        Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 10 Charred Steppe     Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 11 The Molten Heart   Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 12 The Glowing Waste  Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
+ /* 13 Emberflow          Lv50    */ {pub:[[7,100]],                  sb:[[10,45],[11,55]],         sbP:0.0060, gear:1.10},
 ];
 const ZONE_TIERS_FALLBACK={pub:[[0,100]],sb:null,sbP:0,gear:1.10};   // ocean / bridge / anything unmapped
 const PUB_TMAX=7;          // public gear caps at T8 (0-based 7). Everything above is soulbound.
@@ -650,26 +670,15 @@ const TIER_OVERFLOW=0.05;  // a small tail one tier above the row's max, so the 
 // Which area's table applies to a kill. In a dungeon there is no overworld band under the tile
 // (rings is null), so the drop inherits the boss's OVERWORLD clump -- the dream pays out in the
 // currency of the homeland it remembers, which is the rule the tiles and mob names already follow.
-// SCAVENGED DREAMS IN AN ASCENDED DREAM DUNGEON (user, 2026-07-28).
-// SD falls in two places: the Lv50 rim, which the ZONE_TIERS rows say outright, and the ascended
-// dream dungeons, which they cannot -- a dungeon has no overworld tile under it and inherits its
-// boss's clump row, so the Ashen Keep and the Lv50 steppe read the SAME row. The dungeon half has
-// to be decided by the DUNGEON, and the test already exists: `gate` on the boss is the ascension
-// wall, where 'none' means a walk-in starter dungeon and anything else -- INCLUDING a missing
-// field -- means the awakened depths. Same default the dungeon door uses, so a new boss can never
-// accidentally start paying SD.
-const SD_DUN_W=22;                     // SD's weight inside an ascended dungeon's bound roll
-const _sdRowCache={};
-function _sdAugmentRow(row,ring){
-  if(!row||!row.sb) return row;
-  if(_sdRowCache[ring]) return _sdRowCache[ring];
-  // never add SD twice, and never mutate the shared ZONE_TIERS row -- it is read by every kill
-  for(const r of row.sb) if(r[0]===SD_T){ _sdRowCache[ring]=row; return row; }
-  const out=Object.assign({},row);
-  out.sb=row.sb.map(r=>[r[0],r[1]]).concat([[SD_T,SD_DUN_W]]);
-  _sdRowCache[ring]=out;
-  return out;
-}
+// SD_DUN_W AND _sdAugmentRow ARE GONE (user, 2026-07-29). They existed to inject Scavenged Dreams
+// into an ascended dungeon's bound roll, because a dungeon has no overworld tile and inherits its
+// boss's clump row, so the rows alone could not say "SD falls here but not on the steppe". SD is
+// crafted-only now, so there is nothing to inject and the whole mechanism is dead weight. Deleting
+// it rather than zeroing the weight is deliberate: a weight of 0 is a table entry that still names
+// index 12, and index 12 is the relic band now.
+// _ascendedDungeon() stays -- it is still the one test for "the awakened depths", where `gate` on the
+// boss is the ascension wall and anything other than 'none' -- INCLUDING a missing field -- means
+// awakened. Stage 3's SD reagents and the relic drop tables both read it.
 function _ascendedDungeon(){
   if(typeof curRoom==='undefined'||!curRoom||!curRoom.dungeon) return -1;
   if(typeof curRoom.ring!=='number'||typeof GBOSS==='undefined') return -1;
@@ -682,9 +691,7 @@ function zoneTierRow(x,y){
     if(curRoom.rings && typeof zoneAt==='function') z=zoneAt(x/TILE,y/TILE);
     else if(typeof curRoom.ring==='number'&&typeof BOSS_ZONE!=='undefined') z=BOSS_ZONE[curRoom.ring];
   }
-  const row=ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
-  const ring=_ascendedDungeon();
-  return (ring>=0) ? _sdAugmentRow(row,ring) : row;
+  return ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
 }
 // The row one zone deeper than the ground you are standing on. Clamped at the last row, so an
 // elite in the final zone simply rolls that zone's row rather than falling off the end of the table.
@@ -695,11 +702,7 @@ function zoneTierRowUp(x,y){
     else if(typeof curRoom.ring==='number'&&typeof BOSS_ZONE!=='undefined') z=BOSS_ZONE[curRoom.ring];
   }
   if(z<0) return ZONE_TIERS_FALLBACK;
-  const row=ZONE_TIERS[Math.min(ZONE_TIERS.length-1,z+1)]||ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
-  // an elite in an ascended dungeon gets the SD entry too, or the one kill that is supposed to pay
-  // better than the room around it would pay strictly worse than the boss beside it
-  const ring=_ascendedDungeon();
-  return (ring>=0) ? _sdAugmentRow(row,ring+100) : row;
+  return ZONE_TIERS[Math.min(ZONE_TIERS.length-1,z+1)]||ZONE_TIERS[z]||ZONE_TIERS_FALLBACK;
 }
 function pickWeighted(rows,fort){
   if(!rows||!rows.length) return 0;
@@ -710,12 +713,14 @@ function pickWeighted(rows,fort){
   let mx=0; for(const r of rows) if(r[0]>mx) mx=r[0];
   // the overflow tail: a rare step above the row's ceiling. Fortune widens it.
   if(Math.random() < TIER_OVERFLOW*(1+(fort||0)*0.02) && t===mx) t=mx+1;
-  // THE CEILING IS THE ROW'S OWN, NOT MAXT. This used to clamp to MAXT-1, which was the same
-  // number as "the top of the ordinary ladder" right up until Scavenged Dreams raised MAXT — at
-  // which point every Lv50 row, all of which top out at T12, would have started paying SD through
-  // the 5% overflow tail. SD is meant to be an explicit entry in the tables that grant it and
-  // nowhere else, so a row may only reach SD_T if it actually names SD_T.
-  const ceil = (mx>=SD_T) ? SD_T : Math.min(SD_T-1, MAXT-1);
+  // NO WEIGHTED ROLL MAY REACH EITHER CRAFTED RUNG. The overflow tail above adds a step ABOVE the
+  // row's ceiling, so a Lv50 row topping out at T12 (index 11) would tail into index 12 -- which is
+  // the relic band now -- and hand out relics from the ordinary soulbound channel. Both top rungs
+  // are built only by mkRelicItem and forgeDo, so the hard ceiling here is the top of the ordinary
+  // ladder and the row's own maximum, whichever is lower.
+  // This is the third shape this clamp has had; each time the ladder's top moved, the number that
+  // meant "as high as a roll may go" moved with it. MAXT is that number and nothing else is.
+  const ceil = Math.min(mx+1, MAXT-1);
   return Math.max(0,Math.min(ceil,t));
 }
 
@@ -758,8 +763,30 @@ function levelStats(c,lvl){ const L=Math.max(0,lvl-1); const mt=CARMOR[c.id]||'p
   wis:Math.round(L*(cast?1.8:0.9)), dex:Math.round(L*(cast?0.78:agile?0.78:0.66)),
   spd:Math.round(L*1.8), luck:Math.round(L*0.45), fort:Math.round(L*0.36) };
 }
+// THE TOP TWO RUNGS ARE MULTIPLIERS ON THE CURVE, NOT POINTS ON IT (user, 2026-07-29: "the SD
+// equipment should be 5x better than the relic and the relic should be 2x better than [T12]").
+// The quadratic below would have paid a relic 254 atk against T12's 185 -- a 1.37x step -- so the
+// jump is applied as a factor on the FINISHED stat block instead of by bending the curve:
+//
+//   T12 Hearthfire  x1     185 atk        the top of what the world drops
+//   RF  Riftforged  x2.0   370 atk        found in the six ascended dungeons
+//   SD  Scavenged   x10.0  1850 atk       crafted only, and deliberately game-breaking
+//
+// ON THE WHOLE BLOCK, not on the weapon's atk alone: "5x better" is a statement about the piece, and
+// scaling one stat would quietly turn armour and rings into sidegrades at the top of the ladder.
+// Read at min(t, ART_TIERS-1) so the curve itself is never evaluated past T12 -- the two rungs above
+// it are not on the curve, and letting t=13 through would compound the quadratic with the factor.
+//
+// A Lv50 hero's own attack is ~235, so a full SD set is roughly a 5x character-power step. That is
+// the intent, for now: raids for ten players are planned to scale against relic/SD gear, and until
+// they exist SD is a victory lap. See the note in HANDOFF about what ten players actually needs.
+const TOP_MUL={12:2.0, 13:10.0};
 // fixed base stats for a gear piece by slot + tier (+ material / ring type)
 function gearBaseStats(slot,t,extra){ const s=newStats(); t=t|0;
+  const _mul=TOP_MUL[t]||1;
+  if(_mul!==1){ const b=gearBaseStats(slot,Math.min(t,ART_TIERS-1),extra);
+    for(const k of STATS) b[k]=Math.round(b[k]*_mul);
+    return b; }
  if(slot==='wpn'){ s.atk=Math.round(t*t*1.35+t*2); s.dex=Math.round(t*0.8); }
  else if(slot==='arm'){ const mt=extra||'plate'; const dm={plate:1.5,leather:1.0,robe:0.7}[mt]||1;
   s.def=Math.round((t+1)*dm*1.4); s.hp=t*6+8; s.vit=Math.round(t*0.6);
@@ -927,6 +954,19 @@ function mkItem(k,t,fort,cls){ t=Math.max(0,Math.min(MAXT-1,t)); let it;
    it={k:k,mt:mats[Math.floor(Math.random()*3)],t:t}; }
  else it={k:'ring',st:RING_STATS[Math.floor(Math.random()*RING_STATS.length)],t:t};
  return rollAffixes(it, (fort!==undefined)?fort:((typeof player!=='undefined'&&player.fortune)||0)); }
+// A PIECE ON ONE OF THE TWO CRAFTED RUNGS, which mkItem deliberately cannot reach: its clamp is
+// MAXT-1, the top of what any roll may produce, and that is the guarantee stopping relics and
+// Scavenged Dreams leaking out of a loot table. So the things that are ALLOWED to mint one say so by
+// calling this instead -- the forge, and the dev workbench. It is the same shape as mkItem with the
+// clamp lifted, and it refuses anything below the crafted rungs so it can never become a back door
+// around the ordinary ladder.
+function mkTopItem(k,t,cls){
+  t=t|0;
+  if(t!==RELIC_T && t!==SD_T) return null;
+  const it=mkItem(k,0,0,cls);       // shape, weapon type / material / ring stat and affixes
+  if(it) it.t=t;
+  return it;
+}
 // legacy single-item drop, still used by the boss branches in 07_update
 function mkDrop(t,fort){ const r=Math.random();
  const k = r<0.5?'wpn' : r<0.7?'arm' : r<0.85?'helm' : 'ring';
@@ -971,12 +1011,15 @@ const LOOT_BANDS=[
  // material and ornament, never through shape -- but the richest one there is: violet and gold
  // thread, gems in the seams, light coming out of it. Ten minutes on the ground, because the one
  // thing that must never happen is a relic rotting while you are still fighting what dropped it.
- // `min:13` is RELIC_T, so bandOfTier finds it on its own and nothing else can reach this band.
- // IT MOVED WITH THE RELICS (2026-07-28). When the crafted Emberforged tier was inserted at index
- // 12 this row had to go up with them or a T13 -- a thing no monster has ever dropped -- would have
- // claimed the reliquary sprite. Nothing crafted can reach a sack at all, so the band above the
- // ladder stays exactly as exclusive as it was; the number just has to keep pointing at relics.
- {min:13, spr:'_lootSackRelic', bound:true, life:600, label:'RELIC'},
+ // IT MOVES WITH THE RELICS, AND IT HAS NOW MOVED TWICE -- so it reads the CONSTANT rather than a
+ // literal. It went to 13 when Scavenged Dreams was inserted at 12, and comes back to 12 now that
+ // the two have swapped and relics are the drop again. Written as `13` a third time it would have
+ // pointed at SD, which never drops, and every relic sack would have quietly fallen back to the
+ // T11-T12 studded canvas -- the richest thing in the game wearing the second-richest bag, with
+ // nothing to notice but a sprite.
+ // Still exactly four rows, which is not cosmetic: the band field on the co-op wire is TWO BITS, so
+ // a fifth row would silently alias to band 0 on an older peer.
+ {min:RELIC_T, spr:'_lootSackRelic', bound:true, life:600, label:'RELIC'},
 ];
 // THE EVENT CHEST is not a band -- it is its own thing, and it opts OUT of bandOfTier entirely by
 // carrying `band:-1` and its own sprite. It sits in `loots` so every prompt, panel and co-op path
@@ -1005,11 +1048,12 @@ function isCreatureItem(it){ return !!it && (it.k==='mount' || it.k==='egg'); }
 // Deliberately generous: this is the reward for an event, not a kill. A dungeon boss pays a relic
 // at 0.25%-1% (relicChanceFor); a chest pays one better than one time in three, and everything
 // else it holds is drawn from the top of the tier table rather than the middle.
-// CHEST_TMAX exists because MAXT stopped being the top of the ordinary ladder. The chest draws
-// from the top of the tier table, and "the top" used to mean T12 by definition; once SD raised the
-// clamp, an unchanged `MAXT-1` here would have made a placed event object the easiest source of a
-// tier that is supposed to come only from the Lv50 rim and the ascended depths.
-const CHEST_RELIC_P=0.35, CHEST_PIECES=[4,6], CHEST_TMIN=8, CHEST_TMAX=SD_T-1;
+// CHEST_TMAX IS THE TOP OF THE ORDINARY LADDER AND MUST BE WRITTEN AS THAT. It read `SD_T-1`, which
+// was T12 while SD sat at index 12 -- and became the RELIC band the moment the two swapped, so the
+// chest's ordinary gear rolls would have started paying relics beside the one it grants on purpose.
+// `MAXT-1` says what is actually meant: as high as a roll may ever go. The relic a chest pays comes
+// from mkRelicItem below, deliberately and at a stated rate, and that is the only way it should.
+const CHEST_RELIC_P=0.35, CHEST_PIECES=[4,6], CHEST_TMIN=8, CHEST_TMAX=MAXT-1;
 function rollEventChest(lv,cls,opts){
   const o=opts||{};
   const relicP=(o.relicP!==undefined)?o.relicP:CHEST_RELIC_P;
@@ -1899,9 +1943,15 @@ const HP_SCALE=0.80, MP_SCALE=0.80;
 function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  const ci=Math.max(0,CLASSES.findIndex(x=>x.id===ch.cls)); const c=CLASSES[ci];
  player.cname=ch.name; player.hue=ci*20;
- // the weapon slot clamps to the top ROLLABLE tier, except when a relic is in it -- a relic is the
- // one thing allowed to sit on the Riftforged band, and clamping would quietly demote it to T12
- rpg.wpn=Math.min(rpg.wpn||0,((rpg.eqAff&&rpg.eqAff.wpn&&rpg.eqAff.wpn.rel)?RELIC_T:MAXT-1));
+ // THE CLAMP HAS TO ALLOW BOTH TOP RUNGS NOW, and getting this wrong destroys the best item in the
+ // game in silence. It used to read `rel ? RELIC_T : MAXT-1`, which was right while the only thing
+ // above the rollable ceiling was a relic. Both crafted rungs sit above it today and MAXT-1 came
+ // back down to 11, so that expression would have demoted an equipped Scavenged Dreams piece --
+ // no relic flag, tier 13 -- straight to T12 on the next load, with no message and nothing to
+ // notice. Clamp to the real top of TIER_NAMES instead. Bounding a garbage index is all this can
+ // honestly do anyway: the save is client-side and editable by design, which is why the auction
+ // cannot escrow either.
+ rpg.wpn=Math.min(rpg.wpn||0,SD_T);
  player.wt=classWT(ch.cls);
  if(!rpg.eqAff) rpg.eqAff={};
  const mt=CARMOR[ch.cls]||'plate';

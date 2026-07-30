@@ -16,9 +16,16 @@
     const ch=curChar();
     // a pouch with a spread across every source, so the strip is realistically full
     for(const k of MAT_KEYS) matAdd(k, 1+Math.floor(Math.random()*8));
-    // and the gear the anvil actually takes
-    for(const k of ['wpn','arm','helm','ring']) ch.inv.push(mkItem(k, SD_T, 0, ch.cls));
-    ch.inv.push(mkItem('wpn', MAXT-2, 0, ch.cls));
+    // AND THE GEAR THE ANVIL ACTUALLY TAKES, which is RELICS now that the gear rung runs
+    // relic -> SD. It used to stock SD pieces via mkItem(k, SD_T, ...) -- two ways wrong after the
+    // swap: mkItem's clamp is MAXT-1 so it would have silently produced T12, and the anvil no longer
+    // accepts an SD piece anyway, so the panel would have photographed as empty.
+    if(typeof RELICS!=='undefined' && RELICS.length){
+      const seen={};
+      for(const R of RELICS){ if(seen[R.slot]) continue; seen[R.slot]=1;
+        ch.inv.push(mkRelicItem(R.id, ch.cls)); if(Object.keys(seen).length>=4) break; }
+    }
+    ch.inv.push(mkItem('wpn', MAXT-1, 0, ch.cls));      // a plain T12, to show it is refused
     // stand at Bram's counter
     curShopNear='bram';
   }
@@ -44,6 +51,11 @@
     setup(); hideChrome();
     if(WANT==='forge'){
       openForge();
+      // `?scroll=end` drops #forgeBody to the bottom. The panel is aspect-pinned with ONE scroller,
+      // so the anvil list sits below the fold at any viewport -- and a taller window cannot reach it
+      // either, because past square the game shows its portrait gate instead of the game.
+      if(Q.get('scroll')==='end'){ const b=document.getElementById('forgeBody');
+        if(b){ void b.offsetHeight; b.scrollTop=b.scrollHeight; } }
     } else if(WANT==='map'){
       // THE FULL MAP needs a real world, not just a panel: mapTerrain reads rooms['G'] and
       // _territories(), and drawMap plots lairs, pillars and portals in world coordinates. So put
