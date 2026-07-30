@@ -1503,8 +1503,8 @@ function mapTerrain(G,L){
   // first time the map opened. Sample a fixed budget of cells instead, drawing each as a
   // step-sized block: the picture is the same, and the cost stops tracking world size.
   const step=Math.max(1,Math.ceil(Math.sqrt((G.w*G.h)/250000))), bs=s*step+0.6;
-  for(let ty=0;ty<G.h;ty+=step){ const row=G.grid[ty]; if(!row) continue;
-    for(let tx=0;tx<G.w;tx+=step){ const ch=row[tx]; if(ch==null) continue;
+  for(let ty=0;ty<G.h;ty+=step){
+    for(let tx=0;tx<G.w;tx+=step){ const ch=gAt(G,tx,ty); if(ch===' ') continue;
       const px=L.ox+tx*s, py=L.oy+ty*s;
       if(ch==='w'){ c.fillStyle=MAP_OCEAN; c.fillRect(px,py,bs,bs); continue; }
       if(ch==='b'){ c.fillStyle=MAP_BRIDGE; c.fillRect(px,py,bs,bs); continue; }

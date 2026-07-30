@@ -373,7 +373,7 @@ function lairAnchor(RG,T,z,b){
  // centroid+nudge path below is correct for every boss in the game.
  const ang=(LAIR_NUDGE[b]!==undefined?LAIR_NUDGE[b]:b*0.9), nud=0.35*Math.sqrt(t.n/Math.PI);
  return {x:cx+Math.cos(ang)*nud, y:cy+Math.sin(ang)*nud}; }
-function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return; _lairsStamped=true; R.lairs={};
+function stampLairs(){ const R=rooms['G']; if(!R||!R.cells||_lairsStamped) return; _lairsStamped=true; R.lairs={};
  const RG=R.rings, NZ=(RG&&RG.names.length)||9;
  const P=(RG&&RG.portal)||null;
  // Territories are built HERE, before any carving — deliberately. The clump raster must be sampled
@@ -415,7 +415,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     let bad=0, tot=0;
     for(let ty=py-1;ty<=py+TH;ty++)for(let tx=px-1;tx<=px+TW;tx++){
       if(!_inside(tx-px,ty-py)) continue;                                        // skip the dead corners
-      const row=R.grid[ty]; const c=row&&row[tx], off=(c==null||'wWhHlXFb'.indexOf(c)>=0);
+      const c=gAt(R,tx,ty), off=(c===' '||'wWhHlXFb'.indexOf(c)>=0);
       tot++; if(off){ bad++;
         const nx=(tx-px-TW/2)/(TW/2), ny=(ty-py-TH/2)/(TH/2);
         if(nx*nx+ny*ny<=0.42) return false; } }                                  // core must be solid ground
@@ -491,25 +491,25 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
       if(da<d[1]) return true; }
     return false; };
   const inGrid=(tx,ty)=>tx>0&&ty>0&&tx<R.w-1&&ty<R.h-1;
-  const ground=(tx,ty)=>{ const c=R.grid[ty]&&R.grid[ty][tx]; return c!=null&&'wWhHlXFDP'.indexOf(c)<0; };
+  const ground=(tx,ty)=>{ const c=gAt(R,tx,ty); return c!==' '&&'wWhHlXFDP'.indexOf(c)<0; };
   const bx0=px-3,bx1=px+TW+3,by0=py-3,by1=py+TH+3;
   // Remember which boss owns each carved tile, so the renderer can theme the room to its BOSS
   // instead of to the ground it stands on.
   if(!R.lairAt) R.lairAt={};
   const own=(tx,ty)=>{ R.lairAt[ty*R.w+tx]=b; };
   // pass 1: floor
-  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++) if(inGrid(tx,ty)&&floorAt(tx,ty)&&ground(tx,ty)){ R.grid[ty][tx]='F'; own(tx,ty); }
+  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++) if(inGrid(tx,ty)&&floorAt(tx,ty)&&ground(tx,ty)){ gSet(R,tx,ty,'F'); own(tx,ty); }
   // pass 2: the wall itself — every ground cell touching floor, minus the doorways
-  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++){ if(!inGrid(tx,ty)||R.grid[ty][tx]==='F'||!ground(tx,ty)) continue;
-    let touch=false; for(let dy=-1;dy<=1&&!touch;dy++)for(let dx=-1;dx<=1;dx++){ if(R.grid[ty+dy]&&R.grid[ty+dy][tx+dx]==='F'){touch=true;break;} }
+  for(let ty=by0;ty<by1;ty++)for(let tx=bx0;tx<bx1;tx++){ if(!inGrid(tx,ty)||gCode(R,tx,ty)===T_F||!ground(tx,ty)) continue;
+    let touch=false; for(let dy=-1;dy<=1&&!touch;dy++)for(let dx=-1;dx<=1;dx++){ if(gCode(R,tx+dx,ty+dy)===T_F){touch=true;break;} }
     if(!touch) continue;
     if(doorAt(tx,ty)) continue;
     // a colonnade has no curtain wall at all — just standing pillars at regular bearings
     if(A.k==='colonnade'){ const a=Math.atan2((ty+0.5-cy)/ry,(tx+0.5-cx)/rx);
       const f=((a+Math.PI)/6.2832)*(A.n||12); if((f-Math.floor(f))>0.42) continue; }
-    R.grid[ty][tx]='X'; own(tx,ty); }
+    gSet(R,tx,ty,'X'); own(tx,ty); }
   // pass 3: interior structure — what's INSIDE says as much as the outline
-  const put=(tx,ty)=>{ if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') R.grid[ty][tx]='X'; };
+  const put=(tx,ty)=>{ if(inGrid(tx,ty)&&gCode(R,tx,ty)===T_F) gSet(R,tx,ty,'X'); };
   if(A.k==='pans'){                                    // evaporation pans: two dividing walls, gap each
     for(const fx of [-0.34,0.34]){ const wx=Math.round(cx+fx*rx);
       for(let ty=Math.round(cy-ry*0.8);ty<=Math.round(cy+ry*0.8);ty++) if(Math.abs(ty-cy)>ry*0.28) put(wx,ty); } }
@@ -521,12 +521,12 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
   else if(A.k!=='colonnade'){                          // everything else: scattered natural cover
     for(let i=0;i<5;i++){ const a=(i/5)*6.283+b, rr=0.42+0.28*_lh(px+i,py+i);
       const tx=Math.round(cx+Math.cos(a)*rx*rr), ty=Math.round(cy+Math.sin(a)*ry*rr);
-      if(inGrid(tx,ty)&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>2.4&&!doorAt(tx,ty)){
+      if(inGrid(tx,ty)&&gCode(R,tx,ty)===T_F&&Math.hypot(tx-cx,ty-cy)>2.4&&!doorAt(tx,ty)){
         put(tx,ty); if(_lh(tx+1,ty)>0.5) put(tx+1,ty); } } }
   // decor scattered on the INTERIOR floor
   const _decos=[]; for(let i=0;i<7;i++){ const a=(i/7)*6.283+b*1.3, rr=0.40+0.22*_lh(px+i*3,py-i);
     const dx=cx+Math.cos(a)*rx*rr, dy=cy+Math.sin(a)*ry*rr, tx=Math.round(dx), ty=Math.round(dy);
-    if(R.grid[ty]&&R.grid[ty][tx]==='F'&&Math.hypot(tx-cx,ty-cy)>1.6) _decos.push({x:dx*TILE,y:dy*TILE,i:i%4}); }
+    if(gCode(R,tx,ty)===T_F&&Math.hypot(tx-cx,ty-cy)>1.6) _decos.push({x:dx*TILE,y:dy*TILE,i:i%4}); }
   // Snap the boss's stand and the centrepiece onto real floor. The shapes are no longer all
   // centre-filled — a crescent ledge or an apse can leave the old fixed offsets inside a wall,
   // and a boss anchored in rock never spawns (spawnRingBoss just fails quietly).
@@ -534,7 +534,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
     for(let r=0;r<9;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
       if(Math.max(Math.abs(dx),Math.abs(dy))!==r) continue;
       const tx=Math.round(ox)+dx, ty=Math.round(oy)+dy;
-      if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') return {x:(tx+0.5)*TILE,y:(ty+0.5)*TILE}; }
+      if(inGrid(tx,ty)&&gCode(R,tx,ty)===T_F) return {x:(tx+0.5)*TILE,y:(ty+0.5)*TILE}; }
     return {x:ox*TILE,y:oy*TILE}; };
   const sp0=A.spawn||[0,0.20], dn0=A.den||[0,-0.55];
   // ---- STAGING for the arena's presence (drawLairs): a lit gateway, braziers ringing the
@@ -547,7 +547,7 @@ function stampLairs(){ const R=rooms['G']; if(!R||!R.grid||_lairsStamped) return
   const braz=[]; for(let i=0;i<_nb;i++){ const a=(i/_nb)*6.283+0.39;
     let da=Math.abs(a-_door); if(da>Math.PI) da=6.2832-da; if(da<0.42) continue;   // never in the doorway
     const tx=Math.round(cx+Math.cos(a)*rx*0.72), ty=Math.round(cy+Math.sin(a)*ry*0.72);
-    if(inGrid(tx,ty)&&R.grid[ty][tx]==='F') braz.push({x:(tx+0.5)*TILE, y:(ty+0.5)*TILE, p:i*0.7}); }
+    if(inGrid(tx,ty)&&gCode(R,tx,ty)===T_F) braz.push({x:(tx+0.5)*TILE, y:(ty+0.5)*TILE, p:i*0.7}); }
   R.lairs[b]={ b, px, py, tw:TW, th:TH, arch:A.k,
     spawn:snap(sp0[0],sp0[1]),                              // where the boss stands
     sprite:snap(dn0[0],dn0[1]),                             // den centrepiece
@@ -827,7 +827,10 @@ function genDungeon(ring){
  // for the entire dungeon. Every other room in the game says where you are; the one place you can
  // get permanently lost said nothing. It is the boss's dream, so it is named after the dream.
  const _dn=(typeof GBOSS!=='undefined'&&GBOSS[ring]&&GBOSS[ring].dn)||'The Deep';
- const room={key:'DUN',name:_dn,grid:g,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
+ // PACKED HERE, not carried as chars. genDungeon carves `g` as an array of char rows because that is
+ // much clearer to read than bit twiddling, and 196x84 is small enough that it costs nothing; the
+ // room it hands back is cells like every other room.
+ const room={key:'DUN',name:_dn,w:W2,h:H2,lv:lv,band:'boss',town:false,big:false,dungeon:true,
   glows:[],portals:[],spawns:[],regions:null,rings:null,ring:ring,
   px:Math.floor(chs[0].cx),py:Math.floor(chs[0].cy),
   orbs:[], switches:[], plates:[], circles:[], chases:[], objs:[], ddec:[] };
@@ -896,6 +899,7 @@ function genDungeon(ring){
  // chamber (never the boss arena) so he's found on the way in.
  if(DUN_NPC[ring] && chs.length>2){ const c=chs[1];
   room.npc=Object.assign({x:(c.cx+.5)*TILE, y:(c.cy+.5)*TILE, said:0}, DUN_NPC[ring]); }
+ gPack(room,g);            // chars -> cells, once, at the door
  rooms['DUN']=room;
  return room;
 }
@@ -2531,7 +2535,7 @@ function mobArch(e){
 function slowF(e){return e.slowT>0?0.55:1;}
 function safeSpot(r,px,py){
  function sol(tx,ty){ if(ty<1||ty>=r.h-1||tx<1||tx>=r.w-1) return true;
-  return 'WhlHwtkXD'.indexOf(r.grid[ty][tx])>=0; }   // incl. lair walls + dream gates
+  return 'WhlHwtkXD'.indexOf(gAt(r,tx,ty))>=0; }   // incl. lair walls + dream gates
  const t0x=Math.floor(px/TILE), t0y=Math.floor(py/TILE);
  for(let rad=0;rad<14;rad++){
   for(let dy=-rad;dy<=rad;dy++)for(let dx=-rad;dx<=rad;dx++){
@@ -2601,10 +2605,13 @@ function _territories(R){ const RG=R&&R.rings; if(!RG||!RG.radial) return null; 
  // widest in its middle, so an even distance split leaves its first and last levels with almost
  // no ground on them (Lv15 came out with 167 tiles of the 21,296 in its province).
  const DQN=420, sHist=[]; for(let i=0;i<STARTER_ZONES;i++) sHist.push(new Int32Array(DQN));
- const W=R.w,H=R.h,grid=R.grid,zg=new Array(H);
- for(let ty=0;ty<H;ty++){ const row=grid[ty], zr=new Int8Array(W); zg[ty]=zr;
-   for(let tx=0;tx<W;tx++){ const ch=row&&row[tx];
-     if(ch==null||ch==='w'||ch==='b'){ zr[tx]=-1; continue; }
+ const W=R.w,H=R.h,zg=new Array(H);
+ // reads the packed cells directly rather than through gCode, because this is the one full-world
+ // pass in the game and the bounds are already known to be in range -- one array index per tile.
+ const CL=R.cells;
+ for(let ty=0;ty<H;ty++){ const o=ty*W, zr=new Int8Array(W); zg[ty]=zr;
+   for(let tx=0;tx<W;tx++){ const cd=CL[o+tx]&T_MASK;
+     if(cd===0||cd===T_w||cd===T_b){ zr[tx]=-1; continue; }
      // Same warped-Voronoi rule on both islands -- only the candidate seeds differ. Restricting
      // the search to one island's own seeds is what stops them bleeding into each other: with a
      // single unrestricted search, 653 tiles of the starter island's east spill were claimed by

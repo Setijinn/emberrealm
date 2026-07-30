@@ -28,8 +28,7 @@
     // province centre, in tiles, taking the first non-solid cell.
     // AND NOT WATER. `solid()` does not refuse shallows, so the first two attempts at this
     // harness photographed the sea twice and called it terrain.
-    const G=curRoom&&curRoom.grid;
-    const wet=(tx,ty)=>{ const r=G&&G[ty|0]; const c=r&&r[tx|0]; return c==='w'||c==='W'; };
+    const wet=(tx,ty)=>{ const c=gAt(curRoom,tx|0,ty|0); return c==='w'||c==='W'; };
     for(let r=0;r<40;r++){
       for(let a=0;a<Math.max(1,r*8);a++){
         const th=a/Math.max(1,r*8)*6.2832;

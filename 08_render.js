@@ -445,7 +445,7 @@ function terrainDetail(x,y,tx,ty,bd){
   }
 }
 function drawTileG(x,y){
-  const c=curRoom.grid[y][x], tx=x*TILE, ty=y*TILE, t=curRoom.town;
+  const c=gAt(curRoom,x,y), tx=x*TILE, ty=y*TILE, t=curRoom.town;
   ctx.fillStyle=(x+y)%2?(t?'#2b1f18':'#17141d'):(t?'#281d16':'#1a1721');
   ctx.fillRect(tx,ty,TILE,TILE);
   // The Sanctuary (pet room): meadow floor + hedge border (PixelLab art, procedural fallback)
@@ -461,7 +461,7 @@ function drawTileG(x,y){
       let wimg=null; if(typeof _pondVar!=='undefined'&&_pondVar){ const pv=_pondVar[hmix(x,y)%_pondVar.length]; if(pv&&pv.complete&&pv.naturalWidth) wimg=pv; }
       if(wimg){ ctx.imageSmoothingEnabled=false; ctx.drawImage(wimg,tx,ty,TILE,TILE); }
       else { ctx.fillStyle=(x+y)&1?'#2f9fb2':'#3ab0c4'; ctx.fillRect(tx,ty,TILE,TILE); }
-      const G=curRoom.grid, wat=(xx,yy)=>{const r=G[yy];return r&&r[xx]==='w';};
+      const wat=(xx,yy)=>gCode(curRoom,xx,yy)===T_w;
       // DEPTH: darker toward the pond centre so it reads as deep water
       const wf=curRoom.waterfall;
       if(wf){ const dd=Math.hypot((x-wf.pcx)/Math.max(1,wf.prx),(y-wf.pcy)/Math.max(1,wf.pry)), deep=Math.max(0,Math.min(1,1-dd));
@@ -577,7 +577,7 @@ function drawTileG(x,y){
         if(wh%6===0){ const tw=0.07+0.11*(0.5+0.5*Math.sin(performance.now()/900+(x*2+y*3)));
           ctx.fillStyle=_hexA(GB?GB.col:'#6a6aa0',tw.toFixed(3));
           ctx.fillRect(tx+3+(wh%(TILE-6)),ty+3+((wh>>5)%(TILE-6)),1,1); } }
-      else { const G=curRoom.grid, vd=(xx,yy)=>{ const rr=G[yy]; const cc=rr&&rr[xx]; return cc==='W'||cc==='D'||cc==null; };
+      else { const vd=(xx,yy)=>{ const cc=gCode(curRoom,xx,yy); return cc===T_W||cc===T_D||cc===0; };
         const rc='rgba(255,238,200,0.16)';
         if(vd(x,y-1)) pxH(tx,ty,TILE,rc,0.5); if(vd(x,y+1)) pxH(tx,ty+TILE-1,TILE,rc,0.5);
         if(vd(x-1,y)) pxV(tx,ty,TILE,rc,0.5); if(vd(x+1,y)) pxV(tx+TILE-1,ty,TILE,rc,0.5); }
@@ -602,7 +602,7 @@ function drawTileG(x,y){
     else { ctx.fillStyle='#5a3f28'; ctx.fillRect(tx,ty,TILE,TILE);
       ctx.fillStyle='#6e4d31'; for(let py=2;py<TILE;py+=6) ctx.fillRect(tx,ty+py,TILE,4);   // planks
       ctx.fillStyle='rgba(0,0,0,.28)'; for(let py=5;py<TILE;py+=6) ctx.fillRect(tx,ty+py,TILE,1); }
-    const G=curRoom.grid, off=(xx,yy)=>{ const rr=G[yy]; const cc=rr&&rr[xx]; return cc!=='b'; };
+    const off=(xx,yy)=>gCode(curRoom,xx,yy)!==T_b;
     if(off(x,y-1)) pxH(tx,ty,TILE,'rgba(40,26,16,0.9)',0.8);        // rope rails on the open sides
     if(off(x,y+1)) pxH(tx,ty+TILE-1,TILE,'rgba(40,26,16,0.9)',0.8);
     return; }
@@ -631,7 +631,7 @@ function drawTileG(x,y){
     // the 8-bit blades
     if(typeof drawFloorDetail==='function') drawFloorDetail('grass',tx,ty,x,y,1);
     // edge shading against neighbouring stone, so a lawn has a lip rather than a border
-    const Gr=curRoom.grid, gr=(xx,yy)=>{ const r=Gr[yy]; return r&&r[xx]==='g'; };
+    const gr=(xx,yy)=>gCode(curRoom,xx,yy)===T_g;
     if(!gr(x,y-1)) { ctx.fillStyle='rgba(30,40,22,0.40)'; ctx.fillRect(tx,ty,TILE,3); }
     if(!gr(x,y+1)) { ctx.fillStyle='rgba(30,40,22,0.30)'; ctx.fillRect(tx,ty+TILE-2,TILE,2); }
     if(!gr(x-1,y)) { ctx.fillStyle='rgba(30,40,22,0.40)'; ctx.fillRect(tx,ty,3,TILE); }
@@ -681,7 +681,7 @@ function drawTileG(x,y){
   //   h  the back bank of safe-deposit doors
   //   W  dressed stone with a brass dado rail
   if(curRoom.key==='VAULT'){
-    const VG=curRoom.grid, vat=(xx,yy)=>{ const r=VG[yy]; return r?r[xx]:'W'; };
+    const vat=(xx,yy)=>{ const cc=gCode(curRoom,xx,yy); return cc===0?'W':T_CHARS[cc]; };
     const vh=hmix(x,y);
 
     if(c==='W'){
@@ -909,7 +909,7 @@ function drawTileG(x,y){
   } else if(c==='w'){
     // OCEAN: base tile + drifting wave crests + shoreline surf. Waves/foam are drawn as pixel
     // scatter (pxH/pxV), never solid lines (user rule), and animate so the sea actually moves.
-    const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
+    const wat=(xx,yy)=>gCode(curRoom,xx,yy)===T_w;
     // Pick one of the seamless ocean variants per cell (mix breaks the single-tile repetition).
     // NO per-cell flip — these tiles are edge-matched, flipping would break the seams.
     // The variant is CYCLED over time, not fixed per cell, so the sea animates through its wave
@@ -1026,7 +1026,7 @@ function drawTileG(x,y){
           ctx.fillRect(tx+2+((hh>>6)%30), ty+3+((hh>>10)%28), 3, 2); } }
       // A wall standing over the floor casts onto it. Drawn on the FLOOR tile beneath, this is
       // the single strongest cue that the wall has height rather than being a painted pattern.
-      if(c==='F'){ const G3=curRoom.grid, ab=(dx)=>{ const r=G3[y-1]; return r&&r[x+dx]==='X'; };
+      if(c==='F'){ const ab=(dx)=>gCode(curRoom,x+dx,y-1)===T_X;
         if(ab(0)){ const sg=ctx.createLinearGradient(0,ty,0,ty+TILE*0.55);
           sg.addColorStop(0,'rgba(0,0,0,0.50)'); sg.addColorStop(1,'rgba(0,0,0,0)');
           ctx.fillStyle=sg; ctx.fillRect(tx,ty,TILE,TILE*0.55); }
@@ -1034,7 +1034,7 @@ function drawTileG(x,y){
           sg.addColorStop(0,'rgba(0,0,0,0.26)'); sg.addColorStop(1,'rgba(0,0,0,0)');
           ctx.fillStyle=sg; ctx.fillRect(tx,ty,TILE,TILE*0.30); } }
       if(c==='X'){
-        const G2=curRoom.grid, wl=(xx,yy)=>{ const r=G2[yy]; return r&&r[xx]==='X'; };
+        const wl=(xx,yy)=>gCode(curRoom,xx,yy)===T_X;
         // Light the wall by its SHAPE, not uniformly: a run of identical blocks with the same
         // highlight top and shadow bottom is exactly what reads as a repeated texture. Only the
         // exposed courses catch light, and only free-standing ends get a side shadow.
@@ -1066,7 +1066,7 @@ function drawTileG(x,y){
     // SHORE: a sandy beach ring wherever land meets the ocean. Land cells touching 'w' draw the
     // sand tile instead of ground, with a wet-sand rim on the water side -> reads as a coastline.
     if(curRoom.rings.radial && typeof _shoreImg!=='undefined' && _shoreImg && _shoreImg.complete && _shoreImg.naturalWidth){
-      const G=curRoom.grid, wat=(xx,yy)=>{ const r=G[yy]; return r&&r[xx]==='w'; };
+      const wat=(xx,yy)=>gCode(curRoom,xx,yy)===T_w;
       if(wat(x-1,y)||wat(x+1,y)||wat(x,y-1)||wat(x,y+1)){
         ctx.imageSmoothingEnabled=false; const hh=hmix(x,y), o=hh&3;
         ctx.save(); ctx.translate(tx+TILE/2,ty+TILE/2); ctx.scale(o&1?-1:1,o&2?-1:1);

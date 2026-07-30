@@ -608,6 +608,56 @@
       }
     } else ok('itemUsable/useItem exist', false);
 
+    // ---------- 10b2. THE GRID IS PACKED, AND IT IS THE SAME WORLD ----------
+    // Stage 6 moved every room from an array-of-arrays-of-chars to one flat Uint8Array and touched
+    // ~48 read sites. The only honest way to know it changed nothing is to hash every tile of every
+    // room and compare against the value measured BEFORE the conversion. f60a9d2a is that number.
+    //
+    // It has already earned itself once: the first run came back with four rooms moved and four
+    // INVALID cells, because 'B' is a spawn marker that the build sweep CONSUMES -- so it is absent
+    // from the finished rooms and present in four raw maps, and leaving it out of the alphabet packed
+    // those four tiles as code 0. Nothing threw; the world was just quietly four tiles wrong.
+    note('');
+    note('== packed grid ==');
+    if(typeof gAt==='function' && typeof T_CHARS!=='undefined'){
+      ok('the tile alphabet fits in 5 bits', T_CHARS.length<=32, T_CHARS.length+' codes');
+      ok('code 0 is reserved as INVALID', T_CHARS[0]===' ');
+      // round-trip every character through the accessors
+      let rt=true;
+      const probe=rooms['0,0'];
+      if(probe){
+        const was=gAt(probe,1,1);
+        for(let i=1;i<T_CHARS.length;i++){ gSet(probe,1,1,T_CHARS[i]);
+          if(gAt(probe,1,1)!==T_CHARS[i]) rt=false; }
+        gSet(probe,1,1,was);
+        ok('gSet/gAt round-trip every code', rt);
+        // and a write must not disturb the island bits sharing the byte
+        gSetIsle(probe,1,1,2); gSet(probe,1,1,'W');
+        ok('a tile write preserves the island id', isleAt(probe,1,1)===2, 'isle='+isleAt(probe,1,1));
+        gSetIsle(probe,1,1,0); gSet(probe,1,1,was);
+      }
+      // NO CELL ANYWHERE MAY BE INVALID
+      let bad=0, tiles=0;
+      const keys=Object.keys(rooms).filter(k=>rooms[k]&&rooms[k].cells).sort();
+      for(const k of keys){ const R=rooms[k];
+        for(let i=0;i<R.cells.length;i++){ tiles++; if((R.cells[i]&T_MASK)===0) bad++; } }
+      ok('no tile decodes to INVALID', bad===0, bad+' of '+tiles.toLocaleString());
+      // THE FINGERPRINT
+      const fnv=(s)=>{ let h=0x811c9dc5>>>0;
+        for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
+        return ('00000000'+h.toString(16)).slice(-8); };
+      let whole='';
+      for(const k of keys){ const R=rooms[k]; let s='';
+        for(let y=0;y<R.h;y++){ let ln=''; for(let x=0;x<R.w;x++) ln+=gAt(R,x,y); s+=ln; }
+        whole+=k+':'+fnv(s)+';'; }
+      const world=fnv(whole);
+      ok('the world hashes exactly as it did before the packing', world==='f60a9d2a',
+         world+' over '+tiles.toLocaleString()+' tiles in '+keys.length+' rooms');
+      // R.grid must be GONE, not shimmed: a subarray shim would keep every `c==='w'` compiling and
+      // permanently false, which is the failure mode this conversion was shaped to avoid.
+      ok('R.grid is gone rather than shimmed', rooms['0,0'].grid===undefined);
+    } else ok('the grid accessors exist', false);
+
     // ---------- 10c2. A TINTED SPRITE STILL DRAWS ----------
     // itemArtImg tints two kinds of item -- a Riftseed and a stat scroll -- and a tint returns a
     // CANVAS, which has `width` but no `naturalWidth`. drawItemIcon read naturalWidth outright, so the

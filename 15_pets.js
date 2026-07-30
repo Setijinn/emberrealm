@@ -758,7 +758,7 @@ function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['P
   D.push({img:'trough',x:34*TILE,y:17.5*TILE,s:1.9});
   D.push({img:'hay',x:31*TILE,y:25*TILE,s:1.5},{img:'hay',x:8*TILE,y:25*TILE,s:1.5});
   D.push({img:'picket',x:4.5*TILE,y:21.5*TILE,s:2.0},{img:'picket',x:7.9*TILE,y:21.5*TILE,s:2.0},{img:'picket',x:11.3*TILE,y:21.5*TILE,s:2.0});
-  const room={ id:'PETS', name:'The Sanctuary', w:W,h:H, grid, petRoom:true, town:false, big:false,
+  const room={ id:'PETS', name:'The Sanctuary', w:W,h:H, petRoom:true, town:false, big:false,
     spawns:[], glows:[], pillars:[], px:ex, py:H-3,
     waterfall:{ cx:pcx, x0:cx-1.35, x1:cx+1.35, topY:3.5, pcx, pcy, prx, pry },
     // The gate stands 5 tiles OFF the back wall, not in it. The camera clamps at the room edge,
@@ -770,10 +770,11 @@ function buildPetRoom(){ if(typeof rooms==='undefined') return null; if(rooms['P
     portals:[{x:(ex+0.5)*TILE, y:(H-5+0.5)*TILE, to:'_petback', col:'#e8a34b', big:false}],
     petStations:[{x:13*TILE, y:11.6*TILE, kind:'incubator'}, {x:27*TILE, y:11.6*TILE, kind:'fusion'}],
     petDecor:D };
+  gPack(room,grid);         // chars -> cells, once, at the door
   rooms['PETS']=room; return room; }
 // a random walkable LAWN point (grass '.', never water) — pets roam the ring around the central pond
 function _petLawnPoint(){ const R=rooms['PETS']; for(let i=0;i<30;i++){ const tx=2+((Math.random()*(R.w-4))|0), ty=2+((Math.random()*(R.h-4))|0);
-    if(R.grid[ty] && R.grid[ty][tx]==='.') return {x:(tx+0.5)*TILE, y:(ty+0.5)*TILE}; }
+    if(gCode(R,tx,ty)===T_dot) return {x:(tx+0.5)*TILE, y:(ty+0.5)*TILE}; }
   return {x:(R.px+0.5)*TILE, y:(R.py+0.5)*TILE}; }
 function spawnWanderers(){ petWanderers=[]; const u=petStore(); if(!u||!rooms['PETS']) return;
   for(const p of u.pets){ const s=_petLawnPoint();
@@ -847,7 +848,7 @@ function drawPetRoom(){ if(!curRoom||!curRoom.petRoom||typeof ctx==='undefined')
     if(it.k==='d'){ const w2=it.w2||(TILE*it.s), h2=it.h2||(w2*it.im.naturalHeight/it.im.naturalWidth);
       if(it.flat){ ctx.imageSmoothingEnabled=false; ctx.globalAlpha=0.96; ctx.drawImage(it.im, it.x-w2/2, it.y-h2/2, w2, h2); ctx.globalAlpha=1; continue; }   // lily pads / bridge float flat, no shadow
       // rocks standing IN the pond: show only the top half, with foam + wave ripples at the waterline
-      const gx=(it.x/TILE)|0, gy=(it.y/TILE)|0, inWater=(it.img==='rock'||it.img==='rocks')&&curRoom.grid[gy]&&curRoom.grid[gy][gx]==='w';
+      const gx=(it.x/TILE)|0, gy=(it.y/TILE)|0, inWater=(it.img==='rock'||it.img==='rocks')&&gCode(curRoom,gx,gy)===T_w;
       if(inWater){ const wl=it.y-h2*0.44;
         ctx.save(); ctx.beginPath(); ctx.rect(it.x-w2/2, it.y-h2, w2, Math.max(1,wl-(it.y-h2))); ctx.clip();
         ctx.imageSmoothingEnabled=false; ctx.drawImage(it.im, it.x-w2/2, it.y-h2, w2, h2); ctx.restore();

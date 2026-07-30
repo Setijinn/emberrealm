@@ -2,30 +2,34 @@
 // Per-tile pseudo-random offset so trees/boulders aren't all grid-centred.
 // Used by BOTH the renderer and collision so the hitbox tracks the sprite.
 function featOffset(x,y){ const h=(x*73+y*149)>>>0; return [(h%15)-7,((h>>4)%11)-5]; }
+// SOLID IS THE HOTTEST TILE READ IN THE GAME -- roughly eight calls per entity per frame, for every
+// enemy, ally and pet -- so it works in tile CODES and looks the answer up in a Uint8Array instead of
+// scanning `'WhlHwXD'.indexOf(c)` for every one of them.
 function solid(px,py){
   const gx=Math.floor(px/TILE), gy=Math.floor(py/TILE);
   if(gy<0||gy>=curRoom.h||gx<0||gx>=curRoom.w) return false; // off-edge = door gap
-  const c=curRoom.grid[gy][gx];
+  const c=gCode(curRoom,gx,gy);
   // Trees / boulders: block a small circle at the offset base, not the whole tile.
   // Tree circle sits UP at the visible stump (the sprite carries a shadow/grass skirt
   // below the trunk, so blocking at the image base stopped you too far down).
-  if(c==='t'||c==='k'){
+  if(T_BLOCKSMALL[c]){
     // Pathwarden capstone: the PLAYER moves through trees and rocks
     if(typeof _pmove!=='undefined'&&_pmove&&player.terrainGhost) return false;
     // ...and so does a rider in the air, for the obvious reason
     if(typeof _pmove!=='undefined'&&_pmove&&typeof playerIsFlying==='function'&&playerIsFlying()) return false;
     const o=featOffset(gx,gy);
     const bx=(gx+0.5)*TILE+o[0], by=(gy+1)*TILE-6+o[1];
-    const ax=px-bx, ay=py-(by-(c==='t'?13:6)), rr=(c==='t'?7:11);
+    const isTree=(c===T_t);
+    const ax=px-bx, ay=py-(by-(isTree?13:6)), rr=(isTree?7:11);
     return ax*ax+ay*ay < rr*rr; }
   // FLIGHT CLEARS WATER, AND WATER ONLY (user, 2026-07-28). Not walls, not lair walls, not locked
   // gates: 'W' is the VOID inside a dungeon, and 'X'/'D' are how the world gates its own content,
   // so a flyer that cleared them could leave the map or skip a boss door. Gated on `_pmove` like
   // the Pathwarden exemption above, so it only ever applies to the PLAYER's own movement — enemies,
   // spawns and dropped loot keep testing the real terrain and never path into the sea.
-  if(c==='w' && typeof _pmove!=='undefined' && _pmove
+  if(c===T_w && typeof _pmove!=='undefined' && _pmove
      && typeof playerIsFlying==='function' && playerIsFlying()) return false;
-  return 'WhlHwXD'.indexOf(c)>=0;  // walls / structures / water / lair walls / locked gates: full tile
+  return !!T_SOLID[c];  // walls / structures / water / lair walls / locked gates: full tile
 }
 // Is there room to STAND at this world point, given a body radius?
 // A single tree only blocks a small circle, so one is easy to walk around -- but a clump of them
