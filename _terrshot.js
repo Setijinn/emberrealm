@@ -112,6 +112,40 @@
         p={x:gt.x-Math.cos(gt.a)*150, y:gt.y-Math.sin(gt.a)*150};
       }
       player.x=p.x; player.y=p.y;
+      // `?mount=<id|any|fly>&dir=<n|ne|e|se|s|sw|w|nw>` puts the hero in the saddle and faces him a
+      // given way. Mount art is 8-directional and the rider is CLIPPED at the saddle line, so the
+      // only way to judge either is to render the pair together at a known facing.
+      const MT=Q.get('mount');
+      if(MT && typeof giveMount==='function'){
+        const st=(typeof mountStore==='function')?mountStore():null;
+        if(st) st.mountLv=99;
+        let pick=null;
+        if(MT==='any') pick=MOUNT_DB[0];
+        else if(MT==='fly') pick=MOUNT_DB.filter(m=>m.fly)[0];
+        else pick=MOUNT_DB.filter(m=>m.id===MT||m.spr===MT)[0]||null;
+        if(pick){ giveMount(pick.id);
+          if(typeof lessonStore==='function'){ const L=lessonStore(); if(L){ L.ride=1; L.fly=1; } }
+          // MOUNTING IS A CAST (MOUNT_CAST, 17k_mounts.js) -- mountUp only STARTS the climb and
+          // tickMounts seats you when it finishes. The first version called it and screenshotted 0.5s
+          // later, so every mounted shot came back as a hero standing on the grass with the label
+          // saying every gate had passed. Seat him directly instead: the harness wants the pose, not
+          // the animation, and _mountSeat is the same landing the cast uses.
+          if(typeof _mountSeat==='function') _mountSeat(pick.id);
+          else if(typeof mountUp==='function') mountUp(pick.id);
+          const DIRS={e:0,se:0.785,s:1.571,sw:2.356,w:3.142,nw:3.927,n:4.712,ne:5.498};
+          const dv=DIRS[(Q.get('dir')||'e')];
+          if(dv!==undefined){ player.aim=dv; player.faceAng=dv; }
+        }
+        // SAY WHY IF IT REFUSED. mountUp has four separate ways to say no -- the level, the riding
+        // lesson, the flight lesson and mountAllowedHere -- and a silent refusal renders as a hero
+        // standing on the grass, which looks exactly like a mount that failed to draw.
+        window._mtWhy = pick
+          ? ('picked '+pick.id+' · unlocked '+((typeof mountUnlocked==='function')?mountUnlocked():'?')
+             +' · flyOk '+((typeof mountFlyOk==='function')?mountFlyOk():'?')
+             +' · allowedHere '+((typeof mountAllowedHere==='function')?mountAllowedHere():'?')
+             +' · mnt '+(player.mnt||'none'))
+          : ('no mount matched "'+MT+'"');
+      }
       const roomBefore=curRoom;
       _step(0.016);
       // re-check the room did not change under the placement -- crossing a boundary teleports the
@@ -165,6 +199,21 @@
       //                fault was that no composited frame ever reached the screenshot.
       const _cv=document.querySelector('canvas');
       let _lab='z'+ZI+'  '+t.name+'   band '+band+'   Lv'+lv+'   render '+ms.toFixed(2)+'ms';
+      if(window._mtWhy) _lab+='   MOUNT: '+window._mtWhy;
+      // THE NUMBERS THAT DECIDE WHERE THE PAIR LANDS. A mounted hero that renders wrong has four
+      // candidate causes -- the mount art, the rider art, the seat measurement and the saddle clip --
+      // and only these tell them apart.
+      if(player.mnt && typeof mountDef==='function'){
+        const d=mountDef(player.mnt);
+        const dir=(typeof _mountDir==='function')?_mountDir(player.aim||0):'?';
+        const rs=(typeof riderSprite==='function')?riderSprite(player.look||{cls:'knight'},player.aim||0):null;
+        const art=(typeof mountArtFor==='function')?mountArtFor(d,{aim:player.aim||0,moving:false,clock:0}):null;
+        _lab+='   dir '+dir
+          +'   mountArt '+(art?(art.width+'x'+art.height):'NONE')
+          +'   riderSprite '+(rs&&rs.img?(rs.img.width+'x'+rs.img.height):'NONE')
+          +'   saddleY '+((typeof mountSaddleY==='function')?Math.round(mountSaddleY()):'?')
+          +'   playerY '+Math.round(player.y);
+      }
       if(Q.get('diag')==='1'){
         _lab+='   buf '+(_cv?(_cv.width+'x'+_cv.height):'none')
           +'   css '+(_cv?(_cv.clientWidth+'x'+_cv.clientHeight):'none')
