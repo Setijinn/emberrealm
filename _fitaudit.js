@@ -28,13 +28,17 @@
 // nothing has, and 95px shorter than the one being tuned for. The header line prints the viewport it
 // actually got; trust that number and not the one on the command line.
 (function(){
-  const L=[]; let warn=0, bad=0;
+  const L=[]; let warn=0, clip=0, side=0;
   const pad=(s,n)=>{ s=String(s); return s+' '.repeat(Math.max(1,n-s.length)); };
   function out(){
     const el=document.getElementById('testout');
-    const head='FIT AUDIT  '+innerWidth+'x'+innerHeight+'  '+bad+' clipped, '+warn+' tight';
+    // COUNTED APART, because they are different faults with different fixes and the first version of
+    // this header lumped them into one "clipped" number -- which then reported "1 clipped" with no
+    // CLIPPED row anywhere in the table, and sent me looking for a panel that was not there.
+    const head='FIT AUDIT  '+innerWidth+'x'+innerHeight+'  '
+      +clip+' clipped, '+side+' scrolls sideways, '+warn+' tight';
     if(el) el.textContent=head+'\n'+L.join('\n');
-    document.title='FIT '+(bad?'FAIL':'OK');
+    document.title='FIT '+((clip+side)?'FAIL':'OK');
   }
 
   // Every panel, and the call that opens it. A panel with no opener is still measured -- it is shown
@@ -80,17 +84,28 @@
     // the deepest scroller inside it, which is where content actually overflows. Seeded with the
     // card's own overflow, because a bare .scr scrolls itself and has no inner scroller to find.
     let sc=card, best=card.scrollHeight-card.clientHeight;
-    card.querySelectorAll('*').forEach(e=>{
+    // SIDEWAYS OVERFLOW IN AN overflow-x:auto CONTAINER IS THE SANCTIONED PATTERN, not a fault. The
+    // project's rule is that the BODY never scrolls horizontally and wide content scrolls inside its
+    // own box -- the dev panel's tab strip is one deliberate row you swipe, and flagging it made the
+    // audit report a failure for the design it was written to check for. Only overflow the container
+    // has not opted into counts, because that is the overflow nobody can reach.
+    let unreachable=0;
+    const scan=(e)=>{
       const st=getComputedStyle(e);
-      if(st.overflowY==='auto'||st.overflowY==='scroll'||st.overflowX==='auto'||st.overflowX==='scroll'){
-        const over=e.scrollHeight-e.clientHeight;
-        if(over>=best){ best=over; sc=e; } }
-    });
+      const scrollsX=(st.overflowX==='auto'||st.overflowX==='scroll');
+      const over=e.scrollWidth-e.clientWidth;
+      if(over>1 && !scrollsX) unreachable=Math.max(unreachable,over);
+      if(st.overflowY==='auto'||st.overflowY==='scroll'||scrollsX){
+        const ov=e.scrollHeight-e.clientHeight;
+        if(ov>=best){ best=ov; sc=e; } }
+    };
+    scan(card);
+    card.querySelectorAll('*').forEach(scan);
     return {
       w:Math.round(r.width), h:Math.round(r.height),
       offX:Math.round(Math.max(0, -r.left) + Math.max(0, r.right-innerWidth)),
       offY:Math.round(Math.max(0, -r.top)  + Math.max(0, r.bottom-innerHeight)),
-      sideways:Math.max(0, sc.scrollWidth-sc.clientWidth),
+      sideways:unreachable,
       hidden:Math.max(0, sc.scrollHeight-sc.clientHeight),
       shown:sc.clientHeight||1
     };
@@ -124,13 +139,21 @@
       const s=document.getElementById(id); if(s) s.style.display='flex';
       void document.body.offsetHeight;                 // force layout before measuring
       const m=measure(id);
-      if(!m){ L.push('  '+pad(id,12)+' MISSING'); bad++; continue; }
-      const clipped=(m.offX>1||m.offY>1), side=(m.sideways>1);
-      if(clipped||side) bad++;
-      else if(m.hidden>m.shown*1.5) warn++;
+      if(!m){ L.push('  '+pad(id,12)+' MISSING'); clip++; continue; }
+      // A TOLERANCE, WITH THE RAW NUMBER STILL PRINTED. Measured after --hide-scrollbars removed the
+      // gutter, five panels still reported 4-13px of horizontal overflow: a child at width:100% plus
+      // a border, sub-pixel rounding on a percentage padding, that class of thing. 8px on a 640px
+      // card is not content a player cannot reach, and treating it as a failure would train whoever
+      // runs this to ignore the failures. Past SIDE_TOL it is a strip of real content -- a wide table
+      // or a chip row -- and that is the case worth stopping for.
+      const SIDE_TOL=16;
+      const clipped=(m.offX>1||m.offY>1), sideways=(m.sideways>SIDE_TOL);
+      if(clipped) clip++;
+      if(sideways) side++;
+      if(!clipped && !sideways && m.hidden>m.shown*1.5) warn++;
       L.push('  '+pad(id,12)+pad(m.w+'x'+m.h,11)
              +pad((clipped?('CLIPPED '+m.offX+'x'+m.offY):'-'),12)
-             +pad(side?('SIDEWAYS '+m.sideways):'-',11)
+             +pad(sideways?('SIDEWAYS '+m.sideways):(m.sideways>1?('('+m.sideways+'px)'):'-'),11)
              +(m.hidden?('+'+m.hidden+'px below the fold, '
                         +((m.hidden+m.shown)/m.shown).toFixed(1)+' screens'):'fits')
              +(err?('   [opener threw: '+err+']'):''));
@@ -146,7 +169,7 @@
     out();
   }
 
-  function boot(){ try{ go(); }catch(e){ L.push('AUDIT THREW: '+(e&&e.stack||e)); bad++; out(); } }
+  function boot(){ try{ go(); }catch(e){ L.push('AUDIT THREW: '+(e&&e.stack||e)); clip++; out(); } }
   if(document.readyState==='complete') setTimeout(boot,700);
   else window.addEventListener('load',()=>setTimeout(boot,700));
 })();

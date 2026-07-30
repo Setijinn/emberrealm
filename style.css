@@ -195,6 +195,22 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
   width:44px;height:44px;display:flex;align-items:center;justify-content:center;
   padding:0;line-height:1;}
 .ccard.mini{width:152px;padding:10px;}
+/* NINE CLASS CARDS ARE 7.5 SCREENS ON A PHONE. Measured by _fitaudit at a 667x375 viewport: at
+   168px wide they wrap three to a row and the picker becomes 2800px of scrolling on the very first
+   screen a new player sees. Smaller cards on a short screen put it inside two screens, and the same
+   rule fixes character select, which is the same card. Keyed on height because this game is
+   landscape-only, so height is the axis that separates a phone from a desktop. */
+@media (max-height:470px){
+  .clist{gap:7px;}
+  .ccard{width:124px;padding:8px;border-radius:9px;}
+  .ccard.mini{width:114px;padding:7px;}
+  .ccard .cicCv,.ccard.mini .cicCv{width:44px;height:44px;margin-bottom:1px;}
+  .cn{font-size:15px;}
+  .cd{font-size:10px;min-height:30px;margin-top:2px;}
+  .cs{font-size:10px;margin-top:3px;}
+  .mtitle{font-size:26px;}
+  .msub{font-size:12px;}
+}
 #classList{max-height:52vh;overflow-y:auto;}
 
 #invBtn{display:none;align-items:center;justify-content:center;

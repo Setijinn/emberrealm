@@ -1067,8 +1067,16 @@
       note('  '+LL.length+' lairs: closest pair '+Math.round(cl)+' px, furthest '+Math.round(fa)+' px');
       note('  boss compass range '+r+' px = '+(r/TILE).toFixed(0)+' tiles ('
            +BC_RANGE_FRAC+' of the closest lair pair)');
-      ok('the compass range reproduces the measured 3000 px on this world',
-         Math.abs(r-3000)<200, r+' px');
+      // THE INVARIANT IS THE RATIO, NOT THE NUMBER. This used to assert r ~= 3000, which was the
+      // hand-tuned value on the baked world -- and 00c_worldgen.js changed that world, so the closest
+      // lair pair went 4622 -> 3569 px and the derived range with it. Pinning the absolute number
+      // would mean re-tuning it on every world change, which is precisely what deriving it was for.
+      // What must hold is that it IS the ratio, and that the result is still a useful distance: far
+      // enough to pick up a marker between two lairs, not so far that everything is always on screen.
+      ok('the compass range is the ratio of the measured spacing',
+         Math.abs(r-Math.max(BC_RANGE_MIN,Math.round(cl*BC_RANGE_FRAC)))<=1,
+         r+' px vs '+Math.round(cl*BC_RANGE_FRAC));
+      ok('and it is a useful distance', r/TILE>=40 && r/TILE<=110, (r/TILE).toFixed(0)+' tiles');
       ok('the compass range has a floor', BC_RANGE_MIN===1800);
       ok('BC_RANGE the raw constant is gone', typeof BC_RANGE==='undefined');
       curRoom=_rm;

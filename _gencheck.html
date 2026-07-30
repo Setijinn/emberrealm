@@ -1,0 +1,33 @@
+<!doctype html><meta charset="utf-8"><title>gen check</title>
+<!-- Runs 00_data.js + 00c_worldgen.js ALONE, with nothing else in the page, and prints what the
+     generator produced or the error it threw. The full game swallows a throw here: 00c runs before
+     01_constants.js, and a failure there leaves ROOM_DEFS['G'] undefined so every later file dies on
+     something unrelated -- the world audit reported "cannot read properties of undefined (reading
+     rings)", which is forty lines downstream of the actual fault. -->
+<pre id="o" style="font:12px monospace;color:#9f9;background:#000;padding:8px;white-space:pre-wrap">pending</pre>
+<script src="00_data.js"></script>
+<script>
+const o=document.getElementById('o');
+const L=[];
+try{
+  const t0=performance.now();
+  document.write('');   // no-op, keeps the script order obvious
+}catch(e){}
+window.addEventListener('error',(e)=>{ L.push('WINDOW ERROR: '+e.message+'\n  at '+e.filename+':'+e.lineno);
+  o.textContent=L.join('\n'); });
+</script>
+<script src="00c_worldgen.js"></script>
+<script>
+try{
+  const D=ROOM_DEFS['G'];
+  if(!D) throw new Error('ROOM_DEFS.G is '+D);
+  L.push('OK  '+D.w+'x'+D.h+'  hash '+WORLD_HASH);
+  L.push('rows '+D.map.length+'  cols '+D.map[0].length);
+  const c={}; let land=0;
+  for(const row of D.map) for(const ch of row){ c[ch]=(c[ch]||0)+1; if(ch!=='w') land++; }
+  L.push('land '+land);
+  L.push('mix  '+Object.keys(c).sort((a,b)=>c[b]-c[a]).map(k=>k+':'+c[k]).join('  '));
+  L.push('gen  '+JSON.stringify(D._gen));
+}catch(e){ L.push('THREW: '+(e&&e.stack||e)); }
+o.textContent=L.join('\n');
+</script>

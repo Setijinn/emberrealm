@@ -55,6 +55,11 @@ def run(page, size="1280,720"):
         # headless run this harness had ever done was an implicit 800x600 desktop window, so a panel
         # that overflows a phone in landscape measured as fitting. `size=WxH` as a trailing argument.
         "--window-size=" + size,
+        # A VERTICAL SCROLLBAR IS A 15px GUTTER, and _fitaudit measures horizontal overflow. Without
+        # this, every panel with a vertical scroller reported 4-14px of "unreachable" sideways
+        # overflow -- which was the scrollbar taking width out of clientWidth, not content escaping.
+        # tools/shot.py passes it for the same reason (a scrollbar in a screenshot of a panel).
+        "--hide-scrollbars",
         # an audit runs millions of simulated kills, so it needs a great deal more simulated time
         # than the self-test's 40s budget
         "--virtual-time-budget=600000",
