@@ -112,7 +112,29 @@ function mountFlyLevelOk(){ const u=mountStore(); if(!u) return false;
 // function, so the lesson lands everywhere at once.
 function mountFlyOk(){ return mountFlyLevelOk() && lessonKnown('fly'); }
 // Is the player in the air RIGHT NOW? Read by collision, by the damage gate and by the renderer.
-function playerIsFlying(){ return mounted() && mountIsFlyer(player.mnt); }
+// IN THE AIR RIGHT NOW -- not merely sitting on something with wings. Everything that treats flight
+// as a state reads this: the collision exemption, flyUntouchable, the altitude in the draw, and the
+// island-C gate. A flyer with its feet down is an ordinary (fast) mount and can be hit.
+function playerIsFlying(){ return mounted() && mountIsFlyer(player.mnt) && (player.airborne!==false); }
+// Put a flyer down, or get it back up. Landing is refused where landing would be absurd (over water,
+// mid-crossing) by the same test dismount already uses, so you cannot strand yourself in the sea.
+function mountLand(){
+  if(!mounted() || !mountIsFlyer(player.mnt)) return false;
+  if(player.airborne===false) return false;
+  if(typeof mountCanLandHere==='function' && !mountCanLandHere()){
+    if(typeof msg==='function') msg('NOT HERE','there is nothing under you to land on');
+    return false; }
+  player.airborne=false;
+  if(typeof msg==='function') msg('LANDED', 'faster than any beast afoot, and no longer untouchable');
+  return true; }
+function mountTakeOff(){
+  if(!mounted() || !mountIsFlyer(player.mnt)) return false;
+  if(player.airborne!==false) return false;
+  if(!mountFlyOk()){ if(typeof msg==='function') msg('NOT YET','you have not learned to fly'); return false; }
+  player.airborne=true;
+  if(typeof msg==='function') msg('AIRBORNE','');
+  return true; }
+function mountToggleFlight(){ return playerIsFlying() ? mountLand() : mountTakeOff(); }
 // The single seam for "who can touch a flyer". Today: nobody. Widening this is how the rule
 // softens later, and it is deliberately a function rather than a constant for that reason.
 function flyUntouchable(){ return playerIsFlying(); }
@@ -458,8 +480,49 @@ const MOUNT_LV = 20;
 
 // The species value wins; the rarity baseline is only the fallback, so a row that omits `spd` or
 // `tough` still behaves sensibly and adding a species is genuinely one line.
-function mountSpdOf(m){ const d=mountDef(m); if(!d) return 1;
+// ===================================================================================================
+//  THREE SPEED TIERS (user, 2026-07-30: "flying mounts should still be able to be grounded and run
+//  faster than ground mounts. But never as fast as flying")
+// ---------------------------------------------------------------------------------------------------
+//  THE AUTHORED NUMBERS OVERLAP, which is why this is a remap and not a multiplier. Measured off the
+//  roster: ground mounts run 1.26-1.84 and flyers were authored 1.46-1.92, so the bands sit on top of
+//  each other -- a Dawn Skiff (1.50) was SLOWER than half the horses. No fraction of a flyer's bonus
+//  can be "faster than every ground mount" while also being slower than its own flight, because the
+//  slowest flyer's own flight is below the fastest horse. The bands have to be separated.
+//
+//  So the authored value is kept as a RANK, not as a speed, and mapped into a band:
+//     ground mounts     1.26 .. 1.84   unchanged, still the authored number
+//     flyer, grounded   1.88 .. 1.98   above every ground mount, below every flight
+//     flyer, airborne   2.05 .. 2.45   the reason to be in the air
+//  Monotonic in the authored value, so a dragon still outruns a moth in both states, and no roster
+//  row changes -- adding a flyer is still one line.
+//
+//  FLIGHT IS ALSO A DEFENCE (flyUntouchable), so a grounded flyer gives that up. That is the trade
+//  the third tier buys: speed without immunity.
+const FLY_AUTH=[1.46,1.92];              // the authored range across _FLYERS and _DRAGONS
+const FLY_AIR =[2.05,2.45];              // airborne
+const FLY_GND =[1.88,1.98];              // the same animal walking
+function _remap(v,a,b,c,d){
+  if(b<=a) return c;
+  const t=Math.max(0,Math.min(1,(v-a)/(b-a)));
+  return c+(d-c)*t;
+}
+// What the roster AUTHORED for this mount. Display and comparison read this; the game reads the two
+// below.
+function mountBaseSpd(m){ const d=mountDef(m); if(!d) return 1;
   return d.spd || MOUNT_SPD[d.rar] || 1.34; }
+// Airborne, for a flyer.
+function mountAirSpd(m){ const d=mountDef(m); if(!d||!d.fly) return mountBaseSpd(m);
+  return +_remap(mountBaseSpd(m), FLY_AUTH[0], FLY_AUTH[1], FLY_AIR[0], FLY_AIR[1]).toFixed(3); }
+// The same flyer with its feet on the ground.
+function mountGndSpd(m){ const d=mountDef(m); if(!d||!d.fly) return mountBaseSpd(m);
+  return +_remap(mountBaseSpd(m), FLY_AUTH[0], FLY_AUTH[1], FLY_GND[0], FLY_GND[1]).toFixed(3); }
+// The number the game moves you at: a ground mount's own, or a flyer's depending on whether it is in
+// the air right now.
+function mountSpdOf(m){ const d=mountDef(m); if(!d) return 1;
+  if(!d.fly) return mountBaseSpd(m);
+  const airborne=(typeof player!=='undefined'&&player&&player.mnt===d.id) ? (player.airborne!==false) : true;
+  return airborne ? mountAirSpd(m) : mountGndSpd(m); }
 function mountToughOf(m){ const d=mountDef(m); if(!d) return 0.12;
   return (d.tough!==undefined) ? d.tough : (MOUNT_TOUGH[d.rar]||0.12); }
 
@@ -616,6 +679,9 @@ function mountCancel(quiet){
 // The cast landing. Split out of mountUp so tickMounts has one place to finish it.
 function _mountSeat(id){
   const d=mountDef(id); if(!d||!mountOwns(d.id)) return false;
+  // a flyer starts in the air; a walker is never airborne. Set explicitly so nothing has to
+  // interpret `undefined`, which is the state playerIsFlying used to treat as flying.
+  player.airborne = !!d.fly;
   player.mnt=d.id; player.mntDmg=0; player.mntCast=0; player.mntCastId=null;
   if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:d.name.toUpperCase(),col:mountRarCol(d.rar),life:0.8});
   return true; }

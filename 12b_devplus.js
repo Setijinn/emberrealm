@@ -924,6 +924,23 @@ DEV_PANE.mounts=function(B){
     u.glory=(u.glory|0)+10000; saveUsers&&saveUsers(); devLog('glory = '+u.glory); }));
   B.appendChild(gl);
 
+  B.appendChild(_dvHd('IN THE AIR, OR ON THE GROUND'));
+  B.appendChild(_dvNote('A flyer can put its feet down. Grounded it is faster than every ground mount '
+    +'and slower than any flight -- and it gives up flyUntouchable, so it can be hit. '
+    +'ground 1.26-1.84 · flyer grounded 1.88-1.98 · flyer airborne 2.05-2.45'));
+  const gf=_dvGrid();
+  gf.appendChild(_dvBtn('LAND',()=>{ if(!mountLand()) devLog('refused — not flying, or nothing to land on');
+    else devLog('landed · speed x'+mountSpdOf(player.mnt)); }));
+  gf.appendChild(_dvBtn('TAKE OFF',()=>{ if(!mountTakeOff()) devLog('refused — not on a flyer, or already up');
+    else devLog('airborne · speed x'+mountSpdOf(player.mnt)); }));
+  gf.appendChild(_dvBtn('What am I doing?',()=>{
+    devLog(mounted()
+      ? ((player.mnt)+' · '+(playerIsFlying()?'AIRBORNE':'grounded')
+         +' · speed x'+mountSpdOf(player.mnt)
+         +' · untouchable '+((typeof flyUntouchable==='function')?flyUntouchable():'?'))
+      : 'afoot'); }));
+  B.appendChild(gf);
+
   B.appendChild(_dvHd('THE FLIGHT GATE'));
   const g1=_dvGrid();
   g1.appendChild(_dvBtn('Unlock flight (set mountLv '+MOUNT_FLY_LV+')',()=>{

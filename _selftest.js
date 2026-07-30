@@ -915,6 +915,31 @@
       if(typeof LS!=='undefined'){ LS.set('er-dens',_saved); _denSet=null; }
     } else ok('denOpened/openDen exist', false);
 
+    // ---------- 10d3. THREE SPEED TIERS, AND THEY MAY NOT OVERLAP ----------
+    // The rule is an ordering, so it is checked as one: every ground mount is slower than every
+    // grounded flyer, which is slower than every flight. The authored numbers OVERLAP (ground
+    // 1.26-1.84 against flyers authored 1.46-1.92), which is exactly why the flyer bands are a
+    // remap rather than a multiplier -- and why this assertion has to exist rather than be assumed.
+    note('');
+    note('== mount speed tiers ==');
+    if(typeof MOUNT_DB!=='undefined' && typeof mountAirSpd==='function'){
+      let gMax=0, gMin=9, aMin=9, aMax=0, nMin=9, nMax=0;
+      for(const m of MOUNT_DB){
+        if(m.fly){ const a=mountAirSpd(m.id), g=mountGndSpd(m.id);
+          if(a<aMin)aMin=a; if(a>aMax)aMax=a; if(g<nMin)nMin=g; if(g>nMax)nMax=g; }
+        else { const b=mountBaseSpd(m.id); if(b>gMax)gMax=b; if(b<gMin)gMin=b; }
+      }
+      note('  ground mounts      '+gMin.toFixed(2)+' .. '+gMax.toFixed(2));
+      note('  flyers, grounded   '+nMin.toFixed(2)+' .. '+nMax.toFixed(2));
+      note('  flyers, airborne   '+aMin.toFixed(2)+' .. '+aMax.toFixed(2));
+      ok('a grounded flyer beats every ground mount', nMin>gMax, nMin.toFixed(2)+' > '+gMax.toFixed(2));
+      ok('and is slower than every flight', nMax<aMin, nMax.toFixed(2)+' < '+aMin.toFixed(2));
+      // and the state actually gates the immunity, or landing would be free speed with no trade
+      ok('landing gives up the flight immunity',
+         typeof mountLand==='function' && typeof mountTakeOff==='function'
+         && /airborne/.test(String(playerIsFlying)));
+    } else ok('the mount speed model exists', false);
+
     // ---------- 10d2. A NEW HERO IS DRESSED, AND THE DEV DIALS ARE OFF ----------
     note('');
     note('== a new character ==');
