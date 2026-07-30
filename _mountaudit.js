@@ -274,6 +274,43 @@
         const Q=new URLSearchParams(location.search);
         setTimeout(()=>{
           try{
+            if(Q.get('seats')==='1'){
+              // WHERE THE RIDER ACTUALLY LANDS, per archetype x direction, and which source won.
+              // The table is measured; the live central slice is a per-frame refinement that must
+              // not be allowed to relocate a rider onto a wing. This prints both so the clamp can
+              // be checked rather than eyeballed off a contact sheet.
+              const L2=[]; let over=0, kept=0;
+              L2.push('  archetype        seat   ' + DIRS.map(d=>d[0].padStart(6)).join(''));
+              L2.push('  ' + '-'.repeat(78));
+              Object.keys(byArch).sort().forEach(function(a){
+                const m=byArch[a];
+                if(typeof giveMount==='function') giveMount(m.id);
+                player.mnt=null; if(typeof _mountSeat==='function') _mountSeat(m.id);
+                const d=mountDef(m.id), st=mountSeatOf(d);
+                const cells=DIRS.map(function(dd){
+                  const mref=_mountFrame(d.spr,'idle_'+dd[0]) || _mountFrame(d.spr,'idle_'+dd[0]+'_0')
+                          || mountImg(d.spr);
+                  const sm=mref?mountSeatY(mref):null;
+                  if(!sm||!(sm.h>0)) return '     -';
+                  const frac=(sm.foot-sm.top)/sm.h;
+                  // the old clause used the slice whenever it landed in 0.40..0.75; mark those
+                  const wouldFire=(frac>=0.40 && frac<=0.75);
+                  if(wouldFire) over++; else kept++;
+                  return (wouldFire?'*':' ')+frac.toFixed(2)+'  ';
+                });
+                L2.push('  '+a.padEnd(16)+st.seat.toFixed(2)+'   '+cells.join(''));
+              });
+              L2.push('');
+              L2.push('  The live central slice reads (bboxBottom - topOfCentralSlice) / bboxHeight.');
+              L2.push('  It is NOT a saddle height: it sits at 0.71..0.99 on every archetype, while the');
+              L2.push('  measured seats run 0.29..0.68. riderDrawOver no longer consults it -- MOUNT_SEATS');
+              L2.push('  is the only source. * marks the '+over+' of '+(over+kept)+' poses where the old');
+              L2.push('  0.40..0.75 clause would have fired and moved the rider off the measured seat.');
+              const el2=document.getElementById('testout');
+              if(el2){ el2.textContent='RIDER SEATS\n\n'+L2.join('\n'); el2.style.display='block'; }
+              document.title='SEATS READY';
+              return;
+            }
             if(Q.get('sheet')==='1'){
               // the sheet needs the same world the audit does: a room, a seat and the gates open
               play(); if(typeof devTeleport==='function') devTeleport('G');

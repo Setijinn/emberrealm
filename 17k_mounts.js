@@ -1313,18 +1313,22 @@ function riderDrawOver(x,y,faceAng,skin){
   const st=mountSeatOf(d);
   const feetY=y+MOUNT_FOOT;
   let saddleY=feetY-MOUNT_DRAW_H*st.seat;
-  const mref=_mountFrame(d.spr,'idle_'+_mountDir(faceAng||0))
-          || _mountFrame(d.spr,'idle_'+_mountDir(faceAng||0)+'_0') || mountImg(d.spr);
-  const sm=mref?mountSeatY(mref):null;
-  if(sm && sm.h>0){
-    // SANITY-CLAMP THE MEASUREMENT, because the central slice does not always find a BACK. Facing
-    // north a horse's head and neck are dead centre, so the topmost central pixel is its ears and
-    // the rider ends up in the air above it; antlers and a raised wing do the same. A real saddle
-    // sits between 40% and 75% of the way up an animal, so a reading outside that band is not a
-    // back and the per-archetype table wins instead.
-    const frac=(sm.foot-sm.top)/sm.h;
-    if(frac>=0.40 && frac<=0.75) saddleY=feetY-MOUNT_DRAW_H*frac;
-  }
+  // THE LIVE SLICE USED TO GET A VOTE HERE. It no longer does, and the reason is worth keeping.
+  //
+  // It computed frac = (bboxBottom - topOfCentralSlice) / bboxHeight and, if that landed in
+  // 0.40..0.75, used it as the saddle instead of the table. But that expression is not a saddle
+  // height at all -- the central slice reaches nearly the top of the box on almost every animal,
+  // so it measures 0.71..0.99 across all 20 archetypes x 8 directions (`?seats=1` on the audit
+  // page prints the whole grid). It therefore fell outside the band and did nothing 152 times out
+  // of 160, and the eight times it DID fire were the low readings -- griffon 0.64/0.71 and pegasus
+  // 0.72 -- which are winged archetypes whose measured seat is 0.38 and 0.34. So the only effect
+  // the clause ever had was to take the four or five poses it happened to fire on and move the
+  // rider up into the wing line, which is exactly what the contact sheet showed on those two.
+  //
+  // MOUNT_SEATS is the honest source: measured per archetype by asking PixelLab for a rider,
+  // subtracting the riderless art, and taking the median of eight directions. A saddle does not
+  // move when an animal turns, so one number per archetype is the right shape for this, and a
+  // per-frame refinement is only worth having if it actually measures a back. This one did not.
   // his own feet land on the saddle: work back from where his box bottoms out in his canvas
   const canvasH=rs.img.height||64;
   const footInCanvas=bb?(bb.y+bb.h):canvasH;
