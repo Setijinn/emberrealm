@@ -118,7 +118,7 @@
       M.sN = measure('    ambush  (type N)', 'N', false, starterXY);
       M.se = measure('    elite chaser',     'c', true,  starterXY);
       M.sB = measure('    BOSS',             'B', false, starterXY);
-      say('  MAIN ISLAND (Lv20–'+((typeof LV_CAP!=='undefined')?LV_CAP:50)+')');
+      say('  ISLANDS B AND C (Lv20–'+((typeof LV_CAP!=='undefined')?LV_CAP:50)+')');
       M.mc = measure('    chaser  (type c)', 'c', false, mainXY);
       M.me = measure('    elite chaser',     'c', true,  mainXY);
       M.mB = measure('    BOSS',             'B', false, mainXY);

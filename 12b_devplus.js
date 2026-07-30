@@ -21,7 +21,11 @@ function _dvBtn(label,fn,cls){ const b=document.createElement('button');
     if(el){ el.textContent='✖ '+err.message; el.style.color='#e2604c'; } } };
   return b; }
 function _dvGrid(){ const d=document.createElement('div'); d.className='dgrid'; return d; }
-function _dvHd(t){ const d=document.createElement('div'); d.className='msub'; d.style.marginTop='10px';
+// `open` marks the section _dvFold should expand by default. Without it the fold always opened the
+// FIRST section, which for a tune-and-shoot tool is the wrong one -- the weapon tab opened on its
+// type picker while the numbers you came to nudge stayed shut.
+function _dvHd(t,open){ const d=document.createElement('div'); d.className='msub'; d.style.marginTop='10px';
+  if(open) d.dataset.open='1';
   d.textContent=t; return d; }
 function _dvNote(t){ const d=document.createElement('div'); d.className='mnote'; d.textContent=t; return d; }
 // a sack on the ground at the player's feet, through the real loot path
@@ -92,7 +96,7 @@ function _dvDrawBoss(c,ring,dungeonForm){
 const DEV_TABS=[
  ['sacks','SACKS'], ['relics','RELICS'], ['items','ITEMS'], ['forge','FORGE'], ['flasks','FLASKS'],
  ['bosses','BOSSES'], ['anim','ANIMATION'], ['mobs','ENEMIES'], ['world','WORLD'],
- ['mounts','MOUNTS'], ['travel','TRAVEL'],
+ ['mounts','MOUNTS'], ['travel','TRAVEL'], ['boost','XP / LOOT'], ['weapon','WEAPONS'],
  ['levels','LEVELS'], ['ui','UI / FX'], ['bal','BALANCE'],
 ];
 function devPaintTabs(){
@@ -138,7 +142,8 @@ function _dvFold(B){
       // remembered if we have seen it; otherwise the first section of a tab starts open so the
       // pane never reads as empty
       const key=_devTab+'|'+name;
-      d.open=(key in _dvOpen)?_dvOpen[key]:first;
+      const wants=(el.dataset && el.dataset.open==='1');
+      d.open=(key in _dvOpen)?_dvOpen[key]:(wants||first);
       d.addEventListener('toggle',()=>{ _dvOpen[key]=d.open; });
       B.insertBefore(d,el);
       el.remove();
@@ -1013,3 +1018,145 @@ DEV_PANE.travel=function(B){
     B.appendChild(g);
   }
 };
+
+
+// ---------------------------------- XP / LOOT ------------------------------------------------
+// Four dials the game's own paths read (DEV_MUL, 11_ui.js): xp through gainXP, quantity through
+// boostDupeItems, drop rate through the soulbound chance, rarity through boostRareRolls. Nothing
+// here is a parallel code path -- turning a dial up makes the SHIPPED rule do more of what it does.
+DEV_PANE.boost=function(B){
+  if(typeof DEV_MUL==='undefined'){ B.appendChild(_dvNote('11_ui.js is not loaded.')); return; }
+  B.appendChild(_dvNote('Multipliers for testing. They are NOT saved -- reload and everything is back '
+    +'to 1x -- because a dial left on quietly invalidates every drop-rate number measured afterwards, '
+    +'and the audits in this repo read these same functions.'));
+  const STEPS=[1,2,4,6,8,10,15,20,50,100];
+  const DIALS=[
+    ['xp',   'EXPERIENCE',    'multiplies gainXP, alongside the Scholar\u2019s Draught, so kills, objectives and bounties are all covered'],
+    ['loot', 'LOOT QUANTITY', 'keeps N copies of every qualifying item in a sack. Never a relic, a legendary or a Fortune Coin -- the same exclusions the Prospector\u2019s draught uses'],
+    ['rate', 'DROP RATE',     'multiplies the SOULBOUND chance -- how often a trash kill pays anything above T8 at all. Weights and the row ceiling are untouched: more often, not better'],
+    ['rare', 'RARITY ROLLS',  'rolls rarity N times and keeps the best, exactly as a Prospector\u2019s does']
+  ];
+  for(const [key,label,why] of DIALS){
+    B.appendChild(_dvHd(label+'   \u00d7'+DEV_MUL[key]));
+    B.appendChild(_dvNote(why));
+    const g=_dvGrid();
+    for(const n of STEPS){
+      const b=_dvBtn((n===1?'off (1\u00d7)':(n+'\u00d7')),()=>{
+        DEV_MUL[key]=n; devLog(label+' \u00d7'+n+'   \u2014   '+devMulLabel()); devPaintBody(); });
+      if(DEV_MUL[key]===n){ b.style.borderColor='#ffc94d'; b.style.color='#ffc94d'; }
+      g.appendChild(b);
+    }
+    B.appendChild(g);
+  }
+  B.appendChild(_dvHd('ALL AT ONCE'));
+  const ga=_dvGrid();
+  for(const n of [1,2,5,10,25,100]){
+    ga.appendChild(_dvBtn((n===1?'RESET everything to 1\u00d7':('everything \u00d7'+n)),()=>{
+      DEV_MUL.xp=DEV_MUL.loot=DEV_MUL.rate=DEV_MUL.rare=n;
+      devLog(devMulLabel()); devPaintBody(); }));
+  }
+  B.appendChild(ga);
+  B.appendChild(_dvNote('now: '+devMulLabel()));
+};
+
+// ---------------------------------- WEAPONS ---------------------------------------------------
+// THE WEAPON CREATOR, IN THE PANEL (user, 2026-07-30: "a personal tool linked to the dev panel").
+// It edits the LIVE WTYPE row in 11_ui.js and puts the type in your hands, so the player's own fire()
+// reads it on the very next shot -- no reload, no separate page, and nothing to keep in sync. What
+// you feel is what the row does; PRINT ROW gives you the line to paste back into 11_ui.js.
+//
+// The five numbers only mean anything together, which is the whole reason this exists: shots and
+// spread decide coverage, speed and reach decide whether it lands before it expires, and rate ties
+// them to damage. Reading them in a table tells you nothing.
+DEV_PANE.weapon=function(B){
+  if(typeof WTYPE==='undefined'){ B.appendChild(_dvNote('11_ui.js is not loaded.')); return; }
+  if(!_dvWpn) _dvWpn=(typeof CWEAP!=='undefined'&&curChar&&curChar()&&CWEAP[curChar().cls])||'sword';
+  const W=WTYPE[_dvWpn];
+  if(!W){ B.appendChild(_dvNote('no WTYPE row for '+_dvWpn)); return; }
+
+  B.appendChild(_dvNote('Edits the live WTYPE row and equips the type, so your next shot uses it. '
+    +'Changes last until reload; PRINT ROW writes the line for 11_ui.js.'));
+
+  B.appendChild(_dvHd('TYPE'));
+  const gt=_dvGrid();
+  for(const k in WTYPE){
+    if(WTYPE[k].legacy) continue;
+    const b=_dvBtn(WTYPE[k].n||k,()=>{ _dvWpn=k; _dvWpnEquip(); devPaintBody(); });
+    if(_dvWpn===k){ b.style.borderColor='#ffc94d'; b.style.color='#ffc94d'; }
+    gt.appendChild(b);
+  }
+  B.appendChild(gt);
+
+  // one row of steppers per field: a slider is unusable next to a thumb on a phone, and these are
+  // numbers you nudge rather than sweep
+  const FIELDS=[
+    ['shots','projectiles',1,7,1,'how many bolts leave the weapon. Capped at 7 by fire()'],
+    ['spread','spread (rad)',0,0.8,0.01,'angle BETWEEN bolts. Ignored when `par` is set'],
+    ['par','parallel (px)',0,40,1,'fire abreast instead of fanned -- the shotgun/volley feel'],
+    ['spd','speed (px/s)',80,1400,20,'how fast the bolt travels'],
+    ['life','reach (s)',0.05,3,0.05,'how long it lives. THIS is a weapon\u2019s range'],
+    ['size','bolt size (px)',2,16,1,'hitbox radius as well as how big it looks'],
+    ['dm','damage \u00d7',0.1,4,0.05,'multiplies the player\u2019s damage'],
+    ['rof','rate \u00d7',0.2,4,0.01,'higher is FASTER: fire() divides the cooldown by it'],
+    ['pierce','pierce',0,99,1,'how many enemies a bolt passes through. 99 = everything']
+  ];
+  // ONE SECTION, NOT NINE. Every field used to get its own .msub, which _dvFold then turned into
+  // its own dropdown -- so tuning a weapon meant expanding a fold, tapping a stepper, and doing it
+  // again for the next number. This is a tune-and-shoot tool: the numbers have to be visible
+  // together, because they only mean anything together.
+  B.appendChild(_dvHd('STATS',true));
+  for(const [key,label,min,max,step,why] of FIELDS){
+    const bump=(d)=>{
+      let v=(W[key]!==undefined?W[key]:0)+d;
+      v=Math.max(min,Math.min(max,Math.round(v*1000)/1000));
+      W[key]=v; devLog(_dvWpn+'.'+key+' = '+v); devPaintBody();
+    };
+    const row=document.createElement('div'); row.className='dvWrow'; row.title=why;
+    const l=document.createElement('span'); l.className='dvWlab'; l.textContent=label;
+    const vv=document.createElement('b'); vv.className='dvWval';
+    vv.textContent=String(Math.round((W[key]!==undefined?W[key]:0)*1000)/1000);
+    row.appendChild(l); row.appendChild(vv);
+    const steps=[['--',-step*5],['-',-step],['+',step],['++',step*5]];
+    for(const st of steps){
+      const b=_dvBtn(st[0],(function(d){ return function(){ bump(d); }; })(st[1]));
+      b.className='mbtn dev dvWbtn';
+      row.appendChild(b);
+    }
+    B.appendChild(row);
+  }
+
+  B.appendChild(_dvHd('WHAT IT ADDS UP TO'));
+  // the numbers only mean something together, so say what they mean together
+  const n=Math.min(7,W.shots||1), rate=(W.rof||1), dps=(W.dm||1)*n*rate;
+  const reach=Math.round((W.spd||0)*(W.life||0));
+  B.appendChild(_dvNote(n+' bolt'+(n===1?'':'s')+' \u00d7 '+(W.dm||1)+' damage \u00d7 '+rate.toFixed(2)
+    +' rate  =  '+dps.toFixed(2)+' relative DPS   \u00b7   reach '+reach+'px ('+(reach/44).toFixed(1)+' tiles)'
+    +'   \u00b7   '+(W.par?('parallel '+W.par+'px'):('spread '+((W.spread||0)*(n-1)).toFixed(2)+' rad total'))));
+
+  B.appendChild(_dvHd('ROW'));
+  const gr=_dvGrid();
+  gr.appendChild(_dvBtn('PRINT ROW (for 11_ui.js)',()=>{
+    const keys=['shots','spread','spd','life','size','dm','rof','pierce','par'];
+    const parts=keys.filter(k=>W[k]!==undefined&&W[k]!==null).map(k=>k+':'+W[k]);
+    devLog(' '+_dvWpn+":{n:'"+(W.n||_dvWpn)+"',"+parts.join(',')+'},'); }));
+  gr.appendChild(_dvBtn('RESTORE this type',()=>{
+    if(_dvWpnBak && _dvWpnBak[_dvWpn]){ Object.assign(W,_dvWpnBak[_dvWpn]);
+      devLog(_dvWpn+' restored'); devPaintBody(); }
+    else devLog('nothing backed up for '+_dvWpn); }));
+  gr.appendChild(_dvBtn('EQUIP this type',()=>{ _dvWpnEquip(); devLog('equipped '+_dvWpn); }));
+  B.appendChild(gr);
+};
+let _dvWpn=null, _dvWpnBak=null;
+// back the row up the FIRST time it is touched, so RESTORE always has the shipped values rather
+// than whatever the last edit left behind
+function _dvWpnBackup(k){ if(typeof WTYPE==='undefined') return;
+  if(!_dvWpnBak) _dvWpnBak={};
+  if(!_dvWpnBak[k]) _dvWpnBak[k]=Object.assign({},WTYPE[k]); }
+// put the type in the player's hands: fire() reads CWEAP[cls], so the class is the switch
+function _dvWpnEquip(){
+  _dvWpnBackup(_dvWpn);
+  const ch=(typeof curChar==='function')?curChar():null;
+  if(!ch||typeof CWEAP==='undefined') return;
+  for(const cls in CWEAP) if(CWEAP[cls]===_dvWpn){ ch.cls=cls; break; }
+  if(typeof recalcStats==='function') recalcStats();
+}

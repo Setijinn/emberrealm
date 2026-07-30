@@ -5,11 +5,11 @@
 //  tick() -- `for(let i=-2;i<=2;i++) eFire(e, a+i*0.18, 215*P.speed)` -- and the only way to see what
 //  one felt like was to edit 17i_bossfights.js, reload, walk to the boss, and fight it. That is a
 //  thirty-second round trip on a change you want to make twenty times, so in practice nobody iterates:
-//  patterns get written once and left. Weapons are worse -- the WEAP row decides shots, spread, speed,
+//  patterns get written once and left. Weapons are worse -- the WTYPE row decides shots, spread, speed,
 //  reach and rate all at once, and those five numbers only mean anything together, in motion.
 //
 //  THIS DRIVES THE REAL CODE. It does not simulate anything. Patterns go through eFire() into eShots
-//  and are moved, collided and drawn by update()/render(); the weapon half edits the live WEAP row and
+//  and are moved, collided and drawn by update()/render(); the weapon half edits the live WTYPE row and
 //  fires through the player's own fire(). What you watch is what ships -- and what it prints is
 //  pasteable into the file it came from.
 //
@@ -48,7 +48,7 @@
   const AIMS=['player','fixed','outward'];
 
   // ---- THE WEAPON MODEL --------------------------------------------------------------------------
-  // These ARE the fields of a WEAP row in 11_ui.js. The lab edits the live table, so the player's own
+  // These ARE the fields of a WTYPE row in 11_ui.js. The lab edits the live table, so the player's own
   // fire() reads them on the next shot with no reload.
   const WKEYS=['shots','spread','spd','life','size','dm','rof','pierce','par'];
   let wtype='sword', wbackup=null;
@@ -167,10 +167,10 @@
   }
 
   function exportWeapon(){
-    const W=(typeof WEAP!=='undefined')?WEAP[wtype]:null;
-    if(!W) return '// no WEAP row for '+wtype;
+    const W=(typeof WTYPE!=='undefined')?WTYPE[wtype]:null;
+    if(!W) return '// no WTYPE row for '+wtype;
     const parts=WKEYS.filter(k=>W[k]!==undefined&&W[k]!==null).map(k=>k+':'+W[k]);
-    return '// weapon row from the lab — replace this line in WEAP, 11_ui.js\n'
+    return '// weapon row from the lab — replace this line in WTYPE, 11_ui.js\n'
          + ' '+wtype+":{n:'"+(W.n||wtype)+"',"+parts.join(',')+'},';
   }
 
@@ -207,7 +207,7 @@
     return i;
   }
   function wslider(key, min, max, step){
-    const W=WEAP[wtype];
+    const W=WTYPE[wtype];
     const wrap=document.createElement('div'); wrap.className='labSlide';
     const i=document.createElement('input'); i.type='range';
     i.min=min; i.max=max; i.step=step; i.value=(W[key]!==undefined?W[key]:0);
@@ -237,10 +237,10 @@
       body.appendChild(row('core', colour('core')));
       body.appendChild(row('damage', slider('dmg',1,60,1)));
     } else {
-      const W=(typeof WEAP!=='undefined')?WEAP[wtype]:null;
+      const W=(typeof WTYPE!=='undefined')?WTYPE[wtype]:null;
       const pick=document.createElement('div'); pick.className='labPick';
-      for(const k of Object.keys(WEAP||{})){
-        if(WEAP[k].legacy) continue;
+      for(const k of Object.keys(WTYPE||{})){
+        if(WTYPE[k].legacy) continue;
         const b=document.createElement('button'); b.textContent=k;
         b.className=(wtype===k)?'on':'';
         b.onclick=()=>{ restoreWeapon(); wtype=k; backupWeapon(); build(); equipLabWeapon(); };
@@ -261,9 +261,9 @@
     }
   }
 
-  function backupWeapon(){ if(typeof WEAP==='undefined') return;
-    wbackup=Object.assign({}, WEAP[wtype]); }
-  function restoreWeapon(){ if(wbackup && typeof WEAP!=='undefined') Object.assign(WEAP[wtype], wbackup); }
+  function backupWeapon(){ if(typeof WTYPE==='undefined') return;
+    wbackup=Object.assign({}, WTYPE[wtype]); }
+  function restoreWeapon(){ if(wbackup && typeof WTYPE!=='undefined') Object.assign(WTYPE[wtype], wbackup); }
   // put the chosen type in the player's hands, so fire() reads the row being edited
   function equipLabWeapon(){
     const ch=(typeof curChar==='function')?curChar():null;

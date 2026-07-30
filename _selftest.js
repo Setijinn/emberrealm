@@ -915,6 +915,28 @@
       if(typeof LS!=='undefined'){ LS.set('er-dens',_saved); _denSet=null; }
     } else ok('denOpened/openDen exist', false);
 
+    // ---------- 10d2. A NEW HERO IS DRESSED, AND THE DEV DIALS ARE OFF ----------
+    note('');
+    note('== a new character ==');
+    if(typeof starterRPG==='function'){
+      for(const cls of ['knight','ranger','pyro','necro']){
+        const r=starterRPG(cls);
+        const ok4 = r.wpn===0 && r.arm===0 && r.helm===0 && r.ring && r.ring.t===0;
+        ok('a new '+cls+' opens in full T1', ok4,
+           'wpn '+r.wpn+' arm '+r.arm+' helm '+r.helm+' ring '+(r.ring?(r.ring.st+' T'+(r.ring.t+1)):'none'));
+      }
+      // THE ONE THAT ACTUALLY BROKE: helm was undefined, and `rpg.helm>=0` is false for undefined,
+      // so the equipment doll said "No helm" and the first helm found compared against nothing.
+      ok('helm is a number, not undefined', typeof starterRPG('knight').helm==='number');
+      ok('the ring carries a stat', !!starterRPG('knight').ring.st, starterRPG('knight').ring.st);
+    } else ok('starterRPG exists', false);
+
+    // The dev multipliers must be 1 in a fresh session, or every drop-rate number this suite and the
+    // audits report is silently multiplied by whatever was left on.
+    if(typeof DEV_MUL!=='undefined'){
+      ok('the dev multipliers are all off', !devMulActive(), devMulLabel());
+    } else ok('DEV_MUL exists', false);
+
     // ---------- 10e. A REMEMBERED SESSION KNOWS WHAT IT IS ----------
     // er-last logs you back in on reload without a password. It restored curUser and NOTHING ELSE,
     // so a remembered admin session came back with isAdmin false -- and every dev control is gated

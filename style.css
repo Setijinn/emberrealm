@@ -997,6 +997,16 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 /* A SECTION IS A DROPDOWN. The summary carries the same look the .msub header had, plus a marker
    that says which way it is going -- a fold with no affordance reads as a heading that lost its
    content. */
+/* A WEAPON FIELD IS ONE ROW: label, live value, and four steppers reachable without opening
+   anything. -/-- and +/++ are 1x and 5x of the field's own step, so a coarse sweep and a fine
+   nudge are the same two gestures on every number. */
+.dvWrow{display:flex;align-items:center;gap:6px;width:100%;padding:3px 2px;
+  border-bottom:1px solid rgba(46,39,56,.6);}
+.dvWlab{flex:1 1 auto;min-width:0;color:#8a8494;font-size:12px;
+  font-family:'Pixelify Sans',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dvWval{flex:0 0 68px;text-align:right;color:#ffd07a;font-size:13px;
+  font-family:'Pixelify Sans',monospace;}
+.mbtn.dev.dvWbtn{flex:0 0 auto;width:auto;min-width:44px;min-height:38px;padding:4px 8px;font-size:14px;}
 .dvSec{ width:100%; border-top:1px solid #2a2433; margin-top:6px; }
 .dvSec>summary{
   list-style:none; cursor:pointer; user-select:none;

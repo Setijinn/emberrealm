@@ -1356,6 +1356,10 @@ function rollSoulboundItems(e,row,who){
  if(e.type==='B') p=1;                                  // bosses are the reliable T9+ path
  else if(e.type==='s') p=row.sbP*3;
  else p=row.sbP;
+ // the workbench's loot-rate dial. Multiplying the CHANCE rather than the roll keeps the
+ // weights and the row ceiling exactly as they are -- a 10x rate finds bound gear ten times
+ // as often, it does not find better bound gear.
+ if(typeof DEV_MUL!=='undefined' && DEV_MUL.rate!==1) p=Math.min(1, p*DEV_MUL.rate);
  const n=(e.type==='B')?((typeof curRoom!=='undefined'&&curRoom&&curRoom.dungeon)?2:1):1;
  for(let q=0;q<n;q++){
    if(Math.random()>=p) continue;
@@ -2348,10 +2352,59 @@ function hcCheck(){ const ch=curChar(); if(!ch||!rpg||!inGame) return false;
  $s('hcScr').style.display='flex';
  navigator.vibrate&&navigator.vibrate([40,60,40]);
  return true; }
+// ===================================================================================================
+//  DEV MULTIPLIERS (user, 2026-07-30) — the workbench's XP / LOOT tab writes these.
+// ---------------------------------------------------------------------------------------------------
+//  Four dials, all defaulting to 1, all read by the SHIPPED path rather than by a parallel one:
+//    xp     multiplies gainXP, alongside the Scholar's Draught, so kills / objectives / bounties are
+//           all covered by the one line that already covers them
+//    loot   how many copies of a sack's qualifying items to keep -- the same rule and the same
+//           exclusions as the Prospector's duplicate (never a relic, a legendary or a coin)
+//    rate   multiplies the SOULBOUND chance, which is the number that decides whether a trash kill
+//           pays anything above T8 at all
+//    rare   extra rarity rolls, keep-the-best, exactly as boostRareRolls does
+//
+//  THEY ARE NOT SAVED. A multiplier that survived a reload would eventually be forgotten and quietly
+//  invalidate every measurement taken afterwards -- and the audits in this repo exist precisely to
+//  measure drop rates. Reload and you are back to 1x.
+//
+//  A RUN WITH THESE ON IS NOT A MEASUREMENT. _forgeaudit, _scrollaudit and the killability sweep all
+//  read the same functions; if a dial is up, their numbers are up with it. devMulActive() is here so
+//  anything that reports a rate can say so.
+const DEV_MUL = {xp:1, loot:1, rate:1, rare:1};
+function devMulActive(){ return DEV_MUL.xp!==1||DEV_MUL.loot!==1||DEV_MUL.rate!==1||DEV_MUL.rare!==1; }
+function devMulLabel(){ return devMulActive()
+  ? ('xp x'+DEV_MUL.xp+' · loot x'+DEV_MUL.loot+' · rate x'+DEV_MUL.rate+' · rare x'+DEV_MUL.rare)
+  : 'all 1x'; }
+
+// EVERY HERO STARTS DRESSED (user, 2026-07-30: "make every character start with all T1 equipment
+// for their class").
+//
+// A new character was `{lvl:1,xp:0,wpn:0,pots:1,mpots:1}` -- a T1 weapon and nothing else. `arm`
+// read as 0 through `rpg.arm||0` so armour LOOKED equipped, but `helm` was undefined, and
+// `rpg.helm>=0` is false for undefined, so the doll said "No helm"; `ring` was undefined too. The
+// first hour was therefore spent with two empty slots and a compare screen that had nothing to
+// compare against -- and the very first helm you found read as a huge upgrade because it was being
+// measured against nothing.
+//
+// The RING's stat is the class's own: a knight opens with Vigor, a wisdom class with Wisdom. Falls
+// back to hp for any class not named, so adding a class needs no edit here.
+const CLASS_RING={ knight:'hp', paladin:'hp', berserker:'dmg', dragoon:'dmg', guardian:'def',
+  rogue:'dex', assassin:'dex', monk:'spd', ranger:'dex', hunter:'dex', bard:'wis',
+  pyro:'dmg', shaman:'wis', warlock:'wis', cleric:'wis', druid:'vit', necro:'mp' };
+function starterRPG(cls){
+  return { lvl:1, xp:0,
+    wpn:0,                      // T1 weapon of the class's own type (CWEAP)
+    arm:0,                      // T1 armour in the class's own material (CARMOR)
+    helm:0,                     // T1 helm -- this is the one that was missing outright
+    ring:{ st:(CLASS_RING[cls]||'hp'), t:0 },
+    pots:1, mpots:1 };
+}
 function gainXP(x,g){ if(!rpg)return;              // g is ignored: kills pay xp, never currency
  // a Scholar's Draught doubles it (17l_boosts.js). Applied here rather than at each caller so
  // every source of experience -- kills, objectives, bounties -- is covered by one line.
  if(typeof boostXpMul==='function') x=Math.round(x*boostXpMul());
+ if(typeof DEV_MUL!=='undefined' && DEV_MUL.xp!==1) x=Math.round(x*DEV_MUL.xp);
  rpg.xp+=x;
  while(rpg.lvl<LV_CAP && rpg.xp>=xpNeed(rpg.lvl)){ rpg.xp-=xpNeed(rpg.lvl); rpg.lvl++;
   if(typeof grantPerkPoints==='function') grantPerkPoints(rpg);
@@ -2654,7 +2707,7 @@ function openMenu(){
 function resumeRun(){ if(!runLive||curChar()!==runChar){ play(); return; }
  hideAll(); showGameHud(); inGame=true; hudRPG(); }
 function migrate(u){ if(!u.chars){ u.chars=[]; u.cur=0;
-  if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||{lvl:1,xp:0,wpn:0,pots:1,mpots:1}}); }
+  if(u.char){ u.chars.push({name:curUser.slice(0,14), cls:u.char, rpg:u.rpg||starterRPG(u.char)}); }
   delete u.char; delete u.rpg; LS.set('er-users',users); }
  if(u.cur===undefined||u.cur>=u.chars.length) u.cur=0; }
 function curChar(){ const u=users[curUser]; if(!u) return null; migrate(u); return u.chars[u.cur]||null; }
@@ -2697,7 +2750,7 @@ function openClassPick(){
   paintClassIcon(d.querySelector('.cicCv'), c.id);
   d.onclick=()=>{ const nm=($s('charName').value.trim()||('Hero'+Math.floor(Math.random()*900+100))).slice(0,14);
    const u=users[curUser];
-   u.chars.push({name:nm, cls:c.id, rpg:{lvl:1,xp:0,wpn:0,pots:1,mpots:1}});
+   u.chars.push({name:nm, cls:c.id, rpg:starterRPG(c.id)});
    u.cur=u.chars.length-1; LS.set('er-users',users); $s('charName').value=''; openMenu(); };
   box.appendChild(d); });
  show('classScr');

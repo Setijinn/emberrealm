@@ -92,7 +92,10 @@ function boostXpMul(){ return boostMul('xp'); }
 
 // How many times rollRarity should roll and keep the best. 1 normally, BOOST_RARE_ROLLS while a
 // Prospector's is running.
-function boostRareRolls(){ return boostActive('rare') ? BOOST_RARE_ROLLS : 1; }
+function boostRareRolls(){
+  const base = boostActive('rare') ? BOOST_RARE_ROLLS : 1;
+  const dev  = (typeof DEV_MUL!=='undefined' && DEV_MUL.rare>1) ? Math.floor(DEV_MUL.rare) : 1;
+  return Math.max(base, dev); }
 
 // Duplicate the qualifying items of a freshly rolled sack. Returns a NEW array; the caller swaps
 // it in. Called once per sack rather than per item so the whole rule lives in one place.
@@ -103,6 +106,21 @@ function boostRareRolls(){ return boostActive('rare') ? BOOST_RARE_ROLLS : 1; }
 // does not improve its own drop rate: Fortune Coins raise every future roll, and a draught that
 // minted them would compound into itself.
 function boostDupeItems(items){
+  // THE WORKBENCH'S LOOT DIAL RIDES THE SAME RULE. A dev multiplier of N keeps N copies of every
+  // qualifying item, with the SAME exclusions the draught uses -- a relic carries its own duplicate
+  // rule and a coin compounds into itself, so neither may ever be copied by anything.
+  const devN = (typeof DEV_MUL!=='undefined' && DEV_MUL.loot>1) ? Math.floor(DEV_MUL.loot) : 1;
+  if(devN>1 && items && items.length){
+    const dev=[];
+    for(const it of items){
+      dev.push(it);
+      if(!it || it.relic || it.k==='leg' || it.k==='coin' || it.k==='boost') continue;
+      for(let i=1;i<devN;i++){
+        const c=Object.assign({},it);
+        if(Array.isArray(it.aff)) c.aff=it.aff.map(a=>({s:a.s,v:a.v}));
+        dev.push(c); } }
+    items=dev;
+  }
   if(!items || !items.length || !boostActive('dupe')) return items;
   const out=[];
   for(const it of items){
