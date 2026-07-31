@@ -35,3 +35,7 @@ assets/riders/_composites/
 # Rider layers extracted but not yet reviewed. The user asked for one mount at a time, so an
 # archetype waits here until its own pass; moving it up one level is what makes it live.
 assets/riders/_pending/
+
+# Ridden sets that were generated and rejected. Kept on disk so a judgement can be revisited without
+# spending generations again; out of the repo because they are not art the game should ever load.
+assets/mounts/_old/

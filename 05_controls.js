@@ -119,6 +119,10 @@ addEventListener('keydown',e=>{
   // that is holding WASD — every other spare letter is on the right of the board and would mean
   // letting go of movement to get on a horse.
   else if(k==='v'){ if(typeof mountToggle==='function') mountToggle(); }
+  // F lands a flyer, or puts it back up. Deliberately a separate key from V: dismounting in the air
+  // is refused anyway, so one key that means both "get off" and "come down" would refuse half the
+  // time and teach the player nothing.
+  else if(k==='f'){ if(typeof mountToggleFlight==='function') mountToggleFlight(); }
 });
 addEventListener('keyup',e=>{ if(e.key) keys[e.key.toLowerCase()]=false; });
 // A KEYUP YOU NEVER RECEIVE LEAVES YOU WALKING. Alt-tab, a notification or an OS overlay while

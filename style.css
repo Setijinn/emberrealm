@@ -122,6 +122,9 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 /* the mount button reads its own state: lit amber in the saddle, dimmed while the throw
    cooldown runs, so you never mash a key that is going to refuse you. */
 #mountBtn.up{color:#ffe08a;background:rgba(58,40,16,.92);}
+/* AIRBORNE reads as sky, not as fire: the mount button goes ember-gold when you are in
+   the saddle, so the flight toggle needs its own colour or the two say the same thing. */
+#flyBtn.up{color:#9ad4ef;background:rgba(16,38,58,.92);}
 #mountBtn.cd{opacity:.42;}
 /* the climb into the saddle is a CAST, and a short committed one is worth showing: the button
    fills from the left over MOUNT_CAST so a thumb knows it started and knows when it lands. */
@@ -231,7 +234,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 .istats{margin-top:5px;font-size:10px;line-height:1.5;letter-spacing:.02em;}
 #eqStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:9px;}
 
-#loadBtn,#skillBtn,#petBtn,#statsBtn,#mountBtn{display:none;align-items:center;justify-content:center;
+#loadBtn,#skillBtn,#petBtn,#statsBtn,#mountBtn,#flyBtn{display:none;align-items:center;justify-content:center;
  width:44px;height:40px;background:rgba(23,20,29,.88);border:1px solid #7a4a1e;border-radius:10px;font-size:18px;color:#ffc94d;}
 /* Hearth recall. Lives INSIDE #hudBot's flex row rather than being positioned absolutely, so it
    can never overlap another control at any UI scale — the row just reflows around it. */
@@ -845,7 +848,7 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  border:1px dashed #4a2a5c;border-radius:10px;margin-bottom:9px;}
 
 /* ornate borders for every HUD button (user: "give all the buttons a border") */
-#menuBtn,#flasks,#invBtn,#tgtBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#mountBtn,#devBtn2,#hearthBtn{
+#menuBtn,#flasks,#invBtn,#tgtBtn,#mapBtn,#coopBtn,#loadBtn,#skillBtn,#petBtn,#statsBtn,#mountBtn,#flyBtn,#devBtn2,#hearthBtn{
  border:2px solid #8a6a34;
  box-shadow:0 0 0 1px #14100c, inset 0 0 0 1px rgba(255,208,122,.30), 0 2px 6px rgba(0,0,0,.55);
 }
@@ -943,7 +946,7 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 #potBtn,#mpotBtn{min-width:calc(52px*var(--uis));height:calc(40px*var(--uis));
  font-size:calc(15px*var(--uis));padding:0 calc(10px*var(--uis));}
 #invBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
-#loadBtn,#skillBtn,#petBtn,#mountBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
+#loadBtn,#skillBtn,#petBtn,#mountBtn,#flyBtn{width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(18px*var(--uis));}
 #statsBtn{min-width:calc(44px*var(--uis));height:calc(40px*var(--uis));font-size:calc(16px*var(--uis));padding:0 calc(7px*var(--uis));}
 #mapBtn,#coopBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(17px*var(--uis));}
 #hearthBtn{width:calc(48px*var(--uis));height:calc(40px*var(--uis));font-size:calc(19px*var(--uis));}

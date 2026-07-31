@@ -769,7 +769,8 @@ function tickMounts(dt){
   if(mounted() && !mountAllowedHere()) dismount('boss');
   // the HUD button reads state that changes without any input (the throw, the cooldown running
   // out), so it is refreshed here rather than only on click
-  if(typeof hudMounts==='function') hudMounts(); }
+  if(typeof hudMounts==='function') hudMounts();
+  if(typeof hudFly==='function') hudFly(); }
 
 // The factor the player's speed chain multiplies in. 1 when afoot, so it is always safe to call.
 function mountSpdMul(){ return mounted()?mountSpdOf(player.mnt):1; }
@@ -1659,6 +1660,25 @@ function hudMounts(){
     : cd ? ('Thrown — remount in '+Math.ceil(player.mntCd)+'s')
     : ('Mount '+m.name); }
 
+// ---- LAND / TAKE OFF ----
+// Shown only while you are actually sitting on something with wings, because that is the only time
+// it can do anything. Unlike hudMounts this is NOT mobile-only: the state it toggles is not a
+// convenience, it changes your speed band and whether things can hit you, so it needs to be visible
+// on a screen where the F key is also available -- a player who does not know landing exists will
+// never press a key they were never shown.
+function hudFly(){
+  if(typeof document==='undefined') return;
+  const b=document.getElementById('flyBtn'); if(!b) return;
+  const on = mounted() && mountIsFlyer(player.mnt) && !((player.mntCast||0)>0);
+  b.style.display = on ? 'flex' : 'none';
+  if(!on) return;
+  const up = playerIsFlying();
+  b.className = up ? 'up' : '';
+  b.textContent = up ? '\uD83E\uDEB6' : '\u2601\uFE0F';
+  b.title = up
+    ? 'Land (F) — faster than any beast afoot, but you can be hit'
+    : 'Take off (F) — nothing can reach you'; }
+
 // wired once the DOM exists; the panel's buttons live in index.html beside the vault's
 (function(){ if(typeof document==='undefined') return;
   function wire(){
@@ -1671,7 +1691,9 @@ function hudMounts(){
       else setActiveMount(_stableSel);
       paintStable(); hudMounts(); };
     const mb=document.getElementById('mountBtn');
-    if(mb) mb.onclick=function(){ if(typeof mountToggle==='function') mountToggle(); hudMounts(); };
+    if(mb) mb.onclick=function(){ if(typeof mountToggle==='function') mountToggle(); hudMounts(); hudFly(); };
+    const fb=document.getElementById('flyBtn');
+    if(fb) fb.onclick=function(){ if(typeof mountToggleFlight==='function') mountToggleFlight(); hudFly(); };
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire); else wire();
 })();
