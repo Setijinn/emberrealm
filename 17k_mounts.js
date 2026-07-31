@@ -1346,8 +1346,12 @@ function riderDrawOver(x,y,faceAng,skin){
   // guessed saddle line. It is the best that can be done without seated art and it has never looked
   // like a person sitting down. When an aligned layer exists none of that applies -- same canvas,
   // same transform, done.
+  // A layer is aligned when its canvas is the animal's, or the animal's grown by the SAME margin on
+  // every side. blit centres and scales about the centre, so symmetric padding draws in exactly the
+  // same place -- which is what lets a rider fitted from a smaller animal keep his helmet.
   const _al=rideArchImg(_mountDir(faceAng||0), d.spr);
-  if(_al && _mountBlit && _al.naturalWidth===_mountBlit.w && _al.naturalHeight===_mountBlit.h){
+  const _pw=_al?(_al.naturalWidth-_mountBlit.w):0, _ph=_al?(_al.naturalHeight-_mountBlit.h):0;
+  if(_al && _mountBlit && _pw===_ph && _pw>=0 && (_pw%2)===0){
     blit(skin?skin(_al):_al, _mountBlit.x, _mountBlit.y, _mountBlit.sc, _mountBlit.flip);
     return true;
   }
