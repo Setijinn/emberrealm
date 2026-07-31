@@ -51,26 +51,49 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    card's height), so the whole panel scales up rather than reflowing into a different layout. */
 :root{ --pinW: min(95vw, 620px); }
 
-#msg{position:fixed;left:0;right:0;top:22%;text-align:center;color:#ffc94d;font-size:24px;
-  letter-spacing:.06em;pointer-events:none;text-shadow:0 2px 8px #000;opacity:0;
-  transition:opacity .38s ease-out;z-index:6;padding:0 12px;box-sizing:border-box;}
+/* OUT OF THE FIGHT (user, 2026-07-31: "move that entire pop up prompt to a thin spot on the top or
+   something out of the way").
+   It used to sit at top:22% -- a third of the way down the screen, dead centre, in 24px gold, for
+   the entire hold. Boss telegraphs like "It plants itself" and "STRIKE NOW" are exactly the lines
+   that fire while you most need to see the floor, and they landed on top of the boss.
+   The top is where the free space is, and it is genuinely thin. Measured, the top band is:
+       the room plaque   canvas-drawn at y=6*us, about 47*us tall, so it ends near y=53
+       the minimap       146px square at 10,10 -- the LEFT corner only
+       the button row    the right 14px, down to y=44 -- the RIGHT corner only
+   so the strip immediately under the plaque is clear all the way across the middle. The banner
+   moves there, becomes a centred pill with a backing so it reads over terrain instead of relying on
+   a text shadow, and the sub line joins it INLINE -- a two-line banner is not a thin spot. */
+#msg{position:fixed;left:50%;transform:translateX(-50%);
+  top:calc(58px*var(--uis,1));
+  max-width:min(560px,70vw);
+  text-align:center;color:#ffc94d;font-size:17px;letter-spacing:.05em;
+  pointer-events:none;text-shadow:0 1px 3px #000;opacity:0;
+  transition:opacity .38s ease-out;z-index:6;
+  background:rgba(12,9,16,.84);border:1px solid #7a4a1e;border-radius:10px;
+  padding:4px 14px;box-sizing:border-box;}
 #msg.show{opacity:1;transition:opacity .16s ease-in;}
-/* THE SUB LINE HAS A WIDTH. left:0/right:0 with no cap meant a boss's tagline wrapped only at the
-   viewport edge -- on a 667x375 phone that is one line running from under the minimap to off the
-   right edge, straight through the fight. Capped, it wraps into a readable block instead. */
-#msg small{display:block;font-size:14px;color:#d8d2c8;margin:4px auto 0;max-width:min(620px,84vw);}
+/* INLINE, not a block. The sub used to be its own centred line under the title, which is fine in
+   the middle of the screen and is the whole problem in a thin strip -- it doubled the height of
+   the thing we are trying to keep out of the way. It still wraps if a tagline is long, so nothing
+   is truncated; it simply starts on the same line. */
+#msg small{display:inline;font-size:12px;color:#d8d2c8;margin-left:8px;}
+#msg small::before{content:'\00b7\00a0';color:#7a6a55;}
 /* routine notices: present, readable, and not competing with the fight */
-#msg.quiet{font-size:16px;color:#e8dcc0;letter-spacing:.04em;top:26%;}
-#msg.quiet small{font-size:12px;}
-/* A PHONE IN LANDSCAPE IS SHORT, NOT NARROW, and 22% of 375px lands the banner inside the minimap's
-   corner. It drops below the panel and shrinks with the screen, because the same 24px that reads as
-   a title on a 720px-tall desktop is a third of the vertical space here. Keyed on height: this is a
-   landscape-only game, so height is the axis that actually varies between a phone and a desktop. */
+#msg.quiet{font-size:14px;color:#e8dcc0;letter-spacing:.03em;background:rgba(12,9,16,.72);}
+#msg.quiet small{font-size:11px;}
+/* A PHONE IN LANDSCAPE IS SHORT, NOT NARROW. The plaque scales with the same `us` the banner's
+   offset does, so the offset needs no change here -- only the type, because 17px on a 375px-tall
+   screen is proportionally the same problem 24px was on a desktop. */
 @media (max-height:470px){
-  #msg{top:36%;font-size:19px;}
-  #msg small{font-size:12px;max-width:min(620px,78vw);}
-  #msg.quiet{top:40%;font-size:15px;}
-  #msg.quiet small{font-size:11px;}
+  /* ...and the OFFSET does change, because the plaque moves. On a short screen drawRoomPlaque goes
+     into its cramped branch and re-lays the room name UNDER the button row instead of in a slab at
+     the top -- around hudBounds().bottom + fs, near y=60. A banner at 58px landed straight on it,
+     with the plaque's text legible through the pill. 82px clears the cramped line and is still a
+     fifth of the way down a 375px screen rather than the 36% it used to sit at. */
+  #msg{top:calc(82px*var(--uis,1));font-size:14px;max-width:min(560px,74vw);padding:3px 10px;}
+  #msg small{font-size:10px;margin-left:6px;}
+  #msg.quiet{font-size:12px;}
+  #msg.quiet small{font-size:10px;}
 }
 
 .scr{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#1a1520,#0b0a10 70%);z-index:20;
