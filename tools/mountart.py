@@ -139,6 +139,7 @@ def measure(path):
 def walk():
     out = []
     for dirpath, _dirs, files in os.walk(MOUNTS):
+        _dirs[:] = [d for d in _dirs if d != '_old']   # replaced sets are kept on disk, not measured
         for f in files:
             if f.lower().endswith('.png'):
                 out.append(os.path.join(dirpath, f))

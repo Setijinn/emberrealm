@@ -70,7 +70,8 @@ def main():
     worst = collections.defaultdict(lambda: (0, '', ''))
     kindof = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
     scanned = 0
-    for dirpath, _dirs, files in os.walk(base):
+    for dirpath, dirs, files in os.walk(base):
+        dirs[:] = [d for d in dirs if d != '_old']   # replaced sets are kept, not measured
         for f in sorted(files):
             if not f.endswith('.png'):
                 continue

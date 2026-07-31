@@ -20,3 +20,8 @@ tools/__pycache__/
 _terrshot_run.html
 _lab.html
 _admincheck.html
+
+# tools/mountinstall.py keeps the set it replaced here. Git already has the old pixels in history,
+# so committing them again would just double the art in the repo -- but keep them ON DISK, because
+# an art swap is the one change no selftest can judge and reverting has to be a copy, not a fetch.
+assets/mounts/_old/
