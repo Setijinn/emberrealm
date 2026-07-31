@@ -167,7 +167,6 @@ const MOUNT_ARCH = {
   cat:      {n:'great cat', spr:'arch_cat'},
   drake:    {n:'drake',     spr:'arch_drake'},      // wingless ground drake
   lizard:   {n:'lizard',    spr:'arch_lizard'},
-  colossus: {n:'colossus',  spr:'arch_colossus'},   // walking stone construct
   // ---- the six WINGED archetypes. Only species with fly:1 use these, and the art is drawn
   // wings-spread mid-beat because a flyer is never shown standing. ----
   griffon:  {n:'griffon',   spr:'arch_griffon',  air:1},
@@ -217,7 +216,6 @@ const MOUNT_SEATS = {
   moth:     {seat:0.46},
   drake:    {seat:0.42},
   griffon:  {seat:0.38},
-  colossus: {seat:0.38},      // guessed 0.72; measured 0.38
   pegasus:  {seat:0.34},
   skywyrm:  {seat:0.30},
   roc:      {seat:0.29},
@@ -338,7 +336,6 @@ const _MOUNTS = [
   ['bramble',  'Bramblehorn Elk',   2,'elk',     'verdant',1.49, 0.24],
   ['sanddrake','Sand Drake',        2,'drake',   'sand',   1.58],
   ['greatwolf','Greatwolf',         2,'wolf',    'stone',  1.56],
-  ['stonehide','Stonehide Beast',   2,'colossus','stone',  1.44, 0.29],
   ['tidemane', 'Tidemane',          2,'horse',   'tide',   1.52],
   ['frostwolf','Frost Hunter',      2,'wolf',    'frost',  1.55],
   ['emberdrake','Ember Drake',      2,'drake',   'ember',  1.57],
@@ -348,7 +345,6 @@ const _MOUNTS = [
   ['ashcat',   'Ashen Prowler',     2,'cat',     'ash',    1.56],
   ['voidlizard','Riftscale Lizard', 2,'lizard',  'void',   1.50],
   ['dawnhorse','Dawn Courser',      2,'horse',   'dawn',   1.54],
-  ['peatcolossus','Mire Colossus',  2,'colossus','bog',    1.45, 0.30],
   ['frostram', 'Glacier Ram',       2,'ram',     'frost',  1.47, 0.26],
   ['bloodwolf','Red Hunter',        2,'wolf',    'blood',  1.57],
   ['tidedrake','Tide Drake',        2,'drake',   'tide',   1.55],
@@ -357,14 +353,12 @@ const _MOUNTS = [
   ['frosthoof','Frosthoof Destrier',3,'destrier','frost',  1.62, 0.27],
   ['stormelk', 'Stormcrown Elk',    3,'elk',     'storm',  1.68],
   ['ashenwolf','Ashen Direwolf',    3,'wolf',    'ash',    1.69],
-  ['warden',   'Warden Colossus',   3,'colossus','stone',  1.55, 0.35],
   ['voidcat',  'Void Prowler',      3,'cat',     'void',   1.70],
   ['spiritdest','Spirit Destrier',  3,'destrier','spirit', 1.64],
   ['bloodrake','Blood Drake',       3,'drake',   'blood',  1.67],
   ['dawnelk',  'Dawnhorn Elk',      3,'elk',     'dawn',   1.63],
   ['frostcat', 'Rime Prowler',      3,'cat',     'frost',  1.66],
   ['stormdrake','Storm Drake',      3,'drake',   'storm',  1.68],
-  ['emberco',  'Cinder Colossus',   3,'colossus','ember',  1.57, 0.33],
   ['voidwolf', 'Rift Direwolf',     3,'wolf',    'void',   1.69],
   ['tidedest', 'Tidebound Destrier',3,'destrier','tide',   1.61, 0.28],
   ['spiritstag','Pale Stag',        3,'stag',    'spirit', 1.65],
@@ -377,7 +371,6 @@ const _MOUNTS = [
   ['worldelk', 'Elk of the First Wood',4,'elk',  'verdant',1.74, 0.32],
   ['tidesov',  'Tide Sovereign',    4,'drake',   'tide',   1.79],
   ['bonewolf', 'The Pale Hunt',     4,'wolf',    'spirit', 1.83],
-  ['ashking',  'The Ashen King',    4,'colossus','ash',    1.68, 0.40],
   ['bloodmane','Bloodmane',         4,'cat',     'blood',  1.84],
   ['frostsov', 'Winter Sovereign',  4,'destrier','frost',  1.75, 0.33],
 ];
@@ -547,6 +540,15 @@ function mountStore(){ const u=(typeof users!=='undefined'&&typeof curUser!=='un
   if(!Array.isArray(u.mounts)) u.mounts=[];        // owned mount ids
   if(u.activeMount===undefined) u.activeMount=null;// id of the saddled mount
   if(u.mountLv===undefined) u.mountLv=0;           // highest level any character has reached
+  // A SPECIES CAN BE RETIRED, and a save written before it was still names it (user, 2026-07-31:
+  // the five colossus mounts). mountsOwned already drops what mountDef cannot resolve, so the
+  // stable looks right on its own -- but `activeMount` is an ID, and mountOwns() would still say
+  // true for it while mountDef returns undefined, so activeMount() hands back undefined and every
+  // `a.id` after it throws. Prune both, once, wherever the store is first touched.
+  if(u.mounts.length){
+    const live=u.mounts.filter(id=>!!mountDef(id));
+    if(live.length!==u.mounts.length){ u.mounts=live; saveMounts(); } }
+  if(u.activeMount && !mountDef(u.activeMount)){ u.activeMount=null; saveMounts(); }
   return u; }
 function saveMounts(){ if(typeof LS!=='undefined'&&typeof users!=='undefined') LS.set('er-users',users); }
 
