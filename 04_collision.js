@@ -29,6 +29,15 @@ function solid(px,py){
   // spawns and dropped loot keep testing the real terrain and never path into the sea.
   if(c===T_w && typeof _pmove!=='undefined' && _pmove
      && typeof playerIsFlying==='function' && playerIsFlying()) return false;
+  // ...AND A BOSS ARENA'S RING (user, 2026-07-31: "flyers should be able to go over walls of
+  // overworld boss arenas"). 'X' is stamped by stampLairs, which runs only on room 'G', so it is
+  // by construction the OVERWORLD den wall and never a dungeon's masonry. That wall exists to shape
+  // a fight, not to gate content -- it has doors, and you can already walk in through them -- so
+  // flying over it takes nothing away. 'W' (the dungeon void), 'h'/'l' and the locked gate 'D' are
+  // all still solid to a flyer, which is what keeps flight from skipping a boss door or leaving the
+  // map. flyOverWalls also refuses inside a dungeon, where a flyer is dismissed anyway.
+  if(c===T_X && typeof _pmove!=='undefined' && _pmove
+     && typeof flyOverWalls==='function' && flyOverWalls()) return false;
   return !!T_SOLID[c];  // walls / structures / water / lair walls / locked gates: full tile
 }
 // Is there room to STAND at this world point, given a body radius?

@@ -338,6 +338,11 @@ function enemyAI(e,dx,dy,dd,dt){
   let B=(typeof EBEH!=='undefined'&&EBEH[e.beh])||{};
   if(e.sig){ if(!e._mb || e._mbk!==e.beh){ e._mb=Object.assign({},B,e.sig); e._mbk=e.beh; } B=e._mb; }
   let tx=player.x, ty=player.y, smul=1;
+  // AN AIRBORNE RIDER IS NOT A TARGET POINT. Everything below steers toward (tx,ty); with a flyer
+  // overhead that meant the whole zone turning to follow someone it could neither reach nor hurt.
+  // Aiming at where the enemy already stands makes it hold position rather than freeze in a walk
+  // pose, so a flyover leaves the ground looking undisturbed instead of stirred up.
+  if(typeof playerUnseen==='function' && playerUnseen()){ tx=e.x; ty=e.y; }
   // per-enemy gait clock and phase. Lazily seeded from the spawn position so it survives enemies
   // built by paths that never touch makeEnemy (summons, decoys) and so two neighbours never sway
   // in lockstep — a row of identically-swaying hounds reads as one animation, not three animals.
@@ -656,7 +661,11 @@ function update(dt){
       if(dd<e.r+player.r+POSS_GRAB && typeof possessPlayer==='function') possessPlayer(e);
       if(e.maxmp){ e.mp=Math.min(e.maxmp,(e.mp||0)+e.maxmp*0.35*dt); }   // caster MP regen (~35%/s)
       e.fireT-=dt;
-      if(e.fireT<=0 && (e.mp||0)>=8){ e.mp-=8;                           // MP-gated: low-lv casters can't sustain
+      // NOT AT A FLYER. damagePlayer already zeroed the damage, so this changes no arithmetic -- it
+      // stops the screen filling with volleys aimed at someone they cannot touch, which is what
+      // made the exemption look broken rather than deliberate.
+      if(typeof playerUnseen==='function' && playerUnseen()) e.fireT=Math.max(e.fireT,0.2);
+      else if(e.fireT<=0 && (e.mp||0)>=8){ e.mp-=8;                      // MP-gated: low-lv casters can't sustain
         // cadence and VOLUME both ramp with level now (eFireCd / eShotCount in 03_entities) --
         // a Lv1 shooter puts one slow bolt in the air, a Lv50 one a fast three-wide fan.
         // `rof` lets a species be quicker or heavier than its band's baseline.

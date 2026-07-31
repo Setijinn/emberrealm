@@ -138,6 +138,21 @@ function mountToggleFlight(){ return playerIsFlying() ? mountLand() : mountTakeO
 // The single seam for "who can touch a flyer". Today: nobody. Widening this is how the rule
 // softens later, and it is deliberately a function rather than a constant for that reason.
 function flyUntouchable(){ return playerIsFlying(); }
+// UNSEEN, not merely unhittable (user, 2026-07-31: "enemies shouldn't see or shoot at mounted
+// flying players"). damagePlayer already returned 0 for a flyer, so nothing could hurt you -- but
+// every archer in the zone still turned, tracked you and emptied its quiver at a target it could
+// not touch. That reads as a bug even though the damage number was right, and it fills the screen
+// with projectiles that mean nothing.
+//
+// Same predicate, used one step earlier: an airborne rider is not a target at all. Enemies keep
+// whatever they were doing before you flew over.
+function playerUnseen(){ return playerIsFlying(); }
+
+// CAN A FLYER CROSS THIS? Walls that exist to shape a FIGHT do not reach the sky -- a boss arena's
+// ring is a fence, and flying over a fence is the entire point of a flying mount. Walls that are
+// the WORLD -- a dungeon's masonry, a building -- still stop you, because inside them you are not
+// really in the air at all.
+function flyOverWalls(){ return playerIsFlying() && !(typeof curRoom!=='undefined' && curRoom && curRoom.dungeon); }
 
 // ---- the twelve drawings. spr = assets/mounts/<spr>.png ----
 const MOUNT_ARCH = {
@@ -647,6 +662,18 @@ function mountAllowedHere(){
     try{ if(bossEngaged(bossBar)) return false; }catch(err){} }
   return true; }
 
+// A DUNGEON IS NO PLACE FOR A FLYER (user, 2026-07-31: "flyers should immediately despawn if
+// mounted inside a dungeon"). It is a roofed, walled interior: there is no sky to be in, the
+// corridors are narrower than the animal, and being untouchable inside a boss room would empty
+// every fight in the game of consequence. So the moment a flyer finds itself under a roof it is
+// put away -- not refused at the door, DISMISSED, because you can also arrive by portal while
+// already in the saddle.
+//
+// Ground mounts are untouched. Riding a wolf through a dungeon is fine and always has been.
+function flyerBanishedHere(){
+  return mounted() && mountIsFlyer(player.mnt)
+      && !!(typeof curRoom!=='undefined' && curRoom && curRoom.dungeon); }
+
 // Begin climbing into the saddle. Returns true if the CAST STARTED — not if you are mounted, which
 // is MOUNT_CAST seconds later and only if nothing interrupts.
 function mountUp(id){
@@ -767,6 +794,10 @@ function tickMounts(dt){
     if(!mountAllowedHere()) mountCancel(false);
     else { player.mntCast-=dt; if(player.mntCast<=0) _mountSeat(player.mntCastId); } }
   if(mounted() && !mountAllowedHere()) dismount('boss');
+  // and a flyer under a roof goes away at once, however it got there
+  if(flyerBanishedHere()){
+    dismount('dungeon');
+    if(typeof msg==='function') msg('NO ROOM TO FLY','your mount will not go underground'); }
   // the HUD button reads state that changes without any input (the throw, the cooldown running
   // out), so it is refreshed here rather than only on click
   if(typeof hudMounts==='function') hudMounts();
@@ -1524,9 +1555,14 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   const fly=!!d.fly;
   // A FLYER HOVERS; A WALKER TROTS. Slower, deeper, and it never stops — a wing-beat sway that
   // keeps going while you stand still is most of what says "this thing is not on the ground".
-  const gait = fly ? Math.sin((clock||0)*4.2)*2.6
+  // WHETHER IT IS ACTUALLY UP THERE, not whether it has wings. `fly` is a property of the SPECIES;
+  // playerIsFlying is a property of right now. Declared here rather than beside `alt` below because
+  // `gait` reads it -- put it after, and this is a const in its temporal dead zone, mountDrawUnder
+  // throws on every frame and every mount silently draws nothing at all.
+  const _up = fly && ((typeof playerIsFlying==='function' && player.mnt===d.id) ? playerIsFlying() : true);
+  const gait = _up ? Math.sin((clock||0)*4.2)*2.6
              : (moving?Math.sin((clock||0)*13+1.1)*1.6:Math.sin((clock||0)*3)*0.5);
-  const alt = fly ? MOUNT_FLY_H : 0;
+  const alt = _up ? MOUNT_FLY_H : 0;
   // NO FLIP. This used to be `Math.cos(faceAng)<0`, which mirrored every westward frame -- and the
   // art has a real west, north-west and south-west drawing, so mirroring them turned all three back
   // round to face EAST. Five of the eight directions (e, se, sw, w, ne) came out facing right, which
@@ -1544,7 +1580,12 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   const footInCanvas=bb?(bb.y+bb.h):canvasH;               // px from canvas top down to its feet
   const centreY = y + MOUNT_FOOT + (canvasH*sc)/2 - footInCanvas*sc + gait*0.4 - alt;
   // shadow first, at the TRUE ground position, so the gap under the mount is the altitude
-  if(fly) _mountShadow(x, y, (bb?bb.w:64)*sc);
+  // THE SHADOW IS THE ALTITUDE, so a grounded flyer must not have one (user, 2026-07-31: "fix their
+  // shadow when they're not flying"). The gap between the shadow and the feet is what sells height;
+  // with the feet on the floor that gap is zero and the ellipse just becomes a dark smear under the
+  // animal that nothing else in the game has. `alt` is already 0 when grounded, so the test is the
+  // same one that decides whether to lift the sprite at all.
+  if(fly && alt>0) _mountShadow(x, y, (bb?bb.w:64)*sc);
   blit(art, x, centreY, sc, flip);
   // PUBLISH THE TRANSFORM. An ALIGNED rider layer -- one extracted from a PixelLab state of this same
   // object, so the animal is in the same place in both -- only lands in the saddle if it is drawn
