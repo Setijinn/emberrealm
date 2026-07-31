@@ -102,6 +102,10 @@
       for(const [dn] of DIRS){
         urls.push('assets/mounts/'+spr+'/idle_'+dn+'.png');
         urls.push('assets/mounts/'+spr+'/idle_'+dn+'_1.png');
+        // the RIDDEN drawing, where this archetype has one -- 404s resolve as misses and cost
+        // nothing, which is how this list already handles archetypes with no animated idle
+        urls.push('assets/mounts/'+spr+'/ridden/idle_'+dn+'.png');
+        urls.push('assets/mounts/'+spr+'/ridden/walk_'+dn+'_1.png');
       }
     }
     // the rider too -- riderDrawOver returns false without it and the pose would be a bare animal

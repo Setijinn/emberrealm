@@ -687,6 +687,13 @@ function _mountSeat(id){
   // hero and then pop. Eight small PNGs, requested once, at the one moment we know they are needed.
   if(typeof rideArchImg==='function' && d.spr)
     for(const _d of MOUNT_DIRS) rideArchImg(_d, d.spr);
+  // and the RIDDEN drawing, for the same reason: _mountFrame returns null on the first ask because
+  // that ask is what starts the download, so without this the first seconds in the saddle silently
+  // draw the layered fallback and then pop over to the whole picture.
+  if(d.spr) for(const _d of MOUNT_DIRS){
+    riddenFrame(d.spr,'idle_'+_d);
+    for(let i=0;i<9;i++){ riddenFrame(d.spr,'walk_'+_d+'_'+i); riddenFrame(d.spr,'idle_'+_d+'_'+i); }
+  }
   player.mnt=d.id; player.mntDmg=0; player.mntCast=0; player.mntCastId=null;
   if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:d.name.toUpperCase(),col:mountRarCol(d.rar),life:0.8});
   return true; }
@@ -913,6 +920,47 @@ const MOUNT_WALK_FPS = 10;
 
 // The frame to draw right now. Returns null when this archetype has no directional art at all,
 // which is the caller's signal to fall back to the flat sprite.
+// ============================================================
+//  THE RIDDEN SET — one drawing of the animal AND the knight
+// ------------------------------------------------------------
+//  Everything before this tried to compose a rider out of two layers: the animal, and a knight cut
+//  out of a PixelLab state and placed on top. It got a long way -- the knight ends up in the right
+//  saddle, at the right size, facing the right way -- and it kept running into the same wall, which
+//  is that the source states draw the knight flush with the top of a 68px frame. His helmet is
+//  sliced flat and no amount of processing puts back pixels that were never drawn. Three repairs
+//  were tried and every one looked worse than the fault (see tools/riderextract.py).
+//
+//  So the pair is drawn ONCE, together, on a canvas big enough for both: an 8-direction object of
+//  "this animal carrying an armoured knight", generated per archetype, with room above the helmet.
+//  assets/mounts/<arch>/ridden/ holds it, in exactly the layout of the unridden set.
+//
+//  WHAT THIS COSTS, stated plainly: the knight is now part of the picture, so he takes the species
+//  TINT with him. A frost wolf would give a frost knight. Rather than accept that, the ridden set is
+//  drawn UNTINTED -- so while you are in the saddle every wolf looks like the same wolf, and the
+//  species colour shows in the stable, the mounts tab and the chips, which all draw the unridden
+//  art. That is the trade: colour identity while riding, in exchange for a rider who looks like a
+//  man sitting on an animal.
+//
+//  The layered path is still here and still used by every archetype that has no ridden set yet, so
+//  this arrives one mount at a time rather than as a switch.
+function riddenFrame(arch,name){
+  return _mountFrame(arch+'/ridden', name); }
+// Does this archetype have a ridden drawing for this direction? Cached by _mountFrame, so asking is
+// cheap after the first frame.
+function riddenArt(d,aim,moving,clock){
+  if(!d||!d.spr) return null;
+  const arch=d.spr, dir=_mountDir(aim||0);
+  if(moving){ const n=_mountWalkCount(arch+'/ridden',dir);
+    if(n>0){ const i=Math.floor((clock||0)*MOUNT_WALK_FPS)%n;
+      const f=riddenFrame(arch,'walk_'+dir+'_'+i); if(f) return f; } }
+  const ni=_mountClipCount(arch+'/ridden','idle',dir);
+  if(ni>0){ const i=Math.floor((clock||0)*MOUNT_IDLE_FPS)%ni;
+    const f=riddenFrame(arch,'idle_'+dir+'_'+i); if(f) return f; }
+  return riddenFrame(arch,'idle_'+dir); }
+// Set by mountDrawUnder each frame: true when the ridden drawing was used, which means the rider is
+// already in the picture and riderDrawOver must not put a second one on top of him.
+let _mountRodeWhole = false;
+
 function mountFrameFor(d,aim,moving,clock){
   if(!d||!d.spr) return null;
   // the FOLDER is named after the sprite key (arch_horse), which is also the flat sprite's
@@ -1340,6 +1388,9 @@ function mountTransformed(){ return MOUNT_TRANSFORM && mounted(); }
 // x,y is the player's world anchor, the same one mountDrawUnder is given.
 function riderDrawOver(x,y,faceAng,skin){
   if(!mounted() || typeof blit!=='function') return false;
+  // already in the picture: mountDrawUnder used the ridden drawing, which HAS the knight in it.
+  // Returning true tells 09_sprites the hero is accounted for, so it does not draw him again.
+  if(_mountRodeWhole) return true;
   const d=mountDef(player.mnt); if(!d) return false;
   // ---- THE ALIGNED PATH, when this archetype has a real seated rider ----
   // Everything below this block is the fallback: a STANDING hero sprite, shrunk and dropped onto a
@@ -1439,7 +1490,11 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   const d=mountDef(player.mnt); if(!d) return 0;
   // the eight-way animated frame if this archetype has one, else the flat sprite
   const st={aim:faceAng, moving:moving, clock:clock};
-  const art=mountArtFor(d,st); if(!art) return 0;
+  // THE RIDDEN DRAWING WINS WHEN THERE IS ONE. Untinted on purpose -- see the block above riddenArt.
+  // mountArtFor is still what draws the animal alone, which is what the panels want.
+  const whole=riddenArt(d, faceAng, moving, clock);
+  _mountRodeWhole = !!whole;
+  const art=whole || mountArtFor(d,st); if(!art) return 0;
   // OPAQUE BOX, never the canvas. _imgBBox caches on src, and the tinted canvas keeps the source's
   // geometry, so measuring the untinted archetype is both correct and cheaper. Every one of these
   // is a PixelLab canvas with a different amount of transparent margin — scaling by canvas size is
@@ -1454,7 +1509,14 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   // frame 0 of that clip. Still one fixed image per direction, which is the whole requirement:
   // the scale must not change between frames or the animal pulses as its wings beat.
   const _rd=_mountDir(faceAng||0);
-  const ref=_mountFrame(d.spr,'idle_'+_rd) || _mountFrame(d.spr,'idle_'+_rd+'_0') || mountImg(d.spr);
+  // MEASURE THE SAME SET THAT IS BEING DRAWN. A ridden frame is a bigger picture than the animal
+  // alone -- it has a knight on top of it -- so scaling it by the unridden idle's box would shrink
+  // the pair until the animal matched a riderless one, and the knight would come and go in size
+  // between standing and walking.
+  const ref=(whole
+      ? (riddenFrame(d.spr,'idle_'+_rd) || riddenFrame(d.spr,'idle_'+_rd+'_0'))
+      : null)
+    || _mountFrame(d.spr,'idle_'+_rd) || _mountFrame(d.spr,'idle_'+_rd+'_0') || mountImg(d.spr);
   const bb=(typeof _imgBBox==='function'&&ref)?_imgBBox(ref):null;
   const realH=(bb&&bb.h)?bb.h:(art.height||64);
   const sc=MOUNT_DRAW_H/Math.max(1,realH);

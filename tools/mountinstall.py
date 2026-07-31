@@ -126,8 +126,9 @@ def main(argv):
     for name, data in sorted(dest.items()):
         io.open(os.path.join(target, name), 'wb').write(data)
 
-    # the flat fallback sprite is the south rotation
-    flat = dest.get('idle_s.png')
+    # the flat fallback sprite is the south rotation. A RIDDEN set has no flat sprite -- panels and
+    # chips draw the animal alone, never the pair -- so --no-flat skips it.
+    flat = None if '--no-flat' in argv else dest.get('idle_s.png')
     if flat:
         fp = os.path.join(MOUNTS, arch + '.png')
         if os.path.exists(fp):
