@@ -33,6 +33,7 @@ MOUNTS = os.path.join(ROOT, 'assets', 'mounts')
 SOFT_BAD = 0.22        # >22% of the subject partly transparent reads as see-through in game
 EDGE_BAD = 3           # opaque pixels on an edge; 1-2 can be a legitimate touch
 FILL_MIN = 0.18        # opaque area below 18% of the canvas draws soft when scaled up
+RIDER_MAX = 1.55       # a rider layer wider than this x the generic knight's is the animal, not him
 
 
 def read_png_rgba(path):
@@ -177,11 +178,72 @@ def main():
             print('%s\t%s' % (rel, why))
         return
 
+    riders()
+
     print('%d mount sprites scanned' % len(rows))
     print('%d have something wrong' % len(bad))
     print('')
     for _s, rel, why in (bad if only_bad else rows):
         print('%-58s %s' % (rel, why))
+
+
+def riders():
+    """Is every rider layer actually a RIDER?
+
+    A rider is a person, and a person has a person's proportions whatever he is sitting on. The
+    per-archetype layers that shipped under assets/riders/<arch>/<cls>/ were not riders: they were
+    made by asking PixelLab to add a knight to the animal and were meant to have the riderless
+    source subtracted back out, which never happened. Each one is the WHOLE ANIMAL with a knight on
+    it, and drawn as a rider layer -- scaled to 48px and blitted onto the real mount -- it puts a
+    second, smaller mount inside the first.
+
+    It hid because the mini mount is the same animal in the same pose sitting exactly on the big
+    one, so it reads as plating. One number separates them: the generic knight's opaque box is
+    27x42 and the composites run to 60x53. Nothing that is a rider is twice as wide as the rider.
+    """
+    base = os.path.join(ROOT, 'assets', 'riders')
+    if not os.path.isdir(base):
+        return
+    print('')
+    print('rider layers')
+    ref = {}
+    for d in ('e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'):
+        p = os.path.join(base, 'knight', 'ride_%s.png' % d)
+        m = measure(p) if os.path.exists(p) else None
+        if m and not m.get('empty'):
+            x0, y0, x1, y1 = m['bbox']
+            ref[d] = (x1 - x0 + 1, y1 - y0 + 1)
+    if not ref:
+        print('  no generic knight layer at assets/riders/knight/ -- nothing to compare against')
+        return
+    bad = n = 0
+    for arch in sorted(os.listdir(base)):
+        ap = os.path.join(base, arch)
+        if not os.path.isdir(ap) or arch in ('knight', '_composites', '_old'):
+            continue
+        for cls in sorted(os.listdir(ap)):
+            cp = os.path.join(ap, cls)
+            if not os.path.isdir(cp):
+                continue
+            for d, (rw, rh) in sorted(ref.items()):
+                f = os.path.join(cp, 'ride_%s.png' % d)
+                if not os.path.exists(f):
+                    continue
+                m = measure(f)
+                if not m or m.get('empty'):
+                    continue
+                n += 1
+                x0, y0, x1, y1 = m['bbox']
+                w, h = x1 - x0 + 1, y1 - y0 + 1
+                if w > rw * RIDER_MAX:
+                    bad += 1
+                    print('  %-34s NOT A RIDER  %dx%d against the knight %dx%d -- this is the '
+                          'animal, and it draws as a mount inside the mount'
+                          % ('%s/%s/ride_%s.png' % (arch, cls, d), w, h, rw, rh))
+    if not n:
+        print('  no per-archetype layers -- every mount uses the one knight silhouette')
+    else:
+        print('  %d per-archetype layers checked, %d are composites' % (n, bad))
 
 
 if __name__ == '__main__':

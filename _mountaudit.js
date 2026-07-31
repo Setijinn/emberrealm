@@ -182,6 +182,11 @@
     L.push('  A pose that is 0.0% see-through is fully opaque everywhere it painted. Anything above');
     L.push('  that is letting the background through the animal or the rider, and the two-background');
     L.push('  difference says by how much: 255 would be completely transparent.');
+
+    // The rider layer is checked by tools/mountart.py rather than here: `_rideAt` only returns an
+    // Image once it has loaded, so a browser-side test reads null for every layer it has not already
+    // asked for and passes by doing nothing. It is a property of the files on disk, so it is
+    // measured off the files on disk.
     out();
   }
 

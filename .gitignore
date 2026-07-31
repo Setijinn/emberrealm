@@ -25,3 +25,9 @@ _admincheck.html
 # so committing them again would just double the art in the repo -- but keep them ON DISK, because
 # an art swap is the one change no selftest can judge and reverting has to be a copy, not a fetch.
 assets/mounts/_old/
+
+# The per-archetype "rider" layers, which were never riders -- each is the whole animal with a
+# knight on it, and drawing one put a second smaller mount inside the real one. Out of the repo so
+# nothing can read them again; kept on disk because they are still the only source a real rider
+# layer could be extracted FROM. tools/mountart.py fails any that come back.
+assets/riders/_composites/

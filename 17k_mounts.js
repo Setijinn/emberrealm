@@ -1212,9 +1212,30 @@ function _rideAt(path){
   if(typeof window==='undefined') return null;
   if(_rideArt[path]===undefined){ const i=new Image(); i.src=path; _rideArt[path]=i; }
   const im=_rideArt[path]; return (im&&im.complete&&im.naturalWidth)?im:null; }
+// THE PER-ARCHETYPE OVERRIDE IS GONE, and this is worth the paragraph (user, 2026-07-30: "there is
+// a mini mount inside of the normal mount in game").
+//
+// The intent was sound: a rider sits differently on a moth than on a horse, so let an archetype
+// ship its own rider layer at assets/riders/<arch>/<cls>/ride_<d>.png and fall back to the generic
+// one. What actually sat in those folders was not a rider. Those files were made by asking PixelLab
+// to "add an armoured knight riding..." and were supposed to have the riderless source SUBTRACTED
+// out; the subtraction never landed, so each one is the WHOLE ANIMAL with a knight on it.
+//
+// Drawn as a rider layer, that composite is scaled to RIDER_DRAW_H (48px) and blitted on top of the
+// real mount -- a complete second, smaller mount standing on the first. Measurable rather than
+// arguable: the generic knight's opaque box is 27x42 and these run to 60x53 (roc), 58x44 (infernal),
+// 57x46 (moth). A person is not 60px wide next to a 27px person.
+//
+// It hid in plain sight because the mini mount is the SAME ANIMAL in the SAME POSE sitting exactly
+// on the big one, so it reads as plating or as a badly-placed rider -- which is what it was written
+// up as off the first contact sheet. It only separates once the mount underneath changes shape,
+// which is what the dragon/roc/wolf regeneration did.
+//
+// So: one silhouette for every mount, which is what RIDER_BASE_CLS already promises two functions
+// down. If a real per-archetype rider layer is ever extracted, restore the override AND add it to
+// the check in _mountaudit.js that would have caught this.
 function rideImg(cls,dir,arch){
   if(!cls) return null;
-  if(arch){ const own=_rideAt('assets/riders/'+arch+'/'+cls+'/ride_'+dir+'.png'); if(own) return own; }
   return _rideAt('assets/riders/'+cls+'/ride_'+dir+'.png'); }
 
 // {img, flip} or null. West mirrors east when there is no west art, matching _emberDir's rule for
