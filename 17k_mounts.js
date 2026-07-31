@@ -1085,11 +1085,14 @@ function paintStable(){
   if(!list) return;
   const owned=mountsOwned(), act=activeMount();
 
-  if(cnt) cnt.innerHTML= mountUnlocked()
-    ? '<span class="purse">'+owned.length+' of '+MOUNT_DB.length+' mounts stabled</span>'
-    : (mountLevelOk()
-        ? '<span class="purse">You have the level. You have not had the lesson.</span>'
-        : '<span class="purse">The stablemaster turns you away — reach level '+MOUNT_LV+'</span>');
+  // THE PURSE IS ALWAYS VISIBLE. Everything in this panel is bought with glory, and the old header
+  // only ever mentioned the balance buried inside a card you could not afford -- so a player short
+  // of a lesson saw the price, saw no total, and had to leave to find out how close they were.
+  const _g=(typeof accountGlory==='function')?accountGlory():0;
+  if(cnt) cnt.innerHTML='<span class="purse">'+_g.toLocaleString()+'\u2726</span>'
+    + (mountUnlocked()
+        ? ' <span class="purse">'+owned.length+' of '+MOUNT_DB.length+' stabled</span>'
+        : '');
 
   list.innerHTML='';
 
@@ -1112,11 +1115,17 @@ function paintStable(){
     ico.textContent=(id==='fly')?'\uD83E\uDEB6':'\uD83D\uDCD6';
     card.appendChild(ico);
     const txt=document.createElement('div'); txt.className='shoptext';
+    // THE DESCRIPTION IS NOT THE PLACE TO PUT THE BLOCKER. It used to REPLACE it, so the flight
+    // lesson read "learn to ride first" and nothing else -- a 30,000 glory purchase whose entire
+    // description was the reason you could not have it yet. You could not find out what it did
+    // without first buying the other book. The blocker gets its own line underneath.
     const why = pre ? 'learn to ride first'
               : !lvOk ? ('needs level '+d.lv)
-              : !afford ? ('you have '+glory+'\u2726')
-              : d.d;
-    txt.innerHTML='<div class="shopname">'+d.n+'</div><div class="shopdesc">'+why+'</div>';
+              : !afford ? (( d.cost-glory ).toLocaleString()+'\u2726 short')
+              : '';
+    txt.innerHTML='<div class="shopname">'+d.n+'</div>'
+      +'<div class="shopdesc">'+d.d+'</div>'
+      +(why?'<div class="shopneed">'+why+'</div>':'');
     card.appendChild(txt);
     const pr=document.createElement('div'); pr.className='shopprice';
     pr.textContent=d.cost+'\u2726';
@@ -1132,11 +1141,12 @@ function paintStable(){
   if(anyLesson) list.appendChild(shelf);
 
   if(!mountUnlocked()){
-    const d=document.createElement('div'); d.className='mnote';
-    d.textContent = mountLevelOk()
-      ? 'Buy the riding lesson above and the stalls open to you.'
-      : 'Mounts are for riders who have crossed the bridge. Reach level '+MOUNT_LV+' and come back.';
-    list.appendChild(d);
+    // The status line under the list already says what to do next, so this said it twice. It keeps
+    // only the thing the status line has no room for: WHY there is a level gate at all.
+    if(!mountLevelOk()){
+      const d=document.createElement('div'); d.className='mnote';
+      d.textContent='Mounts are for riders who have crossed the bridge.';
+      list.appendChild(d); }
   } else if(!owned.length){
     const d=document.createElement('div'); d.className='mnote';
     d.textContent='Empty stalls. Rare mounts are found out in the world.';
@@ -1164,12 +1174,24 @@ function paintStable(){
     list.appendChild(c); }
 
   const m=_stableSel?mountDef(_stableSel):null;
+  // IT USED TO CONTRADICT THE HEADER IN THE SAME BREATH. mountUnlocked() is false when you have
+  // the level but not the lesson, and this line's else-branch read "Come back at level 20" -- two
+  // inches under a header that said "You have the level." Now the three states are distinct and
+  // the level is only mentioned when the level is actually the problem.
   if(sel) sel.textContent = m
-    ? m.name+' — '+Math.round((mountSpdOf(m.id)-1)*100)+'% faster afoot, thrown after '
+    ? m.name+' \u2014 '+Math.round((mountSpdOf(m.id)-1)*100)+'% faster afoot, thrown after '
       +Math.round(mountToughOf(m.id)*100)+'% of your health in damage'
-    : (mountUnlocked()?'Pick a mount':'Come back at level '+MOUNT_LV);
+    : mountUnlocked() ? 'Pick a mount'
+    : mountLevelOk()  ? 'Buy the riding lesson and the stalls open to you'
+    : 'The stablemaster turns you away \u2014 come back at level '+MOUNT_LV;
+  // AND THE BUTTON WAS THE LOUDEST THING IN A PANEL WHERE IT DID NOTHING. Before the lesson there
+  // is no mount to saddle, yet SADDLE IT sat at the bottom in the gold `go` style -- the panel's
+  // apparent primary action, permanently dead. It is hidden outright when there is nothing to
+  // saddle rather than dimmed, so LEAVE becomes the only button and the lesson cards are the only
+  // things you can press.
   if(btn){ const can=!!(m&&mountOwns(m.id));
-    btn.disabled=!can; btn.style.opacity=can?1:0.45;
+    btn.style.display=can?'':'none';
+    btn.disabled=!can;
     btn.textContent=(m&&activeMount()&&activeMount().id===m.id)?'UNSADDLE':'SADDLE IT'; } }
 
 // ============================================================
