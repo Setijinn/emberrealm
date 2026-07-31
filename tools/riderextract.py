@@ -60,7 +60,8 @@ DIRS = {'east': 'e', 'south-east': 'se', 'south': 's', 'south-west': 'sw',
 #                               then picked a re-rendered patch of animal instead. Fragments are
 #                               welded with a dilate before labelling, and the winner is chosen by
 #                               being PERSON-SHAPED rather than by being biggest.
-DIFF_MIN = 26        # per-channel move that counts as "this pixel changed", not re-render dither
+# The ladder extract() walks; see its docstring for why one value cannot serve every animal.
+DIFF_MIN_DEFAULT = 26
 HUE_MIN = 40         # or a colour spread that swung this far, for a dark rider on a dark animal
 ALPHA_ON = 8
 # A rider is narrow COMPARED TO THE ANIMAL -- but an animal seen from directly behind is itself
@@ -86,7 +87,19 @@ MIN_VISIBLE = 60
 # helmet is sliced flat in all eight directions -- extracted perfectly and wrong on screen. Same
 # contiguous-run test tools/mountclip.py uses on the animals: a few pixels touching a border is an
 # edge reached, a long run is a slice.
-EDGE_CUT = 5
+# CUT-OFF REPAIR IS OFF, and the reason is worth keeping next to the code that does it.
+#
+# The wolf's state draws the knight flush with the top of the 68px frame, so his helmet is flat --
+# a real fault, and three increasingly clever repairs were built for it: borrow the direction whole,
+# repair only the crown by lining the two knights up on their shoulders, and graft the donor's whole
+# knight at the local seat. Every one of them made the picture WORSE than the flat helmet it fixed:
+# detached crowns floating above the rider, a knight a size too large, one sitting too high on the
+# shoulder. A 10px flat helmet is a blemish; a floating helmet is a bug.
+#
+# So the archetype's own extraction wins unless the rider is genuinely INVISIBLE (MIN_VISIBLE), which
+# is a fault nothing can compensate for. Set EDGE_CUT back to a small number to re-enable the repair
+# path if a better alignment landmark than the shoulder line ever turns up.
+EDGE_CUT = 9999
 # Margin added on every side when refitting. A knight fitted from a small animal onto a large one is
 # scaled UP, and on the wolf that pushed his helmet through the top of the 68px frame -- swapping one
 # cut-off rider for another. blit() centres a sprite and scales about that centre, so a canvas grown
@@ -222,8 +235,8 @@ def pick_rider(mask, w, h, box, floor=None):
     return out, bestn
 
 
-def extract(base_png, state_png):
-    """(w, h, rgba, note) -- the rider alone, at his original offset."""
+def _extract_at(base_png, state_png, DIFF_MIN, WELD=1):
+    """One subtraction at one threshold. (w, h, rgba), note."""
     bw, bh, bp = decode(base_png)
     sw, sh, sp = decode(state_png)
     if (bw, bh) != (sw, sh):
@@ -287,6 +300,35 @@ def extract(base_png, state_png):
         if mask[i]:
             out[i*4:i*4+4] = sp[i*4:i*4+4]
     return (bw, bh, out), '%dx%d rider, %d px, animal is %d wide%s' % (rw, ry1-ry0+1, cnt, aw, note)
+
+
+def extract(base_png, state_png):
+    """The rider alone, at his original offset.
+
+    NO SINGLE THRESHOLD WORKS FOR EVERY ANIMAL, and trying to find one is what kept breaking this.
+    High, and a charcoal knight on a black wyvern disappears into the noise floor. Low, and on a
+    horse seen head-on the knight's mask merges with the horse's head into one component, which then
+    fails the person-shaped guard and leaves a 7-pixel fragment -- the horse lost its southern rider
+    the moment the threshold came down far enough to find the wyvern's.
+
+    So it does not pick a threshold, it tries several and keeps the best answer. "Best" is the one
+    that passes every guard and recovers the most pixels: a rider is the largest thing that is still
+    person-shaped, and a threshold that merges him into the animal fails the shape test rather than
+    winning on size.
+    """
+    best, bestnote, bestn = None, 'nothing survived at any threshold', 0
+    # WELD IS PART OF THE LADDER TOO. Dilating before labelling is what joins a knight's helmet
+    # to his torso -- and on a horse seen head-on it is also what joins the knight to the horse's
+    # HEAD, making one component that fails the person-shaped guard. Neither setting is right for
+    # every pose, so both are tried.
+    for diff, weld in ((44,1),(44,0),(36,1),(36,0),(30,1),(30,0),(26,1),(26,0),(20,1),(20,0)):
+        got, note = _extract_at(base_png, state_png, diff, weld)
+        if not got:
+            continue
+        n = sum(1 for i in range(got[0]*got[1]) if got[2][i*4+3] > ALPHA_ON)
+        if n > bestn:
+            best, bestnote, bestn = got, note + ' @%d/w%d' % (diff, weld), n
+    return best, bestnote
 
 
 def bbox(px, w, h):
@@ -361,6 +403,168 @@ def refit(rider, oldbase, newpath):
                                                                         float(nbh) / max(1, obh))
 
 
+def pad_canvas(got, pad):
+    """The same image on a canvas grown by `pad` on every side. blit centres and scales about the
+    centre, so this draws in exactly the same place -- it is pure headroom."""
+    if not got:
+        return None
+    w, h, px = got
+    pw, ph = w + 2*pad, h + 2*pad
+    out = bytearray(pw * ph * 4)
+    for y in range(h):
+        row = px[(y*w)*4:(y*w + w)*4]
+        o = ((y + pad) * pw + pad) * 4
+        out[o:o + w*4] = row
+    return (pw, ph, out)
+
+
+def rbox(got):
+    w, h, px = got
+    x0, y0, x1, y1 = w, h, -1, -1
+    for i in range(w * h):
+        if px[i*4+3] > ALPHA_ON:
+            x, y = i % w, i // w
+            if x < x0: x0 = x
+            if x > x1: x1 = x
+            if y < y0: y0 = y
+            if y > y1: y1 = y
+    return (x0, y0, x1, y1) if x1 >= 0 else None
+
+
+def widest_row(px, w, h, box):
+    """The row where a rider is widest -- his shoulders. A stable landmark on the same knight."""
+    x0, y0, x1, y1 = box
+    best, besty = -1, y0
+    for y in range(y0, y1 + 1):
+        n = 0
+        for x in range(x0, x1 + 1):
+            if px[(y*w + x)*4+3] > ALPHA_ON:
+                n += 1
+        if n > best:
+            best, besty = n, y
+    return besty, best
+
+
+def repair_top(own, donor):
+    """Give a cut-off knight his crown back without moving him.
+
+    The archetype's own extraction is the one in the right PLACE -- it came off that animal's own
+    state, so it sits in that animal's saddle. Replacing it wholesale with a donor's, refitted by
+    bounding-box fractions, is what put the knight floating above and behind the wolf: a wolf is not
+    a short horse, and the same fraction of two different builds is not the same saddle.
+
+    But the same knight is the same knight, so only the missing rows are borrowed. The two are lined
+    up on the SHOULDER LINE -- the row where each is widest -- rather than on their total heights,
+    because total height is exactly what the cut destroyed: the wolf's knight measures 43 rows and so
+    does the horse's, which made a height comparison conclude nothing was missing while his helmet
+    was flat against the top of the frame.
+    """
+    ob = rbox(own)
+    db = rbox(donor)
+    if not ob or not db:
+        return None
+    ow, oh, op = own
+    dw, dh, dp = donor
+    ox0, oy0, ox1, oy1 = ob
+    dx0, dy0, dx1, dy1 = db
+    obw = ox1 - ox0 + 1
+    dbw = dx1 - dx0 + 1
+    k = obw / float(max(1, dbw))                 # donor -> own scale, from their widths
+    osh, _a = widest_row(op, ow, oh, ob)
+    dsh, _b = widest_row(dp, dw, dh, db)
+    ocx = (ox0 + ox1) / 2.0
+    dcx = (dx0 + dx1) / 2.0
+    # how far the donor's crown rises above his shoulders, in own-canvas rows
+    rise = int(round((dsh - dy0) * k))
+    want = oy0 - (osh - rise)                    # rows the cut removed
+    if want <= 0:
+        return None
+    out = bytearray(op)
+    added = 0
+    for y in range(max(0, oy0 - want), oy0):
+        sy = int(round(dsh - (osh - y) / k))
+        if sy < 0 or sy >= dh:
+            continue
+        for x in range(ow):
+            sx = int(round(dcx + (x - ocx) / k))
+            if sx < 0 or sx >= dw:
+                continue
+            o = (sy * dw + sx) * 4
+            if dp[o+3] <= ALPHA_ON:
+                continue
+            t = (y * ow + x) * 4
+            if out[t+3] > ALPHA_ON:
+                continue                          # never paint over what was extracted
+            out[t:t+4] = dp[o:o+4]
+            added += 1
+    if not added:
+        return None
+    return (ow, oh, out)
+
+
+MIRROR = {'w': 'e', 'nw': 'ne', 'sw': 'se'}
+
+
+def mirror_of(got):
+    """Left-right mirror. Only ever applied to a RIDER, never to an animal.
+
+    _mountDir's comment is right that a three-quarter view of a quadruped cannot be mirrored
+    honestly -- that is why the mounts have eight real drawings and why removing the blit flip
+    mattered. A seated man is a different case: riderSprite already mirrors east onto west when
+    there is no west layer, on the grounds that a rider is near enough symmetric. This is the last
+    resort for a direction where every other route left him cut.
+    """
+    w, h, px = got
+    out = bytearray(w * h * 4)
+    for y in range(h):
+        for x in range(w):
+            o = (y*w + (w-1-x)) * 4
+            out[(y*w + x)*4:(y*w + x)*4+4] = px[o:o+4]
+    return (w, h, out)
+
+
+def graft(own, donor):
+    """The donor's whole knight, placed where THIS archetype's knight actually sits.
+
+    The last resort when a crown repair cannot work out how much was cut. It keeps the two things
+    that matter and discards the one that does not: POSITION comes from the archetype's own
+    extraction, which came off that animal's own state and therefore sits in that animal's saddle;
+    the PIXELS come from the donor, who is not cut. They are matched by scaling the donor to the
+    same shoulder width and landing his feet where the local knight's feet are.
+
+    This is strictly better than the bounding-box refit that put a knight floating above the wolf:
+    that mapped him onto the ANIMAL's box, which differs wildly between builds, where this maps him
+    onto the RIDER's box, which is the same man every time.
+    """
+    ob = rbox(own)
+    db = rbox(donor)
+    if not ob or not db:
+        return None
+    ow, oh, op = own
+    dw, dh, dp = donor
+    ox0, oy0, ox1, oy1 = ob
+    dx0, dy0, dx1, dy1 = db
+    k = (ox1 - ox0 + 1) / float(max(1, dx1 - dx0 + 1))
+    ocx = (ox0 + ox1) / 2.0
+    dcx = (dx0 + dx1) / 2.0
+    out = bytearray(ow * oh * 4)
+    drawn = 0
+    for y in range(oh):
+        sy = int(round(dy1 - (oy1 - y) / k))      # feet on feet
+        if sy < 0 or sy >= dh:
+            continue
+        for x in range(ow):
+            sx = int(round(dcx + (x - ocx) / k))  # centred on centred
+            if sx < 0 or sx >= dw:
+                continue
+            o = (sy * dw + sx) * 4
+            if dp[o+3] <= ALPHA_ON:
+                continue
+            out[(y*ow + x)*4:(y*ow + x)*4+4] = dp[o:o+4]
+            drawn += 1
+    return (ow, oh, out) if drawn else None
+
+
 def top_run(got):
     """Longest contiguous opaque run along any border of an extracted rider."""
     w, h, px = got
@@ -421,6 +625,8 @@ def main(argv):
         return 1
     dest = os.path.join(ROOT, 'assets', 'riders', arch, 'knight')
     ok = fail = 0
+    results = {}
+    pending_mirror = []
     print('%s' % arch)
     for d in ('e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'):
         if d not in brot or d not in srot:
@@ -432,11 +638,27 @@ def main(argv):
         if donor and got:
             vis = sum(1 for i in range(got[0]*got[1]) if got[2][i*4+3] > ALPHA_ON)
             cut = top_run(got)
-            if vis < MIN_VISIBLE or cut > EDGE_CUT:
+            if vis < MIN_VISIBLE:
                 got2, note2 = borrow(arch, d, donor)
                 if got2:
-                    why = ('%d px visible' % vis) if vis < MIN_VISIBLE else ('cut %dpx at a border' % cut)
-                    got, note = got2, '%s -- %s' % (why, note2)
+                    got, note = got2, '%d px visible -- %s' % (vis, note2)
+            elif cut > EDGE_CUT:
+                # in the right place but missing his crown: repair, do not replace
+                lend, _n = borrow(arch, d, donor)
+                # room to put the crown back: the canvas grows by the same margin on every side,
+                # which blit draws in exactly the same place
+                grown = pad_canvas(got, PAD)
+                lendp = pad_canvas(lend, PAD) if lend else None
+                fixed = repair_top(grown, lendp) if lendp else None
+                if fixed:
+                    got, note = fixed, note + ' - cut %dpx, crown repaired from %s' % (cut, donor)
+                else:
+                    g = graft(grown, lendp) if lendp else None
+                    if g and top_run(g) <= EDGE_CUT:
+                        got, note = g, note + ' - cut %dpx, whole knight grafted from %s at the local seat' % (cut, donor)
+                    else:
+                        note += ' - cut %dpx at a border, no repair available' % cut
+                        pending_mirror.append(d)
         if not got and donor:
             got2, note2 = borrow(arch, d, donor)
             if got2:
@@ -454,10 +676,21 @@ def main(argv):
             fail += 1
             continue
         ok += 1
+        results[d] = got
         print('  %-4s %s' % (d, note))
         if not dry:
             os.makedirs(dest, exist_ok=True)
             write_png(os.path.join(dest, 'ride_%s.png' % d), got[0], got[1], got[2])
+    # anything still cut takes its opposite side, mirrored -- a seated man is near enough symmetric
+    for d in pending_mirror:
+        src = MIRROR.get(d)
+        if src and results.get(src) and top_run(results[src]) <= EDGE_CUT:
+            m = mirror_of(results[src])
+            results[d] = m
+            print('  %-4s mirrored from %s, which is not cut' % (d, src))
+            if not dry:
+                os.makedirs(dest, exist_ok=True)
+                write_png(os.path.join(dest, 'ride_%s.png' % d), m[0], m[1], m[2])
     print('  %d extracted, %d skipped%s' % (ok, fail, ' (--dry, nothing written)' if dry else ''))
     return 0
 
