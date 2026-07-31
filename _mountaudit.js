@@ -220,7 +220,7 @@
         ctx.fillText(DIRS[i][0].toUpperCase(), ox+LBL+i*cell+cell/2-7, 16);
       }
     }
-    let rdr=0, rerr='';
+    let rdr=0, ali=0, rerr='';
     for(let r=0;r<archs.length;r++){
       const a=archs[r], m=byArch[a];
       const b=(r<half)?0:1, row=(r<half)?r:(r-half), ox=b*(blockW+24), oy=46+row*cellH;
@@ -239,12 +239,18 @@
         ctx.beginPath(); ctx.rect(ox+LBL+i*cell, oy, cell, cellH); ctx.clip();
         ctx.translate(ox+LBL+i*cell+cell/2-player.x, oy+cellH*0.74-player.y);
         try{ mountDrawUnder(player.x,player.y,0,player.aim,false,0); }catch(e){}
-        try{ if(riderDrawOver(player.x,player.y,player.aim,null)!==false) rdr++; }catch(e){ rerr=rerr||(''+e); }
+        try{
+          // did the ALIGNED layer take it, or did the standing-hero fallback? The two look similar
+          // enough at a glance that the sheet has to say which one it drew.
+          const _a=(typeof rideArchImg==='function')?rideArchImg(DIRS[i][0],(mountDef(m.id)||{}).spr):null;
+          if(_a && _a.naturalWidth) ali++;
+          if(riderDrawOver(player.x,player.y,player.aim,null)!==false) rdr++;
+        }catch(e){ rerr=rerr||(''+e); }
         ctx.restore();
       }
     }
     ctx.fillStyle=ink; ctx.textAlign='left';
-    ctx.fillText('rider drew on '+rdr+' of '+(archs.length*cols)+' poses'+(rerr?('  ['+rerr+']'):''), 4, H2-12);
+    ctx.fillText('rider drew on '+rdr+' of '+(archs.length*cols)+' poses  ·  '+ali+' from an aligned seated layer, '+(rdr-ali)+' from the standing fallback'+(rerr?('  ['+rerr+']'):''), 4, H2-12);
     const url=cv.toDataURL('image/png');
     for(let n=document.body.firstElementChild;n;n=n.nextElementSibling) n.style.display='none';
     document.body.style.cssText='margin:0;padding:0;background:'+bg;
@@ -331,7 +337,10 @@
               Object.keys(byArch).forEach(function(a){
                 const m=byArch[a]; if(typeof giveMount==='function') giveMount(m.id);
                 player.mnt=null; if(typeof _mountSeat==='function') _mountSeat(m.id);
-                _d8.forEach(function(dd){ try{ rideImg('knight',dd,(mountDef(m.id)||{}).spr); }catch(e){} });
+                _d8.forEach(function(dd){ try{
+                  rideImg('knight',dd,(mountDef(m.id)||{}).spr);
+                  if(typeof rideArchImg==='function') rideArchImg(dd,(mountDef(m.id)||{}).spr);
+                }catch(e){} });
               });
               setTimeout(function(){
                 sheet(byArch, Object.keys(byArch).sort(), Q.get('bg')||'#ffff00');

@@ -682,6 +682,11 @@ function _mountSeat(id){
   // a flyer starts in the air; a walker is never airborne. Set explicitly so nothing has to
   // interpret `undefined`, which is the state playerIsFlying used to treat as flying.
   player.airborne = !!d.fly;
+  // ASK FOR THE SEATED RIDER NOW. _rideAt creates the Image on first request and returns null until
+  // it arrives, so without this the first seconds in the saddle silently fall back to the standing
+  // hero and then pop. Eight small PNGs, requested once, at the one moment we know they are needed.
+  if(typeof rideArchImg==='function' && d.spr)
+    for(const _d of MOUNT_DIRS) rideArchImg(_d, d.spr);
   player.mnt=d.id; player.mntDmg=0; player.mntCast=0; player.mntCastId=null;
   if(typeof texts!=='undefined') texts.push({x:player.x,y:player.y-40,txt:d.name.toUpperCase(),col:mountRarCol(d.rar),life:0.8});
   return true; }
@@ -1234,6 +1239,17 @@ function _rideAt(path){
 // So: one silhouette for every mount, which is what RIDER_BASE_CLS already promises two functions
 // down. If a real per-archetype rider layer is ever extracted, restore the override AND add it to
 // the check in _mountaudit.js that would have caught this.
+// An ALIGNED per-archetype layer, or null. Aligned means: extracted by tools/riderextract.py from a
+// PixelLab state of this archetype's own object, so it is the animal's canvas with only the rider
+// left in it. Drawn with the animal's own transform it lands in the saddle by construction -- there
+// is no seat to guess, because PixelLab already put him there.
+//
+// This is NOT the folder that shipped before. Those were the whole animal with a knight on it and
+// drew as a mount inside the mount; tools/mountart.py now fails anything that wide, and riderAligned
+// checks the canvas matches the animal's before trusting it.
+function rideArchImg(dir,arch){
+  if(!arch) return null;
+  return _rideAt('assets/riders/'+arch+'/knight/ride_'+dir+'.png'); }
 function rideImg(cls,dir,arch){
   if(!cls) return null;
   return _rideAt('assets/riders/'+cls+'/ride_'+dir+'.png'); }
@@ -1325,6 +1341,16 @@ function mountTransformed(){ return MOUNT_TRANSFORM && mounted(); }
 function riderDrawOver(x,y,faceAng,skin){
   if(!mounted() || typeof blit!=='function') return false;
   const d=mountDef(player.mnt); if(!d) return false;
+  // ---- THE ALIGNED PATH, when this archetype has a real seated rider ----
+  // Everything below this block is the fallback: a STANDING hero sprite, shrunk and dropped onto a
+  // guessed saddle line. It is the best that can be done without seated art and it has never looked
+  // like a person sitting down. When an aligned layer exists none of that applies -- same canvas,
+  // same transform, done.
+  const _al=rideArchImg(_mountDir(faceAng||0), d.spr);
+  if(_al && _mountBlit && _al.naturalWidth===_mountBlit.w && _al.naturalHeight===_mountBlit.h){
+    blit(skin?skin(_al):_al, _mountBlit.x, _mountBlit.y, _mountBlit.sc, _mountBlit.flip);
+    return true;
+  }
   const rs=riderSprite(player.look||{cls:'knight'}, faceAng); if(!rs) return false;
   const bb=(typeof _imgBBox==='function')?_imgBBox(rs.img):null;
   const rh=(bb&&bb.h)?bb.h:(rs.img.height||64);
@@ -1434,7 +1460,17 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   const gait = fly ? Math.sin((clock||0)*4.2)*2.6
              : (moving?Math.sin((clock||0)*13+1.1)*1.6:Math.sin((clock||0)*3)*0.5);
   const alt = fly ? MOUNT_FLY_H : 0;
-  const flip=Math.cos(faceAng)<0;
+  // NO FLIP. This used to be `Math.cos(faceAng)<0`, which mirrored every westward frame -- and the
+  // art has a real west, north-west and south-west drawing, so mirroring them turned all three back
+  // round to face EAST. Five of the eight directions (e, se, sw, w, ne) came out facing right, which
+  // is what the user saw: "why are 4 of them facing the same direction".
+  //
+  // Measured rather than assumed: east against a mirrored west is only ~40% the same pixels on the
+  // horse, the wolf and the boar, so west is its own drawing and not a mirror. _mountDir's own
+  // comment says the same thing -- "returns the folder name, never a flip: a three-quarter view
+  // cannot be mirrored honestly, which is the whole reason for having eight" -- the draw just never
+  // honoured it.
+  const flip=false;
   // blit CENTRES on the point it is given, so to plant the animal's FEET we have to work back
   // from where its opaque box ends inside its own canvas.
   const canvasH=art.height||64;
@@ -1443,6 +1479,11 @@ function mountDrawUnder(x,y,bob,faceAng,moving,clock){
   // shadow first, at the TRUE ground position, so the gap under the mount is the altitude
   if(fly) _mountShadow(x, y, (bb?bb.w:64)*sc);
   blit(art, x, centreY, sc, flip);
+  // PUBLISH THE TRANSFORM. An ALIGNED rider layer -- one extracted from a PixelLab state of this same
+  // object, so the animal is in the same place in both -- only lands in the saddle if it is drawn
+  // with exactly the numbers the animal was drawn with. Recomputing them in riderDrawOver would be
+  // two copies of one calculation waiting to drift, so the one that ran is handed over instead.
+  _mountBlit = {x:x, y:centreY, sc:sc, flip:flip, w:(art.width||0), h:(art.height||0)};
   // Lift the rider so his feet land on the saddle rather than on the floor beside it. Derived from
   // the same numbers that placed the animal, so changing MOUNT_DRAW_H moves both together.
   //   mount feet      = y + MOUNT_FOOT
@@ -1467,6 +1508,8 @@ const MOUNT_SIT = 22;
 // same frame. A plain module-level value rather than a return field because the hero blit needs it
 // AFTER mountDrawUnder has already returned its lift.
 let _mountSaddleY = 0;
+// The blit mountDrawUnder last performed, for a rider layer that shares the animal's canvas.
+let _mountBlit = null;
 function mountSaddleY(){ return _mountSaddleY; }
 
 // ============================================================

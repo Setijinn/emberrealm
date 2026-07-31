@@ -31,3 +31,7 @@ assets/mounts/_old/
 # nothing can read them again; kept on disk because they are still the only source a real rider
 # layer could be extracted FROM. tools/mountart.py fails any that come back.
 assets/riders/_composites/
+
+# Rider layers extracted but not yet reviewed. The user asked for one mount at a time, so an
+# archetype waits here until its own pass; moving it up one level is what makes it live.
+assets/riders/_pending/
