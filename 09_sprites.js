@@ -1413,6 +1413,77 @@ function drawBanner(x,y){
  ctx.moveTo(x-18,y); ctx.lineTo(x+18,y); ctx.lineTo(x+18,y+36); ctx.lineTo(x,y+28); ctx.lineTo(x-18,y+36); ctx.closePath(); ctx.fill();
  ctx.fillStyle='#e8b34b'; ctx.beginPath(); ctx.arc(x,y+15,6,0,6.29); ctx.fill();
 }
+// ============================================================
+//  THE PADDOCK — the Stable's stand, and the stablemaster standing at it
+// ------------------------------------------------------------
+//  User, 2026-07-31: "there legit isn't a stand for the vendor he's invisible."
+//
+//  Correct, and the codebase had already written down why it matters. The wardrobe's own comment,
+//  forty lines up, says: "Deliberately a real object rather than an invisible trigger: the vault's
+//  strongbox taught that an interactable you cannot see reads as a bug, not as a secret." The
+//  Stable was given coordinates in ROOM_DEFS, a proximity prompt in 07_update and a whole panel --
+//  and nothing that draws anything. You walked onto an empty patch of lawn and a prompt appeared
+//  out of the grass.
+//
+//  It is NOT in SHOPNPCS, which is why it slipped through: those four get their stall, their
+//  fallback sprite and their hanging sign from one loop in the town pass. The Stable is a room-def
+//  interactable like the mirror, so it needs its own object in the decor pass -- which is where
+//  this lives, beside drawMirror.
+//
+//  Drawn rather than generated: the art budget is spent (9 generations left of 9,355), and a
+//  paddock is fence rails and a trough, which is exactly the sort of thing the mirror and the
+//  stalls are already drawn with.
+const sprOstler=makeSprite(MAREN,{O:'#140d08',A:'#4a3a22',a:'#33270f',S:'#ecc795',
+                                  R:'#6b5230',r:'#4d3a20',G:'#c9a94b',E:'#140d08'});
+function drawPaddock(x,y){
+  const t=performance.now()/1000;
+  // ---- the ground shadow first, so everything else sits on it ----
+  ctx.save();
+  ctx.globalAlpha=0.26; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(x,y+10,54,15,0,0,6.29); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // ---- the fence. Two rails on four posts, running left to right behind the stand, so the eye
+  //      reads "enclosure" before it reads any single prop ----
+  const POSTS=[-58,-20,20,58];
+  ctx.fillStyle='#4a3524';
+  for(const px of POSTS) ctx.fillRect(x+px-3, y-34, 6, 40);
+  ctx.fillStyle='#5c3f28';
+  ctx.fillRect(x-60, y-30, 120, 5);
+  ctx.fillRect(x-60, y-16, 120, 5);
+  ctx.fillStyle='#74543a';                                  // lit top edge, same trick as drawStall
+  ctx.fillRect(x-60, y-30, 120, 2);
+  ctx.fillRect(x-60, y-16, 120, 2);
+  ctx.fillStyle='#3a2a1c';                                  // post caps
+  for(const px of POSTS) ctx.fillRect(x+px-4, y-36, 8, 3);
+
+  // ---- a water trough at the left post, and a hay bale at the right. Two props, because one
+  //      reads as scenery and three starts competing with the vendor ----
+  ctx.fillStyle='#4a3524'; ctx.fillRect(x-56, y-6, 30, 12);
+  ctx.fillStyle='#3a2a1c'; ctx.fillRect(x-56, y-6, 30, 3);
+  ctx.fillStyle='#2f4a58'; ctx.fillRect(x-54, y-4, 26, 7);   // water
+  ctx.globalAlpha=0.5; ctx.fillStyle='#7fb0c4';
+  ctx.fillRect(x-54, y-4+Math.sin(t*1.7)*0.6, 26, 2);        // a slow ripple
+  ctx.globalAlpha=1;
+
+  ctx.fillStyle='#b8933f'; ctx.fillRect(x+30, y-14, 26, 20); // hay bale
+  ctx.fillStyle='#cfa94b'; ctx.fillRect(x+30, y-14, 26, 3);
+  ctx.fillStyle='#8a6b2a';
+  for(let i=0;i<4;i++) ctx.fillRect(x+32+i*6, y-12, 2, 16);  // straw lines
+  ctx.fillStyle='#6b5230'; ctx.fillRect(x+30, y-7, 26, 2);   // the twine
+
+  ctx.restore();
+}
+// The stablemaster himself, drawn separately so he can be depth-sorted against the player like any
+// other body rather than being part of the scenery he stands behind.
+function drawOstler(x,y){
+  const t=performance.now()/1000;
+  ctx.globalAlpha=0.3; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(x,y+13,13,5,0,0,6.29); ctx.fill();
+  ctx.globalAlpha=1;
+  blit(sprOstler, x, y+2+Math.sin(t*1.6)*0.8, 1.9, false);
+}
+
 function drawStall(np){ const x=np.x, y=np.y, awn=np.awn||'#b5482f';
  ctx.fillStyle='#3a2a1c'; ctx.fillRect(x-34,y-22,5,44); ctx.fillRect(x+29,y-22,5,44);
  ctx.fillStyle='#4a3524'; ctx.fillRect(x-32,y-8,64,24);
@@ -1881,6 +1952,18 @@ function render(){
     else if(d.t==='chest') drawChest(dx,dy);
     else if(d.t==='strongbox') drawStrongbox(dx,dy);
     else if(d.t==='mirror') drawMirror(dx,dy);
+    else if(d.t==='paddock'){ drawPaddock(dx,dy); drawOstler(dx-2,dy-22);
+      // the sign is the other half of "this is a shop" -- the four stall vendors get one from
+      // drawShopSign and the Stable had none, so even once you saw the fence there was nothing
+      // naming it
+      // ...but NOT while you are stood in front of it. The [E] STABLE prompt renders in the same
+      // airspace, and with both up the sign's name was hidden behind the prompt and only its role
+      // line showed underneath -- which reads as one broken label rather than two good ones. The
+      // sign is what names the stall from across the square; the prompt takes over once you are
+      // close enough for the sign to have done its job.
+      const _pp=(typeof portalPrompt!=='undefined')?portalPrompt:null;
+      if(!(_pp && _pp.kind==='stable'))
+        drawShopSign({x:dx, y:dy-16, name:'The Stable', role:'STABLEMASTER', awn:'#b8933f'}); }
     else if(d.t&&d.t.slice(0,2)==='v_') drawVaultProp(d.t.slice(2),dx,dy,d.w);
     else if(d.t==='banner') drawBanner(dx,dy); }
   // particles: normal pass, then additive pass for glow ones (embers, magic, sparks)

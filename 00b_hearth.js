@@ -102,7 +102,10 @@
   // frame: measured, the basin band occupies rows 54-112 of 125, so its middle is 21px (0.49 tile)
   // below the frame's middle while the thin spire fills the top. Anchoring half a tile high puts
   // the BASIN -- the part the eye reads as "the fountain" -- on the square's true centre.
-  decor:[{t:'fountain',x:21.5,y:11.5},{t:'mirror',x:9.5,y:7.6}],
+  decor:[{t:'fountain',x:21.5,y:11.5},{t:'mirror',x:9.5,y:7.6},
+   // THE PADDOCK, at the same coordinates as the `stable` interactable above it. Both must
+   // move together -- a stand that is not where the prompt is would be worse than no stand.
+   {t:'paddock',x:16.5,y:18.2}],
   stalls:[ {id:'bram', x:9.5,y:10.8}, {id:'sella',x:9.5,y:18.3}, {id:'maren',x:32.5,y:10.8}, {id:'odo',x:32.5,y:18.3} ],
  };
 
