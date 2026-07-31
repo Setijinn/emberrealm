@@ -1077,7 +1077,10 @@ function closeStable(){
   const s=(typeof $s==='function')?$s('stableScr'):document.getElementById('stableScr');
   if(s) s.style.display='none'; }
 
+// Set while painting when any stall's art has not arrived yet; cleared by the repaint it schedules.
+let _stableWaitArt=false, _stableArtPending=false;
 function paintStable(){
+  _stableWaitArt=false;
   const cnt=(typeof $s==='function')?$s('stableCount'):document.getElementById('stableCount');
   const list=(typeof $s==='function')?$s('stableList'):document.getElementById('stableList');
   const sel=(typeof $s==='function')?$s('stableSel'):document.getElementById('stableSel');
@@ -1156,7 +1159,13 @@ function paintStable(){
     const c=document.createElement('div');
     c.className='embChip'+(isSel?' sel':'')+(on?' on':'');
     c.style.borderColor=mountRarCol(m.rar);
+    // THE FIRST ASK IS ALWAYS NULL, and this used to give up on it. mountImg creates the Image and
+    // returns null on the first call for a species, because that call is what starts the download --
+    // so every chip in a freshly-opened stable drew as a bare nameplate with no animal in it, and
+    // stayed that way until something else repainted the panel. The mounts TAB already solved this
+    // (mountPaintImgs retries itself 220ms later); the stall list never got the same treatment.
     const im=mountImg(m.spr);
+    if(!im) _stableWaitArt=true;
     if(im){ const cv=document.createElement('canvas'); cv.width=48; cv.height=40; cv.className='isprite';
       const cc=cv.getContext('2d'); cc.imageSmoothingEnabled=false;
       // SIZE BY THE OPAQUE BOX, never naturalWidth — PixelLab files carry transparent margin and
@@ -1192,7 +1201,15 @@ function paintStable(){
   if(btn){ const can=!!(m&&mountOwns(m.id));
     btn.style.display=can?'':'none';
     btn.disabled=!can;
-    btn.textContent=(m&&activeMount()&&activeMount().id===m.id)?'UNSADDLE':'SADDLE IT'; } }
+    btn.textContent=(m&&activeMount()&&activeMount().id===m.id)?'UNSADDLE':'SADDLE IT'; }
+
+  // ...and come back for the art. One pending repaint at a time, and only while the panel is still
+  // open, so a stable left open does not spin forever on a species whose file is genuinely missing.
+  if(_stableWaitArt && !_stableArtPending){
+    _stableArtPending=true;
+    setTimeout(function(){ _stableArtPending=false;
+      const sc=document.getElementById('stableScr');
+      if(sc && sc.style.display!=='none') paintStable(); }, 220); } }
 
 // ============================================================
 //  THE SEATED RIDER (assets/<cls>/ride_<dir>.png)

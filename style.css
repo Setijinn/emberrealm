@@ -799,6 +799,14 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
  background:#0f0c14;border-radius:9px;border:1px solid #2a2433;}
 .shopico.emoji{font-size:23px;}
 .shopico .isprite{position:static;inset:auto;width:42px;height:36px;image-rendering:pixelated;}
+/* THE STALL CHIPS NEEDED THE SAME OPT-OUT and never had it. The global `canvas` rule above is
+   position:fixed / inset:0 / 100vw for the fullscreen game canvas, so an in-panel canvas that does
+   not override it covers the entire screen -- which is precisely what the stable's mount sprites
+   did the moment they started loading. The bug was invisible for as long as it was, because
+   mountImg returns null on the first ask and paintStable never retried, so no canvas was ever
+   appended and the rule had nothing to break. Fixing the retry exposed it immediately. */
+.embChip .isprite{position:static;inset:auto;width:48px;height:40px;
+ image-rendering:pixelated;display:block;margin:0 auto 3px;}
 .shoptext{flex:1;min-width:0;text-align:left;}
 .shopname{font-family:'Pixelify Sans',monospace;color:#f0e8d8;font-size:14px;}
 .shopcard.legend .shopname{color:#ff9c50;}
