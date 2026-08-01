@@ -221,6 +221,16 @@ const BOSS_PROJ=[
  {col:'#9a8f7d',core:'#eee6d4',shape:'dart',size:7},   // 12 Cairnwright — flung stone chips
 ];
 let groundPortals=[], worldBoss=null, wbCd=18, dunReturn=null, ringBossCd=[];
+// THIRTY MINUTES (user, 2026-07-31: "make bosses take 30 minutes to respawn"). It was 32-52
+// SECONDS, which meant a lair you cleared was refilled before you had finished looting it and a
+// world boss was a respawning trash mob with a health bar.
+const BOSS_RESPAWN = 1800;      // seconds after a kill before that lair may hold its boss again
+// ringBossCd USED TO DO TWO JOBS AT ONCE and they cannot both be 1800. It was the post-kill
+// lockout AND the spawner's retry clock -- the spawner only rolls to place a boss when the counter
+// hits zero, and re-arms it to 14-26s whether or not the roll succeeded. Setting the kill lockout
+// to 1800 with the two merged would mean a boss that merely failed its 85% roll also waited half
+// an hour. Split: ringBossCd is the LOCKOUT, ringBossTry is the POLL.
+let ringBossTry=[];
 function ringBossAlive(b){ for(const e of enemies) if(e.wb && e.ring===b) return true; return false; }
 // ===== BOSS PLACEMENT =====
 // Boss identity used to BE the theme band, which pinned the deepest-lore bosses to the starter
@@ -2919,7 +2929,7 @@ function enterRoom(key, px, py){
   curRoom=rooms[key];
   player.x=px; player.y=py;
   enemies=[]; pShots=[]; eShots=[]; embers=[]; loots=[]; zones=[]; fx=[];
-  worldBoss=null; ringBossCd=[]; if(!curRoom||!curRoom.dungeon) groundPortals=[];
+  worldBoss=null; ringBossCd=[]; ringBossTry=[]; if(!curRoom||!curRoom.dungeon) groundPortals=[];
   for(const al of allies){al.x=player.x;al.y=player.y;}
   if(typeof spawnCritters==='function') spawnCritters(curRoom);   // the Hearth flock
   buildRoomCache();

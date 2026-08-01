@@ -864,7 +864,7 @@ function update(dt){
       // machine -- and those bags carry no `remote` flag, so the snapshot cull never removed them.
       // The portal, the message and the XP stay per-machine: those are correctly local.
       const _sim=(typeof netSimulates!=='function' || netSimulates());
-      if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null; ringBossCd[de.ring]=32+Math.random()*20;
+      if(de.wb && de.ring>=0 && !curRoom.dungeon){ worldBoss=null; ringBossCd[de.ring]=BOSS_RESPAWN;
         groundPortals.push({x:de.x,y:de.y,ring:de.ring,life:45});
         if(_sim) for(let q=0;q<2;q++) loots.push(bagAt(de,mkDrop(Math.min(11,Math.round(de.lv/4.2)+1))));
         // AND THE LAIR GATE STAYS OPEN FROM NOW ON. The corpse portal above is still the immediate
@@ -923,10 +923,16 @@ function update(dt){
   // keyed on the TERRITORY's boss, not the theme band — and -1 (ocean, bridge, the reserved
   // Molten Heart) must never touch ringBossCd, which players cross constantly.
   if(curRoom.rings && (typeof netSimulates!=='function' || netSimulates())){
+    // EVERY LAIR'S LOCKOUT RUNS, not just the one you are stood in. The old counter only ticked for
+    // the territory under your feet, which was harmless at 32 seconds and absurd at 1800: walk away
+    // from a lair you cleared and its half hour would simply stop, so the boss came back the moment
+    // you returned however long you had been gone. Fifteen subtractions a frame is nothing.
+    for(let i=0;i<ringBossCd.length;i++)
+      if(ringBossCd[i]>0) ringBossCd[i]=Math.max(0,ringBossCd[i]-dt);
     const cb=zoneBossAt(player.x/TILE,player.y/TILE);
-    if(cb>=0){ ringBossCd[cb]=(ringBossCd[cb]||0)-dt;
-      if(ringBossCd[cb]<=0){ ringBossCd[cb]=14+Math.random()*12;
-        if(!ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } } }
+    if(cb>=0){ ringBossTry[cb]=(ringBossTry[cb]||0)-dt;
+      if(ringBossTry[cb]<=0){ ringBossTry[cb]=14+Math.random()*12;
+        if((ringBossCd[cb]||0)<=0 && !ringBossAlive(cb) && Math.random()<0.85) spawnRingBoss(cb); } } }
   // release the portal lock once we've stepped clear of every portal.
   // (dungeons have no fixed curRoom.portals, so without this the lock set on
   //  entry never cleared and the return-home portal could never fire.)

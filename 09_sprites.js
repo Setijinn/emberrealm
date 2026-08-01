@@ -2373,6 +2373,7 @@ function render(){
   drawPortalPrompt();
   // boss compass: tiny edge markers pointing at nearby lairs (09d_bosscompass.js)
   if(typeof drawBossCompass==='function') drawBossCompass();
+  if(typeof drawBossObjectives==='function') drawBossObjectives();
   // where you are / who you are / who you are with — top of screen, yields to the bar below
   if(typeof drawStatusBanner==='function') drawStatusBanner();
   // big boss bar, top of screen — shows from the first hit on a boss.

@@ -71,18 +71,20 @@ function bossCompassTargets(){
   out.sort((a,b)=>((a.alive?0:1)-(b.alive?0:1)) || (a.d-b.d));
   return out.slice(0,BC_MAX);
 }
-// The level band of the ground a lair sits on, as a string. This is the number that decides
-// whether you should be walking toward it or away, so it is the one piece of text on the marker.
+// THE BOSS'S OWN LEVEL (user, 2026-07-31: "give it the boss level"). It used to widen the reading
+// into the band its zone spans -- "20-22" -- which is the ground's level, not the animal's. The
+// boss is spawned with lv = grvLvAt at its own lair (spawnRingBoss), so reading the same function
+// at the same point gives exactly the number the thing you are walking toward will have.
 function bossCompassLv(L){
-  const R=curRoom;
-  if(R&&R.rings&&typeof grvLvAt==='function'){
-    const lv=Math.round(grvLvAt(L.x/TILE, L.y/TILE));
-    // widen to the band the zone actually spans, so it reads as a range rather than false precision
-    const names=(R.rings.names)||[];
-    for(const n of names) if(lv>=n.lv && lv<=(n.lv2||n.lv)) return n.lv+'-'+(n.lv2||n.lv);
-    return 'Lv'+lv;
-  }
-  return '';
+  if(curRoom && curRoom.rings && typeof grvLvAt==='function')
+    return Math.round(grvLvAt(L.x/TILE, L.y/TILE));
+  return 0;
+}
+// mm:ss, for a lockout that is now half an hour rather than half a minute
+function bossCdText(sec){
+  sec=Math.max(0,Math.ceil(sec));
+  const m=Math.floor(sec/60), ss=sec%60;
+  return m+':'+(ss<10?'0':'')+ss;
 }
 function drawBossCompass(){
   if(typeof ctx==='undefined'||!ctx) return;
@@ -150,17 +152,95 @@ function drawBossCompass(){
       ctx.fillStyle=GB.col||'#c8a06a';
       ctx.beginPath(); ctx.arc(mx,my,sz*0.32,0,6.29); ctx.fill();
     }
-    // the level band, under the plate. This is the number that decides whether to walk toward it.
+    // the boss's level, under the plate. This is the number that decides whether to walk toward it.
     const lv=bossCompassLv(t);
     if(lv){
+      const txt='Lv '+lv;
       const fs=Math.max(8,Math.round(9*us));
       ctx.font='bold '+fs+'px "Pixelify Sans",monospace';
       ctx.textAlign='center';
       const ly=my+sz/2+fs+1;
-      ctx.fillStyle='rgba(0,0,0,.75)'; ctx.fillText(lv,mx+1,ly+1);
-      ctx.fillStyle=t.alive?'#d8cfb8':'#6a6472'; ctx.fillText(lv,mx,ly);
+      ctx.fillStyle='rgba(0,0,0,.75)'; ctx.fillText(txt,mx+1,ly+1);
+      ctx.fillStyle=t.alive?'#d8cfb8':'#6a6472'; ctx.fillText(txt,mx,ly);
       ctx.textAlign='left';
     }
     ctx.restore();
   }
+}
+
+
+// ===================================================================================================
+//  THE OBJECTIVE TRACKER (user, 2026-07-31: "make it like a quest objective thing, give it the
+//  boss level")
+// ---------------------------------------------------------------------------------------------------
+//  The edge markers answer WHICH WAY. They cannot answer what it is called, how far, what level, or
+//  whether it is even there right now -- a 22px portrait has no room for any of that, and a boss on
+//  a thirty-minute lockout looks identical to one waiting for you except for being slightly dimmer.
+//
+//  So the same targets also get a small tracker, in the shape every game uses for an objective: a
+//  rule down the left edge in the boss's own colour, its name, its level, the distance, and a state
+//  line. It sits UNDER THE MINIMAP, which is the one part of the screen already given over to
+//  orientation -- the minimap is 146px square at 10,10, so everything below y=166 on the left is
+//  free, and the HUD button row and the ability bar are both on the other side or the bottom.
+//
+//  It never appears in town or in a dungeon, for the same reason the compass does not: in a dungeon
+//  there is one boss and you are already walking at it.
+const BO_W    = 132;    // px, before UI scale
+const BO_ROW  = 30;
+const BO_LEFT = 10;
+
+function drawBossObjectives(){
+  if(typeof ctx==='undefined'||!ctx) return;
+  if(typeof curRoom==='undefined'||!curRoom||curRoom.town||curRoom.dungeon) return;
+  const targets=bossCompassTargets();
+  if(!targets.length) return;
+  const us=(typeof UIS!=='undefined')?UIS:1;
+  const w=Math.round(BO_W*us), rowh=Math.round(BO_ROW*us);
+  // under the minimap when there is one, and tight to the top corner when there is not
+  // miniRect is the ONE geometry function the minimap's painter and hit-test both read, so asking
+  // it is how this stays under the panel when the panel resizes rather than guessing 148px.
+  const mr=(typeof miniRect==='function')?miniRect():null;
+  const mmB=mr ? (mr.y+mr.h) : Math.round((10+148)*us);
+  let y=Math.round(mmB+8*us), x=mr?mr.x:Math.round(BO_LEFT*us);
+
+  ctx.save();
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  for(const t of targets){
+    const GB=(typeof GBOSS!=='undefined')?GBOSS[t.b]:null;
+    const col=(GB&&GB.col)?GB.col:'#c8a06a';
+    const lv=bossCompassLv(t);
+    const cd=(typeof ringBossCd!=='undefined'&&ringBossCd)?(ringBossCd[t.b]||0):0;
+    // DISTANCE IN TILES, not pixels. A tile is the unit the player actually moves in and 3000px
+    // means nothing to anybody; 68 tiles is a walk you can picture.
+    const tiles=Math.round(t.d/TILE);
+
+    ctx.globalAlpha=t.alive?0.92:0.66;
+    ctx.fillStyle='rgba(12,9,16,0.78)';
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(x,y,w,rowh,5); else ctx.rect(x,y,w,rowh);
+    ctx.fill();
+    ctx.fillStyle=col; ctx.fillRect(x,y,Math.max(2,Math.round(2*us)),rowh);   // the rule
+
+    const padL=x+Math.round(7*us);
+    const f1=Math.max(9,Math.round(10*us)), f2=Math.max(8,Math.round(8.5*us));
+    ctx.textAlign='left';
+    ctx.font='bold '+f1+'px "Pixelify Sans",monospace';
+    ctx.fillStyle=t.alive?'#e8dcc0':'#8a8494';
+    const nm=(GB&&GB.n)?GB.n:'A boss';
+    ctx.fillText(nm, padL, y+f1+Math.round(3*us));
+
+    ctx.font=f2+'px "Pixelify Sans",monospace';
+    // Lv in the boss's colour so the eye lands on it first -- it is the decision, the rest is detail
+    const lvTxt='Lv '+lv;
+    ctx.fillStyle=t.alive?col:'#6a6472';
+    ctx.fillText(lvTxt, padL, y+rowh-Math.round(5*us));
+    const lvW=ctx.measureText(lvTxt).width;
+    ctx.fillStyle=t.alive?'#a89e8c':'#5f5a68';
+    const state = t.alive ? (tiles+' tiles') : ('back in '+bossCdText(cd));
+    ctx.fillText('  \u00b7  '+state, padL+lvW, y+rowh-Math.round(5*us));
+
+    y+=rowh+Math.round(4*us);
+  }
+  ctx.globalAlpha=1; ctx.textAlign='left';
+  ctx.restore();
 }
