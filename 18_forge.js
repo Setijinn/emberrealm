@@ -560,6 +560,9 @@ function forgeDo(A,B,opts){
   // its trait. Copied rather than mutated so a mid-flight failure cannot leave a half-changed item.
   const up=Object.assign({}, ch.inv[idx]);
   up.t=SD_T;
+  // THE MARK. An SD piece keeps its relic flag by design, so `relic` cannot tell the two rungs apart
+  // and a future index swap would demote this back to a relic. See migrateForgeTiers' note.
+  up.sd=1;
   if(!up.relic){ for(const id in plan.cost) matAdd(id, plan.cost[id]);
     return {ok:false, why:'That piece lost its relic on the anvil.'}; }
   ch.inv[idx]=up;
@@ -602,6 +605,29 @@ function atForge(){
 // Idempotent: run it twice and the second pass matches nothing. A relic is already at RELIC_T, and a
 // migrated SD piece is at 13 so the `t===12` test misses it.
 //
+// THAT CLAIM WAS WRONG FOR SD AND THIS PASS WAS DESTROYING IT. forgeDo() raises a relic IN PLACE --
+// it copies the item, sets t=SD_T, and REFUSES to proceed if the copy is not still relic-flagged
+// ("That piece lost its relic on the anvil"), because an SD piece is meant to keep its set, its
+// exclusive affix and its trait. So every SD piece the forge has ever made is {relic:<id>, t:13}.
+// The relic branch below fired on it (13 !== RELIC_T), wrote t back to 12, and `return`ed before the
+// SD rule could ever see it -- a 10.0x top-rung multiplier silently becoming 2.0x, ~1854 weapon
+// attack becoming ~371, written straight to localStorage at boot with no message.
+//
+// AND IT CANNOT BE FIXED WITH A BETTER TEST ON `t`. A pre-first-swap relic is {relic, t:13} and a
+// crafted SD piece is {relic, t:13}: the same shape, needing opposite treatment. My first attempt
+// exempted t===SD_T and the self-test caught it immediately -- four assertions, because that
+// exemption stops the FIRST swap's relics from ever reaching RELIC_T. The discriminator has to be
+// something only the forge can know, so forgeDo now stamps `sd:1` on the piece it raises (and
+// equipItem carries it into eqAff), and anything wearing that mark is never re-indexed by any
+// future swap. The fixture in _selftest is a post-first-swap save whose SD pieces predate the mark,
+// which is why it still exercises the unmarked path.
+//
+// One casualty, stated plainly: an SD piece crafted BEFORE this commit carries no mark and will be
+// demoted to RELIC_T once, on the next load. It is recoverable -- it lands back on the anvil as the
+// relic it was raised from -- and the population is essentially empty anyway, because no relic has
+// ever dropped in play (see 07_update's note on rollLoot), so the only ones that can exist came from
+// the dev panel.
+//
 // EQUIPPED GEAR IS MIGRATED TOO, WHICH IT WAS NOT BEFORE. equipItem stores the tier as a bare number
 // in rpg.wpn/arm/helm and rpg.ring.t, with the relic id off in rpg.eqAff[slot].rel -- so the old
 // version's comment claimed it covered "the equipped-affix record" while the code only walked inv
@@ -612,6 +638,7 @@ function migrateForgeTiers(){
   let n=0;
   const fix=(it)=>{
     if(!it) return;
+    if(it.sd) return;                     // explicitly a top-rung piece; never re-indexed
     if(it.relic){ if(it.t!==RELIC_T){ it.t=RELIC_T; n++; } return; }
     if(it.t===12 && SD_T!==12){ it.t=SD_T; n++; }
   };
@@ -621,13 +648,15 @@ function migrateForgeTiers(){
     const aff=rp.eqAff||{};
     for(const sl of ['wpn','arm','helm']){
       if(typeof rp[sl]!=='number') continue;
+      if(aff[sl]&&aff[sl].sd) continue;   // an equipped top-rung piece, marked at craft time
       const rel=aff[sl]&&aff[sl].rel;
       if(rel){ if(rp[sl]!==RELIC_T){ rp[sl]=RELIC_T; n++; } }
       else if(rp[sl]===12 && SD_T!==12){ rp[sl]=SD_T; n++; }
     }
     if(rp.ring && typeof rp.ring.t==='number'){
       const rel=aff.ring&&aff.ring.rel;
-      if(rel){ if(rp.ring.t!==RELIC_T){ rp.ring.t=RELIC_T; n++; } }
+      if(aff.ring&&aff.ring.sd){ /* marked top rung -- leave it */ }
+      else if(rel){ if(rp.ring.t!==RELIC_T){ rp.ring.t=RELIC_T; n++; } }
       else if(rp.ring.t===12 && SD_T!==12){ rp.ring.t=SD_T; n++; }
     }
   };

@@ -536,9 +536,15 @@ function drawAbilButtons(){ if(!rpg) return; ensureLoadout(); const ch=curChar()
 // ultimate recharged. Respeccing mid-arena was a free death and camping in a menu was free ult
 // regeneration. Promoted to the shared predicate (uiPanelOpen) and given the entries the four
 // divergent copies of this list were each missing.
+// EVERY FULL-SCREEN PANEL MUST BE IN THIS LIST or the world keeps simulating behind it: uiPanelOpen()
+// is what pauses input and the update loop, and a panel it does not know about leaves you standing
+// in the open being hit while you read. petScr and forgeScr were both missing -- Bram's Forge is a
+// panel you sit in for minutes at a time comparing recipes. Anything added to index.html as a
+// `class="scr"` overlay belongs here on the same commit.
 const UI_PANEL_IDS=['menuScr','charScr','classScr','devScr','setScr','loginScr','fallenScr',
   'hcScr','deathScr','invScr','loadScr','shopScr','aucScr','bntScr','dmdScr','wrdScr',
-  'skillScr','mapScr','coopScr','statsScr','bagScr','vaultScr','stableScr','ftScr'];
+  'skillScr','mapScr','coopScr','statsScr','bagScr','vaultScr','stableScr','ftScr',
+  'petScr','forgeScr'];
 function uiPanelOpen(){
   for(const id of UI_PANEL_IDS){ const el=document.getElementById(id);
     if(el && getComputedStyle(el).display!=='none') return true; }

@@ -397,6 +397,31 @@
     ok('and the save is byte-identical after a second pass', JSON.stringify(users['_m'])===_snap);
     delete users['_m'];
 
+    // A CRAFTED SD PIECE MUST SURVIVE THE PASS, and this is the regression that shipped. forgeDo
+    // raises a relic IN PLACE and keeps its relic flag on purpose (the set, the exclusive affix and
+    // the trait all ride on it), so a crafted SD piece is {relic:<id>, t:SD_T} -- the same shape as
+    // a PRE-swap relic, which must move to RELIC_T. Told apart by the `sd` mark forgeDo stamps and
+    // equipItem carries into eqAff, and nothing else. Without this test the migration silently
+    // demoted every top-rung piece to a relic on the next load: 10.0x to 2.0x, written to disk.
+    users['_s']={cur:0,
+      chars:[{cls:'knight',
+        inv:[{k:'wpn',wt:'sword',t:SD_T,relic:'pyre_wpn',sd:1,rar:5,aff:[]},
+             {k:'helm',mt:'plate',t:SD_T,relic:'gate_helm',rar:5,aff:[]}],  // UNMARKED: a legacy relic
+        rpg:{wpn:SD_T, arm:11, helm:11, ring:{st:'luck',t:SD_T},
+             eqAff:{wpn:{r:5,a:null,rel:'pyre_wpn',sd:1},
+                    ring:{r:5,a:null,rel:'gate_helm',sd:1}}}
+      }],
+      vault:[{k:'arm',mt:'plate',t:SD_T,relic:'gate_helm',sd:1,rar:5,aff:[]}]};
+    migrateForgeTiers();
+    const _sc=users['_s'].chars[0];
+    ok('a marked SD piece in the satchel keeps SD_T', _sc.inv[0].t===SD_T, 't='+_sc.inv[0].t);
+    ok('an UNmarked relic at SD_T still migrates down', _sc.inv[1].t===RELIC_T, 't='+_sc.inv[1].t);
+    ok('a marked SD piece in the vault keeps SD_T', users['_s'].vault[0].t===SD_T,
+       't='+users['_s'].vault[0].t);
+    ok('an EQUIPPED marked SD piece keeps SD_T', _sc.rpg.wpn===SD_T, 'wpn='+_sc.rpg.wpn);
+    ok('a marked SD ring keeps SD_T', _sc.rpg.ring.t===SD_T, 'ring='+_sc.rpg.ring.t);
+    delete users['_s'];
+
     // ---------- 9. THE WIRE ----------
     note('== co-op packing ==');
     ok('NKIND has room and mat was appended', NKIND[9]==='mat' && NKIND.length<=16, 'len='+NKIND.length);

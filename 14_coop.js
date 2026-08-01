@@ -5,8 +5,16 @@
 // and acts as the relay; if they leave, remaining players race to claim it (host
 // migration) and everyone reconnects automatically. Private code rooms still work.
 const COOP_PUB_ID='emberrealm-public-server-1';
+// `link` BELONGS IN THE LITERAL, not bolted on afterwards. It used to be created once, far below at
+// file scope, while _coopReset replaces this whole object with a fresh literal -- so after any
+// GO SOLO, lost relay, host migration, coopHost() or coopJoin() (all six route through _coopReset)
+// coop.link was undefined and coopLinkScore() threw on `coop.link.score = ...` every second, which
+// is the coopElectTick interval. The game's own window.onerror painted the repeat counter across
+// the play area in world screenshots, climbing at 1 Hz. Declaring it in both literals is the fix;
+// there is no state here worth preserving across a reset, which is why a shared default is right.
+const _coopLink=()=>({score:9999, rtt:0, pingT:0, lastPong:0});
 let coop={on:false, host:false, code:null, peer:null, conns:[], peers:{}, id:null, err:null,
-          auto:true, pub:false, _trying:false};
+          auto:true, pub:false, _trying:false, link:_coopLink()};
 function _coopPid(code){ return 'emberrealm-room-'+code.toLowerCase(); }
 function _coopRand(){ const A='BCDFGHJKMNPQRSTVWXYZ23456789'; let s='';
   for(let i=0;i<4;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
@@ -23,7 +31,7 @@ function _coopReset(keepAuto){ const au=keepAuto?coop.auto:true; _coopEpoch++;
   for(const c of coop.conns){ try{c.close();}catch(e){} }
   if(coop.peer){ try{coop.peer.destroy();}catch(e){} }
   coop={on:false,host:false,code:null,peer:null,conns:[],peers:{},id:null,err:null,
-        auto:au,pub:false,_trying:false}; }
+        auto:au,pub:false,_trying:false,link:_coopLink()}; }
 // ---- public server auto-connect (claim the server id, else join whoever holds it) ----
 function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) return;
   // A HANDOVER IS IN PROGRESS AND I AM NOT THE ONE ELECTED. Racing for the id here is exactly the
@@ -226,7 +234,8 @@ const HOST_SAMPLES  = 8;       // consecutive comparisons it must win (~8s at th
 const HOST_COOLDOWN = 45000;   // ms before another handover may fire
 const HOST_CLAIM_LOCK = 9000;  // ms a non-elected peer stays off COOP_PUB_ID during a handover
 
-coop.link = {score:9999, rtt:0, pingT:0, lastPong:0};
+// (coop.link is declared in the literal above and re-made by _coopReset; this line used to create
+// it here and was the reason a reset could leave it undefined.)
 let _hostWins = {};            // peer id -> consecutive comparisons won
 let _hostLastSwap = 0;
 let _hostClaimLock = 0;        // performance.now() until which we must NOT claim the server id

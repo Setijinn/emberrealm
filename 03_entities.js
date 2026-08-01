@@ -2981,7 +2981,13 @@ function enterRoom(key, px, py){
   curRoom=rooms[key];
   player.x=px; player.y=py;
   enemies=[]; pShots=[]; eShots=[]; embers=[]; loots=[]; zones=[]; fx=[];
-  worldBoss=null; ringBossCd=[]; ringBossTry=[]; if(!curRoom||!curRoom.dungeon) groundPortals=[];
+  // ringBossCd AND ringBossTry SURVIVE A ROOM CHANGE. They used to be cleared here with the rest of
+  // the per-room state, which meant BOSS_RESPAWN's thirty-minute lockout was erased by stepping into
+  // the boss's own dungeon through the portal its corpse just opened -- or into the Hearth, or a
+  // stall. Walk out again and the lair could repopulate immediately. They are not room state: they
+  // are a property of the WORLD's lairs, indexed by boss id, and the boss compass reads them to draw
+  // the respawn clock. worldBoss is genuinely per-room and still goes.
+  worldBoss=null; if(!curRoom||!curRoom.dungeon) groundPortals=[];
   for(const al of allies){al.x=player.x;al.y=player.y;}
   if(typeof spawnCritters==='function') spawnCritters(curRoom);   // the Hearth flock
   buildRoomCache();

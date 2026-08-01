@@ -481,9 +481,13 @@ function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
 // resolved, which is what the whole list used to do. Never lets one bad pillar blank the list.
 function ftPillarLv(G,pl){
   try{
+    // _territories TAKES THE ROOM. Called bare it reads `R&&R.rings` on undefined, returns null, and
+    // every waypoint silently fell through to the band label -- which is the exact bug this function
+    // was written to fix, so it has been shipping as a no-op. It is also why Verdant Belt and
+    // Wolfwood still read the same range: not a shared band, a dropped argument.
     if(typeof zoneAtIn==='function' && typeof _territories==='function'){
       const z=zoneAtIn(G, Math.round(pl.x/TILE), Math.round(pl.y/TILE));
-      const T=_territories();
+      const T=_territories(G);
       const t=(T&&z>=0)?T[z]:null;
       if(t && t.lvmin!==undefined)
         return 'Lv '+t.lvmin+((t.lvmax&&t.lvmax!==t.lvmin)?('\u2013'+t.lvmax):'');
@@ -2097,7 +2101,10 @@ function equipItem(it,ch){
   else if(slot==='helm'){ rpg.helm=it.t; }
   else if(slot==='ring'){ rpg.ring={st:it.st,t:it.t}; }
   else return false;
-  rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null,rel:it.relic||null};
+  // `sd` rides along because an equipped tier is a bare number on rpg -- there is no item object to
+  // read the mark off later, and migrateForgeTiers has to be able to tell a worn Scavenged Dreams
+  // piece from a worn relic. Both are relic-flagged; only one is at the top rung.
+  rpg.eqAff[slot]={r:it.rar||0,a:it.aff||null,rel:it.relic||null,sd:it.sd?1:0};
   recalcStats(); saveRPG(); hudRPG();
   return {old:old};
 }
@@ -2309,6 +2316,14 @@ function recalcStats(){ const ch=curChar(); if(!ch||!rpg)return;
  if(player.mp===undefined||player.mp>player.maxmp) player.mp=player.maxmp;
  if(player.hp>player.maxhp)player.hp=player.maxhp; }
 function saveRPG(){ if(curUser&&users[curUser]&&rpg){ LS.set('er-users',users); } }
+// ACCOUNT-LEVEL SAVE, and it did not exist. Seven call sites reach for saveUsers() -- the mount
+// LESSON purchase at 17k_mounts.js:632 among them, which spends glory -- and every one of them is
+// written defensively as `typeof saveUsers==='function' && saveUsers()` or `saveUsers&&saveUsers()`,
+// so instead of throwing they all quietly did nothing. A player could buy the riding lesson, spend
+// the glory (spendGlory writes er-users itself, so the CHARGE persisted), and lose the lesson on
+// reload. saveRPG is character-scoped and guards on `rpg`, which is why it is not a substitute:
+// lessons and mounts live on the account, and are edited from screens where rpg may be null.
+function saveUsers(){ if(typeof users!=='undefined' && users && typeof LS!=='undefined') LS.set('er-users',users); }
 function hudRPG(){ if(!rpg)return;
  $s('lvlTxt').textContent='Lv '+rpg.lvl;
  $s('goldTxt').textContent=(typeof accountGlory==='function'?accountGlory():0)+'\u2726';
