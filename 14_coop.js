@@ -186,7 +186,11 @@ function _coopPanel(){ const el=document.getElementById('coopBody'); if(!el) ret
     +'<div class="mnote" style="margin:12px 0 4px;border-top:1px solid #2c2633;padding-top:10px;">private room with friends:</div>'
     +'<button class="mbtn dev" onclick="coopHost()">HOST PRIVATE ROOM</button>'
     +'<div style="display:flex;gap:8px;margin-top:6px"><input id="coopCodeIn" maxlength="4" placeholder="CODE" autocomplete="off">'
-    +'<button class="mbtn dev" style="margin-top:0" onclick="coopJoin(document.getElementById(\'coopCodeIn\').value)">JOIN</button></div>'
+    // flex:0 0 auto;width:auto -- WITHOUT IT THE CODE FIELD CANNOT BE TYPED IN. #coopCard .mbtn sets
+    // width:100%, so as a flex item JOIN's base size is the whole row; #coopCodeIn is flex:1 with
+    // min-width:0, making it the only item allowed to shrink, and it collapses to its padding at
+    // about 22px. Opting the button out of the stretch is how .mbtn.user already does it.
+    +'<button class="mbtn dev" style="margin-top:0;flex:0 0 auto;width:auto" onclick="coopJoin(document.getElementById(\'coopCodeIn\').value)">JOIN</button></div>'
     +(coop.err?'<div class="mnote" style="color:#c04a3d">last error: '+coop.err+'</div>':'');
 }
 function _coopMsg(t){ if(typeof msg==='function') msg('CO-OP',t); }

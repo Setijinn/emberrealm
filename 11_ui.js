@@ -2705,7 +2705,10 @@ function spawnPet(){ for(let i=allies.length-1;i>=0;i--) if(allies[i].pet) allie
 // deliberately no HUD button to bind here any more.
 // Every stall panel closes the same way and in the same places (walking off, opening the menu,
 // crossing the bridge), so the list of them lives here once instead of in five call sites.
-const VENDOR_PANELS=['shopScr','aucScr','bntScr','dmdScr','forgeScr'];
+// wrdScr / vaultScr / stableScr were missing even though all three are opened from the same
+// usePortalPrompt stall path as the other five, and all three already share the stall close-button
+// CSS group. A stall you walked away from stayed open behind the world.
+const VENDOR_PANELS=['shopScr','aucScr','bntScr','dmdScr','forgeScr','wrdScr','vaultScr','stableScr'];
 function closeVendorPanels(){ for(const id of VENDOR_PANELS){ const el=document.getElementById(id);
   if(el) el.style.display='none'; } }
 $s('shopClose').addEventListener('click',()=>{$s('shopScr').style.display='none';});
@@ -2720,6 +2723,14 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  $s('menuBtn').style.display='none'; $s('flasks').style.display='none';
  if($s('tgtBtn')) $s('tgtBtn').style.display='none';
  closeVendorPanels();
+ // THE PANELS WITH THEIR OWN CLOSERS. show() hid nine screens by id and left petScr, bagScr and
+ // ftScr standing -- so opening the menu, or dying, painted the death screen UNDERNEATH the open
+ // pet panel. Routed through each panel's real closer rather than setting display directly,
+ // because closePets also resets _petFuseA and the station latch, closeBagPanel clears bagOpen,
+ // and a raw display='none' would skip both and leave the next open in a stale state.
+ if(typeof closePets==='function') closePets();
+ if(typeof closeBagPanel==='function') closeBagPanel();
+ if(typeof closeFastTravel==='function') closeFastTravel();
  $s('invBtn').style.display='none'; $s('invScr').style.display='none';
  $s('abBtn').style.display='none';
  $s('mapScr').style.display='none';

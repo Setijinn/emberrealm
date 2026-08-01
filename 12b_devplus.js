@@ -762,7 +762,8 @@ DEV_PANE.bal=function(B){
   B.appendChild(_dvNote('Reads the live curves. Useful after a tuning change — these are the numbers, not a copy of them.'));
   B.appendChild(_dvHd('THE AGGRESSION RAMP'));
   const pre=document.createElement('div');
-  pre.className='mnote'; pre.style.textAlign='left'; pre.style.whiteSpace='pre'; pre.style.fontSize='11px';
+  // dvTable, not just mnote: the phone clamp on .mnote is three lines and this is nine.
+  pre.className='mnote dvTable'; pre.style.textAlign='left'; pre.style.whiteSpace='pre'; pre.style.fontSize='11px';
   let txt='lv   shots  cd     hit   touch\n';
   for(const lv of [1,4,8,12,20,30,40,50]){
     const dm=eDmgScale(lv), dex=eDex(lv);
