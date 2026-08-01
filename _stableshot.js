@@ -1,24 +1,23 @@
-// Stand in the overworld near a lair so the compass and the objective tracker both have targets,
-// and put one lair on its respawn lockout so the "back in mm:ss" state is on screen too.
+// Four shots: the same lair approached from four sides, so the bubble should appear on four
+// different edges. ?side=e|w|n|s puts the player on that side of the lair.
 (function(){
   function go(){
     try{
       users['_st']={pass:'x',chars:[{name:'St',cls:'knight',inv:[],rpg:{lvl:22,wpn:5,arm:5,helm:5}}],cur:0,mats:{},vault:[]};
       curUser='_st'; play();
       if(typeof devTeleport==='function') devTeleport('G');
-      // walk to a spot between two lairs so two markers qualify
-      const R=curRoom, L=[];
-      for(const k in (R.lairs||{})){ const l=R.lairs[k]; if(l&&l.cx!=null) L.push(l); }
-      L.sort((a,b)=>a.b-b.b);
-      if(L.length>=2){
-        // a point just outside the nearest lair, offset so neither boss is on screen
-        player.x=L[0].cx+520; player.y=L[0].cy+430;
-      }
+      const lairs=[]; for(const k in (curRoom.lairs||{})){ const l=curRoom.lairs[k]; if(l&&l.cx!=null) lairs.push(l); }
+      lairs.sort((a,b)=>a.b-b.b);
+      const T=lairs[0];
+      const side=(new URLSearchParams(location.search).get('side'))||'w';
+      const D=900;
+      if(side==='w'){ player.x=T.cx-D; player.y=T.cy; }        // boss is EAST of us
+      else if(side==='e'){ player.x=T.cx+D; player.y=T.cy; }   // boss is WEST
+      else if(side==='n'){ player.x=T.cx; player.y=T.cy-D; }   // boss is SOUTH
+      else { player.x=T.cx; player.y=T.cy+D; }                 // boss is NORTH
       if(typeof fogReveal==='function') for(let i=0;i<40;i++) fogReveal(curRoom,0.2);
-      // one of them freshly killed, so the tracker shows a live objective and a locked one
-      if(L.length>=2 && typeof ringBossCd!=='undefined') ringBossCd[L[1].b]=1543;
-      document.title='BOSS READY';
-    }catch(e){ document.title='ERR '+e.message; document.body.innerHTML='<pre style="color:#f88">'+e.stack+'</pre>'; }
+      document.title='READY';
+    }catch(e){ document.title='ERR '+e.message; }
   }
   if(document.readyState==='complete') setTimeout(go,2600);
   else window.addEventListener('load',()=>setTimeout(go,2600));

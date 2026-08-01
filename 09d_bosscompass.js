@@ -246,15 +246,27 @@ function drawBossObjectives(){
   const us=(typeof UIS!=='undefined')?UIS:1;
   const w=Math.round(BO_W*us), spr=Math.round(BO_SPR*us), pad=Math.round(BO_PAD*us);
 
-  // under the minimap, anchored to miniRect() -- the one geometry function its painter and its
-  // hit-test both read -- so this follows the panel rather than guessing 148px
+  // THE BUBBLE SITS ON THE SIDE THE BOSS IS ON (user, 2026-08-01). Parked under the minimap it was
+  // in a fixed corner regardless of where you were being sent, so the arrow was doing all the work
+  // and the bubble was doing none of it. Placed by bearing, the panel itself becomes the pointer:
+  // the boss is north-east, the bubble is up and to the right, and you have read the direction
+  // before you have read a word of it.
   const mr=(typeof miniRect==='function')?miniRect():null;
-  let y=Math.round((mr?(mr.y+mr.h):Math.round((10+148)*us))+8*us);
-  const x=mr?mr.x:Math.round(BO_LEFT*us);
+  const pad2=Math.round(10*us);
+  // the HUD owns both ends: the minimap and the button row at the top, the orbs, xp bar and
+  // ability buttons at the bottom. The same band the edge arrows are clamped to.
+  const loY=Math.round(96*us), hiY=H-Math.round(150*us);
+  const placed=[];
 
   ctx.save();
   ctx.setTransform(DPR,0,0,DPR,0,0);
   for(const t of targets){
+    // bearing first: it decides where the whole thing goes, so it is computed before the layout.
+    // World bearing plus the camera's rotation -- 08_render's camRot is driven by Z/C on PC, and
+    // ignoring it points a confident arrow at the wrong quarter of the map.
+    const ang=Math.atan2(t.y-player.y, t.x-player.x)
+            + ((typeof camRot!=='undefined')?camRot:0);
+    const cs=Math.cos(ang), sn=Math.sin(ang);
     const GB=(typeof GBOSS!=='undefined')?GBOSS[t.b]:null;
     const col=(GB&&GB.col)?GB.col:'#c8a06a';
     const lv=(t.lv!==undefined)?t.lv:bossCompassLv(t);
@@ -266,7 +278,12 @@ function drawBossObjectives(){
 
     // ONLY THE PRIMARY GETS ITS DESCRIPTION. Two full bubbles is a wall; the second entry is
     // context, not an objective, so it stays a single line.
-    const txtX=x+pad+spr+pad, txtW=w-(pad+spr+pad)-pad;
+    // WIDTH ONLY, not position. txtX depends on x, and x is not chosen until the placement block
+    // below -- reading it here put a `let` in its temporal dead zone and drawBossObjectives threw
+    // on every frame ("Cannot access 'x' before initialization"), which is the same trap the mount
+    // draw fell into with `_up`. The wrap only needs the WIDTH, and the width is a function of the
+    // bubble, not of where the bubble ends up.
+    const txtW=w-(pad+spr+pad)-pad;
     let desc=[];
     if(t.primary && GB && GB.desc){
       ctx.font=f3+'px "Pixelify Sans",monospace';
@@ -275,6 +292,33 @@ function drawBossObjectives(){
     const h=Math.max(spr+pad*2, pad + f1+Math.round(3*us) + f2+Math.round(3*us)
                                  + desc.length*(f3+Math.round(2*us)) + pad);
 
+    // ---- WHERE IT GOES, from the bearing ----
+    // Left or right when the bearing is more sideways than vertical, top or bottom otherwise, and
+    // then clamped inside the band the HUD leaves free. The arrow lives on the OUTWARD side, so it
+    // always sits between the bubble and the edge the boss is beyond.
+    const sideways=Math.abs(cs)>=Math.abs(sn);
+    const arrowGap=Math.round(20*us);
+    let x, y;
+    if(sideways){
+      x = (cs>0) ? (W-w-pad2-arrowGap) : (pad2+arrowGap);
+      y = H/2 + sn*(H*0.30) - h/2;
+    } else {
+      x = W/2 + cs*(W*0.30) - w/2;
+      y = (sn>0) ? (H-h-pad2) : pad2;
+    }
+    x=Math.max(pad2+arrowGap, Math.min(W-w-pad2-arrowGap, x));
+    y=Math.max(loY, Math.min(hiY-h, y));
+    // KEEP OFF THE MINIMAP. It is a fixed square in the top-left and a bubble laid over it hides
+    // the other half of the orientation the player is using.
+    if(mr && x < mr.x+mr.w+pad2 && y < mr.y+mr.h+pad2) y = mr.y+mr.h+pad2;
+    // ...and off each other. Two objectives on the same bearing would stack in the same place.
+    for(const q of placed){
+      if(Math.abs(x-q.x)<w && Math.abs(y-q.y)<Math.max(h,q.h)+Math.round(4*us))
+        y = q.y+q.h+Math.round(6*us);
+    }
+    y=Math.max(loY, Math.min(hiY-h, y));
+    placed.push({x:x,y:y,h:h});
+
     ctx.globalAlpha=t.alive?0.94:0.7;
     ctx.fillStyle='rgba(12,9,16,0.82)';
     ctx.beginPath();
@@ -282,6 +326,7 @@ function drawBossObjectives(){
     ctx.fill();
     ctx.lineWidth=1; ctx.strokeStyle=t.alive?col:'#4a4552'; ctx.stroke();
     ctx.fillStyle=col; ctx.fillRect(x,y,Math.max(2,Math.round(2*us)),h);   // the rule
+    const txtX=x+pad+spr+pad;
 
     // ---- the sprite, through the same path the world draws it with ----
     const slot=(typeof bossArt==='function')?bossArt(t.b):t.b;
@@ -325,39 +370,23 @@ function drawBossObjectives(){
       for(const line of desc){ ty+=f3+Math.round(2*us); ctx.fillText(line, txtX, ty); }
     }
 
-    // ---- THE NEEDLE, and it is ALWAYS pointing (user, 2026-07-31: "make sure it's always
-    // pointing in the direction of the boss") ----
-    // The edge arrow is deliberately suppressed once the boss is on screen, and it is capped to two
-    // markers -- both correct for a screen-edge hint, and both mean there are moments with nothing
-    // pointing anywhere. A needle inside the bubble has neither problem: it belongs to the objective
-    // rather than to the screen, so it is drawn every single frame the objective is.
-    //
-    // THE ANGLE IS THE WORLD BEARING PLUS THE CAMERA'S ROTATION, and the second term is not
-    // optional. I first wrote this as the bare world bearing on the reasoning that the camera is
-    // axis-aligned -- it is not. 08_render carries camRot, and 07_update drives it from Z and C on
-    // PC (X resets it), so a player who has turned the view would have been sent off by exactly
-    // that angle with a needle that looked perfectly confident.
-    //
-    // w2s rotates its delta by +camRot, so screenBearing = worldBearing + camRot. Taking the world
-    // bearing and adding the rotation, rather than projecting through w2s, keeps this correct for a
-    // target so far away that its projected point has left any sane coordinate range -- which is
-    // the whole point of a needle that is never range-capped.
-    const nAng=Math.atan2(t.y-player.y, t.x-player.x)
-             + ((typeof camRot!=='undefined')?camRot:0);
-    const nR=Math.round(9*us), nx=x+w-pad-nR, ny=y+h-pad-nR;
+    // ---- THE ARROW, BESIDE THE BUBBLE ----
+    // Outside it, on whichever face points at the boss, and rotated to the exact bearing so it is a
+    // direction rather than a side. Never inside the panel: an arrow among the text competes with
+    // the text, and the whole reason the bubble moved is that the direction should be readable
+    // before any of the words are.
+    const ar=Math.round(9*us);
+    let ax, ay;
+    if(sideways){ ax=(cs>0)?(x+w+arrowGap*0.55):(x-arrowGap*0.55); ay=y+h/2; }
+    else        { ax=x+w/2; ay=(sn>0)?(y+h+arrowGap*0.55):(y-arrowGap*0.55); }
     ctx.save();
-    ctx.translate(nx,ny);
-    ctx.globalAlpha=t.alive?0.95:0.6;
-    ctx.fillStyle='rgba(0,0,0,0.45)';
-    ctx.beginPath(); ctx.arc(0,0,nR,0,6.29); ctx.fill();
-    ctx.rotate(nAng);
+    ctx.translate(ax,ay); ctx.rotate(ang);
+    ctx.globalAlpha=t.alive?1:0.55;
     ctx.fillStyle=t.alive?col:'#6a6472';
     ctx.beginPath();
-    ctx.moveTo(nR*0.78,0); ctx.lineTo(-nR*0.44,nR*0.52); ctx.lineTo(-nR*0.16,0); ctx.lineTo(-nR*0.44,-nR*0.52);
+    ctx.moveTo(ar,0); ctx.lineTo(-ar*0.62,ar*0.66); ctx.lineTo(-ar*0.24,0); ctx.lineTo(-ar*0.62,-ar*0.66);
     ctx.closePath(); ctx.fill();
     ctx.restore();
-
-    y+=h+Math.round(5*us);
   }
   ctx.globalAlpha=1; ctx.textAlign='left';
   ctx.restore();

@@ -2372,7 +2372,10 @@ function render(){
   if(typeof drawLootPrompt==='function') drawLootPrompt();
   drawPortalPrompt();
   // boss compass: tiny edge markers pointing at nearby lairs (09d_bosscompass.js)
-  if(typeof drawBossCompass==='function') drawBossCompass();
+  // drawBossCompass (the bare screen-edge arrows) is no longer called: the objective bubble now
+  // places itself on the side the boss is on and carries its own arrow, so the edge markers were a
+  // second, worse pointer at the same thing. The function is kept in 09d for now rather than
+  // deleted, because it is the fallback if the bubble is ever made optional.
   if(typeof drawBossObjectives==='function') drawBossObjectives();
   // where you are / who you are / who you are with — top of screen, yields to the bar below
   if(typeof drawStatusBanner==='function') drawStatusBanner();
