@@ -71,6 +71,48 @@ function bossCompassTargets(){
   out.sort((a,b)=>((a.alive?0:1)-(b.alive?0:1)) || (a.d-b.d));
   return out.slice(0,BC_MAX);
 }
+
+// ---- THE ONE YOU SHOULD BE WALKING TOWARD ----------------------------------------------------
+// User, 2026-07-31: "make sure the quest always points towards the boss of the appropriate player
+// level."
+//
+// bossCompassTargets is a PROXIMITY query -- it answers "what is near me", and near me may be
+// nothing at all. Stand in the middle of a 3700x1700 world with every lair beyond bcRange and the
+// tracker is empty, which is exactly when a player most wants to be told where to go. And when it
+// is not empty it is still sorted by distance, so at a boundary it will happily point you at the
+// Lv 44 lair forty tiles away while you are Lv 22.
+//
+// So there is one more target, chosen by LEVEL rather than by distance and never range-capped: the
+// live lair whose boss level is closest to yours. Ties break toward the nearer one, and toward the
+// one you can actually fight -- a lair on its half-hour lockout is only offered if nothing else is
+// available, because sending you across the map to a locked door is worse than saying nothing.
+function bossPrimaryTarget(){
+  if(typeof curRoom==='undefined'||!curRoom||!curRoom.lairs) return null;
+  if(typeof player==='undefined'||!player) return null;
+  const plv=(typeof rpg!=='undefined'&&rpg&&rpg.lvl)?rpg.lvl:1;
+  let best=null, bestScore=Infinity;
+  for(const k in curRoom.lairs){
+    const L=curRoom.lairs[k]; if(!L||L.cx==null) continue;
+    const lv=(typeof grvLvAt==='function')?Math.round(grvLvAt(L.cx/TILE,L.cy/TILE)):0;
+    const cd=(typeof ringBossCd!=='undefined'&&ringBossCd)?(ringBossCd[L.b]||0):0;
+    const d=Math.hypot(L.cx-player.x, L.cy-player.y);
+    // the level gap dominates; distance only separates equals, and a locked lair is pushed behind
+    // every unlocked one by a margin no level gap on a 1..50 ladder can reach
+    const score=Math.abs(lv-plv)*1000 + Math.min(999,d/TILE) + (cd>0?1e6:0);
+    if(score<bestScore){ bestScore=score; best={b:L.b, x:L.cx, y:L.cy, d:d, alive:cd<=0, lv:lv, primary:true}; }
+  }
+  return best;
+}
+
+// What the TRACKER lists: the level-appropriate objective first and always, then whatever else is
+// near enough to matter, never repeating the primary and never more than BC_MAX rows.
+function bossObjectiveList(){
+  const near=bossCompassTargets();
+  const pri=bossPrimaryTarget();
+  if(!pri) return near;
+  const rest=near.filter(t=>t.b!==pri.b);
+  return [pri].concat(rest).slice(0,BC_MAX);
+}
 // THE BOSS'S OWN LEVEL (user, 2026-07-31: "give it the boss level"). It used to widen the reading
 // into the band its zone spans -- "20-22" -- which is the ground's level, not the animal's. The
 // boss is spawned with lv = grvLvAt at its own lair (spawnRingBoss), so reading the same function
@@ -89,7 +131,9 @@ function bossCdText(sec){
 function drawBossCompass(){
   if(typeof ctx==='undefined'||!ctx) return;
   if(typeof curRoom==='undefined'||!curRoom||curRoom.town||curRoom.dungeon) return;
-  const targets=bossCompassTargets();
+  // the same list the tracker shows, so the arrow and the row can never disagree about what you
+  // are being sent at
+  const targets=bossObjectiveList();
   if(!targets.length) return;
   const us=(typeof UIS!=='undefined')?UIS:1;
   const sz=Math.round(BC_SIZE*us), mg=Math.round(BC_MARGIN*us);
@@ -123,47 +167,11 @@ function drawBossCompass(){
     ctx.fillStyle=t.alive?'#ffd07a':'#6a6472';
     ctx.beginPath(); ctx.moveTo(sz*0.34,0); ctx.lineTo(-sz*0.20,sz*0.24); ctx.lineTo(-sz*0.20,-sz*0.24);
     ctx.closePath(); ctx.fill();
-    // BACK TO THE CANVAS BASE, NOT TO IDENTITY. 01_constants.js establishes
-    // setTransform(DPR,0,0,DPR,0,0) as this canvas's identity. Resetting to a true 1:1 matrix
-    // drew everything below at 1/DPR scale AND 1/DPR position -- correct on a non-retina desktop,
-    // wrong on every phone this PWA targets. The arrow above is drawn before the reset, which is
-    // why it looked right while the plate floated half-size in the wrong place.
-    ctx.setTransform(DPR,0,0,DPR,0,0);
-    // the portrait plate
-    ctx.globalAlpha=a;
-    const GB=(typeof GBOSS!=='undefined')?GBOSS[t.b]:null;
-    ctx.fillStyle='rgba(12,9,16,0.82)';
-    ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(mx-sz/2-2,my-sz/2-2,sz+4,sz+4,4); else ctx.rect(mx-sz/2-2,my-sz/2-2,sz+4,sz+4);
-    ctx.fill();
-    ctx.lineWidth=1.5; ctx.strokeStyle=(GB&&GB.col)?GB.col:'#8a6a34'; ctx.stroke();
-    // the boss's own art, through the same path the world uses
-    const slot=(typeof bossArt==='function')?bossArt(t.b):t.b;
-    let im=null;
-    if(typeof _bossAnim!=='undefined' && _bossAnim[slot] && _bossAnim[slot].idle
-       && _bossAnim[slot].idle[0] && _bossAnim[slot].idle[0].naturalWidth) im=_bossAnim[slot].idle[0];
-    if(!im && typeof _bossImg!=='undefined' && _bossImg[slot] && _bossImg[slot].naturalWidth) im=_bossImg[slot];
-    if(im){
-      const bb=(typeof _imgBBox==='function')?_imgBBox(im):{x:0,y:0,w:im.naturalWidth,h:im.naturalHeight};
-      const sc=sz/Math.max(bb.w,bb.h), w=bb.w*sc, h=bb.h*sc;
-      ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(im, bb.x,bb.y,bb.w,bb.h, Math.round(mx-w/2), Math.round(my-h/2), Math.round(w), Math.round(h));
-    } else if(GB){
-      ctx.fillStyle=GB.col||'#c8a06a';
-      ctx.beginPath(); ctx.arc(mx,my,sz*0.32,0,6.29); ctx.fill();
-    }
-    // the boss's level, under the plate. This is the number that decides whether to walk toward it.
-    const lv=bossCompassLv(t);
-    if(lv){
-      const txt='Lv '+lv;
-      const fs=Math.max(8,Math.round(9*us));
-      ctx.font='bold '+fs+'px "Pixelify Sans",monospace';
-      ctx.textAlign='center';
-      const ly=my+sz/2+fs+1;
-      ctx.fillStyle='rgba(0,0,0,.75)'; ctx.fillText(txt,mx+1,ly+1);
-      ctx.fillStyle=t.alive?'#d8cfb8':'#6a6472'; ctx.fillText(txt,mx,ly);
-      ctx.textAlign='left';
-    }
+    // THE PLATE AND THE LEVEL MOVED INTO THE BUBBLE. What is left here is the one thing a
+    // bubble parked under the minimap cannot express: which way to walk. A portrait at the screen
+    // edge was always a compromise -- 22px of a boss is a smudge -- and now that its name, level,
+    // distance and description are all in one place, repeating a worse copy of it out here would
+    // only split the player's attention between two objects saying the same thing.
     ctx.restore();
   }
 }
@@ -185,61 +193,135 @@ function drawBossCompass(){
 //
 //  It never appears in town or in a dungeon, for the same reason the compass does not: in a dungeon
 //  there is one boss and you are already walking at it.
-const BO_W    = 132;    // px, before UI scale
-const BO_ROW  = 30;
-const BO_LEFT = 10;
+// ONE BUBBLE, WITH THE SPRITE IN IT (user, 2026-07-31: "make the description and level and
+// everything part of the bubble with the sprite").
+//
+// It was two objects saying halves of the same thing: a 22px portrait pinned to the screen edge,
+// and a separate text row under the minimap. You had to look in two places and join them up
+// yourself, and neither had room for the one line that tells you what the fight actually is --
+// GBOSS carries a `desc` for every boss ("A patient colossus that erupts in rings of thorns. Weave
+// the gaps and wear it down.") and nothing had ever shown it outside the boss-intro banner.
+//
+// Now the bubble is the whole objective: the boss's own art on the left, then its name, its level,
+// how far, and what it does. The screen edge keeps a bare ARROW -- direction is the one thing a
+// bubble parked under the minimap genuinely cannot express.
+const BO_W     = 232;     // px at UI scale 1
+const BO_SPR   = 40;      // the portrait inside the bubble
+const BO_PAD   = 7;
+const BO_LEFT  = 10;
+
+// Wrap `txt` to `max` px at the current font, at most `lines` lines, ellipsising the last.
+function _boWrap(txt,max,lines){
+  const words=String(txt).split(/\s+/);
+  const out=[]; let cur='';
+  for(const wd of words){
+    const t=cur?cur+' '+wd:wd;
+    if(ctx.measureText(t).width<=max){ cur=t; continue; }
+    if(cur) out.push(cur);
+    cur=wd;
+    if(out.length>=lines) break;
+  }
+  if(cur && out.length<lines) out.push(cur);
+  if(out.length>=lines){
+    // the last line carries whatever is left, cut to fit
+    let last=out[lines-1];
+    if(ctx.measureText(last).width>max || words.join(' ').length>out.join(' ').length){
+      while(last.length>1 && ctx.measureText(last+'\u2026').width>max) last=last.slice(0,-1);
+      if(words.join(' ').length>out.join(' ').length) last+='\u2026';
+      out[lines-1]=last;
+    }
+  }
+  return out.slice(0,lines);
+}
 
 function drawBossObjectives(){
   if(typeof ctx==='undefined'||!ctx) return;
   if(typeof curRoom==='undefined'||!curRoom||curRoom.town||curRoom.dungeon) return;
-  const targets=bossCompassTargets();
+  const targets=bossObjectiveList();
   if(!targets.length) return;
   const us=(typeof UIS!=='undefined')?UIS:1;
-  const w=Math.round(BO_W*us), rowh=Math.round(BO_ROW*us);
-  // under the minimap when there is one, and tight to the top corner when there is not
-  // miniRect is the ONE geometry function the minimap's painter and hit-test both read, so asking
-  // it is how this stays under the panel when the panel resizes rather than guessing 148px.
+  const w=Math.round(BO_W*us), spr=Math.round(BO_SPR*us), pad=Math.round(BO_PAD*us);
+
+  // under the minimap, anchored to miniRect() -- the one geometry function its painter and its
+  // hit-test both read -- so this follows the panel rather than guessing 148px
   const mr=(typeof miniRect==='function')?miniRect():null;
-  const mmB=mr ? (mr.y+mr.h) : Math.round((10+148)*us);
-  let y=Math.round(mmB+8*us), x=mr?mr.x:Math.round(BO_LEFT*us);
+  let y=Math.round((mr?(mr.y+mr.h):Math.round((10+148)*us))+8*us);
+  const x=mr?mr.x:Math.round(BO_LEFT*us);
 
   ctx.save();
   ctx.setTransform(DPR,0,0,DPR,0,0);
   for(const t of targets){
     const GB=(typeof GBOSS!=='undefined')?GBOSS[t.b]:null;
     const col=(GB&&GB.col)?GB.col:'#c8a06a';
-    const lv=bossCompassLv(t);
+    const lv=(t.lv!==undefined)?t.lv:bossCompassLv(t);
     const cd=(typeof ringBossCd!=='undefined'&&ringBossCd)?(ringBossCd[t.b]||0):0;
-    // DISTANCE IN TILES, not pixels. A tile is the unit the player actually moves in and 3000px
-    // means nothing to anybody; 68 tiles is a walk you can picture.
     const tiles=Math.round(t.d/TILE);
+    const f1=Math.max(10,Math.round(10.5*us));   // name
+    const f2=Math.max(8,Math.round(9*us));       // level + distance
+    const f3=Math.max(8,Math.round(8.5*us));     // description
 
-    ctx.globalAlpha=t.alive?0.92:0.66;
-    ctx.fillStyle='rgba(12,9,16,0.78)';
+    // ONLY THE PRIMARY GETS ITS DESCRIPTION. Two full bubbles is a wall; the second entry is
+    // context, not an objective, so it stays a single line.
+    const txtX=x+pad+spr+pad, txtW=w-(pad+spr+pad)-pad;
+    let desc=[];
+    if(t.primary && GB && GB.desc){
+      ctx.font=f3+'px "Pixelify Sans",monospace';
+      desc=_boWrap(GB.desc, txtW, 2);
+    }
+    const h=Math.max(spr+pad*2, pad + f1+Math.round(3*us) + f2+Math.round(3*us)
+                                 + desc.length*(f3+Math.round(2*us)) + pad);
+
+    ctx.globalAlpha=t.alive?0.94:0.7;
+    ctx.fillStyle='rgba(12,9,16,0.82)';
     ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(x,y,w,rowh,5); else ctx.rect(x,y,w,rowh);
+    if(ctx.roundRect) ctx.roundRect(x,y,w,h,6); else ctx.rect(x,y,w,h);
     ctx.fill();
-    ctx.fillStyle=col; ctx.fillRect(x,y,Math.max(2,Math.round(2*us)),rowh);   // the rule
+    ctx.lineWidth=1; ctx.strokeStyle=t.alive?col:'#4a4552'; ctx.stroke();
+    ctx.fillStyle=col; ctx.fillRect(x,y,Math.max(2,Math.round(2*us)),h);   // the rule
 
-    const padL=x+Math.round(7*us);
-    const f1=Math.max(9,Math.round(10*us)), f2=Math.max(8,Math.round(8.5*us));
+    // ---- the sprite, through the same path the world draws it with ----
+    const slot=(typeof bossArt==='function')?bossArt(t.b):t.b;
+    let im=null;
+    if(typeof _bossAnim!=='undefined' && _bossAnim[slot] && _bossAnim[slot].idle
+       && _bossAnim[slot].idle[0] && _bossAnim[slot].idle[0].naturalWidth) im=_bossAnim[slot].idle[0];
+    if(!im && typeof _bossImg!=='undefined' && _bossImg[slot] && _bossImg[slot].naturalWidth) im=_bossImg[slot];
+    const sx=x+pad+Math.round(2*us), sy=y+Math.round((h-spr)/2);
+    if(im){
+      const bb=(typeof _imgBBox==='function')?_imgBBox(im):{x:0,y:0,w:im.naturalWidth,h:im.naturalHeight};
+      const sc=spr/Math.max(bb.w,bb.h), iw=bb.w*sc, ih=bb.h*sc;
+      ctx.imageSmoothingEnabled=false;
+      if(!t.alive) ctx.globalAlpha=0.45;
+      ctx.drawImage(im, bb.x,bb.y,bb.w,bb.h,
+                    Math.round(sx+(spr-iw)/2), Math.round(sy+(spr-ih)/2), Math.round(iw), Math.round(ih));
+      ctx.globalAlpha=t.alive?0.94:0.7;
+    } else {
+      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(sx+spr/2, sy+spr/2, spr*0.3, 0, 6.29); ctx.fill();
+    }
+
+    // ---- the text ----
+    let ty=y+pad+f1;
     ctx.textAlign='left';
     ctx.font='bold '+f1+'px "Pixelify Sans",monospace';
     ctx.fillStyle=t.alive?'#e8dcc0':'#8a8494';
-    const nm=(GB&&GB.n)?GB.n:'A boss';
-    ctx.fillText(nm, padL, y+f1+Math.round(3*us));
+    ctx.fillText((GB&&GB.n)?GB.n:'A boss', txtX, ty);
 
-    ctx.font=f2+'px "Pixelify Sans",monospace';
-    // Lv in the boss's colour so the eye lands on it first -- it is the decision, the rest is detail
+    ty+=f2+Math.round(4*us);
+    ctx.font='bold '+f2+'px "Pixelify Sans",monospace';
     const lvTxt='Lv '+lv;
     ctx.fillStyle=t.alive?col:'#6a6472';
-    ctx.fillText(lvTxt, padL, y+rowh-Math.round(5*us));
-    const lvW=ctx.measureText(lvTxt).width;
+    ctx.fillText(lvTxt, txtX, ty);
+    ctx.font=f2+'px "Pixelify Sans",monospace';
     ctx.fillStyle=t.alive?'#a89e8c':'#5f5a68';
-    const state = t.alive ? (tiles+' tiles') : ('back in '+bossCdText(cd));
-    ctx.fillText('  \u00b7  '+state, padL+lvW, y+rowh-Math.round(5*us));
+    ctx.fillText('  \u00b7  '+(t.alive?(tiles+' tiles'):('back in '+bossCdText(cd))),
+                 txtX+ctx.measureText(lvTxt).width, ty);
 
-    y+=rowh+Math.round(4*us);
+    if(desc.length){
+      ctx.font=f3+'px "Pixelify Sans",monospace';
+      ctx.fillStyle='#8f8778';
+      for(const line of desc){ ty+=f3+Math.round(2*us); ctx.fillText(line, txtX, ty); }
+    }
+
+    y+=h+Math.round(5*us);
   }
   ctx.globalAlpha=1; ctx.textAlign='left';
   ctx.restore();
