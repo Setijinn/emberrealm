@@ -144,7 +144,11 @@ function drawBossCompass(){
   for(const t of targets){
     // is it already on screen? then say nothing.
     const sp=(typeof w2s==='function')?w2s(t.x,t.y):{x:W/2,y:H/2};
-    const onScreen=(sp.x>-40&&sp.x<W+40&&sp.y>-40&&sp.y<H+40);
+    // ON SCREEN USED TO MEAN SILENCE. That is right for a boss you can see, and wrong for the
+    // several frames where it is technically within the viewport rectangle but behind terrain, or
+    // a pixel inside the edge -- the arrow blinked out and back. It fades instead, so there is
+    // never a moment with nothing pointing.
+    const onScreen=(sp.x>40&&sp.x<W-40&&sp.y>40&&sp.y<H-40);
     if(onScreen) continue;
     // direction from the CENTRE of the screen, then pushed out to the edge
     const ang=Math.atan2(sp.y-H/2, sp.x-W/2);
@@ -320,6 +324,38 @@ function drawBossObjectives(){
       ctx.fillStyle='#8f8778';
       for(const line of desc){ ty+=f3+Math.round(2*us); ctx.fillText(line, txtX, ty); }
     }
+
+    // ---- THE NEEDLE, and it is ALWAYS pointing (user, 2026-07-31: "make sure it's always
+    // pointing in the direction of the boss") ----
+    // The edge arrow is deliberately suppressed once the boss is on screen, and it is capped to two
+    // markers -- both correct for a screen-edge hint, and both mean there are moments with nothing
+    // pointing anywhere. A needle inside the bubble has neither problem: it belongs to the objective
+    // rather than to the screen, so it is drawn every single frame the objective is.
+    //
+    // THE ANGLE IS THE WORLD BEARING PLUS THE CAMERA'S ROTATION, and the second term is not
+    // optional. I first wrote this as the bare world bearing on the reasoning that the camera is
+    // axis-aligned -- it is not. 08_render carries camRot, and 07_update drives it from Z and C on
+    // PC (X resets it), so a player who has turned the view would have been sent off by exactly
+    // that angle with a needle that looked perfectly confident.
+    //
+    // w2s rotates its delta by +camRot, so screenBearing = worldBearing + camRot. Taking the world
+    // bearing and adding the rotation, rather than projecting through w2s, keeps this correct for a
+    // target so far away that its projected point has left any sane coordinate range -- which is
+    // the whole point of a needle that is never range-capped.
+    const nAng=Math.atan2(t.y-player.y, t.x-player.x)
+             + ((typeof camRot!=='undefined')?camRot:0);
+    const nR=Math.round(9*us), nx=x+w-pad-nR, ny=y+h-pad-nR;
+    ctx.save();
+    ctx.translate(nx,ny);
+    ctx.globalAlpha=t.alive?0.95:0.6;
+    ctx.fillStyle='rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.arc(0,0,nR,0,6.29); ctx.fill();
+    ctx.rotate(nAng);
+    ctx.fillStyle=t.alive?col:'#6a6472';
+    ctx.beginPath();
+    ctx.moveTo(nR*0.78,0); ctx.lineTo(-nR*0.44,nR*0.52); ctx.lineTo(-nR*0.16,0); ctx.lineTo(-nR*0.44,-nR*0.52);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
 
     y+=h+Math.round(5*us);
   }
