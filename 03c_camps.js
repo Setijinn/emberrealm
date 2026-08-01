@@ -114,16 +114,64 @@ const CAMP_DEC = [
   // 9 THE RIFT -- nobody lives here, they are digging
   ['7_1','5_3','3_2','5_0']           // lava crystal, crystal cluster, a survey pillar, molten pit
 ];
+// THE POOL COMES FROM THE ZONE'S BOSS, not from the ground. bossDecArt() is the same call the den
+// makes -- 03_entities:350, DEC_SLOT with a bossArt() fallback -- so a camp in the Grovewarden's
+// province is dressed out of the Grovewarden's set, and walking from its camps into its lair is one
+// continuous place. That is also what makes a province worth grinding: the camps look like they
+// belong to the thing at the end of it.
+//
+// Then two corrections on top of the raw set:
+//   - the seven pieces above are still cut, whatever set they came from
+//   - and every pool is TOPPED UP TO SIX, because four pieces against five or six art props per
+//     camp meant a repeat on screen -- the Verdant camp showed the same arch twice and Cinderwatch
+//     showed the molten pit twice. Fire tops up first: a campfire belongs in every camp that has
+//     ever been lived in, whoever rules the province.
+const CAMP_DEC_BAN = {0:[3], 1:[1], 4:[0,1], 6:[2], 8:[2,3]};
+const CAMP_DEC_FIRE = ['5_2','7_3','6_3'];   // stone fire pit, campfire, standing brazier
+const CAMP_DEC_FILL = ['3_1','5_1'];         // spoil, and a skull pile -- for the two thinnest sets
+const CAMP_DEC_N    = 6;
+
+// Resolved once per camp at stamp time and stored on it, so the draw is a lookup and the tables are
+// read exactly once. ZBOSS and bossDecArt both live in 03_entities, which loads before this file.
+function campDecPool(z, band){
+  const pool=[];
+  const boss=(typeof ZBOSS!=='undefined' && ZBOSS[z]!==undefined) ? ZBOSS[z] : -1;
+  if(boss>=0 && typeof bossDecArt==='function'){
+    const set=bossDecArt(boss);
+    const ban=CAMP_DEC_BAN[set]||[];
+    for(let k=0;k<4;k++) if(ban.indexOf(k)<0) pool.push(set+'_'+k);
+  } else {
+    // A PROVINCE WITH NO BOSS still gets a camp, and ZBOSS carries two -1s. Fall back to the
+    // material the ground is made of, which is what this file used before the bosses did.
+    const list=CAMP_DEC[Math.max(0,Math.min(CAMP_DEC.length-1, band|0))];
+    for(const id of list) pool.push(id);
+  }
+  for(const id of CAMP_DEC_FIRE) if(pool.length<CAMP_DEC_N && pool.indexOf(id)<0) pool.push(id);
+  for(const id of CAMP_DEC_FILL) if(pool.length<CAMP_DEC_N && pool.indexOf(id)<0) pool.push(id);
+  return pool;
+}
+// the piece a camp puts in its middle: the first real fire its pool holds. Every pool holds one --
+// sets 5, 6 and 7 own theirs and the rest are topped up with the trio above.
+function campFireArt(pool, tx, ty){
+  // ITS OWN FIRE FIRST. The boss's own pieces are pushed before the top-up, so the first fire in
+  // pool order is the one that came from its set -- 5_2 for the Deep set, 6_3 for the graves, 7_3
+  // for the Ashfall. Only where the set owns no fire does it fall to the trio, and there it is
+  // hashed rather than fixed: taking the first would have put the identical stone pit at the centre
+  // of ten of the thirteen provinces.
+  const own=[]; for(const id of pool) if(CAMP_DEC_FIRE.indexOf(id)>=0) own.push(id);
+  if(!own.length) return null;
+  const pre=pool[0].charAt(0);                 // the set the boss's own pieces came from
+  for(const id of own) if(id.charAt(0)===pre) return id;
+  return own[_campHash(tx|0, ty|0, 950)%own.length];
+}
+
 const _campDec = {};
-function campDecArt(band){
-  const list = CAMP_DEC[Math.max(0,Math.min(CAMP_DEC.length-1, band|0))];
-  const key = band|0;
-  if(_campDec[key]) return _campDec[key];
+function campDecImg(id){
+  if(_campDec[id]) return _campDec[id];
   if(typeof window==='undefined' || typeof Image==='undefined') return null;
-  const a=[];
-  for(const id of list){ const im=new Image(); im.src='assets/env/ldec_'+id+'.png'; a.push(im); }
-  _campDec[key]=a;
-  return a;
+  const im=new Image(); im.src='assets/env/ldec_'+id+'.png';
+  _campDec[id]=im;
+  return im;
 }
 
 function campTheme(band){
@@ -217,7 +265,8 @@ function stampCamps(){
       if(!ok) continue;
 
       const camp={tx:tx, ty:ty, z:z, band:band, k:theme.k, col:theme.col,
-                  cx:(tx+.5)*TILE, cy:(ty+.5)*TILE, props:[], mobs:0, elites:0};
+                  cx:(tx+.5)*TILE, cy:(ty+.5)*TILE, props:[], mobs:0, elites:0,
+                  dec:campDecPool(z, band)};
       _campFill(R, camp, theme, nMob);
       R.camps.push(camp);
       placed++;
@@ -278,6 +327,11 @@ function _campFill(R, camp, theme, nMob){
   // A ring rather than a scatter, because a ring reads as a camp and a scatter reads as litter.
   // They reject against the enemies as well as against each other, so nothing stands inside a tent.
   const nProp=10+Math.round(_campRnd(camp.tx,camp.ty,11)*4);
+  // THE CENTREPIECE IS SETTLED FIRST so the ring can be told not to use it. Left in the pool, the
+  // camp fire turned up twice -- once in the middle where it is the centrepiece and once out on the
+  // ring where it reads as a second, smaller camp inside the first.
+  const fireId=camp.dec?campFireArt(camp.dec, camp.tx, camp.ty):null;
+  const ringDec=(camp.dec||[]).filter(id=>id!==fireId);
   for(let i=0;i<nProp;i++){
     for(let tryN=0; tryN<18; tryN++){
       const a=(i/nProp)*6.28318 + (_campRnd(camp.tx,camp.ty,100+i*7+tryN)-0.5)*0.7;
@@ -295,8 +349,10 @@ function _campFill(R, camp, theme, nMob){
       // built by somebody in a place that was already there.
       // HALF AND HALF. It started at one in three and the art plainly carries the camp better than
       // the shapes do, so the split moved: the drawn props are the human half a den has no piece for.
-      if(i%2===1){
-        camp.props.push({t:'art', a:(_campHash(camp.tx,camp.ty,900)+i)%4, b:camp.band, x:x, y:y});
+      if(i%2===1 && ringDec.length){
+        // walked, not drawn independently, so all five show before any shows twice
+        const id=ringDec[(_campHash(camp.tx,camp.ty,900)+((i/2)|0))%ringDec.length];
+        camp.props.push({t:'art', id:id, x:x, y:y});
       } else {
         const kind=theme.props[(_campHash(camp.tx,camp.ty,300)+i)%theme.props.length];
         camp.props.push({t:kind, x:x, y:y});
@@ -307,7 +363,14 @@ function _campFill(R, camp, theme, nMob){
   }
   // the fire in the middle, wherever the middle is still free -- it is what makes the centre read
   // as occupied, but it never displaces a body
-  if(far(camp.tx,camp.ty,1.6)) camp.props.push({t:'fire', x:camp.tx, y:camp.ty});
+  // THE CENTREPIECE IS REAL ART. It was the drawn flame in every camp -- a 20px canvas fire at the
+  // middle of the one place a camp is supposed to be read from -- while bands 0 and 4 were already
+  // showing a proper stone fire pit out on the ring, which made the centre the worst-looking thing
+  // in the camp. The drawn one stays as the fallback for a pool that somehow has no fire in it.
+  if(far(camp.tx,camp.ty,1.6)){
+    camp.props.push(fireId ? {t:'art', id:fireId, x:camp.tx, y:camp.ty}
+                        : {t:'fire', x:camp.tx, y:camp.ty});
+  }
 
   // the spawn bucket index is built once per room and cached; adding points after it exists would
   // leave them invisible to the streamer
@@ -376,8 +439,7 @@ function drawCampProp(p, x, y, col){
   // a borrowed den piece: real art, so it goes straight down at the scale the dens draw it at
   // (TILE*1.1) with its foot on the anchor rather than its middle
   if(p.t==='art'){
-    const set=campDecArt(p.b||0);
-    const im=set&&set[p.a|0];
+    const im=campDecImg(p.id);
     if(im&&im.naturalWidth){
       const w=TILE*1.15, h=w*im.height/im.width;
       ctx.save();
