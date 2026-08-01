@@ -117,9 +117,23 @@ function petFeedTier(uid,t,n){
   const d=petFoodDef(t);
   petFeedPower(p, d.pow*use);
   savePets(); return use; }
+// BOSSES AND ELITES ONLY, AND RARELY (user, 2026-08-01: "food should be a very very rare drop
+// only from bosses and an even more rare drop off elites").
+//
+// It was 60% from a boss, 24% from an elite and -- the part that made food ordinary -- 5.5% from
+// EVERY trash mob in the game. Trash is what you kill thousands of, so the trickle from it was the
+// real supply and the boss drop was a bonus on top. Food was the only growth currency in the game
+// and it rained.
+//
+// Now nothing but a boss or an elite pays out at all, and the elite pays LESS often than the boss
+// rather than more, which inverts the old ordering: an elite was 24% against a boss's 60% but
+// there are perhaps fifty elites for every boss, so elites were the bigger source by far.
+const FOOD_P_BOSS  = 0.08;   // roughly one feed every twelve bosses
+const FOOD_P_ELITE = 0.03;   // rarer still per kill, and there are many more elites
 function petFoodDropFor(e){
   if(!e || e.node) return null;
-  const p = (e.type==='B') ? 0.60 : e.elite ? 0.24 : (e.type==='s' ? 0.075 : 0.055);
+  const p = (e.type==='B') ? FOOD_P_BOSS : e.elite ? FOOD_P_ELITE : 0;
+  if(!(p>0)) return null;
   if(Math.random()>=p) return null;
   return {k:'food', t:petFoodTier(e), n:1};
 }
