@@ -209,9 +209,14 @@ function drawBossCompass(){
 // Now the bubble is the whole objective: the boss's own art on the left, then its name, its level,
 // how far, and what it does. The screen edge keeps a bare ARROW -- direction is the one thing a
 // bubble parked under the minimap genuinely cannot express.
-const BO_W     = 232;     // px at UI scale 1
-const BO_SPR   = 40;      // the portrait inside the bubble
-const BO_PAD   = 7;
+// SQUARE, not a letterbox (user, 2026-08-01: "make it more of a perfect square"). It was 232 wide
+// and about 54 tall -- a strip, which is what you get when the sprite sits BESIDE the text and the
+// description then has to run sideways. Stacking it instead, portrait over name over stats over
+// description, gives a card whose height falls out of its own contents at roughly its own width,
+// and a bigger portrait for free: 54px against 40.
+const BO_W     = 152;     // px at UI scale 1
+const BO_SPR   = 54;      // the portrait, now on its own row above the text
+const BO_PAD   = 8;
 const BO_LEFT  = 10;
 
 // Wrap `txt` to `max` px at the current font, at most `lines` lines, ellipsising the last.
@@ -278,19 +283,21 @@ function drawBossObjectives(){
 
     // ONLY THE PRIMARY GETS ITS DESCRIPTION. Two full bubbles is a wall; the second entry is
     // context, not an objective, so it stays a single line.
-    // WIDTH ONLY, not position. txtX depends on x, and x is not chosen until the placement block
-    // below -- reading it here put a `let` in its temporal dead zone and drawBossObjectives threw
-    // on every frame ("Cannot access 'x' before initialization"), which is the same trap the mount
-    // draw fell into with `_up`. The wrap only needs the WIDTH, and the width is a function of the
-    // bubble, not of where the bubble ends up.
-    const txtW=w-(pad+spr+pad)-pad;
+    // WIDTH ONLY, not position. The text is centred on the card, so where it starts depends on x --
+    // and x is not chosen until the placement block below. Reading it here put a `let` in its
+    // temporal dead zone and drawBossObjectives threw on every frame ("Cannot access 'x' before
+    // initialization"), the same trap the mount draw fell into with `_up`. The wrap only needs the
+    // WIDTH, which is a property of the card rather than of where the card ends up.
+    const txtW=w-pad*2;
     let desc=[];
     if(t.primary && GB && GB.desc){
       ctx.font=f3+'px "Pixelify Sans",monospace';
-      desc=_boWrap(GB.desc, txtW, 2);
+      desc=_boWrap(GB.desc, txtW, 3);
     }
-    const h=Math.max(spr+pad*2, pad + f1+Math.round(3*us) + f2+Math.round(3*us)
-                                 + desc.length*(f3+Math.round(2*us)) + pad);
+    // the height is whatever the stack needs, so a card with no description is simply shorter
+    // rather than a square with a hole in it
+    const h=pad + spr + Math.round(6*us) + f1 + Math.round(5*us) + f2
+            + (desc.length?Math.round(4*us)+desc.length*(f3+Math.round(2*us)):0) + pad;
 
     // ---- WHERE IT GOES, from the bearing ----
     // Left or right when the bearing is more sideways than vertical, top or bottom otherwise, and
@@ -325,8 +332,8 @@ function drawBossObjectives(){
     if(ctx.roundRect) ctx.roundRect(x,y,w,h,6); else ctx.rect(x,y,w,h);
     ctx.fill();
     ctx.lineWidth=1; ctx.strokeStyle=t.alive?col:'#4a4552'; ctx.stroke();
-    ctx.fillStyle=col; ctx.fillRect(x,y,Math.max(2,Math.round(2*us)),h);   // the rule
-    const txtX=x+pad+spr+pad;
+    ctx.fillStyle=col; ctx.fillRect(x,y,w,Math.max(2,Math.round(2*us)));   // the rule, along the top
+    const cx2=x+w/2;
 
     // ---- the sprite, through the same path the world draws it with ----
     const slot=(typeof bossArt==='function')?bossArt(t.b):t.b;
@@ -334,7 +341,7 @@ function drawBossObjectives(){
     if(typeof _bossAnim!=='undefined' && _bossAnim[slot] && _bossAnim[slot].idle
        && _bossAnim[slot].idle[0] && _bossAnim[slot].idle[0].naturalWidth) im=_bossAnim[slot].idle[0];
     if(!im && typeof _bossImg!=='undefined' && _bossImg[slot] && _bossImg[slot].naturalWidth) im=_bossImg[slot];
-    const sx=x+pad+Math.round(2*us), sy=y+Math.round((h-spr)/2);
+    const sx=x+(w-spr)/2, sy=y+pad+Math.round(2*us);
     if(im){
       const bb=(typeof _imgBBox==='function')?_imgBBox(im):{x:0,y:0,w:im.naturalWidth,h:im.naturalHeight};
       const sc=spr/Math.max(bb.w,bb.h), iw=bb.w*sc, ih=bb.h*sc;
@@ -347,27 +354,39 @@ function drawBossObjectives(){
       ctx.fillStyle=col; ctx.beginPath(); ctx.arc(sx+spr/2, sy+spr/2, spr*0.3, 0, 6.29); ctx.fill();
     }
 
-    // ---- the text ----
-    let ty=y+pad+f1;
-    ctx.textAlign='left';
+    // ---- the text, centred under the portrait ----
+    let ty=y+pad+spr+Math.round(6*us)+f1;
+    ctx.textAlign='center';
     ctx.font='bold '+f1+'px "Pixelify Sans",monospace';
     ctx.fillStyle=t.alive?'#e8dcc0':'#8a8494';
-    ctx.fillText((GB&&GB.n)?GB.n:'A boss', txtX, ty);
+    // the name gets the card's full width and is cut rather than allowed to run past the frame --
+    // "The Sawgrass Reaper" is wider than 152px and there is nowhere for it to go
+    ctx.fillText(_boWrap((GB&&GB.n)?GB.n:'A boss', txtW, 1)[0]||'', cx2, ty);
 
-    ty+=f2+Math.round(4*us);
-    ctx.font='bold '+f2+'px "Pixelify Sans",monospace';
+    ty+=Math.round(5*us)+f2;
+    // Lv and the distance on one centred line: two measurements, drawn as a unit so the pair stays
+    // centred rather than the second half hanging off the middle
     const lvTxt='Lv '+lv;
+    const stTxt='  \u00b7  '+(t.alive?(tiles+' tiles'):('back in '+bossCdText(cd)));
+    ctx.font='bold '+f2+'px "Pixelify Sans",monospace';
+    const lvW=ctx.measureText(lvTxt).width;
+    ctx.font=f2+'px "Pixelify Sans",monospace';
+    const stW=ctx.measureText(stTxt).width;
+    const startX=cx2-(lvW+stW)/2;
+    ctx.textAlign='left';
+    ctx.font='bold '+f2+'px "Pixelify Sans",monospace';
     ctx.fillStyle=t.alive?col:'#6a6472';
-    ctx.fillText(lvTxt, txtX, ty);
+    ctx.fillText(lvTxt, startX, ty);
     ctx.font=f2+'px "Pixelify Sans",monospace';
     ctx.fillStyle=t.alive?'#a89e8c':'#5f5a68';
-    ctx.fillText('  \u00b7  '+(t.alive?(tiles+' tiles'):('back in '+bossCdText(cd))),
-                 txtX+ctx.measureText(lvTxt).width, ty);
+    ctx.fillText(stTxt, startX+lvW, ty);
 
     if(desc.length){
+      ctx.textAlign='center';
       ctx.font=f3+'px "Pixelify Sans",monospace';
       ctx.fillStyle='#8f8778';
-      for(const line of desc){ ty+=f3+Math.round(2*us); ctx.fillText(line, txtX, ty); }
+      ty+=Math.round(4*us);
+      for(const line of desc){ ty+=f3+Math.round(2*us); ctx.fillText(line, cx2, ty); }
     }
 
     // ---- THE ARROW, BESIDE THE BUBBLE ----
