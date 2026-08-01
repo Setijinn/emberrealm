@@ -212,17 +212,24 @@ function drawBossCompass(){
 // GBOSS carries a `desc` for every boss ("A patient colossus that erupts in rings of thorns. Weave
 // the gaps and wear it down.") and nothing had ever shown it outside the boss-intro banner.
 //
-// Now the bubble is the whole objective: the boss's own art on the left, then its name, its level,
-// how far, and what it does. The screen edge keeps a bare ARROW -- direction is the one thing a
-// bubble parked under the minimap genuinely cannot express.
+// Now the bubble is the whole objective: the boss's own art, then its name, its level and how far.
+// The screen edge keeps a bare ARROW -- direction is the one thing a bubble parked under the
+// minimap genuinely cannot express. (The description that paragraph promised is gone; see below.)
+//
 // SQUARE, not a letterbox (user, 2026-08-01: "make it more of a perfect square"). It was 232 wide
-// and about 54 tall -- a strip, which is what you get when the sprite sits BESIDE the text and the
-// description then has to run sideways. Stacking it instead, portrait over name over stats over
-// description, gives a card whose height falls out of its own contents at roughly its own width,
-// and a bigger portrait for free: 54px against 40.
-const BO_W     = 152;     // px at UI scale 1
-const BO_SPR   = 54;      // the portrait, now on its own row above the text
-const BO_PAD   = 8;
+// and about 54 tall -- a strip, which is what you get when the sprite sits BESIDE the text. Stacked
+// instead, portrait over name over stats, the height falls out of its own contents at roughly its
+// own width, and the portrait gets bigger for free.
+// SMALLER AGAIN, AND THE DESCRIPTION IS GONE (user, 2026-08-01: "make the quest window for the boss
+// smaller and drop the description and add a timer for respawn"). Three wrapped lines of flavour
+// text were most of the card's height and none of its job -- you read them once per boss and then
+// they are a paragraph sitting in the corner during a fight. What is actually live is: which boss,
+// what level, how far, and -- once it is dead -- how long until it is back. That last one had been
+// hiding inside the distance line as "back in 12:34"; it is its own row now, in the boss's colour,
+// because a thirty-minute lockout is the thing you are actually waiting on.
+const BO_W     = 118;     // px at UI scale 1
+const BO_SPR   = 44;      // the portrait, on its own row above the text
+const BO_PAD   = 7;
 const BO_LEFT  = 10;
 
 // Wrap `txt` to `max` px at the current font, at most `lines` lines, ellipsising the last.
@@ -260,8 +267,7 @@ function drawBossObjectives(){
   // width of an 812px landscape phone while being a tenth of a desktop's -- the same card is
   // proportionally twice the screen. Keyed on HEIGHT, the same axis style.css uses for the banner,
   // because this is a landscape-only game and height is what actually varies between a phone and a
-  // desktop. The description drops to two lines at the same time: three lines of 8px text on a
-  // 375px-tall screen is a paragraph in the middle of a fight.
+  // desktop.
   const small=(typeof H!=='undefined' && H<=470);
   const k=small?0.78:1;
   const w=Math.round(BO_W*us*k), spr=Math.round(BO_SPR*us*k), pad=Math.round(BO_PAD*us*k);
@@ -292,27 +298,21 @@ function drawBossObjectives(){
     const lv=(t.lv!==undefined)?t.lv:bossCompassLv(t);
     const cd=(typeof ringBossCd!=='undefined'&&ringBossCd)?(ringBossCd[t.b]||0):0;
     const tiles=Math.round(t.d/TILE);
-    const f1=Math.max(9,Math.round(10.5*us*k));    // name
-    const f2=Math.max(8,Math.round(9*us*k));       // level + distance
-    const f3=Math.max(7,Math.round(8.5*us*k));     // description
+    const f1=Math.max(9,Math.round(10*us*k));      // name
+    const f2=Math.max(8,Math.round(8.5*us*k));     // level + distance
+    const fT=Math.max(9,Math.round(11*us*k));      // the respawn clock -- the biggest text on it
 
-    // ONLY THE PRIMARY GETS ITS DESCRIPTION. Two full bubbles is a wall; the second entry is
-    // context, not an objective, so it stays a single line.
     // WIDTH ONLY, not position. The text is centred on the card, so where it starts depends on x --
     // and x is not chosen until the placement block below. Reading it here put a `let` in its
     // temporal dead zone and drawBossObjectives threw on every frame ("Cannot access 'x' before
     // initialization"), the same trap the mount draw fell into with `_up`. The wrap only needs the
     // WIDTH, which is a property of the card rather than of where the card ends up.
     const txtW=w-pad*2;
-    let desc=[];
-    if(t.primary && GB && GB.desc){
-      ctx.font=f3+'px "Pixelify Sans",monospace';
-      desc=_boWrap(GB.desc, txtW, small?2:3);
-    }
-    // the height is whatever the stack needs, so a card with no description is simply shorter
-    // rather than a square with a hole in it
+    // THE CLOCK ONLY EXISTS WHILE THE BOSS IS DOWN, and the card is simply shorter without it
+    // rather than carrying an empty row -- the same rule the description used to follow.
+    const showCd=(!t.alive && cd>0);
     const h=pad + spr + Math.round(6*us) + f1 + Math.round(5*us) + f2
-            + (desc.length?Math.round(4*us)+desc.length*(f3+Math.round(2*us)):0) + pad;
+            + (showCd?Math.round(5*us)+fT:0) + pad;
 
     // ---- WHERE IT GOES, from the bearing ----
     // Left or right when the bearing is more sideways than vertical, top or bottom otherwise, and
@@ -382,7 +382,7 @@ function drawBossObjectives(){
     // Lv and the distance on one centred line: two measurements, drawn as a unit so the pair stays
     // centred rather than the second half hanging off the middle
     const lvTxt='Lv '+lv;
-    const stTxt='  \u00b7  '+(t.alive?(tiles+' tiles'):('back in '+bossCdText(cd)));
+    const stTxt='  \u00b7  '+tiles+' tiles';
     ctx.font='bold '+f2+'px "Pixelify Sans",monospace';
     const lvW=ctx.measureText(lvTxt).width;
     ctx.font=f2+'px "Pixelify Sans",monospace';
@@ -396,12 +396,18 @@ function drawBossObjectives(){
     ctx.fillStyle=t.alive?'#a89e8c':'#5f5a68';
     ctx.fillText(stTxt, startX+lvW, ty);
 
-    if(desc.length){
+    // ---- THE RESPAWN CLOCK ----
+    // Counting down the thirty-minute lockout 07_update puts on a slain lair. Drawn in the boss's
+    // own colour and larger than anything else on the card, because while it is running it is the
+    // only live number here -- the level and the distance are both facts you already knew.
+    if(showCd){
+      ty+=Math.round(5*us)+fT;
       ctx.textAlign='center';
-      ctx.font=f3+'px "Pixelify Sans",monospace';
-      ctx.fillStyle='#8f8778';
-      ty+=Math.round(4*us);
-      for(const line of desc){ ty+=f3+Math.round(2*us); ctx.fillText(line, cx2, ty); }
+      ctx.font='bold '+fT+'px "Pixelify Sans",monospace';
+      ctx.fillStyle=col;
+      ctx.globalAlpha=0.9;
+      ctx.fillText('\u21bb '+bossCdText(cd), cx2, ty);
+      ctx.globalAlpha=t.alive?0.94:0.7;
     }
 
     // ---- THE ARROW, BESIDE THE BUBBLE ----

@@ -102,12 +102,19 @@
     // own box -- the dev panel's tab strip is one deliberate row you swipe, and flagging it made the
     // audit report a failure for the design it was written to check for. Only overflow the container
     // has not opted into counts, because that is the overflow nobody can reach.
-    let unreachable=0;
+    let unreachable=0, culprit='';
     const scan=(e)=>{
       const st=getComputedStyle(e);
       const scrollsX=(st.overflowX==='auto'||st.overflowX==='scroll');
       const over=e.scrollWidth-e.clientWidth;
-      if(over>1 && !scrollsX) unreachable=Math.max(unreachable,over);
+      // NAME THE ELEMENT, not just the panel. "vaultScr SIDEWAYS 31" sent me editing three
+      // plausible rules in a row, none of which was the one overflowing; the tag/id/class of the
+      // box that actually overflows turns a guess into a lookup.
+      if(over>1 && !scrollsX && over>unreachable){
+        unreachable=over;
+        culprit=e.tagName.toLowerCase()+(e.id?('#'+e.id):'')
+               +(e.className&&e.className.baseVal===undefined&&e.className?('.'+String(e.className).trim().split(/\s+/).join('.')):'');
+      }
       if(st.overflowY==='auto'||st.overflowY==='scroll'||scrollsX){
         const ov=e.scrollHeight-e.clientHeight;
         if(ov>=best){ best=ov; sc=e; } }
@@ -118,7 +125,7 @@
       w:Math.round(r.width), h:Math.round(r.height),
       offX:Math.round(Math.max(0, -r.left) + Math.max(0, r.right-innerWidth)),
       offY:Math.round(Math.max(0, -r.top)  + Math.max(0, r.bottom-innerHeight)),
-      sideways:unreachable,
+      sideways:unreachable, culprit:culprit,
       hidden:Math.max(0, sc.scrollHeight-sc.clientHeight),
       shown:sc.clientHeight||1
     };
@@ -228,7 +235,7 @@
       if(hits.length){ clip++; L.push('  '+pad(id,12)+' OVERLAP  '+hits.join('   |   ')); }
       L.push('  '+pad(id,12)+pad(m.w+'x'+m.h,11)
              +pad((clipped?('CLIPPED '+m.offX+'x'+m.offY):'-'),12)
-             +pad(sideways?('SIDEWAYS '+m.sideways):(m.sideways>1?('('+m.sideways+'px)'):'-'),11)
+             +pad(sideways?('SIDEWAYS '+m.sideways+' '+m.culprit):(m.sideways>1?('('+m.sideways+'px '+m.culprit+')'):'-'),11)
              +(m.hidden?('+'+m.hidden+'px below the fold, '
                         +((m.hidden+m.shown)/m.shown).toFixed(1)+' screens'):'fits')
              +(err?('   [opener threw: '+err+']'):''));

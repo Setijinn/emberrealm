@@ -96,8 +96,19 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
   #msg.quiet small{font-size:10px;}
 }
 
+/* `safe center` IS LOAD-BEARING (user, 2026-08-01: "fix the menu"). A centred flex column that also
+   scrolls is the classic overflow trap: once the content is taller than the box, plain `center`
+   pushes the first items out past the START edge, and a scroll container cannot scroll ABOVE its
+   start -- so the title and the top buttons become unreachable rather than merely off-screen. The
+   menu is exactly that shape: on a 375px-tall phone in landscape, EMBERREALM plus the user, the
+   character line, the best line and up to seven buttons come to roughly 480px. `safe center` centres
+   while it fits and falls back to flex-start the moment it does not, which is the whole fix. The
+   plain declaration stays in front as the fallback for a parser that does not know the keyword. */
 .scr{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#1a1520,#0b0a10 70%);z-index:20;
- display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#d8d2c8;padding:16px;overflow-y:auto;}
+ display:none;flex-direction:column;align-items:center;justify-content:center;
+ justify-content:safe center;gap:10px;color:#d8d2c8;padding:16px;overflow-y:auto;}
+/* and nothing in a scrolling screen may be squeezed instead of scrolled */
+.scr>*{flex-shrink:0;}
 .mtitle{font-size:40px;color:#ffc94d;letter-spacing:.1em;text-shadow:0 3px 0 #7a4a1e,0 6px 16px #000;}
 .msub{font-size:15px;color:#e07a2e;letter-spacing:.2em;}
 .minput{background:#17141d;border:2px solid #39323f;color:#d8d2c8;font-family:inherit;font-size:16px;
@@ -204,8 +215,13 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #stableScr .embChip .cd{ font-size:calc(var(--u)*1.7); }
 
 /* ---------- permadeath (Lv20+) ---------- */
+/* Same bound as the co-op card, and for the same reason: four paragraphs of permadeath warning came
+   to 242px, which clears a landscape phone by 48px once the title and the I UNDERSTAND button are
+   above and below it. That button is the only way out of this screen, so the PROSE takes the
+   overflow rather than the layout. */
 #hcCard{background:#17141d;border:2px solid #7a2f24;border-radius:12px;padding:14px 18px;
- width:min(92vw,520px);font-size:14px;line-height:1.55;color:#d8d2c8;}
+ width:min(92vw,520px);font-size:14px;line-height:1.55;color:#d8d2c8;
+ max-height:calc(100vh - 190px);overflow-y:auto;}
 #hcCard p{margin:8px 0;}
 #hcCard b{color:#e2604c;}
 #deathCard{background:#17141d;border:2px solid #39323f;border-radius:12px;padding:14px 18px;
@@ -471,8 +487,13 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
    (hotkeys Q/I/K/L/M mirror them; ability 1-2-3 bar sits by the orbs instead) */
 #mapBtn,#coopBtn{display:none;align-items:center;justify-content:center;
  width:48px;height:40px;background:rgba(23,20,29,.88);border:1px solid #39323f;border-radius:10px;font-size:17px;}
+/* BOUNDED, AND IT SCROLLS INSIDE ITSELF. At 317px tall in a 375px viewport the card cleared the
+   window by 53px once .scr's padding and gap were counted, so the buttons at its foot were off the
+   bottom edge. Capping it against the viewport it lives in and letting the card take its own
+   overflow keeps every control reachable without moving anything on a desktop. */
 #coopCard{position:relative;width:min(92vw,360px);background:#141019;border:2px solid #7a4a1e;border-radius:14px;
- padding:18px 20px 20px;box-shadow:0 14px 40px rgba(0,0,0,.7);}
+ padding:18px 20px 20px;box-shadow:0 14px 40px rgba(0,0,0,.7);
+ max-height:calc(100vh - 36px);overflow-y:auto;}
 #coopCard .mbtn{width:100%;margin-top:6px;}
 .coopCode{font-family:'Pixelify Sans',monospace;font-size:18px;color:#ffce7a;text-align:center;margin:6px 0;}
 .coopCode b{font-size:26px;letter-spacing:.2em;color:#8fd48c;}
@@ -485,8 +506,13 @@ canvas{display:block;position:fixed;inset:0;width:100vw;height:100vh;width:100dv
 #mapCard #shHead span{font-family:'Pixelify Sans',monospace;font-size:16px;color:#ffc94d;}
 
 #invCard{position:relative;
- --vH: min(96vh, 620px);
- --vW: min(96vw, 980px);
+ /* THE PADDING HAS TO COME OUT OF THE HEIGHT (user, 2026-08-01: "make sure nothing goes off screen
+    for mobile and pc"). .scr carries padding:16px, so a card asking for 96vh occupies 96vh+32px and
+    is over the viewport at every size -- _fitaudit measured the satchel 5px past the bottom edge on
+    an 812x375 phone. Subtracting the padding it actually sits inside makes the cap true. The vw
+    line has the same shape and gets the same treatment. */
+ --vH: min(calc(100vh - 36px), 620px);
+ --vW: min(calc(100vw - 36px), 980px);
  --u:  calc(var(--vH) / 100);
  width:var(--vW); height:var(--vH); max-height:none; display:flex; padding:0;
  background:url(assets/ui/equip_panel_wide2.png) center/100% 100% no-repeat;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7));}
@@ -1165,8 +1191,11 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
   letter-spacing:.04em; pointer-events:none; text-shadow:0 1px 2px #000; }
 #vaultCount{ flex:0 0 auto; text-align:center; margin-bottom:calc(var(--u)*0.6); }
 #vaultCount .purse{ font-size:calc(var(--u)*2.7); padding:calc(var(--u)*0.7) calc(var(--u)*2.4); }
+/* Belt and braces on the panel's own notes; the real 31px offender was the empty-state note inside
+   the item grids, handled below. */
 #vaultScr>#shopCard>#shopInner>.mnote{ flex:0 0 auto; font-size:calc(var(--u)*2.0);
-  line-height:1.25; margin-bottom:calc(var(--u)*0.6); }
+  line-height:1.25; margin-bottom:calc(var(--u)*0.6);
+  min-width:0; max-width:100%; overflow-wrap:anywhere; }
 
 /* The two sides sit SIDE BY SIDE and never wrap. Wrapping was the first bug: at the panel's width
    the columns stacked, the section doubled in height, and the panel outgrew its frame. Side by
@@ -1182,8 +1211,21 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 .vaultHead .mnote{ font-size:inherit; color:#8a8494; }
 
 /* the grids absorb every remaining pixel and scroll inside themselves */
-#vaultGrid,#vaultBag{ flex:1 1 0; min-height:calc(var(--u)*8); max-height:none; overflow-y:auto; }
+/* overflow-x:hidden is the fix for the 31px of SIDEWAYS the audit measured at 1280x800: the slots
+   are a fixed tap size on purpose, so on a narrow column the last one in a row pushes past the right
+   edge -- and a horizontal scroller nested in a vertical one has no scrollbar on touch to tell you
+   it is there. Wrapping already handles the rows; nothing is lost by refusing the sideways axis. */
+#vaultGrid,#vaultBag{ flex:1 1 0; min-height:calc(var(--u)*8); max-height:none;
+  overflow-y:auto; overflow-x:hidden; }
 #vaultGrid,#vaultBag{ align-content:flex-start; }
+/* THE EMPTY-STATE NOTE IS NOT AN ITEM. "Empty. Scrolls you cannot use land here instead of dying
+   with you." is appended straight into these grids by 17j_vault, and the grid is
+   repeat(auto-fill,40px) -- so a whole sentence was laid into a 40px column and ran 31px past the
+   panel with nothing able to scroll to it. _fitaudit measured it at 1280x800 and, once taught to
+   name the element, pointed at div.mnote rather than at the panel. Spanning every column is what
+   the note actually wants: it is a message about the grid, not a cell in it. */
+#vaultGrid>.mnote,#vaultBag>.mnote{ grid-column:1/-1; min-width:0; max-width:100%;
+  overflow-wrap:anywhere; text-align:center; padding:0 4px; }
 #vaultGrid::-webkit-scrollbar,#vaultBag::-webkit-scrollbar{ width:4px; }
 #vaultGrid::-webkit-scrollbar-thumb,#vaultBag::-webkit-scrollbar-thumb{ background:#5a4326; border-radius:2px; }
 /* Slots stay a real tap target rather than shrinking with the frame -- on a small card the column
@@ -1476,3 +1518,35 @@ body.pcmode #hudBot{position:static;bottom:auto;right:auto;gap:calc(6px*var(--ui
 /* the HUD buttons are divs with onclick; give them a focus ring too */
 #menuBtn:focus-visible, #devBtn2:focus-visible{ outline:2px solid #ffc94d; outline-offset:2px; }
 
+
+
+/* ================================================================================================
+   MOUNT AND FLIGHT: ROUND, BOTTOM-RIGHT (user, 2026-08-01: "the mount button should be a small
+   round button on the bottom right of the screen not too small").
+   They were 44x40 rounded rectangles in the top strip, indistinguishable from the nine other
+   buttons up there -- and mounting is the one control you reach for while moving, so it wants to be
+   under the thumb that is already on that side of the screen rather than at the far corner from it.
+   Position is fixed, so they leave #hudTop's flex row without the markup moving; #hudTop is
+   pointer-events:none with `#hudTop>*` turning it back on, and that still applies to a fixed child.
+   58px against the 44px strip buttons: "not too small" is the requirement, and a round target under
+   a thumb needs to beat the 44px accessibility floor with room to spare.
+   ================================================================================================ */
+#mountBtn,#flyBtn{
+ position:fixed;right:calc(14px*var(--uis,1));
+ width:calc(58px*var(--uis,1));height:calc(58px*var(--uis,1));
+ border-radius:50%;font-size:calc(26px*var(--uis,1));
+ z-index:12;pointer-events:auto;
+}
+/* the mount sits in the corner; flight stacks directly above it, because you can only be offered
+   flight while you are already mounted -- it never appears alone */
+#mountBtn{bottom:calc(14px*var(--uis,1));}
+#flyBtn{bottom:calc(80px*var(--uis,1));}
+/* on a short screen the ability row and the orbs come up the same corner, so both move in */
+@media (max-height:470px){
+ #mountBtn,#flyBtn{width:calc(50px*var(--uis,1));height:calc(50px*var(--uis,1));
+                   font-size:calc(23px*var(--uis,1));right:calc(10px*var(--uis,1));}
+ #mountBtn{bottom:calc(10px*var(--uis,1));}
+ #flyBtn{bottom:calc(66px*var(--uis,1));}
+}
+/* the cast sweep was written for a rectangle; on a circle it has to be clipped to one */
+#mountBtn.cast{border-radius:50%;}

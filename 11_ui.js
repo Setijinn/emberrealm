@@ -429,24 +429,70 @@ function travelTo(pl){
 function openFastTravel(){ const G=rooms['G']; if(!G||!G.pillars) return;
   let ov=document.getElementById('ftScr');
   if(!ov){ ov=document.createElement('div'); ov.id='ftScr';
-    // built HIDDEN — only line ~86 turns it on. If anything throws while building the card,
+    // built HIDDEN — only the last line turns it on. If anything throws while building the card,
     // the player is left with the game, not an empty full-screen overlay with no CLOSE button.
-    ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,10,.82);z-index:70;display:none;align-items:center;justify-content:center;'; document.body.appendChild(ov); }
+    ov.style.cssText='position:fixed;inset:0;background:rgba(8,6,10,.82);z-index:70;display:none;'
+      +'align-items:center;justify-content:center;padding:12px;'; document.body.appendChild(ov); }
+  // THE CARD IS BOUNDED AND THE LIST IS THE ONLY THING THAT SCROLLS (user, 2026-08-01). It had no
+  // height limit at all: fifteen provinces came to about 1120px of buttons, so on any real screen
+  // the title ran off the top, CLOSE ran off the bottom, and neither could be reached -- the panel
+  // could only be left by travelling somewhere. Three rows now, and the middle one takes the
+  // overflow: header, scroller, footer.
   const card=document.createElement('div');
-  card.style.cssText='background:#1a151f;border:1px solid #4a3d5c;border-radius:12px;padding:18px;min-width:250px;max-width:90vw;text-align:center;';
-  card.innerHTML='<div style="font:bold 15px monospace;color:#ffd07a;margin-bottom:12px;letter-spacing:.1em;">✦ WAYPOINTS ✦</div>';
+  card.style.cssText='background:#14111b;border:2px solid #4a3d5c;border-radius:14px;'
+    +'padding:14px;width:min(94vw,340px);max-height:min(88vh,560px);'
+    +'display:flex;flex-direction:column;gap:10px;text-align:center;'
+    +"font-family:'Pixelify Sans',monospace;"
+    +'box-shadow:0 10px 40px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,208,122,.08);';
+
+  const hd=document.createElement('div');
+  hd.style.cssText='flex:0 0 auto;font-size:17px;color:#ffc94d;letter-spacing:.12em;';
+  hd.textContent='\u2726 WAYPOINTS \u2726';
+  card.appendChild(hd);
+
+  const list=document.createElement('div');
+  list.style.cssText='flex:1 1 auto;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:5px;';
+  card.appendChild(list);
+
   for(const pl of G.pillars){ const un=pillarUnlocked(pl);
     const b=document.createElement('button');
-    const _zn=(G.rings&&G.rings.names&&G.rings.names[pl.band])||{lv:'?'};   // never let one bad pillar blank the list
-    b.textContent=(un?'▸ ':'🔒 ')+pl.name+'  ·  Lv '+_zn.lv+((_zn.lv2&&_zn.lv2!==_zn.lv)?'–'+_zn.lv2:'');   // flat rim reads "Lv 50", not "Lv 50–50"
+    // THE LEVEL COMES FROM THE PROVINCE, NOT THE BAND. rings.names is keyed by terrain band and
+    // several provinces share one, so the list read "The Verdant Belt Lv 20-25" and "Wolfwood
+    // Lv 20-25" -- the same range on two different places -- and the whole Ashfall/Charred
+    // Steppe/Skyreach trio claimed Lv 35-43. zoneLvRange answers for the clump the pillar actually
+    // stands in, which is what the player is choosing between.
+    b.textContent=(un?'\u25b8 ':'\uD83D\uDD12 ')+pl.name+'  \u00b7  '+ftPillarLv(G,pl);
     b.disabled=!un;
-    b.style.cssText='display:block;width:100%;margin:5px 0;padding:10px;border-radius:7px;border:1px solid #4a3d5c;font:13px monospace;text-align:left;background:'+(un?'#2a2233':'#181420')+';color:'+(un?'#e8e0d0':'#6a6270')+';cursor:'+(un?'pointer':'default')+';';
+    b.style.cssText='display:block;width:100%;padding:9px 10px;border-radius:8px;'
+      +'border:1px solid '+(un?'#7a4a1e':'#39323f')+';font-family:inherit;font-size:13px;'
+      +'text-align:left;background:'+(un?'#241d2e':'#16131c')+';'
+      +'color:'+(un?'#e8e0d0':'#6a6270')+';cursor:'+(un?'pointer':'default')+';';
     if(un) b.onclick=()=>travelTo(pl);
-    card.appendChild(b); }
+    list.appendChild(b); }
+
   const cl=document.createElement('button'); cl.textContent='CLOSE';
-  cl.style.cssText='display:block;width:100%;margin-top:12px;padding:10px;border-radius:7px;border:1px solid #4a3d5c;background:#3a2c20;color:#e8e0d0;font:13px monospace;cursor:pointer;';
+  cl.style.cssText='flex:0 0 auto;display:block;width:100%;padding:10px;border-radius:8px;'
+    +'border:1px solid #7a4a1e;background:#3a2c20;color:#e8e0d0;font-family:inherit;font-size:13px;cursor:pointer;';
   cl.onclick=closeFastTravel; card.appendChild(cl);
   ov.innerHTML=''; ov.appendChild(card); ov.style.display='flex'; }
+
+// What level range to print beside a waypoint. Prefers the PROVINCE the pillar stands in -- that is
+// the thing being chosen -- and falls back to the band label only where the province cannot be
+// resolved, which is what the whole list used to do. Never lets one bad pillar blank the list.
+function ftPillarLv(G,pl){
+  try{
+    if(typeof zoneAtIn==='function' && typeof _territories==='function'){
+      const z=zoneAtIn(G, Math.round(pl.x/TILE), Math.round(pl.y/TILE));
+      const T=_territories();
+      const t=(T&&z>=0)?T[z]:null;
+      if(t && t.lvmin!==undefined)
+        return 'Lv '+t.lvmin+((t.lvmax&&t.lvmax!==t.lvmin)?('\u2013'+t.lvmax):'');
+    }
+  }catch(e){}
+  const zn=(G.rings&&G.rings.names&&G.rings.names[pl.band])||null;
+  if(!zn) return 'Lv ?';
+  return 'Lv '+zn.lv+((zn.lv2&&zn.lv2!==zn.lv)?('\u2013'+zn.lv2):'');
+}
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('emberrealm\u00b7'+s));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const CLASSES=[
