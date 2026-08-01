@@ -45,7 +45,7 @@ def build(script):
     return name
 
 
-def run(page, size="1280,720"):
+def run(page, size="1280,720", query=""):
     chrome = find_chrome()
     profile = fresh_profile("audit")          # never reuse: see fresh_profile
     cmd = [
@@ -67,7 +67,7 @@ def run(page, size="1280,720"):
     ]
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         cmd.append("--no-sandbox")
-    cmd.append("http://localhost:%d/%s" % (PORT, page))
+    cmd.append("http://localhost:%d/%s%s" % (PORT, page, query))
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     dom = proc.stdout.decode("utf-8", "replace")
     m = re.search(r'(?s)<pre id="testout"[^>]*>(.*?)</pre>', dom)
@@ -86,9 +86,19 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(ROOT, script)):
         sys.exit("no such audit script: %s" % script)
     size = "1280,720"
+    # EVERY OTHER k=v IS PASSED TO THE PAGE. They used to be read and thrown away, so
+    # `audit.py _balaudit.js sweep=1` ran the default audit and reported the skip message as though
+    # the flag had never been typed -- a silent no-op is worse than an error. An audit that wants a
+    # slow optional section now has somewhere to read the request from.
+    extra = []
     for kv in sys.argv[2:]:
         if kv.startswith("size="):
             size = kv.split("=", 1)[1].replace("x", ",")
+        elif "=" in kv:
+            extra.append(kv)
+        else:
+            sys.exit("arguments are k=v; got %r" % kv)
     page = build(script)
-    print("built %s around %s at %s" % (page, script, size))
-    run(page, size)
+    query = ("?" + "&".join(extra)) if extra else ""
+    print("built %s around %s at %s%s" % (page, script, size, (" " + query) if query else ""))
+    run(page, size, query)

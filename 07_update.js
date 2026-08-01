@@ -968,9 +968,18 @@ function update(dt){
     const _near=(x,y)=>_nearIdx(x,y).d;
     // each hero's cap follows the zone THEY are standing in, so a Lv1 starter stays sparse while a
     // Lv50 rim gets busy -- even when both are being fed by the same host
+    // MORE OF THEM (user, 2026-08-01: "more enemies less hp and damage"). This cap, not the world's
+    // spawn markers, is what decides how busy a zone feels: there are already 7,490 points on the
+    // overworld and only this many of them are ever alive around you at once. Raising it costs
+    // nothing -- no regeneration, no new WORLD_HASH, no invalidated fog -- where adding markers
+    // would cost all three. Old 3..8, one more every 9 levels; now 5..13, one more every 5, which
+    // is about +60% at every level rather than only at the top. The per-enemy cuts in 03_entities
+    // are sized against exactly this ratio, so the crowd keeps roughly the health and the punch it
+    // had while being made of far more, far weaker things.
     const _caps=_anchors.map(a=>{ if(!curRoom.big) return 1e9;
       const lv=(typeof grvLvAt==='function' && curRoom.rings)?grvLvAt(a.x/TILE,a.y/TILE):(curRoom.band||10);
-      return Math.max(3, Math.min(8, 3+Math.floor(lv/9))); });
+      return Math.max(MOB_CAP_MIN, Math.min(MOB_CAP_MAX,
+                      MOB_CAP_MIN+Math.floor(lv/MOB_CAP_STEP))); });
     const _roamN=_anchors.map(()=>0);
     for(const e of enemies){ if(e.type!=='c'&&e.type!=='s') continue;
       const n=_nearIdx(e.x,e.y); if(n.d<1100) _roamN[n.i]++; }

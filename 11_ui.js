@@ -1394,6 +1394,20 @@ function rollPublicLoot(e,row,F,extra,cls){
 // is only applied when actually networked, so solo bags never carry the field.
 // One player's private roll, as ITEMS. Whether they end up in their own sack or merged into the
 // single sack a kill leaves behind is rollLoot's decision -- see the note there.
+// T11 AND T12 COME OUT LESS OFTEN (user, 2026-08-01: "lower drop rates slightly for t11+ items").
+// Written as a straight rate cut rather than as a re-weighting, and that is deliberate: the four
+// island-C rows carry ONLY tiers 10 and 11, so scaling their weights against each other changes
+// nothing at all once pickWeighted renormalises -- the mass has nowhere to go but back to itself. A
+// roll that lands on T11+ and is then refused is the one lever that lowers the rate in every row,
+// and it leaves each row's tier vocabulary exactly as written. Nothing is substituted: the kill
+// simply does not pay bound gear that time, which is what a lower drop rate is.
+//
+// It cannot touch relics (index 12) or Scavenged Dreams (13). Neither is a weighted roll -- see the
+// note on MAXT -- so neither reaches this code, and "T11+" in the user's sense is the top of the
+// ORDINARY ladder: T11 Mythril and T12 Hearthfire.
+const TOP_TIER_FROM = 10;    // 0-based. 10 == T11 Mythril, 11 == T12 Hearthfire.
+const TOP_TIER_KEEP = 0.85;  // 15% fewer of them
+
 function rollSoulboundItems(e,row,who){
  const items=[];
  if(!row.sb) return items;                              // this area has no soulbound band
@@ -1410,6 +1424,7 @@ function rollSoulboundItems(e,row,who){
  for(let q=0;q<n;q++){
    if(Math.random()>=p) continue;
    const tier=pickWeighted(row.sb,F);
+   if(tier>=TOP_TIER_FROM && Math.random()>=TOP_TIER_KEEP) continue;   // the T11+ cut
    for(const it of rollBagSlots(BAG_SLOTS.bound,tier,F,true,who&&who.cls)) items.push(it); }   // never empty
  return items;
 }

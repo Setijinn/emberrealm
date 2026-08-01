@@ -1030,6 +1030,35 @@ let curShopNear=null;
 // gear-tier were scaled to match, so a Lv50 hero vs a Lv50 enemy == the old Lv150 matchup. Then
 // verified/nudged with the TTK harness. Old (Lv150): {0.60,0.024,0.95,0.016}.
 const DIFF={hpLin:1.80, hpQuad:0.216, dmLin:2.85, dmQuad:0.144};
+// ---- THE REBALANCE DIALS (user, 2026-08-01: "more enemies less hp and damage") -------------------
+// Three numbers that only mean anything together. The DIFF curve above is left exactly as measured
+// and these ride on top of it, so the SHAPE of the ramp -- which is what the killability sweep and
+// the anchor-streak cap were tuned against -- is untouched and only its height moves.
+//
+//   cap x1.63   hp x0.62   damage x0.55
+//
+// 1.63 x 0.62 = 1.01, so an area still costs about the same total health to clear; 1.63 x 0.55 =
+// 0.90, so the pressure if the whole crowd reaches you is slightly gentler than it was. What
+// changes is the texture: you are fighting a lot of things that die quickly instead of a few that
+// do not, which is the point.
+//
+// ROAMERS ONLY. makeEnemy applies these on the 'c' and 's' branches and nowhere else, so bosses
+// keep the strength they were tuned to -- a boss on a thirty-minute lockout is the spike the rest
+// of the curve is measured against, and halving it would flatten the one fight that is supposed to
+// stop you. Elites inherit the cut through the roamer they are built from, so an elite stays the
+// same multiple of the trash around it.
+const MOB_HP_MUL   = 0.62;
+const MOB_DMG_MUL  = 0.55;
+// the concurrent roamer cap, read by 07_update's streamer. Here rather than there because it is one
+// of the three dials and they only make sense side by side.
+const MOB_CAP_MIN  = 5;      // was 3
+const MOB_CAP_MAX  = 13;     // was 8
+// A FRACTIONAL STEP, AND IT IS NOT AN ACCIDENT. At a step of 5 the cap grew FASTER than the old
+// curve as well as starting higher, so the ratio swung from 1.67x at Lv1 to 2.0x at Lv5 and the
+// crowd health drifted up 24% in the middle of the game -- _balaudit measured it. 5.6 holds the
+// ratio between 1.50x and 1.71x across the whole range (mean 1.62), which is what the hp and
+// damage multipliers are sized against.
+const MOB_CAP_STEP = 5.6;    // was 9: one more roamer every N levels
 function eHpScale(lv){ return 1 + lv*DIFF.hpLin + lv*lv*DIFF.hpQuad; }
 function eDmgScale(lv){ return lv*DIFF.dmLin + lv*lv*DIFF.dmQuad; }
 // ---- enemy RPG STAT BLOCK (user, 2026-07-24): every enemy carries a real spread that scales
@@ -1340,8 +1369,17 @@ function makeEnemy(sp){
   // 80% of what a starting hero actually took, while at Lv50 dm is ~502 and the floor is noise.
   // Dropping the floors cuts a Lv1 hit roughly in half and a Lv50 hit by ~1.5% -- exactly where
   // the user asked the reduction to land. Bosses keep their old floors: they are the spike.
-  if(sp.t==='c') e={type:'c',r:15,hp:40*hpm,spd:95*espd,touch:7+dm,col:'#c04a3d'};
-  else if(sp.t==='s') e={type:'s',r:16,hp:60*hpm,spd:46*espd,fireT:1,bd:5+dm*0.63,col:'#8a5ac0'};
+  // the two roamer branches, and the only two that carry the rebalance multipliers -- see the note
+  // on MOB_HP_MUL. THE FLAT TERM IS INSIDE THE MULTIPLIER, not outside it. I first wrote this the
+  // other way round, reasoning that 7 and 5 are a low-level floor already small enough to be noise;
+  // _balaudit disproved it in one line. At Lv1 the level term is only ~3, so the flat 7 is most of
+  // the hit -- leaving it unscaled meant a Lv1 hit fell from 10 to 9 while the crowd around you grew
+  // by two thirds, and a starting hero took 43% MORE damage out of a change whose whole point was
+  // less. Scaling the whole figure holds the crowd pressure at ~0.9x at every level instead.
+  if(sp.t==='c') e={type:'c',r:15,hp:40*hpm*MOB_HP_MUL,spd:95*espd,
+                    touch:(7+dm)*MOB_DMG_MUL,col:'#c04a3d'};
+  else if(sp.t==='s') e={type:'s',r:16,hp:60*hpm*MOB_HP_MUL,spd:46*espd,fireT:1,
+                         bd:(5+dm*0.63)*MOB_DMG_MUL,col:'#8a5ac0'};
   else if(sp.t==='N'){ // dungeon objective node: stationary, harmless, must be destroyed
     const th=GBOSS[(curRoom&&curRoom.ring)||0];
     e={type:'N',r:16,hp:Math.round(46*hm),spd:0,touch:0,col:th?th.col:'#7ab8d4',node:true}; }
