@@ -255,7 +255,16 @@ function drawBossObjectives(){
   const targets=bossObjectiveList();
   if(!targets.length) return;
   const us=(typeof UIS!=='undefined')?UIS:1;
-  const w=Math.round(BO_W*us), spr=Math.round(BO_SPR*us), pad=Math.round(BO_PAD*us);
+  // SMALLER ON A PHONE (user, 2026-08-01: "make the quest box a little smaller on mobile"). UIS
+  // already scales the HUD, but it scales UP as well as down and a 152px card is a fifth of the
+  // width of an 812px landscape phone while being a tenth of a desktop's -- the same card is
+  // proportionally twice the screen. Keyed on HEIGHT, the same axis style.css uses for the banner,
+  // because this is a landscape-only game and height is what actually varies between a phone and a
+  // desktop. The description drops to two lines at the same time: three lines of 8px text on a
+  // 375px-tall screen is a paragraph in the middle of a fight.
+  const small=(typeof H!=='undefined' && H<=470);
+  const k=small?0.78:1;
+  const w=Math.round(BO_W*us*k), spr=Math.round(BO_SPR*us*k), pad=Math.round(BO_PAD*us*k);
 
   // THE BUBBLE SITS ON THE SIDE THE BOSS IS ON (user, 2026-08-01). Parked under the minimap it was
   // in a fixed corner regardless of where you were being sent, so the arrow was doing all the work
@@ -283,9 +292,9 @@ function drawBossObjectives(){
     const lv=(t.lv!==undefined)?t.lv:bossCompassLv(t);
     const cd=(typeof ringBossCd!=='undefined'&&ringBossCd)?(ringBossCd[t.b]||0):0;
     const tiles=Math.round(t.d/TILE);
-    const f1=Math.max(10,Math.round(10.5*us));   // name
-    const f2=Math.max(8,Math.round(9*us));       // level + distance
-    const f3=Math.max(8,Math.round(8.5*us));     // description
+    const f1=Math.max(9,Math.round(10.5*us*k));    // name
+    const f2=Math.max(8,Math.round(9*us*k));       // level + distance
+    const f3=Math.max(7,Math.round(8.5*us*k));     // description
 
     // ONLY THE PRIMARY GETS ITS DESCRIPTION. Two full bubbles is a wall; the second entry is
     // context, not an objective, so it stays a single line.
@@ -298,7 +307,7 @@ function drawBossObjectives(){
     let desc=[];
     if(t.primary && GB && GB.desc){
       ctx.font=f3+'px "Pixelify Sans",monospace';
-      desc=_boWrap(GB.desc, txtW, 3);
+      desc=_boWrap(GB.desc, txtW, small?2:3);
     }
     // the height is whatever the stack needs, so a card with no description is simply shorter
     // rather than a square with a hole in it

@@ -9,7 +9,7 @@
       const want=+((new URLSearchParams(location.search).get('band'))||3);
       const C=(curRoom.camps||[]);
       const cp=C.find(c=>c.band===want)||C[0];
-      if(cp){ player.x=cp.cx; player.y=cp.cy+150; }
+      if(cp){ player.x=cp.cx; player.y=cp.cy+40; }
       if(typeof fogReveal==='function') for(let i=0;i<40;i++) fogReveal(curRoom,0.2);
       document.title='READY';
     }catch(e){ document.title='ERR '+e.message; }
