@@ -126,43 +126,49 @@ const CAMP_DEC = [
 //     camp meant a repeat on screen -- the Verdant camp showed the same arch twice and Cinderwatch
 //     showed the molten pit twice. Fire tops up first: a campfire belongs in every camp that has
 //     ever been lived in, whoever rules the province.
-const CAMP_DEC_BAN = {0:[3], 1:[1], 4:[0,1], 6:[2], 8:[2,3]};
-const CAMP_DEC_FIRE = ['5_2','7_3','6_3'];   // stone fire pit, campfire, standing brazier
-const CAMP_DEC_FILL = ['3_1','5_1'];         // spoil, and a skull pile -- for the two thinnest sets
-const CAMP_DEC_N    = 6;
+const CAMP_DEC_BAN  = {0:[3], 1:[1], 4:[0,1], 6:[2], 8:[2,3]};
+// A CAMP HAS ONE FIRE. These three are campfires -- a stone fire pit, a log fire, a standing
+// brazier -- and while they were in the ring pool as well as the centre, a camp came out with a
+// fire in the middle and another two burning out on the circle, which reads as three camps sharing
+// a clearing rather than one camp. They are held back for the centrepiece and never placed on the
+// ring. 5_0 (a molten pit) and 6_0 (a grave with a flame at its foot) are NOT in this list: they
+// are lit, but neither is something anybody sits around.
+const CAMP_DEC_FIRE = ['5_2','7_3','6_3'];
+// Stone and bone, for the sets the exclusions leave short. Four of the nine sets keep only two or
+// three usable pieces, and spoil, a cairn, a skull pile and a cut pillar are things any camp could
+// have without claiming a theme that is not its own.
+const CAMP_DEC_FILL = ['3_1','5_1','3_2','4_2'];
+const CAMP_DEC_N    = 5;     // ring pieces, the centre fire on top of them
 
 // Resolved once per camp at stamp time and stored on it, so the draw is a lookup and the tables are
 // read exactly once. ZBOSS and bossDecArt both live in 03_entities, which loads before this file.
-function campDecPool(z, band){
-  const pool=[];
+// Returns {ring:[ids], fire:id} -- the ring is what circles the camp, the fire is its middle.
+function campDecPool(z, band, tx, ty){
+  const ring=[];
+  let set=-1;
   const boss=(typeof ZBOSS!=='undefined' && ZBOSS[z]!==undefined) ? ZBOSS[z] : -1;
   if(boss>=0 && typeof bossDecArt==='function'){
-    const set=bossDecArt(boss);
+    set=bossDecArt(boss);
     const ban=CAMP_DEC_BAN[set]||[];
-    for(let k=0;k<4;k++) if(ban.indexOf(k)<0) pool.push(set+'_'+k);
+    for(let k=0;k<4;k++){
+      const id=set+'_'+k;
+      if(ban.indexOf(k)<0 && CAMP_DEC_FIRE.indexOf(id)<0) ring.push(id);
+    }
   } else {
     // A PROVINCE WITH NO BOSS still gets a camp, and ZBOSS carries two -1s. Fall back to the
     // material the ground is made of, which is what this file used before the bosses did.
     const list=CAMP_DEC[Math.max(0,Math.min(CAMP_DEC.length-1, band|0))];
-    for(const id of list) pool.push(id);
+    for(const id of list) if(CAMP_DEC_FIRE.indexOf(id)<0) ring.push(id);
   }
-  for(const id of CAMP_DEC_FIRE) if(pool.length<CAMP_DEC_N && pool.indexOf(id)<0) pool.push(id);
-  for(const id of CAMP_DEC_FILL) if(pool.length<CAMP_DEC_N && pool.indexOf(id)<0) pool.push(id);
-  return pool;
-}
-// the piece a camp puts in its middle: the first real fire its pool holds. Every pool holds one --
-// sets 5, 6 and 7 own theirs and the rest are topped up with the trio above.
-function campFireArt(pool, tx, ty){
-  // ITS OWN FIRE FIRST. The boss's own pieces are pushed before the top-up, so the first fire in
-  // pool order is the one that came from its set -- 5_2 for the Deep set, 6_3 for the graves, 7_3
-  // for the Ashfall. Only where the set owns no fire does it fall to the trio, and there it is
-  // hashed rather than fixed: taking the first would have put the identical stone pit at the centre
-  // of ten of the thirteen provinces.
-  const own=[]; for(const id of pool) if(CAMP_DEC_FIRE.indexOf(id)>=0) own.push(id);
-  if(!own.length) return null;
-  const pre=pool[0].charAt(0);                 // the set the boss's own pieces came from
-  for(const id of own) if(id.charAt(0)===pre) return id;
-  return own[_campHash(tx|0, ty|0, 950)%own.length];
+  for(const id of CAMP_DEC_FILL) if(ring.length<CAMP_DEC_N && ring.indexOf(id)<0) ring.push(id);
+
+  // ITS OWN FIRE IF ITS SET HAS ONE -- the graves burn a brazier, Deep keeps a stone pit, the
+  // Ashfall a log fire. Where the set owns none it is hashed rather than fixed, because taking the
+  // first would have stood the identical pit at the centre of ten of the thirteen provinces.
+  let fire=null;
+  if(set>=0) for(const id of CAMP_DEC_FIRE) if(id.charAt(0)===(''+set)) { fire=id; break; }
+  if(!fire) fire=CAMP_DEC_FIRE[_campHash(tx|0, ty|0, 950)%CAMP_DEC_FIRE.length];
+  return {ring:ring, fire:fire};
 }
 
 const _campDec = {};
@@ -266,7 +272,7 @@ function stampCamps(){
 
       const camp={tx:tx, ty:ty, z:z, band:band, k:theme.k, col:theme.col,
                   cx:(tx+.5)*TILE, cy:(ty+.5)*TILE, props:[], mobs:0, elites:0,
-                  dec:campDecPool(z, band)};
+                  dec:campDecPool(z, band, tx, ty)};
       _campFill(R, camp, theme, nMob);
       R.camps.push(camp);
       placed++;
@@ -327,11 +333,8 @@ function _campFill(R, camp, theme, nMob){
   // A ring rather than a scatter, because a ring reads as a camp and a scatter reads as litter.
   // They reject against the enemies as well as against each other, so nothing stands inside a tent.
   const nProp=10+Math.round(_campRnd(camp.tx,camp.ty,11)*4);
-  // THE CENTREPIECE IS SETTLED FIRST so the ring can be told not to use it. Left in the pool, the
-  // camp fire turned up twice -- once in the middle where it is the centrepiece and once out on the
-  // ring where it reads as a second, smaller camp inside the first.
-  const fireId=camp.dec?campFireArt(camp.dec, camp.tx, camp.ty):null;
-  const ringDec=(camp.dec||[]).filter(id=>id!==fireId);
+  const fireId=camp.dec?camp.dec.fire:null;
+  const ringDec=(camp.dec&&camp.dec.ring)?camp.dec.ring:[];
   for(let i=0;i<nProp;i++){
     for(let tryN=0; tryN<18; tryN++){
       const a=(i/nProp)*6.28318 + (_campRnd(camp.tx,camp.ty,100+i*7+tryN)-0.5)*0.7;
