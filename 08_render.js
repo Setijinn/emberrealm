@@ -27,16 +27,20 @@ const roomCV=document.createElement('canvas');
 function h2(x,y){const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);}
 function buildRoomCache(){} // rooms render live now
 // 9 vertical zones, bottom (band 0, green vale) -> top (band 8, molten crown)
+// THE FALLBACK CHECKERBOARD, drawn only where a terr_N.png atlas is missing. It is NOT the ground
+// you normally see, which is why these values may look nothing like the province they name -- and
+// why copying the light halves into MRAMP (11_ui.js) made the minimap wrong for years.
+// The province names here were nine that no longer exist; corrected against rings.names.
 const GBANDCOL=[
- ['#4a6b3e','#547a44'], // 0 Roothollow Vale
- ['#33502f','#3c5b35'], // 1 Mistwood
- ['#4a5a30','#556636'], // 2 Bramblemarch
- ['#5a6350','#66705a'], // 3 Greystone Foothills
- ['#6a706a','#767c74'], // 4 Wind Crags
- ['#75574a','#836254'], // 5 Emberscar Ridge
- ['#5e5854','#6a635e'], // 6 Ashfall Reach
- ['#7a4030','#8a4a22'], // 7 Cinderspire
- ['#9a3a1c','#b5451e'], // 8 Molten Crown
+ ['#4a6b3e','#547a44'], // 0 The Landing Sands
+ ['#33502f','#3c5b35'], // 1 Gullwind Shore
+ ['#4a5a30','#556636'], // 2 Sawgrass Flats
+ ['#5a6350','#66705a'], // 3 The Verdant Belt
+ ['#6a706a','#767c74'], // 4 Wolfwood
+ ['#75574a','#836254'], // 5 Deep Timber
+ ['#5e5854','#6a635e'], // 6 Stonebrow Rise
+ ['#7a4030','#8a4a22'], // 7 Cinderwatch
+ ['#9a3a1c','#b5451e'], // 8 The Ashfall
  ['#6f6a5c','#7d7768'], // 9 The Cairnworks (starter island, out of the green->red order)
 ];
 // Radial band from tile-x/y — the new two-island world (grvBandAt lives in 03_entities).

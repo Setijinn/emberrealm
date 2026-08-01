@@ -328,14 +328,34 @@ function wgOwns(isle, tx, ty) {
 //
 // The mixes are the measured per-band histograms, cumulative so one random number picks one char.
 //   r = scree and bare rock   d = dirt / open ground   e = burnt ash flats   g = grassland
-//   k = boulder (blocks a small circle)   c/s = spawn markers, consumed by 02_worldbuild's sweep
+//   t = tree (blocks a small circle)   k = boulder (same)   c/s = spawn markers, consumed by
+//   02_worldbuild's sweep
+//
+// 't' WAS ABSENT FROM THE LEGEND AND FROM ALL SIX ROWS, so the generator could not place a single
+// tree and every province it makes -- which is everything outside the byte-identical island-A bake
+// -- was bare ground. Wolfwood and Deep Timber, the two provinces whose whole identity is forest,
+// had no trees at all; the band-3 art slot has had a broadleaf assigned in _bandTree the entire
+// time with nothing to draw it on. Because band 3 is shared by The Verdant Belt and Wolfwood, and
+// band 7 by three provinces, there was no vegetation layer separating them either, and walking east
+// read as one continuous field rather than as crossing provinces.
+//
+// The shares below are carved out of each row's most abundant character rather than appended, so
+// every row still sums to exactly 1.000. Trees block a SMALL CIRCLE, not the tile (T_BLOCKSMALL, the
+// same class as a boulder), and boulders already sit at 4-5% in every row -- so this adds the same
+// kind of obstruction at the same order of density and cannot wall a province off.
 const WG_MIX = [
-  [['d',0.310],['r',0.594],['g',0.866],['e',0.934],['k',0.979],['c',0.994],['s',1.000]],  // band 3
-  [['r',0.411],['d',0.778],['g',0.859],['e',0.926],['k',0.983],['c',0.995],['s',1.000]],  // band 4
-  [['r',0.404],['d',0.784],['e',0.856],['g',0.927],['k',0.983],['c',0.993],['s',1.000]],  // band 5
-  [['r',0.425],['d',0.708],['e',0.886],['k',0.944],['g',0.984],['c',0.993],['s',1.000]],  // band 6
-  [['r',0.360],['e',0.700],['d',0.911],['k',0.968],['g',0.983],['c',0.994],['s',1.000]],  // band 7
-  [['e',0.446],['r',0.761],['d',0.927],['k',0.983],['c',0.993],['s',1.000]]               // band 8
+  // band 3 -- Verdant Belt / Wolfwood: proper broadleaf, 6% carved out of grassland
+  [['d',0.310],['r',0.594],['g',0.806],['t',0.866],['e',0.934],['k',0.979],['c',0.994],['s',1.000]],
+  // band 4 -- 8% out of open dirt: this is where the wood thickens
+  [['r',0.411],['d',0.698],['t',0.778],['g',0.859],['e',0.926],['k',0.983],['c',0.995],['s',1.000]],
+  // band 5 -- Deep Timber, the densest at 10%, still out of dirt
+  [['r',0.404],['d',0.684],['t',0.784],['e',0.856],['g',0.927],['k',0.983],['c',0.993],['s',1.000]],
+  // band 6 -- Stonebrow Rise: stunted and windswept on rock, so 2%
+  [['r',0.425],['d',0.688],['t',0.708],['e',0.886],['k',0.944],['g',0.984],['c',0.993],['s',1.000]],
+  // band 7 -- Cinderwatch: burnt snags, 2% out of the ash flats
+  [['r',0.360],['e',0.680],['t',0.700],['d',0.911],['k',0.968],['g',0.983],['c',0.994],['s',1.000]],
+  // band 8 -- The Ashfall: almost nothing survives, 1.5%
+  [['e',0.431],['t',0.446],['r',0.761],['d',0.927],['k',0.983],['c',0.993],['s',1.000]]
 ];
 function wgGroundFor(band, roll) {
   const row = WG_MIX[Math.max(0, Math.min(WG_MIX.length - 1, band - 3))];

@@ -165,12 +165,24 @@ function dunObjectives(dt){ const R=curRoom; if(!R||!R.dungeon||!R.objs) return;
       if(o.got>=o.need){ R.chases=R.chases.filter(z=>z!==cz); dunOpenGate(o); }
       continue; }
     if(m==='simon'){ o.demoT+=dt;
+      // A WRONG PLATE LATCHES, or it fails again on the very next frame. The failure branch resets
+      // every plate and sets o.got=0 without moving the player or marking anything, so standing on
+      // plate 1 or 2 -- the ordinary way you learn the sequence -- failed at the frame rate: at 60fps
+      // that is 120 phantoms a second, spawned by _dunPhantoms, which has no rate limit. And nothing
+      // could clear them: the streaming cull is gated `curRoom.big`, and a dungeon room is
+      // big:false, dungeon:true. Reading the "THE PLATES RESET" banner was enough to do it.
+      if(o.failT>0){ o.failT-=dt; continue; }
       for(const pl of R.plates){ if(pl.ch!==o.ch||pl.on) continue;
         if(Math.hypot(pl.x-player.x,pl.y-player.y)<28){
           if(pl.idx===o.got){ pl.on=true; o.got++;
             texts.push({x:pl.x,y:pl.y-16,txt:o.got+'/'+o.need,col:'#ffe08a',life:1}); _dunSparkle(pl.x,pl.y,'#ffd07a'); }
           else { for(const p2 of R.plates) if(p2.ch===o.ch) p2.on=false; o.got=0;
-            msg('THE PLATES RESET','watch the sequence'); _dunPhantoms(player.x,player.y,o.ch,2); } } }
+            o.failT=1.4;                       // long enough to step off, and to read the banner
+            msg('THE PLATES RESET','watch the sequence');
+            // and a hard ceiling regardless: repeated failures must not be able to stack a chamber
+            // full of things the room cannot remove
+            if(_chAlive(o.ch)<10) _dunPhantoms(player.x,player.y,o.ch,2);
+            break; } } }
       if(o.got>=o.need) dunOpenGate(o); continue; }
     if(m==='candles'){
       for(const pl of R.plates){ if(pl.ch!==o.ch||pl.on) continue;

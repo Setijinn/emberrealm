@@ -1617,8 +1617,15 @@ const MAP_W=980, MAP_PAD=18, MAP_TOP=34, MAP_BOT=30;
 const MAP_OCEAN='#16303f', MAP_BRIDGE='#6e4d31';
 // map colours by terrain band. 9 (The Cairnworks) is appended out of the green->red order because
 // it is a starter-island band, not a deeper one.
-const MRAMP=['#547a44','#3c5b35','#556636','#66705a','#767c74','#836254','#6a635e','#8a4a22','#b5451e',
- '#7d7768'];
+// MEASURED OFF THE SHIPPED ATLASES, NOT COPIED FROM GBANDCOL. These used to be the light half of
+// each GBANDCOL pair -- which is the FALLBACK checkerboard the renderer only draws when a terr_N.png
+// is missing, not the atlas it actually draws. Mean RGB of each assets/tiles/terr_N.png against the
+// old value: band 0 was off by 200, band 1 by 124, band 7 by 104; only band 6 was close, at 22. On
+// the sand of The Landing Sands (241,217,147) the minimap painted green (84,122,68), and in the
+// vivid green Verdant Belt (92,149,46) it painted grey-green -- so the two provinces were not merely
+// wrong, they were swapped relative to each other and the corner map pointed you the wrong way.
+// Anyone repainting a terrain atlas must re-measure this row; it is a fact about the PNGs.
+const MRAMP=['#f1d993','#8e8a86','#9c9b60','#5c952e','#42512a','#374a2e','#6e736d','#7e807a','#683d25','#9ca09d'];
 function mapLayout(G){ const s=(MAP_W-2*MAP_PAD)/G.w, gridH=G.h*s;
   return {s, ox:MAP_PAD, oy:MAP_TOP, gridH, H:Math.round(MAP_TOP+gridH+MAP_BOT)}; }
 // corruption straight from the room's rings metadata (no curRoom dependency -- the map can be open
@@ -2839,7 +2846,14 @@ function play(){
  loadRPG(); recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
  player.kills=0; player.inv=1;
  res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0; if(typeof clearPlayerStatuses==='function') clearPlayerStatuses();
+ // THE MAGNITUDES GO WITH THE TIMERS. Only the timers were cleared, and 15_pets raises bSpdM with
+ // Math.max -- a monotone floor that nothing ever lowered -- so it survived a death, a new hero and
+ // every run for the life of the page. (Note while here: bDmgT and bRofT have NO producer anywhere
+ // in the codebase. 06_combat reads them with a `||1.5` fallback, boosts run on their own
+ // b.until[id] clocks, and only pet haste writes the speed pair. The damage and fire-rate buff
+ // channels are wired at the consumer end and have nothing feeding them.)
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
+ player.bDmgM=1; player.bRofM=1; player.bSpdM=1;
  // A ward belongs to the hero who raised it. recalcStats only initialises shield when it is
  // undefined, so a Guardian who died permanently under a 90%-maxhp ward handed it to the next
  // Lv1 -- a shield bigger than their entire HP pool, decaying against the NEW maxhp.
