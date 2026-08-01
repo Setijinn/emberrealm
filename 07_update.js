@@ -1150,7 +1150,15 @@ function update(dt){
   }
   // ability upkeep (mana regen handled at top; abilities cast from the right-side button)
   lastShotT+=dt;
-  if(player.bDmgT>0)player.bDmgT-=dt; if(player.bRofT>0)player.bRofT-=dt; if(player.bSpdT>0)player.bSpdT-=dt;
+  // THE MAGNITUDE FALLS WITH THE TIMER. This tick decremented only the T fields, while
+  // applyTimedBuff (12b_abilities.js:54) writes the matching M field with Math.max -- a monotone
+  // floor. So the largest buff a character had ever landed became the size of EVERY later one: land
+  // Crescendo at 1.55x, let it expire, fire a 1.25x buff, and it runs at 1.55x. Ten skills, the
+  // perk layer and the ults all route through applyTimedBuff, so this touched most of the roster.
+  // Clearing at the crossing (not the run boundary, which is all play() covered) is the fix.
+  if(player.bDmgT>0){ player.bDmgT-=dt; if(player.bDmgT<=0){ player.bDmgT=0; player.bDmgM=1; } }
+  if(player.bRofT>0){ player.bRofT-=dt; if(player.bRofT<=0){ player.bRofT=0; player.bRofM=1; } }
+  if(player.bSpdT>0){ player.bSpdT-=dt; if(player.bSpdT<=0){ player.bSpdT=0; player.bSpdM=1; } }
   // active buffs shed colored motes so you can SEE they're running
   if(typeof emitP==='function'){
     if(player.bDmgT>0&&Math.random()<2.5*dt) emitP(player.x+(Math.random()*30-15),player.y+6,{vx:0,vy:-34,life:0.6,col:'#ff8c5a',sz:2,glow:true});

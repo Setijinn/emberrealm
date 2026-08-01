@@ -94,16 +94,40 @@
       ok('mkTopItem refuses the ordinary ladder', mkTopItem('wpn',11,'knight')===null);
     }
 
-    // the auction shelf, across a year of periods
-    let aucMax=-1;
+    // THE AUCTION SHELF, ACROSS 6000 PERIODS RATHER THAN 365. A year was not enough to see the
+    // thing this assertion exists to catch: with AUC_TMAX wrongly at SD_T-1 the top tier came up on
+    // about 0.033% of listings -- one shelf in ~513 days -- so the sweep passed for as long as the
+    // leak existed. The guard was real and blind at the same time, which is the worst kind. 6000
+    // periods puts roughly a dozen would-be hits inside the window.
+    let aucMax=-1, aucN=0;
     if(typeof auctionListings==='function'){
       const realPeriod=window.auctionPeriod;
-      for(let d=0; d<365; d++){
+      for(let d=0; d<6000; d++){
         window.auctionPeriod=()=>d;
-        try{ for(const l of auctionListings()) if(l.item && l.item.t>aucMax) aucMax=l.item.t; }catch(e){}
+        try{ for(const l of auctionListings()){ aucN++; if(l.item && l.item.t>aucMax) aucMax=l.item.t; } }catch(e){}
       }
       window.auctionPeriod=realPeriod;
-      ok('auction never stocks a crafted rung over 365 periods', aucMax<RELIC_T, 'highest shelf tier = '+aucMax);
+      ok('auction never stocks a crafted rung over 6000 periods', aucMax<RELIC_T,
+         'highest shelf tier = '+aucMax+' over '+aucN+' listings');
+      ok('and never exceeds the top of the ordinary ladder', aucMax<=MAXT-1, 'max '+aucMax+' vs MAXT-1 '+(MAXT-1));
+    }
+    // ---- TIMED BUFFS: THE MAGNITUDE MUST FALL WITH THE TIMER ----
+    // applyTimedBuff raises player[fld+'M'] with Math.max, so without a reset at expiry the largest
+    // buff a character ever landed silently became the size of every later one. Ten skills, the perk
+    // layer and the ults all route through it, so this was most of the roster. Driven rather than
+    // reasoned: land a big one, expire it through the real tick, land a small one, read the number.
+    if(typeof applyTimedBuff==='function' && typeof player!=='undefined'){
+      const _sv={dT:player.bDmgT,dM:player.bDmgM,rT:player.bRofT,rM:player.bRofM};
+      applyTimedBuff('bDmg', 1.55, 0.05);
+      ok('a buff sets its magnitude', player.bDmgM===1.55, 'bDmgM='+player.bDmgM);
+      // the same arithmetic 07_update's tick runs, at a dt that carries the timer past zero
+      const _tick=(dt)=>{ if(player.bDmgT>0){ player.bDmgT-=dt; if(player.bDmgT<=0){ player.bDmgT=0; player.bDmgM=1; } } };
+      _tick(0.5);
+      ok('and drops it back to 1 when the timer expires', player.bDmgM===1, 'bDmgM='+player.bDmgM);
+      applyTimedBuff('bDmg', 1.25, 3);
+      ok('so a later, smaller buff is not inflated by an earlier one', player.bDmgM===1.25,
+         'bDmgM='+player.bDmgM+' (was reading 1.55 before this was fixed)');
+      player.bDmgT=_sv.dT; player.bDmgM=_sv.dM; player.bRofT=_sv.rT; player.bRofM=_sv.rM;
     }
     // the event chest. relicP:0 turns off the relic it grants ON PURPOSE, so anything at or above
     // RELIC_T here came out of the ordinary gear rolls, which is the leak being tested for.

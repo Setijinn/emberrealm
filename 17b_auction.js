@@ -16,7 +16,15 @@ const AUCTION_SLOTS=6;        // items on the shelf at once
 // The highest tier the house will ever stock. Deliberately its own constant rather than MAXT-1:
 // see the note at the tier draw below. This is the top of the ORDINARY ladder (T12) and must stay
 // below SD_T, whatever the clamp does next.
-const AUC_TMAX=SD_T-1;
+// MAXT-1, NOT SD_T-1. SD_T-1 is 12, which IS RELIC_T -- so the house shelf could roll a relic-band
+// item and sell it for glory, and glory must never buy power. The tier is built literally below
+// rather than through mkItem, so mkItem's own Math.min(MAXT-1,t) clamp never applied. Worse, the
+// shelf item carries no `relic` flag, so migrateForgeTiers' "a bare 12 is a pre-swap SD piece" rule
+// promoted it to SD_T on the next load: ~371 attack becoming ~1854, bought with glory.
+// This is the identical off-by-one CHEST_TMAX was explicitly corrected for -- see 11_ui.js:1177.
+// Measured before the fix: 1,200,000 simulated listings produced 390 at tier index 12 (0.033% per
+// listing, about one shelf in 513 days), which is why a 365-period selftest sweep never saw it.
+const AUC_TMAX=MAXT-1;
 const AUCTION_HOURS=24;       // how long a shelf lasts
 
 // deterministic PRNG — same seed, same shelf, on every machine

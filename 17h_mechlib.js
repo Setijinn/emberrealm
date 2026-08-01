@@ -474,5 +474,8 @@ function netMechHurt(e,dt){
     for(const b of M.beams){ const dx=player.x-e.x, dy=player.y-e.y;
       if(Math.hypot(dx,dy)>TILE*12) continue;
       let ang=Math.atan2(dy,dx)-b.a; while(ang>Math.PI) ang-=6.283; while(ang<-Math.PI) ang+=6.283;
-      if(Math.abs(ang)<0.21 && M.hit<=0){ M.hit=0.5; damagePlayer(bd*0.45); } } }
+      // _netCap like every other hazard in this file (:448, :465, :470). Without it a client took
+      // the raw beam hit while the other four were capped at 26% of max HP -- and e.bd arrives over
+      // the wire, so an out-of-range snapshot lands here unmitigated.
+      if(Math.abs(ang)<0.21 && M.hit<=0){ M.hit=0.5; damagePlayer(_netCap(bd*0.45)); } } }
 }

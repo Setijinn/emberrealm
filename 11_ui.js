@@ -2846,12 +2846,12 @@ function play(){
  loadRPG(); recalcStats(); player.hp=player.maxhp; player.mp=player.maxmp;
  player.kills=0; player.inv=1;
  res=0; allies=[]; zones=[]; fx=[]; player.spiritT=0; player.deadeye=0; player.thornT=0; if(typeof clearPlayerStatuses==='function') clearPlayerStatuses();
- // THE MAGNITUDES GO WITH THE TIMERS. Only the timers were cleared, and 15_pets raises bSpdM with
- // Math.max -- a monotone floor that nothing ever lowered -- so it survived a death, a new hero and
- // every run for the life of the page. (Note while here: bDmgT and bRofT have NO producer anywhere
- // in the codebase. 06_combat reads them with a `||1.5` fallback, boosts run on their own
- // b.until[id] clocks, and only pet haste writes the speed pair. The damage and fire-rate buff
- // channels are wired at the consumer end and have nothing feeding them.)
+ // THE MAGNITUDES GO WITH THE TIMERS. Only the timers were cleared, and applyTimedBuff raises the
+ // M fields with Math.max -- a monotone floor that nothing lowered -- so a peak survived a death and
+ // a new hero. (An earlier version of this comment claimed bDmgT and bRofT had no producer at all.
+ // That was wrong: applyTimedBuff at 12b_abilities.js:54 writes player[fld+'M'] with a COMPUTED
+ // property name, which a grep for `bDmgM =` does not find. Ten skills, 13b_perks and 13c_ults all
+ // feed it. The expiry itself is fixed in 07_update's tick; this line is the run-boundary belt.)
  player.bDmgT=0; player.bRofT=0; player.bSpdT=0;
  player.bDmgM=1; player.bRofM=1; player.bSpdM=1;
  // A ward belongs to the hero who raised it. recalcStats only initialises shield when it is
