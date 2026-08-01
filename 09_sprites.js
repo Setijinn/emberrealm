@@ -1946,6 +1946,13 @@ function render(){
         g4.addColorStop(0,'#ffd07a'); g4.addColorStop(1,'rgba(0,0,0,0)');
         ctx.fillStyle=g4; ctx.beginPath(); ctx.arc(sw.x,sw.y-4,20,0,6.29); ctx.fill(); ctx.restore(); ctx.globalAlpha=1; } }
   }
+  // CAMPS, before the decor list: the ground scar has to be under everything, and the props are
+  // drawn in y order with the rest of the world so a body can stand in front of a tent.
+  if(curRoom.camps) for(const cp of curRoom.camps){
+    if(Math.abs(cp.cx-player.x)>1400 || Math.abs(cp.cy-player.y)>1100) continue;
+    drawCampGround(cp);
+    for(const pr of cp.props) drawCampProp(pr, pr.x*TILE, pr.y*TILE, cp.col);
+  }
   if(curRoom.decor) for(const d of curRoom.decor){ const dx=d.x*TILE, dy=d.y*TILE;
     if(d.t==='fountain') drawFountain(dx,dy);
     else if(d.t==='sign') drawSign(dx,dy,d.txt);

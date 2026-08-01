@@ -629,6 +629,9 @@ function grvLairXY(b){ const R=rooms['G']; if(!R) return null;
  return {x:(R.w/2)*TILE, y:(tyc+0.5)*TILE}; }
 // lairs are stamped once the world exists — radially for the new isles, band-Y for old worlds
 if(typeof rooms!=='undefined' && rooms['G']) stampLairs();
+// CAMPS COME AFTER THE LAIRS, because placement has to know where the lairs are in order to stay
+// CAMP_LAIR_GAP clear of them. 03c_camps.js loads after this file, so the call cannot be made here
+// -- it is made from the camps file's own tail, which runs once it exists.
 // each ring has its own unique mini-boss; only one of a given ring's boss lives at a time
 function spawnRingBoss(b){
  if(!curRoom||!curRoom.rings) return;
@@ -1403,7 +1406,14 @@ function makeEnemy(sp){
     // stamp the archetype BEFORE the elite renames the species, or "Fen-Swollen Marsh Tick"
     // misses the lookup and an elite silently reverts to the generic hound
     e.arch=(e.spn&&MOB_ARCH[e.spn])||(e.type==='s'?'caster':'beast');
-    if(!e.node && !e.summoned && eliteRoll(sp)) makeElite(e,sp);
+    // ELITES ONLY EXIST IN CAMPS NOW (user, 2026-08-01: "elites should only spawn at the camps").
+    // eliteRoll used to scatter them across the open world at 7.5% of every roaming spawn point,
+    // which made an elite something you bumped into on the way somewhere. Confining them to camps
+    // is what turns a camp into a destination -- it is the only place the better drops are, which
+    // is the whole "gives the area purpose for grinding gear" the camps exist for.
+    // sp.elite is set by _campFill when it lays the point down, so a camp elite is exactly as
+    // deterministic as the rolled ones were: the same spot keeps the same elite across respawns.
+    if(!e.node && !e.summoned && sp.elite) makeElite(e,sp);
   }
   // NEVER spawn inside a wall — grove lairs stamp 'X' over old spawn spots, and any
   // future caller might pass a bad tile; relocate to the nearest open cell.
@@ -2135,7 +2145,11 @@ const DUNSPEC=[
 // its elite across respawns exactly the way it keeps its species -- the outcrop with the Elder
 // Stone Warden on it is a place you learn, not a slot machine. Bosses, nodes and summons never
 // qualify: a boss is already the thing an elite is a smaller version of.
-const ELITE_P = 0.075;                 // about one roaming spawn in thirteen
+// NO LONGER CONSULTED BY THE SPAWNER. makeEnemy now takes sp.elite only, so elites exist in camps
+// and nowhere else. eliteRoll is kept because it is the shape any future "wild elite" would want --
+// a deterministic hash of the position rather than a coin flip, so a spot keeps its elite across
+// respawns -- and because ELITE_P records what the open-world rate used to be.
+const ELITE_P = 0.075;                 // the OLD open-world rate: about one roaming spawn in thirteen
 // Rows 0-8 are terrain bands AND boss art slots 0-8, exactly like MOBNAME/MOBTINT. Rows 9-12 are
 // the starter bosses' art slots, row 13 is terrain band 9 -- BAND_ROW maps a band onto its row.
 const ELITE_TITLES=[

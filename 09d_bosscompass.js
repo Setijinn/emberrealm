@@ -104,14 +104,20 @@ function bossPrimaryTarget(){
   return best;
 }
 
-// What the TRACKER lists: the level-appropriate objective first and always, then whatever else is
-// near enough to matter, never repeating the primary and never more than BC_MAX rows.
+// ONE OBJECTIVE, NEVER TWO (user, 2026-08-01: "only one quest bubble should ever be active at a
+// time"). It listed the level-appropriate boss plus whatever else was in range, which put two cards
+// on screen with two level numbers and two arrows pointing different ways -- and a card that moves
+// to the side its boss is on cannot have a companion without the pair fighting over the same edge.
+// Two objectives is not an objective, it is a menu.
+//
+// The one that survives is the LEVEL-APPROPRIATE one, because that is the question the tracker
+// exists to answer. bossCompassTargets is kept as the proximity fallback for the case where nothing
+// scores at all -- an empty lair table, or a room with no rings.
 function bossObjectiveList(){
-  const near=bossCompassTargets();
   const pri=bossPrimaryTarget();
-  if(!pri) return near;
-  const rest=near.filter(t=>t.b!==pri.b);
-  return [pri].concat(rest).slice(0,BC_MAX);
+  if(pri) return [pri];
+  const near=bossCompassTargets();
+  return near.length?[near[0]]:[];
 }
 // THE BOSS'S OWN LEVEL (user, 2026-07-31: "give it the boss level"). It used to widen the reading
 // into the band its zone spans -- "20-22" -- which is the ground's level, not the animal's. The
