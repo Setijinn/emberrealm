@@ -488,6 +488,28 @@ paints all 12 dev tabs to prove none of them throws.
 tools/shot.py photographs a panel. Use it before saying a panel works.
 tools/terrshot.py photographs overworld ground; tools/audit.py runs a measurement.
 
+tools/spritegen.py MAKES NEW SPRITES OUT OF THE ONES WE ALREADY PAID FOR. Recipes
+in tools/sprite_recipes.json name a source in assets/ and a chain of ops (ramp,
+hue, sat, light, tint, glow, outline, alpha, pad, scale, flip, layer) and it
+writes a new set KEEPING THE SOURCE'S FILENAMES, which is the whole trick -- the
+probing loaders in 08c_embersprites.js can already read the result. The shipped
+recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
+373 files in 3 seconds off art that is already here.
+  - `--probe <path>` FIRST. A sprite's "dominant hue" is a circular mean and on a
+    two-colour sprite it is a colour the sprite does not contain -- arch_golem
+    reports 324 (magenta) from a violet core plus warm stone. That is why the
+    elements are built from `ramp` (luminance-driven, so one definition lands the
+    same on a golem, a husk and a plant -- verified) and not from `hue`. Use
+    `hue` with `only:[lo,hi]` for bespoke per-sprite work.
+  - IT IS ALL DISPOSABLE. Every output is recorded in assets/_derived.json, so
+    `--clean` removes exactly the derived files and nothing else, a re-run with an
+    unchanged recipe is a no-op, and derived art can never be mistaken for
+    hand-generated art. Nothing outside assets/ is ever written.
+  - `--sheet` tiles a family beside its source. Use it: HANDOFF's contact-sheet
+    rule is why five bad SD reagents got caught, and it applies here too.
+  - Generated art is NOT committed. Run it when you decide to use a family, and
+    bump ART_CACHE in sw.js when you do.
+
 ---------------------------------------------------------------------------
 WHAT SHIPPED BEFORE THAT (v481 -> v545)
 ---------------------------------------------------------------------------

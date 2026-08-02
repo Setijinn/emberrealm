@@ -1,0 +1,108 @@
+{
+  "_note": [
+    "Recipes for tools/spritegen.py. Each entry names a SOURCE already in assets/ and a chain of ops,",
+    "and writes a new set that keeps the source's filenames -- which is what makes the result loadable",
+    "by the probing loaders already in 08c_embersprites.js.",
+    "",
+    "WHY THE ELEMENTS ARE BUILT OUT OF `ramp` AND NOT `hue`, which is the one thing to understand",
+    "before editing this file. `hue: {to: N}` rotates a sprite's existing colour toward a target, so",
+    "what it produces depends on the colour the source already had -- and it is measured against the",
+    "sprite's DOMINANT hue, which on a two-colour sprite is a lie. arch_golem reports 324 degrees, a",
+    "magenta it does not contain anywhere: it is a violet core and warm stone averaging out. A single",
+    "`hue` delta across that moved the red trim to yellow while the core went blue.",
+    "",
+    "`ramp` is driven by LUMINANCE instead, which every sprite has and which does not vary by",
+    "archetype. That is what lets one element definition land identically on a golem, a husk and a",
+    "plant -- verified on all three -- so the shared table below is genuinely shared and not twelve",
+    "copies drifting apart. Use `hue` for BESPOKE per-sprite work, with `only` to name the band, and",
+    "run `--probe <path>` first to find out what the bands are.",
+    "",
+    "`ramp.mix` is the dial. Measured on this art: 0.45 barely reads, 0.75 flattens the accent trim",
+    "that carries the creature's identity, 0.58 keeps the trim and still reads as a different element",
+    "across the room. Start at 0.58 and only move it with a contact sheet open.",
+    "",
+    "AFTER BUILDING: look at the contact sheet (--sheet), then bump ART_CACHE in sw.js."
+  ],
+
+  "shared": {
+    "elements": {
+      "frost": [
+        {"op": "ramp", "shadow": "#16223a", "high": "#bfe6ff", "span": 0.78, "mix": 0.58},
+        {"op": "sat", "mul": 0.95}
+      ],
+      "venom": [
+        {"op": "ramp", "shadow": "#142a14", "high": "#b6ee5e", "span": 0.76, "mix": 0.58},
+        {"op": "sat", "mul": 1.10}
+      ],
+      "shadow": [
+        {"op": "ramp", "shadow": "#140f20", "high": "#8f7ec2", "span": 0.72, "mix": 0.68},
+        {"op": "sat", "mul": 0.75},
+        {"op": "glow", "hue": 275, "radius": 5, "strength": 0.34}
+      ],
+      "ember": [
+        {"op": "ramp", "shadow": "#2c1008", "high": "#ff8a2a", "span": 0.78, "mix": 0.58},
+        {"op": "sat", "mul": 1.15},
+        {"op": "glow", "hue": 24, "radius": 4, "strength": 0.28}
+      ]
+    }
+  },
+
+  "recipes": {
+
+    "still_crab":    {"note": "Archetype stills, four elements each. One file per variant -- the whole set of twelve archetypes is 48 files and about 200 KB, which is why the stills are all here and the animations are not.", "from": "assets/mobs/arch_crab.png",    "to": "assets/mobs/arch_crab_{v}.png",    "variants_from": "elements"},
+    "still_swarm":   {"from": "assets/mobs/arch_swarm.png",   "to": "assets/mobs/arch_swarm_{v}.png",   "variants_from": "elements"},
+    "still_bird":    {"from": "assets/mobs/arch_bird.png",    "to": "assets/mobs/arch_bird_{v}.png",    "variants_from": "elements"},
+    "still_husk":    {"from": "assets/mobs/arch_husk.png",    "to": "assets/mobs/arch_husk_{v}.png",    "variants_from": "elements"},
+    "still_golem":   {"from": "assets/mobs/arch_golem.png",   "to": "assets/mobs/arch_golem_{v}.png",   "variants_from": "elements"},
+    "still_plant":   {"from": "assets/mobs/arch_plant.png",   "to": "assets/mobs/arch_plant_{v}.png",   "variants_from": "elements"},
+    "still_wisp":    {"from": "assets/mobs/arch_wisp.png",    "to": "assets/mobs/arch_wisp_{v}.png",    "variants_from": "elements"},
+    "still_boar":    {"from": "assets/mobs/arch_boar.png",    "to": "assets/mobs/arch_boar_{v}.png",    "variants_from": "elements"},
+    "still_slinger": {"from": "assets/mobs/arch_slinger.png", "to": "assets/mobs/arch_slinger_{v}.png", "variants_from": "elements"},
+    "still_shaman":  {"from": "assets/mobs/arch_shaman.png",  "to": "assets/mobs/arch_shaman_{v}.png",  "variants_from": "elements"},
+    "still_acolyte": {"from": "assets/mobs/arch_acolyte.png", "to": "assets/mobs/arch_acolyte_{v}.png", "variants_from": "elements"},
+    "still_hound":   {"from": "assets/mobs/hound.png",        "to": "assets/mobs/hound_{v}.png",        "variants_from": "elements"},
+
+    "anim_golem": {
+      "note": "The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.",
+      "from": "assets/mobs/anim/arch_golem", "to": "assets/mobs/anim/arch_golem_{v}", "variants_from": "elements"
+    },
+    "anim_husk":  {"from": "assets/mobs/anim/arch_husk",  "to": "assets/mobs/anim/arch_husk_{v}",  "variants_from": "elements"},
+    "anim_plant": {"from": "assets/mobs/anim/arch_plant", "to": "assets/mobs/anim/arch_plant_{v}", "variants_from": "elements"},
+    "anim_wisp":  {"from": "assets/mobs/anim/arch_wisp",  "to": "assets/mobs/anim/arch_wisp_{v}",  "variants_from": "elements"},
+
+    "elite_golem": {
+      "note": "The ELITE treatment, and the reason `pad` exists: the halo needs room the source frame does not have, so pad FIRST and pad every frame by the same amount or the animation jitters. Colour only -- an elite is the same creature wearing the fact that it is dangerous, and the silhouette has to stay the thing the player already learned to recognise.",
+      "from": "assets/mobs/anim/arch_golem",
+      "to": "assets/mobs/anim/arch_golem_elite",
+      "ops": [
+        {"op": "pad", "amount": 6},
+        {"op": "sat", "mul": 1.12},
+        {"op": "outline", "color": "#ffd76a", "width": 1, "alpha": 210},
+        {"op": "glow", "color": "#ffb02e", "radius": 5, "strength": 0.5}
+      ]
+    },
+
+    "spectral_wisp": {
+      "note": "Phantom/spectral. `alpha` is nearly the whole treatment -- a spectre is a transparency problem, not a colour one, and every attempt to say it with colour alone reads as 'blue wisp'.",
+      "from": "assets/mobs/anim/arch_wisp",
+      "to": "assets/mobs/anim/arch_wisp_spectral",
+      "ops": [
+        {"op": "sat", "mul": 0.5},
+        {"op": "light", "mul": 1.1},
+        {"op": "alpha", "mul": 0.62},
+        {"op": "glow", "hue": 190, "radius": 6, "strength": 0.4}
+      ]
+    },
+
+    "golem_corebands": {
+      "note": "THE WORKED EXAMPLE FOR `only`. arch_golem probes as three bands: warm stone at 0-60, a violet core at 270-300, red trim at 330-360. This takes the core to cold blue and leaves the stone and the trim exactly where they are -- which is the one thing `ramp` cannot do, because ramp touches every pixel. Bespoke, per-sprite, and it will NOT transfer to another archetype: run `--probe` on that one and read its own bands.",
+      "from": "assets/mobs/arch_golem.png",
+      "to": "assets/mobs/arch_golem_coldcore.png",
+      "ops": [
+        {"op": "hue", "to": 205, "only": [265, 305]},
+        {"op": "sat", "mul": 1.2, "only": [180, 240]}
+      ]
+    }
+
+  }
+}
