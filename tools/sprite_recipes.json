@@ -21,6 +21,23 @@
     "that carries the creature's identity, 0.58 keeps the trim and still reads as a different element",
     "across the room. Start at 0.58 and only move it with a contact sheet open.",
     "",
+    "NAMING IS YOURS AT THREE LEVELS, and the default of 'keep the source's names' is only a default.",
+    "  `to`      names the set and where it lands; {v} is the variant name. See still_hound.",
+    "  `as`      renames variants of ONE recipe without touching the shared table they came from --",
+    "            which is the point, since eleven other archetypes are reading that same table.",
+    "  `rename`  names the individual FRAMES, either as a pattern over the tokens",
+    "                {stem} source name without .png    {base} that with any trailing _<n> removed",
+    "                {n}    trailing frame number       {v} variant   {set} recipe   {ext} '.png'",
+    "            e.g. \"rename\": \"{base}_{v}_{n}{ext}\"   ->  idle_3.png becomes idle_frost_3.png",
+    "            or as an explicit MAP for full per-file control, which only renames what it lists:",
+    "                \"rename\": {\"idle_0.png\": \"sleep_0.png\", \"attack_0.png\": \"lunge_0.png\"}",
+    "A variant may also be written long-hand as an object with its own `name`, `to`, `ops` and",
+    "`rename`, which lets a single member of a family land somewhere else entirely.",
+    "",
+    "Two frames colliding on one output name is refused outright rather than letting the last write",
+    "win, and `--show-names` prints every source -> output name without writing anything. Renaming off",
+    "the loaders' `idle_/walk_/attack_/ride_` pattern only warns -- you may well mean it.",
+    "",
     "AFTER BUILDING: look at the contact sheet (--sheet), then bump ART_CACHE in sw.js."
   ],
 
@@ -60,7 +77,13 @@
     "still_slinger": {"from": "assets/mobs/arch_slinger.png", "to": "assets/mobs/arch_slinger_{v}.png", "variants_from": "elements"},
     "still_shaman":  {"from": "assets/mobs/arch_shaman.png",  "to": "assets/mobs/arch_shaman_{v}.png",  "variants_from": "elements"},
     "still_acolyte": {"from": "assets/mobs/arch_acolyte.png", "to": "assets/mobs/arch_acolyte_{v}.png", "variants_from": "elements"},
-    "still_hound":   {"from": "assets/mobs/hound.png",        "to": "assets/mobs/hound_{v}.png",        "variants_from": "elements"},
+    "still_hound": {
+      "note": "THE WORKED EXAMPLE FOR NAMING. The elements are shared across all twelve archetypes, but nothing says this recipe has to accept their names: `as` renames them here and only here, and `to` puts them wherever you like -- so the hound families are cinderhound/rimehound/nighthound/plaguehound rather than hound_ember and friends, while the other eleven archetypes keep using the same element definitions untouched. Recipe names follow the output names, so this builds as still_hound_rimehound.",
+      "from": "assets/mobs/hound.png",
+      "to": "assets/mobs/{v}.png",
+      "variants_from": "elements",
+      "as": {"frost": "rimehound", "venom": "plaguehound", "shadow": "nighthound", "ember": "cinderhound"}
+    },
 
     "anim_golem": {
       "note": "The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.",

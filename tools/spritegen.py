@@ -42,6 +42,16 @@
 #    python tools/spritegen.py --clean                 delete every derived file, per the manifest
 #    python tools/spritegen.py --clean mob_frost       delete just this recipe's output
 #
+#  NAMING IS YOURS, at all three levels -- see the SETS AND NAMING block further down for the detail.
+#    `to`      names the set and where it lands ({v} = the variant name)
+#    `as`      renames variants of one recipe without touching the shared table they came from
+#    `rename`  names the individual frames: a pattern over {stem} {base} {n} {v} {set} {ext},
+#              or an explicit map {"idle_0.png": "sleep_0.png"} for full per-file control
+#  and from the command line, without editing a recipe first:
+#    python tools/spritegen.py anim_golem_frost --to assets/mobs/anim/rimewrought
+#    python tools/spritegen.py anim_golem_frost --rename "{base}_{v}_{n}{ext}"
+#    python tools/spritegen.py anim_golem_frost --show-names     every source -> output name, no writes
+#
 #  Recipes live in tools/sprite_recipes.json so a batch is reproducible and reviewable without
 #  digging through a chat log -- the same contract install_sd_art.py holds its job ids under.
 #
@@ -421,16 +431,86 @@ def apply_ops(px, ops, ctx):
 
 
 # ---------------------------------------------------------------------------------------------------
-# SETS. A recipe reads a source (one PNG, or a directory of frames) and writes a destination with the
-# SAME FILENAMES. Keeping the names is the whole trick for wiring: 08c_embersprites.js probes for
-# `idle_<d>.png` / `walk_<d>_<n>.png` / `attack_<d>_<n>.png` and mob anims for `{idle,attack}_<n>.png`,
-# so a generated directory that keeps those names is loadable by the code that already exists.
+# SETS AND NAMING. A recipe reads a source (one PNG, or a directory of frames) and writes a
+# destination. By DEFAULT the frames keep the source's filenames, because that is the whole trick for
+# wiring: 08c_embersprites.js probes for `idle_<d>.png` / `walk_<d>_<n>.png` / `attack_<d>_<n>.png`
+# and mob anims for `{idle,attack}_<n>.png`, so a directory that keeps those names is loadable by the
+# code that already exists.
+#
+# THE DEFAULT IS A DEFAULT, NOT A RULE. Every name is yours to set, at three levels:
+#
+#   1. THE SET       `to` is the output path, and it is the only thing that decides where a set lands
+#                    and what it is called. `{v}` in it is replaced by the variant name.
+#   2. THE VARIANT   `as` renames variants coming out of a shared table, per recipe:
+#                        "as": {"frost": "rime", "venom": "blight"}
+#                    so `still_golem` can call its frost family "rime" without the golem's rename
+#                    reaching the eleven other archetypes that share the same element definitions.
+#                    A variant may also be written long-hand as an object with its own `name`/`to`,
+#                    which lets one variant of a family land somewhere else entirely.
+#   3. THE FRAME     `rename` renames the individual files. Either a PATTERN over these tokens
+#                        {stem} source name without .png     {ext}  ".png"
+#                        {v}    variant name                 {set}  recipe name
+#                        {n}    trailing frame number, if the source name ends in one
+#                        {base} source name with any trailing _<n> removed
+#                    e.g.  "rename": "{base}_{v}_{n}{ext}"   ->  idle_3.png -> idle_frost_3.png
+#                    or an explicit MAP for full control, one entry per file:
+#                        "rename": {"idle_0.png": "sleep_0.png", "attack_0.png": "lunge_0.png"}
+#                    Unlisted files keep their names, so a map can rename just the two you care about.
+#
+# `--to` and `--rename` do the same two things from the command line for a one-off build, so naming
+# something new never requires editing the recipe file first.
+#
+# RENAMING IS CHECKED, NOT TRUSTED: two frames colliding on one output name is refused outright
+# rather than silently letting the last one win, and a rename that breaks the loaders' expected
+# pattern is called out as a warning -- you may well mean it (a codex portrait, an item icon, a
+# stitched sheet), so it does not stop the build.
 # ---------------------------------------------------------------------------------------------------
+
+# What the probing loaders in 08c_embersprites.js will actually look for. Used only to warn.
+LOADER_PATTERNS = ("idle_", "walk_", "attack_", "ride_")
+
 
 def frames_of(src_abs):
     if os.path.isdir(src_abs):
         return sorted(f for f in os.listdir(src_abs) if f.lower().endswith(".png"))
     return [os.path.basename(src_abs)]
+
+
+def rename_frame(fn, rec):
+    """Apply a recipe's `rename` to one source filename. No rename -> the source name, unchanged."""
+    ren = rec.get("rename")
+    if not ren:
+        return fn
+    if isinstance(ren, dict):
+        return ren.get(fn, fn)                       # an explicit map only renames what it lists
+    stem, ext = os.path.splitext(fn)
+    n, base = "", stem
+    tail = stem.rsplit("_", 1)
+    if len(tail) == 2 and tail[1].isdigit():
+        base, n = tail[0], tail[1]
+    # Straight token substitution rather than str.format: a stray brace in a filename should not
+    # raise, and there are no other braces we want interpreted.
+    out = ren
+    for tok, val in (("{stem}", stem), ("{ext}", ext), ("{v}", rec.get("v", "")),
+                     ("{set}", rec.get("set", "")), ("{n}", n), ("{base}", base)):
+        out = out.replace(tok, val)
+    return out
+
+
+def resolve_names(names, rec):
+    """Map every source frame to its output name, refusing collisions.
+
+    A collision is refused rather than warned about because the failure is otherwise invisible: two
+    frames writing to one path leaves a set that is short by one, with no error and nothing on disk
+    to show which one won."""
+    pairs = [(fn, rename_frame(fn, rec)) for fn in names]
+    seen = {}
+    for src, dst in pairs:
+        if dst in seen:
+            raise SystemExit("[%s] rename collision: %s and %s both -> %s"
+                             % (rec.get("set", "?"), seen[dst], src, dst))
+        seen[dst] = src
+    return pairs
 
 
 def load_recipes(path=RECIPES):
@@ -451,16 +531,32 @@ def load_recipes(path=RECIPES):
                 raise SystemExit("recipe %s wants shared table %r, which is not defined" % (name, key))
             r = dict(r, variants=shared[key])
         if "variants" in r:
-            for vname, vops in r["variants"].items():
-                out["%s_%s" % (name, vname)] = {
-                    "from": r["from"],
-                    "to": r["to"].replace("{v}", vname),
-                    "ops": (r.get("ops") or []) + vops,
-                    "note": r.get("note", ""),
-                }
+            # `as` renames the variants of THIS recipe only. That is the point of it: the element
+            # definitions are shared across twelve archetypes on purpose, so a rename must not travel
+            # back up into the table and drag the other eleven along with it.
+            aliases = r.get("as") or {}
+            for vname, vspec in r["variants"].items():
+                if isinstance(vspec, dict):                    # long-hand: this variant names itself
+                    label = vspec.get("name", aliases.get(vname, vname))
+                    vto = vspec.get("to") or r["to"].replace("{v}", label)
+                    vops = vspec.get("ops") or []
+                    vren = vspec.get("rename", r.get("rename"))
+                else:
+                    label = aliases.get(vname, vname)
+                    vto = r["to"].replace("{v}", label)
+                    vops = vspec
+                    vren = r.get("rename")
+                key = "%s_%s" % (name, label)                  # the CLI name follows the output name
+                if key in out:
+                    raise SystemExit("two variants of %s both resolve to the name %r" % (name, label))
+                out[key] = {"from": r["from"], "to": vto, "ops": (r.get("ops") or []) + vops,
+                            "note": r.get("note", ""), "v": label, "set": key, "rename": vren}
         else:
             out[name] = {"from": r["from"], "to": r["to"], "ops": r.get("ops") or [],
-                         "note": r.get("note", "")}
+                         "note": r.get("note", ""), "v": "", "set": name, "rename": r.get("rename")}
+    for k in out:
+        if out[k].get("rename") is None:
+            out[k].pop("rename", None)                          # keep the manifest key tidy
     return out
 
 
@@ -518,10 +614,22 @@ def build(name, rec, force=False, dry=False):
         if have:
             return {"name": name, "skipped": True, "count": len(prev.get("files", []))}
 
+    # For a DIRECTORY source `to` is the folder and each frame is named by `rename` (default: keep the
+    # source name). For a SINGLE FILE source `to` already names the file outright, so rename has
+    # nothing left to decide and is not consulted.
+    pairs = resolve_names(names, rec) if os.path.isdir(src) else [(names[0], os.path.basename(dst))]
+
+    warn = None
+    if os.path.isdir(src) and rec.get("rename"):
+        broke = [d for _, d in pairs if not d.startswith(LOADER_PATTERNS)]
+        if broke:
+            warn = ("%d frame(s) renamed off the loader's pattern (e.g. %s) -- fine if deliberate, "
+                    "but 08c_embersprites.js will not find them by probing" % (len(broke), broke[0]))
+
     written = []
-    for fn in names:
+    for fn, outfn in pairs:
         s = os.path.join(src, fn) if os.path.isdir(src) else src
-        d = os.path.join(dst, fn) if os.path.isdir(src) else dst
+        d = os.path.join(dst, outfn) if os.path.isdir(src) else dst
         if dry:
             written.append(os.path.relpath(d, ROOT).replace("\\", "/"))
             continue
@@ -537,7 +645,7 @@ def build(name, rec, force=False, dry=False):
                              "ops": rec["ops"], "files": written}
         write_manifest(man)
     return {"name": name, "skipped": False, "count": len(written), "files": written,
-            "hue": round(set_hue, 1)}
+            "hue": round(set_hue, 1), "warn": warn}
 
 
 def clean(only=None):
@@ -664,12 +772,55 @@ def main():
     ap.add_argument("--sheet", action="store_true", help="tile the built sets into _shots/ to look at")
     ap.add_argument("--recipes", default=RECIPES, help="recipe file (default tools/sprite_recipes.json)")
     ap.add_argument("--probe", metavar="PATH", help="report a sprite's hue bands; run before writing a recipe")
+    ap.add_argument("--to", metavar="PATH", help="override the output path for a single recipe (one-off naming)")
+    ap.add_argument("--rename", metavar="PATTERN",
+                    help="override output frame names, e.g. '{base}_{v}_{n}{ext}' (one recipe at a time)")
+    # NOT `--names`: the positional argument is already `names`, and argparse would quietly have the
+    # flag overwrite the list of recipes to build.
+    ap.add_argument("--show-names", action="store_true", dest="show_names",
+                    help="print the exact source -> output filename for every frame, and write nothing")
     a = ap.parse_args()
 
     if a.probe:
         return probe(a.probe)
 
     recs = load_recipes(a.recipes)
+
+    # One-off naming from the command line. Restricted to a single recipe on purpose: `--to` names one
+    # destination, and quietly pointing eleven recipes at it would have them overwrite each other.
+    if a.to or a.rename:
+        if len(a.names) != 1 or a.all:
+            raise SystemExit("--to/--rename name a single output, so give exactly one recipe name")
+        if a.names[0] not in recs:
+            raise SystemExit("unknown recipe: %s (try --list)" % a.names[0])
+        recs = dict(recs)
+        r = dict(recs[a.names[0]])
+        if a.to:
+            r["to"] = a.to.replace("{v}", r.get("v", ""))
+        if a.rename:
+            r["rename"] = a.rename
+        recs[a.names[0]] = r
+
+    if a.show_names:
+        todo = sorted(recs) if a.all else a.names
+        if not todo:
+            raise SystemExit("--show-names needs a recipe name, or --all")
+        for n in todo:
+            if n not in recs:
+                raise SystemExit("unknown recipe: %s (try --list)" % n)
+            r = recs[n]
+            src = os.path.join(ROOT, r["from"])
+            if not os.path.exists(src):
+                print("! %s: source missing (%s)" % (n, r["from"]))
+                continue
+            fs = frames_of(src)
+            print("%s  ->  %s" % (n, r["to"]))
+            if os.path.isdir(src):
+                for s, d in resolve_names(fs, r):
+                    print("    %-24s -> %s%s" % (s, d, "" if s == d else "   (renamed)"))
+            else:
+                print("    %-24s -> %s" % (fs[0], os.path.basename(r["to"])))
+        return 0
 
     if a.clean:
         n = clean(a.names[0] if a.names else None)
@@ -706,6 +857,8 @@ def main():
             total += r["count"]
             print("  %s %-30s %d file(s)%s" % ("~" if a.dry else "+", n, r["count"],
                   "" if a.dry else "  src hue %.0f deg" % r["hue"]))
+            if r.get("warn"):
+                print("    note: %s" % r["warn"])
     print("\n%s %d file(s) across %d set(s)" % ("would write" if a.dry else "wrote", total, len(todo)))
 
     if a.sheet and not a.dry:
