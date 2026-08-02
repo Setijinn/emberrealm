@@ -165,6 +165,14 @@ function netLootRoster(x,y){
 function netId(e){ if(e && !e.nid) e.nid=_netNid++; return e?e.nid:0; }
 function _netSend(m){ if(typeof coop==='undefined'||!coop.conns) return;
   for(const c of coop.conns){ if(c.open){ try{ c.send(m); }catch(err){} } } }
+// ONE CONNECTION. The 'G' grant is the only message that carries real, awardable item objects, and
+// it was going out on _netSend -- to every connection -- which contradicts the guarantee stated
+// above netBroadcast: soulbound rows are filtered per CONNECTION so another player's T12 never
+// reaches the wire at all and no client bug can reveal it. The receiver-side `d.to!==netSelfId()`
+// filter is a display guard on an untrusted machine; deleting that one line in a modified client
+// awarded someone else's bound drop. Same id space as netBroadcast's per-c.peer `lt` swap.
+function _netTo(id,m){ if(typeof coop==='undefined'||!coop.conns||!id) return;
+  for(const c of coop.conns){ if(c.open && c.peer===id){ try{ c.send(m); }catch(err){} return; } } }
 
 // ---- host: broadcast the world ----
 // Packed as arrays rather than objects: at 12Hz with a few dozen entities the difference between
@@ -449,10 +457,10 @@ function netHostPickup(m,fromId){
     if(b.lid!==m.lid) continue;
     if(b.own && b.own!==fromId) return;      // bound to someone else — deny (the wire already hid it)
     loots.splice(i,1);
-    _netSend({t:'G', lid:m.lid, to:fromId, items:(typeof bagItems==='function')?bagItems(b):[b.item]});
+    _netTo(fromId, {t:'G', lid:m.lid, to:fromId, items:(typeof bagItems==='function')?bagItems(b):[b.item]});
     return; }
   // already taken: answer anyway so the loser clears its in-flight latch instead of retrying
-  _netSend({t:'G', lid:m.lid, to:fromId, items:null});
+  _netTo(fromId, {t:'G', lid:m.lid, to:fromId, items:null});
 }
 // Host-only: retire soulbound sacks whose owner is gone, so they stop eating a snapshot row and a
 // slot in the world forever. Grace periods, not instant despawn — a player who dies, respawns or
@@ -497,6 +505,15 @@ function _netDispatch(d, fromId){
   // peer that is about to change role -- gating it on the role it currently holds is how an election
   // message gets dropped by the one peer that needed it.
   if(d.t==='pg'||d.t==='pn'||d.t==='HO'){
+    // A HOST NEVER LEGITIMATELY RECEIVES A HANDOVER. It is the thing that ISSUES one. Without this
+    // any client could send {t:'HO', to:'H'} and the host would step down -- destroy its peer, drop
+    // every connection and re-enter _pubAttempt -- disconnecting the entire realm, on demand, at
+    // whatever rate the sender liked. Private rooms were not exempt either: _hostHandover never
+    // checked coop.pub, so a forged HO dragged a private room onto the public id.
+    // The test is the ROLE, not the id: on a client the relay's c.peer is COOP_PUB_ID or the room
+    // id, never 'H' -- 'H' is only ever a presence key -- so a fromId==='H' check would reject
+    // every legitimate handover instead.
+    if(d.t==='HO' && asHost) return true;
     if(typeof coopNotePing==='function') return coopNotePing(d, fromId);
     return true; }
   if(d.t==='W'){ if(!asClient) return true; netApplyWorld(d); return true; }

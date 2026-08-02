@@ -48,6 +48,20 @@ function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) ret
     coop.peer=p; coop.host=true; coop.pub=true; coop.on=true; coop.id='H'; coop.code='SERVER';
     coop._trying=false; _coopPanel();
     p.on('connection',c=>_coopWire(c)); });
+  // THE BROKER SOCKET CAN DROP WITHOUT THE GAME NOTICING, AND THAT IS HOW YOU GET TWO RELAYS.
+  // PeerJS 'disconnected' means the signalling socket to the broker went away: existing
+  // DataConnections keep working, so snapshots keep flowing and nothing in the UI changes -- but
+  // the peer id is RELEASED server-side. COOP_PUB_ID is then free, the next joiner's keepalive
+  // claims it successfully, and there are two relays with independent nid counters both presenting
+  // as 'H', neither able to see the other. The original host never re-attempts, because by its own
+  // bookkeeping (coop.on true, conns populated) it is fine.
+  // peer.reconnect() re-takes the SAME id on the same peer object, which is the whole fix. It must
+  // not touch _hostClaimLock: that is the handover's lock and setting it here would lock the host
+  // out of its own id for nine seconds.
+  p.on('disconnected',()=>{
+    if(stale() || p.destroyed) return;
+    try{ p.reconnect(); }catch(err){}
+  });
   p.on('error',e=>{
     if(stale()){ try{p.destroy();}catch(err){} return; }
     if(e.type==='unavailable-id'){ // someone else is the server -> join them
@@ -64,7 +78,16 @@ function _pubAttempt(){ if(typeof Peer==='undefined'||coop._trying||coop.on) ret
         setTimeout(()=>{ if(stale()){ try{g.destroy();}catch(err2){} return; }
           coop._trying=false; if(!coop.on){ try{g.destroy();}catch(err2){} coop.peer=null; } },7000); });
       g.on('error',()=>{ if(stale()) return; coop._trying=false; });
-    } else { coop.err=''+e.type; coop._trying=false; try{p.destroy();}catch(err){} }
+    } else {
+      // A NON-FATAL ERROR AFTER 'open' LEFT THE GAME WEDGED. This destroyed the peer -- taking every
+      // DataConnection with it -- while leaving coop.on, coop.host and coop.peer set. The keepalive
+      // at the bottom of this file only retries when !coop.on, so it never fired again, and the
+      // panel went on saying "you are the relay" over a dead peer. _coopReset is the exit that
+      // actually works: it drops remote shadows FIRST (one frame with coop.on false and shadows in
+      // `enemies` is a crash), bumps the epoch so stale callbacks cannot resurrect this attempt, and
+      // keeps coop.auto so the keepalive picks it up. Bare destroy() is what left it wedged.
+      coop.err=''+e.type; coop._trying=false; _coopReset(true);
+    }
   });
 }
 // keep us on the server whenever we're in-game (also handles host-migration reconnects)
@@ -107,7 +130,25 @@ function _coopWire(c){
       if(typeof netOnMessage==='function' && netOnMessage(d, c.peer)) return;
       return; }
     if(!d.id) return;
-    d.ts=performance.now(); coop.peers[d.id]=d;
+    // KEY ON THE TRANSPORT ID, NOT ON WHAT THE PACKET CLAIMS. c.peer is set by PeerJS and cannot be
+    // forged; d.id was whatever the sender wrote. A client could send {t:'s', id:'H', rm:<your
+    // room>} and the host would store it under 'H' AND relay it verbatim to everyone else --
+    // netHostInMyRoom reads exactly that key, so netSimulates() went false for the whole party and
+    // the world emptied, from one packet, at 8Hz. The host still keys its OWN relayed copy by the
+    // real sender so a client cannot impersonate a third party either.
+    // On the host, c.peer is the sender. On a client every non-presence message comes from the
+    // relay, and presence for other players arrives relayed -- so a client has to trust d.id there,
+    // which is safe because only the host relays and it has already rewritten the id.
+    const _pid = coop.host ? (c.peer || d.id) : d.id;
+    if(coop.host) d.id=_pid;
+    // MERGE, DO NOT REPLACE. p.rtt and p.score are written by coopNotePing at 1Hz; presence arrives
+    // at ~8Hz, and a wholesale assign destroyed them 8 times a second -- which is why the host
+    // election could never accumulate its consecutive wins and has never once fired.
+    const _prev = coop.peers[_pid];
+    if(_prev){ const _rtt=_prev.rtt, _sc=_prev.score, _pts=_prev.pts;
+      coop.peers[_pid]=d; d.ts=performance.now();
+      if(_rtt!==undefined) d.rtt=_rtt; if(_sc!==undefined) d.score=_sc; if(_pts!==undefined) d.pts=_pts;
+    } else { d.ts=performance.now(); coop.peers[_pid]=d; }
     if(coop.host){ for(const o of coop.conns){ if(o!==c && o.open){ try{o.send(d);}catch(e){} } } } });
   const drop=()=>{ coop.conns=coop.conns.filter(x=>x!==c);
     if(!coop.host && !coop.conns.length){ // lost the relay -> auto-reconnect (migration)
@@ -233,7 +274,13 @@ function _coopMsg(t){ if(typeof msg==='function') msg('CO-OP',t); }
 //  off the id, the elected peer claims it, and the lock expires on its own if the elected peer never
 //  arrives, so a failed handover degrades to the old race rather than to nobody hosting.
 // ===================================================================================================
-const HOST_MARGIN   = 0.65;    // challenger must score below 65% of the host's score
+// What the host counts its own link as, in the same unit the challengers are measured in:
+// milliseconds of round trip. A relay serves everyone, so its own cost is not zero -- this is the
+// break-even a challenger has to beat by HOST_MARGIN before the swap is worth the disruption of
+// every peer reconnecting. Tuned as a plain latency figure now that both sides of the comparison
+// are latencies rather than one being a browser-hint score and the other a constant.
+const HOST_SELF_RTT = 120;
+const HOST_MARGIN   = 0.65;    // challenger must measure below 65% of the host's break-even
 const HOST_SAMPLES  = 8;       // consecutive comparisons it must win (~8s at the presence rate)
 const HOST_COOLDOWN = 45000;   // ms before another handover may fire
 const HOST_CLAIM_LOCK = 9000;  // ms a non-elected peer stays off COOP_PUB_ID during a handover
@@ -265,6 +312,9 @@ function coopLinkScore(){
 
 // RTT: the host stamps each presence packet, a client answers, the host records the round trip. It
 // rides the packets that already flow, so it costs no extra traffic.
+// What this host last pinged each connection with, so an echoed 'pn' can be checked against a
+// timestamp we actually sent rather than trusted.
+const _pingK={};
 function coopNotePing(d, fromId){
   const now = performance.now();
   if(d.t==='pg'){                       // a ping from the host -> answer it
@@ -272,10 +322,19 @@ function coopNotePing(d, fromId){
     return true;
   }
   if(d.t==='pn'){                       // a client's answer -> record its round trip
-    const p = coop.peers[fromId] || (coop.peers[fromId]={});
-    p.rtt = Math.max(1, Math.round(now - (d.k||now)));
-    p.score = d.sc|0;
-    p.ts = now;
+    const p = coop.peers[fromId]; if(!p) return true;   // no presence yet: nothing to attach it to
+    // ONLY ACCEPT AN ECHO WE ACTUALLY SENT. d.k is echoed back by the client, so a client that
+    // returns a NEWER timestamp fakes a 1ms round trip and wins any election decided on rtt.
+    // _pingK holds what this host last sent that connection.
+    const sent=_pingK[fromId];
+    if(sent && d.k===sent){ p.rtt = Math.max(1, Math.round(now - sent)); _pingK[fromId]=0; }
+    p.score = d.sc|0;                   // self-reported, and treated as such -- see coopElectTick
+    // p.pts, NOT p.ts. A pong carries no x, y, rm or hp, so refreshing the PRESENCE clock with it
+    // kept a departed peer alive forever in nine readers -- the ghost hero, the peer count, the
+    // enemy group scaling, netSimAnchors (the host kept spawning around a frozen position) and
+    // netReapBound's orphan cull, which then never fired. p.ts means "presence was received";
+    // p.pts means "the link answered".
+    p.pts = now;
     return true;
   }
   if(d.t==='HO'){                       // the host is handing the relay over
@@ -292,15 +351,30 @@ function coopElectTick(){
   if(!coop.host) return;
   const now = performance.now();
   // ping every client, so their RTT is fresh rather than remembered
-  for(const c of coop.conns) if(c.open){ try{ c.send({t:'pg', k:now}); }catch(e){} }
+  for(const c of coop.conns) if(c.open){ _pingK[c.peer]=now; try{ c.send({t:'pg', k:now}); }catch(e){} }
   if(now - _hostLastSwap < HOST_COOLDOWN) return;
-  const mine = coop.link.score;
+  // DECIDED ON THE HOST'S OWN MEASUREMENT, NOT ON WHAT THE CANDIDATE CLAIMS.
+  //
+  // Two reasons. First, p.score came straight off the wire (`p.score = d.sc|0`), so once the
+  // election worked at all, a client claiming sc:1 would win it outright -- an unauthenticated
+  // relay takeover. Second, the arithmetic could never fire anyway: coopLinkScore gives the host a
+  // flat 40 self-credit and adds +300 to any client that has not measured a round trip, while
+  // coop.link.rtt is never written on a client at all. Best possible client score was ~540 against
+  // a host's ~44, and the bar is 0.65 of that -- 28.6. It was structurally impossible, which is why
+  // the relay has never once migrated.
+  //
+  // p.rtt IS a real end-to-end round trip, and it is measured entirely on the host's own clock:
+  // the host stamps `k`, the client echoes it back, the host subtracts. No clock skew, no trust,
+  // and coopNotePing now refuses an echo it did not send. It was collected all along and read by
+  // nothing but a dead reporting function.
+  const mine = HOST_SELF_RTT;
   let best=null, bestId=null;
   for(const id in coop.peers){
     const p = coop.peers[id];
-    if(!p || typeof p.score!=='number') continue;
-    if(now - (p.ts||0) > 4000) continue;                 // stale: they may already be gone
-    if(best===null || p.score < best){ best=p.score; bestId=id; }
+    if(!p || typeof p.rtt!=='number' || !(p.rtt>0)) continue;
+    if(now - (p.ts||0) > 4000) continue;                 // stale presence: they may already be gone
+    if(now - (p.pts||0) > 4000) continue;                 // stale LINK: they stopped answering pings
+    if(best===null || p.rtt < best){ best=p.rtt; bestId=id; }
   }
   if(bestId===null){ _hostWins={}; return; }
   if(best < mine*HOST_MARGIN){
@@ -312,7 +386,10 @@ function coopElectTick(){
       // tell EVERYONE, so the ones who are not elected stay off the id
       for(const c of coop.conns) if(c.open){ try{ c.send({t:'HO', to:bestId, by:coop.id}); }catch(e){} }
       // give the announcement a moment to land before releasing the id
-      setTimeout(()=>{ _hostStepDown(); }, 400);
+      // same guard: _hostStepDown only checks coop.host, which a coopHost() inside these 400ms
+      // leaves true for a DIFFERENT peer -- and it would then destroy that one
+      const _ep2=_coopEpoch;
+      setTimeout(()=>{ if(_coopEpoch!==_ep2) return; _hostStepDown(); }, 400);
     }
   } else {
     _hostWins = {};
@@ -323,6 +400,10 @@ function coopElectTick(){
 function _hostStepDown(){
   if(!coop.host) return;
   _hostClaimLock = performance.now() + HOST_CLAIM_LOCK;   // do not immediately re-claim it myself
+  // SHADOWS GO BEFORE THE FLAG DOES. Every other path that clears coop.on runs netDropRemote first
+  // (see the note in _coopReset); this one did not, so a single frame could run the full local
+  // enemy AI over remote entities that carry no beh, no home and spd:0.
+  if(typeof netDropRemote==='function') netDropRemote();
   try{ coop.peer && coop.peer.destroy(); }catch(e){}
   coop.peer=null; coop.conns=[]; coop.host=false; coop.on=false; coop.id=null;
   _coopEpoch++;                                           // invalidate anything in flight
@@ -337,7 +418,16 @@ function _hostHandover(d){
   const me = coop.id;
   if(d.to && me && d.to===me){
     _hostClaimLock = 0;
+    // EPOCH-GUARDED. This 700ms timer captured nothing and re-tested nothing, so hitting GO SOLO
+    // inside the window destroyed the NEW coop.peer, cleared the new conns and called _pubAttempt()
+    // -- resurrecting co-op after the user had explicitly left it, which is the exact failure the
+    // epoch exists to prevent. Every other async callback in this file captures ep and bails.
+    const ep=_coopEpoch;
     setTimeout(()=>{
+      if(_coopEpoch!==ep) return;
+      // and drop the shadows BEFORE coop.on flips, or one frame runs the full local AI over remote
+      // entities that have no beh, no home and no spd
+      if(typeof netDropRemote==='function') netDropRemote();
       try{ coop.peer && coop.peer.destroy(); }catch(e){}
       coop.peer=null; coop.conns=[]; coop.on=false; coop.host=false;
       _coopEpoch++; coop._trying=false;
