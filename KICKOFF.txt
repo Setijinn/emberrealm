@@ -507,8 +507,21 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     hand-generated art. Nothing outside assets/ is ever written.
   - `--sheet` tiles a family beside its source. Use it: HANDOFF's contact-sheet
     rule is why five bad SD reagents got caught, and it applies here too.
-  - Generated art is NOT committed. Run it when you decide to use a family, and
-    bump ART_CACHE in sw.js when you do.
+  - EVERY NAME IS YOURS. `to` names the set ({v} = the variant), `as` renames the
+    variants of one recipe without touching the shared table the other eleven
+    archetypes read from, and `rename` names the individual frames -- a pattern
+    over {stem} {base} {n} {v} {set} {ext}, or an explicit map for per-file
+    control. `--to` and `--rename` do the same from the command line for a one-off,
+    and `--show-names` prints every source -> output name without writing. Keeping
+    the source's names is only the DEFAULT, and it is the default because it is
+    what lets 08c_embersprites.js find the result by probing; rename off
+    idle_/walk_/attack_/ride_ and it warns rather than stopping you. Two frames
+    colliding on one name is refused outright.
+  - THE 373 GENERATED SPRITES ARE COMMITTED (v613/art-v21): the twelve archetype
+    stills and four animated families in frost/venom/shadow/ember, the golem elite,
+    the spectral wisp, and the four named hounds. Nothing LOADS them yet -- the mob
+    art tables are fixed twelve-entry lists -- so adopting one is a key in
+    _mobArchAnim, not a generation.
 
 ---------------------------------------------------------------------------
 WHAT SHIPPED BEFORE THAT (v481 -> v545)
