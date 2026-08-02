@@ -9,6 +9,12 @@ const LS={
  // returning the value, so the session looked perfectly healthy and the player lost the lot on
  // tab close. It still must not throw -- a save failure cannot be allowed to break a run -- but
  // it says so now, once, loudly enough to act on.
+ // REMOVING A KEY TAKES BOTH STORES. set() writes memStore AND localStorage, and get() falls back
+ // to memStore when localStorage has nothing -- so a bare localStorage.removeItem leaves the value
+ // still answering for the rest of the session. Every caller that "cleared" a key that way was
+ // clearing half of it; the dev panel's waypoint reset is the one that shows, since it appears to
+ // do nothing until the page is reloaded.
+ del:(k)=>{ delete memStore[k]; try{ localStorage.removeItem(k); }catch(e){} },
  set:(k,v)=>{memStore[k]=v;
    try{ localStorage.setItem(k,JSON.stringify(v)); if(_lsFull){ _lsFull=false; } }
    catch(e){ if(!_lsFull){ _lsFull=true;
@@ -47,25 +53,59 @@ let curUser=null;
 // there is no way to know which of them was attuned -- so it converts to the two island-B provinces
 // that inherited the old rim's levels and NOT to anything on island C. Erring toward the island the
 // player could actually walk to is the safe direction.
+// V2 RESOLVED THE OLD BAND NUMBER AGAINST THE NEW BAND TABLE, WHICH IS THE ONE THING IT MUST NOT DO.
+// The old numbering is recorded verbatim at 03_entities.js:1153 and is frozen precisely because it
+// is a save key. The new table is not the same table: new band 3 absorbed TWO provinces (The
+// Verdant Belt and Wolfwood), so from old band 4 upward everything shifted by one --
+//
+//   saved 3 (Verdant Belt)   -> granted Verdant Belt AND Wolfwood   (one too many)
+//   saved 4 (Wolfwood)       -> granted Deep Timber                 (wrong province)
+//   saved 5 (Deep Timber)    -> granted Stonebrow Rise              (wrong province)
+//   saved 6 (Stonebrow Rise) -> granted Cinderwatch                 (wrong province)
+//   saved 7 (Cinderwatch)    -> granted The Ashfall AND Charred Steppe
+//
+// Nothing that meant Deep Timber ever granted Deep Timber; it was only ever reachable by accident.
+// And travelTo gates on flight, not on level, so a save carrying band 7 could warp a Lv20 hero to
+// Charred Steppe at Lv38-40.
+//
+// V3 migrates through PROVINCE IDENTITY using the frozen old table below. It UNIONS with whatever
+// v2 wrote rather than replacing it, because a player has been attuning waypoints normally since v2
+// ran and those are real. The over-grants v2 made are left alone: taking a waypoint back from
+// someone who has been using it is worse than the original error, and the level gate is the thing
+// that actually needed fixing.
+const PILLAR_OLD_BANDS=['The Landing Sands','Gullwind Shore','Sawgrass Flats','The Verdant Belt',
+  'Wolfwood','Deep Timber','Stonebrow Rise','Cinderwatch'];   // old bands 0-7, one province each
 let _pillarSet=null;
 const PILLAR_MIGRATED='er-pillars-v2';
+const PILLAR_V3='er-pillars-v3';
 function pillarId(pl){ return (pl&&(pl.name||pl.id))||('band'+(pl&&pl.band)); }
 function _pillars(){
   if(_pillarSet) return _pillarSet;
-  _pillarSet=new Set(LS.get(PILLAR_MIGRATED,null)||[]);
-  if(!LS.get(PILLAR_MIGRATED,null)){
+  _pillarSet=new Set(LS.get(PILLAR_V3,null)||LS.get(PILLAR_MIGRATED,null)||[]);
+  if(!LS.get(PILLAR_V3,null)){
     const old=LS.get('er-pillars',[])||[];
     const G=(typeof rooms!=='undefined')?rooms['G']:null;
     const Z=(G&&G.rings&&G.rings.zones)||[];
+    // REFUSE TO WRITE THE MARKER WITHOUT THE WORLD. _pillars() is lazy and its first caller may run
+    // before rooms['G'] exists. With Z empty the loop grants nothing, and writing the marker then
+    // would permanently erase every waypoint the player had earned -- silently, once, forever.
+    if(!Z.length) return _pillarSet;
     for(const b of old){
       if(b===8){
-        // the ambiguous one: give back the two island-B provinces that took the old rim's place
+        // the genuinely ambiguous one: five old rim provinces shared this number and there is no
+        // way to know which was attuned, so it converts to the two island-B provinces that
+        // inherited the old rim's levels and to NOTHING on island C -- erring toward the island the
+        // player could actually walk to.
         for(const z of Z) if(z.isle===1 && z.band===7) _pillarSet.add(z.n);
         continue;
       }
-      for(const z of Z) if(z.band===b && z.isle!==2) _pillarSet.add(z.n);
+      if(b===9){ for(const z of Z) if(z.band===9) _pillarSet.add(z.n); continue; }  // The Cairnworks
+      const nm=PILLAR_OLD_BANDS[b];
+      if(!nm) continue;
+      // by NAME, against the province list -- so a future reindex cannot shift it again
+      for(const z of Z) if(z.n===nm && z.isle!==2) _pillarSet.add(z.n);
     }
-    LS.set(PILLAR_MIGRATED,[..._pillarSet]);
+    LS.set(PILLAR_V3,[..._pillarSet]);
   }
   return _pillarSet;
 }
@@ -77,10 +117,13 @@ function pillarUnlocked(pl){
   return _pillars().has(pillarId(pl));
 }
 function unlockPillar(pl){
+  // _pillars() FIRST, ALWAYS. In the number branch the loop body was the only thing that called it,
+  // so with no world (or no pillar of that band) _pillarSet stayed null and the spread below threw.
+  const set=_pillars();
   if(typeof pl==='number'){ const G=rooms['G'];
-    for(const p of ((G&&G.pillars)||[])) if(p.band===pl) _pillars().add(pillarId(p));
-  } else _pillars().add(pillarId(pl));
-  LS.set(PILLAR_MIGRATED,[..._pillarSet]);
+    for(const p of ((G&&G.pillars)||[])) if(p.band===pl) set.add(pillarId(p));
+  } else set.add(pillarId(pl));
+  LS.set(PILLAR_V3,[..._pillarSet]);
 }
 function closeFastTravel(){ const ov=document.getElementById('ftScr'); if(ov) ov.style.display='none'; }
 

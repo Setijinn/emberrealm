@@ -1002,7 +1002,9 @@ DEV_PANE.travel=function(B){
     let n=0; for(const pl of (G.pillars||[])){ if(!pillarUnlocked(pl)){ unlockPillar(pl); n++; } }
     devLog('attuned '+n+' waypoints ('+(G.pillars||[]).length+' total)'); }));
   gw.appendChild(_dvBtn('Forget every waypoint',()=>{
-    try{ localStorage.removeItem('er-pillars-v2'); localStorage.removeItem('er-pillars'); }catch(e){}
+    // all three keys, through LS.del -- a bare localStorage.removeItem leaves memStore answering,
+    // so this button appeared to do nothing until the page was reloaded
+    LS.del('er-pillars-v3'); LS.del('er-pillars-v2'); LS.del('er-pillars');
     _pillarSet=null; devLog('waypoints cleared'); }));
   gw.appendChild(_dvBtn('Open every lair gate',()=>{
     const n=(typeof GBOSS!=='undefined')?GBOSS.length:0; let k=0;

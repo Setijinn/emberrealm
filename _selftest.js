@@ -1130,17 +1130,40 @@
       // A PRE-MIGRATION SAVE MUST NOT ARRIVE PRE-ATTUNED. er-pillars held BAND numbers and island C's
       // provinces are band 8 -- which every save that ever walked the old rim contains.
       if(typeof LS!=='undefined'){
-        const keepOld=LS.get('er-pillars',null), keepNew=LS.get('er-pillars-v2',null);
+        const keepOld=LS.get('er-pillars',null), keepNew=LS.get('er-pillars-v2',null),
+              keepV3=LS.get('er-pillars-v3',null);
         LS.set('er-pillars',[0,3,5,6,7,8]);          // a save that had walked the whole old world
-        try{ localStorage.removeItem('er-pillars-v2'); }catch(e){}
+        LS.del('er-pillars-v2'); LS.del('er-pillars-v3');
         _pillarSet=null;
         const leak=(G.pillars||[]).filter(pl=>onFlyingIsleAt(pl.x,pl.y)&&pillarUnlocked(pl));
         ok('a pre-migration save does NOT arrive with island C attuned', leak.length===0,
            leak.length?leak.map(p=>p.name).join(', '):'none');
         const kept=(G.pillars||[]).filter(pl=>!onFlyingIsleAt(pl.x,pl.y)&&pillarUnlocked(pl));
         ok('and it keeps the waypoints it earned', kept.length>0, kept.length+' still attuned');
-        if(keepOld===null){ try{ localStorage.removeItem('er-pillars'); }catch(e){} } else LS.set('er-pillars',keepOld);
-        if(keepNew===null){ try{ localStorage.removeItem('er-pillars-v2'); }catch(e){} } else LS.set('er-pillars-v2',keepNew);
+        // AND IT KEEPS THE RIGHT ONES. The v2 pass resolved the OLD band number against the NEW band
+        // table, and new band 3 absorbed two provinces -- so from old band 4 up everything was off
+        // by one: saved 5 (Deep Timber) granted Stonebrow Rise, saved 6 (Stonebrow) granted
+        // Cinderwatch. Nothing that meant Deep Timber ever granted it. The old test only asked
+        // whether SOMETHING was kept, which is why the mis-assignment survived it.
+        const _has=(n)=>(G.pillars||[]).some(pl=>pl.name===n&&pillarUnlocked(pl));
+        ok('saved band 5 grants Deep Timber, not its neighbour', _has('Deep Timber'),
+           'Deep Timber attuned=' +_has('Deep Timber'));
+        ok('saved band 6 grants Stonebrow Rise', _has('Stonebrow Rise'));
+        ok('saved band 3 grants The Verdant Belt', _has('The Verdant Belt'));
+        ok('and a band never saved is NOT granted', !_has('Wolfwood'),
+           'Wolfwood (old band 4, absent from the fixture) attuned=' +_has('Wolfwood'));
+        // an empty world must never write the marker -- that would erase every waypoint, once,
+        // silently, forever
+        LS.del('er-pillars-v3');
+        _pillarSet=null;
+        const _rz=G.rings.zones; G.rings.zones=[];
+        _pillars();
+        ok('a world-less migration refuses to write its marker', LS.get('er-pillars-v3',null)===null,
+           'marker=' +JSON.stringify(LS.get('er-pillars-v3',null)));
+        G.rings.zones=_rz; _pillarSet=null;
+        if(keepOld===null) LS.del('er-pillars'); else LS.set('er-pillars',keepOld);
+        if(keepNew===null) LS.del('er-pillars-v2'); else LS.set('er-pillars-v2',keepNew);
+        if(keepV3===null) LS.del('er-pillars-v3'); else LS.set('er-pillars-v3',keepV3);
         _pillarSet=null;
       }
     } else ok('the overworld and isleAt exist', false);
