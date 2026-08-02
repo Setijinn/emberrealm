@@ -77,7 +77,7 @@ function hazAdd(e,x,y,opts){
     t0:(o.tele!==undefined?o.tele:1.1)*P.tele,      // the full telegraph, so hazDraw can show progress
     live:(o.live!==undefined?o.live:4.0), dmg:o.dmg!==undefined?o.dmg:0.55,
     tick:o.tick||0.4, ct:0, col:o.col||'#7a3a2a', grow:o.grow||0,
-    follow:o.follow||0, inflict:o.inflict||null });
+    follow:o.follow||0 });
   return M.haz[M.haz.length-1];
 }
 function hazTick(e,dt){
@@ -92,8 +92,9 @@ function hazTick(e,dt){
     if(h.t<=0){ M.haz.splice(i,1); continue; }
     h.ct-=dt;
     if(h.ct<=0 && pl && Math.hypot(pl.x-h.x,pl.y-h.y)<h.r){
+      // damage only. A hazard is a place you should not stand, and the damage says so; a status on
+      // top of it punishes you for the half-second it took to walk out. See playerStatus.
       h.ct=h.tick; _hurt(mechDmg(e,h.dmg));
-      if(h.inflict && typeof playerStatus==='function') playerStatus(h.inflict.id,h.inflict.dur,h.inflict.val||0);
     }
   }
 }
@@ -468,7 +469,7 @@ function netMechHurt(e,dt){
     const on=M.safe.some(s=>Math.hypot(player.x-s.x,player.y-s.y)<s.r);
     M.wet=(M.wet||0)+dt;
     if(!on && M.wet>0.5){ M.wet=0; damagePlayer(_netCap(bd*0.40));
-      if(typeof playerStatus==='function') playerStatus('chill',1.6,0); }
+      }
   }
   if(M.beams){ M.hit=(M.hit||0)-dt;
     for(const b of M.beams){ const dx=player.x-e.x, dy=player.y-e.y;

@@ -131,7 +131,10 @@ function contactHit(e,dd){
   if(!(t>0)) return;                          // absent or non-numeric: draw the lunge, deal nothing
   player._lastHitBy=e;
   const hit=damagePlayer(t*statusDmgOut(e));
-  if(e.inf && typeof playerStatus==='function') playerStatus(e.inf.id,e.inf.dur,0);
+  // NO STATUS FROM A MELEE HIT. A creature that has already closed to touching range and is dealing
+  // contact damage does not also get to slow or poison you -- see the rule on playerStatus. A
+  // species' `inf` still reaches you through its SHOT, which is how the casters that carry one
+  // (Tide Spitter, Kelp Lobber) were always meant to land it.
   player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
   const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
   if(_th>0){ const rf=Math.round(hit*_th*4);
@@ -957,7 +960,7 @@ function update(dt){
       damagePlayer(s.bd||8);
       // the shot carries whatever its caster inflicts — a Sawgrass Spitter's bolt poisons you the
       // same way your poison bolts poison it. Stamped at eFire from the species.
-      if(s.inf) playerStatus(s.inf.id,s.inf.dur,0);
+      if(s.inf) playerStatus(s.inf.id,s.inf.dur,0,'shot');   // the ONLY source of a player status
       player.inv=Math.max(player.inv,0.35); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',5); eShots.splice(i,1); }
   }
   // particles (gravity + drag are optional per-particle fields)

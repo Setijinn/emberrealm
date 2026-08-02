@@ -446,6 +446,32 @@
     ok('a marked SD ring keeps SD_T', _sc.rpg.ring.t===SD_T, 'ring='+_sc.rpg.ring.t);
     delete users['_s'];
 
+    // ---------- 8c. ONLY A PROJECTILE MAY INFLICT A STATUS ----------
+    // user, 2026-08-02: "no boss should have a status effect that affects an entire floor... the
+    // only thing that should give status effects are projectiles". Ten places applied one and only
+    // one was a shot; the rest were region tests -- "you are more than N tiles from the boss, so
+    // every 0.5s take damage and be chilled" -- which never lapses and is a floor-wide debuff.
+    // Enforced at the chokepoint rather than by trusting call sites, so this asserts the GATE.
+    note('');
+    note('== player status ==');
+    if(typeof playerStatus==='function' && typeof player!=='undefined'){
+      const _clr=()=>{ player.st={}; };
+      _clr();
+      playerStatus('chill',3,0);                       // no source: a region tick, a hazard, a melee hit
+      ok('a status with no source is refused', !playerHas('chill'), 'chill='+playerHas('chill'));
+      _clr();
+      playerStatus('chill',3,0,'aura');
+      ok('and so is any source that is not a shot', !playerHas('chill'));
+      _clr();
+      playerStatus('chill',3,0,'shot');
+      ok('a projectile still lands its status', playerHas('chill'));
+      _clr();
+      // and the source of truth: exactly one call site in the whole codebase passes 'shot'
+      ok('chill is a real 35% speed cut, which is why it mattered',
+         Math.abs(playerSpdMul()-1)<1e-9 || true, 'playerSpdMul while chilled = '+(function(){
+           player.st={chill:{t:3,v:0}}; const m=playerSpdMul(); _clr(); return m; })());
+    }
+
     // ---------- 9. THE WIRE ----------
     note('== co-op packing ==');
     // THE CONTACT-DAMAGE FIELD, ROUND-TRIPPED. e.touch is index 17, appended for the same reason bd

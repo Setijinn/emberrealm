@@ -83,7 +83,25 @@ const PSTAT={
   weak:  {cap:6},          // -30% damage you deal
   curse: {cap:8},          // +damage you take
 };
-function playerStatus(id,dur,val){
+// ONLY A PROJECTILE MAY INFLICT A STATUS ON THE PLAYER (user, 2026-08-02: "no boss should have a
+// status effect that affects an entire floor... the only thing that should give status effects are
+// projectiles").
+//
+// WHAT WAS WRONG. Ten places applied a status and only one of them was a shot. The rest were
+// REGION TESTS -- "you are more than N tiles from the boss, so every 0.5s take damage and be
+// chilled" -- which is a floor-wide debuff wearing a mechanic's clothes. The Tidewrack (ow9) is the
+// clearest: at high tide anywhere outside 3.2 tiles of the boss re-applied chill every 0.6s with a
+// 1.6s duration, so it never lapsed, and chill is a 35% speed cut (playerSpdMul). A permanent slow
+// in a fight whose whole answer is movement, on the Lv4 shore boss. Its dungeon twin dn9 did the
+// same at 1.9 tiles from a swinging dry patch, and four more fights repeated the shape.
+//
+// A projectile is dodgeable, is aimed, has travel time and can be read. A radius check around the
+// boss is none of those. So the rule is enforced HERE, not by trusting ten call sites to behave:
+// anything that is not a shot is refused, and a future mechanic cannot reintroduce a floor-wide
+// debuff by calling this function.
+const PSTAT_SRC='shot';
+function playerStatus(id,dur,val,src){
+  if(src!==PSTAT_SRC) return false;
   if(!PSTAT[id]) return;
   if(player.inv>0 && (id==='freeze'||id==='stun')) return;   // i-frames stop control loss outright
   if(!player.st) player.st={};

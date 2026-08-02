@@ -34,8 +34,7 @@ _F('ow0',{ phases:[0.66,0.33], titles:['','TAKING ROOT','THE GROVE CLOSES'],
       const n=2+ph, P=bossPace(e);
       for(let i=0;i<n;i++){ const a=Math.random()*6.283, d=TILE*(1.4+Math.random()*3.0);
         hazAdd(e,e.x+Math.cos(a)*d,e.y+Math.sin(a)*d,
-          {r:TILE*1.0,tele:1.0,live:6.0*P.cycle,dmg:0.30,tick:0.5,col:'#4a7a3a',
-           inflict:{id:'chill',dur:1.2}}); }
+          {r:TILE*1.0,tele:1.0,live:6.0*P.cycle,dmg:0.30,tick:0.5,col:'#4a7a3a'}); }
     }
     // every root that has you feeds it
     const p=_pxy();
@@ -62,7 +61,7 @@ _F('dn0',{ phases:[0.75,0.45,0.20], anchor:[false,true,false,true],
         if(typeof msg==='function') msg('CUT THE HEARTWOOD','it cannot be hurt while they stand'); }
       if(mechAddsAlive(e,'knot')===0 && e.wardInv) wardDrop(e);
       if(mechEvery(e,'t',2.0,dt)){ const p=_pxy();
-        hazAdd(e,p.x,p.y,{r:TILE*1.2,tele:1.0,live:5,dmg:0.4,col:'#4a7a3a',inflict:{id:'chill',dur:1.4}}); }
+        hazAdd(e,p.x,p.y,{r:TILE*1.2,tele:1.0,live:5,dmg:0.4,col:'#4a7a3a'}); }
     } else {
       if(M.ph!==ph){ M.ph=ph; mechClearAdds(e,'knot'); e.wardInv=0; }
       if(mechEvery(e,'t',2.8,dt)){ _sig(e,'rootheave');
@@ -147,7 +146,7 @@ _F('dn1',{ phases:[0.70,0.40,0.15], titles:['','THE FOG THICKENS','FALSE LIGHTS'
     if(M.close>0.7){ M.close=0;
       const p=_pxy(), dd=Math.hypot(p.x-e.x,p.y-e.y), safe=TILE*(7.0-ph*1.2);
       if(dd>safe){ _hurt(mechDmg(e,0.26+ph*0.05));
-        if(typeof playerStatus==='function') playerStatus('chill',2.0,0); } }
+      } }
   },
   trigger(e,ph){ _sig(e,'fade'); },
   draw(e){ mechDrawCommon(e);
@@ -172,7 +171,7 @@ _F('ow2',{ phases:[0.62,0.30], anchor:[false,false,true],
     if(mechEvery(e,'t',5.0-ph*0.8,dt)){ _sig(e,'surge'); safeStart(e,4-ph,{r:TILE*1.2,tele:2.4,dmg:1.4,col:'#8fd48c'}); }
     if(mechEvery(e,'t2',2.2,dt)){ const p=_pxy();
       hazAdd(e,p.x+(Math.random()-0.5)*TILE*2,p.y+(Math.random()-0.5)*TILE*2,
-        {r:TILE*1.05,tele:0.9,live:5.5,dmg:0.42,col:'#4a6a3a',inflict:{id:'poison',dur:3}}); }
+        {r:TILE*1.05,tele:0.9,live:5.5,dmg:0.42,col:'#4a6a3a'}); }
   },
   trigger(e,ph){ _sig(e,'surge'); safeStart(e,4-ph,{r:TILE*1.2,tele:2.0,dmg:1.5,col:'#8fd48c'}); },
   draw(e){ mechDrawCommon(e); } });
@@ -197,7 +196,7 @@ _F('dn2',{ phases:[0.72,0.45,0.18], anchor:[false,false,false,true],
       if(on.life<=0){ M.isles.splice(M.isles.indexOf(on),1); } }
     else { M.wet=(M.wet||0)+dt;
       if(M.wet>0.5){ M.wet=0; _hurt(mechDmg(e,0.30));
-        if(typeof playerStatus==='function') playerStatus('chill',1.4,0); } }
+      } }
     // THE LAST PHASE NEEDED THIS MOST. `ph<3` excluded phase 3 -- and the islands sink BECAUSE
     // you stand on them, so once the last one went the else branch above ticked mechDmg(0.30)
     // plus chill every 0.5s forever, while the boss was anchor-immune 9s out of every 16.5s.
@@ -419,7 +418,7 @@ _F('ow5',{ phases:[0.64,0.32],
       hazAdd(e,p.x,p.y,{r:TILE*1.6,tele:M.under,live:0.01,dmg:0,col:'#ff7a3a'}); }
     // it leaves scars where it travels
     if(mechEvery(e,'t2',2.4,dt)){
-      hazAdd(e,e.x,e.y,{r:TILE*0.95,tele:0.5,live:7,dmg:0.38,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
+      hazAdd(e,e.x,e.y,{r:TILE*0.95,tele:0.5,live:7,dmg:0.38,col:'#c2452a'}); }
   },
   trigger(e,ph){ _sig(e,'erupt'); },
   draw(e){ mechDrawCommon(e);
@@ -482,7 +481,7 @@ _F('dn5',{ phases:[0.75,0.50,0.25], anchor:[false,false,false,true],
       // of where it has been, so they last -- there are just far fewer of them at once, and the
       // one it lays while surfaced is the punish, not the tunnel.
       if(mechEvery(e,'t',2.8-ph*0.45,dt) && mechHazCount(e)<7+ph*2){
-        hazAdd(e,e.x,e.y,{r:TILE*1.0,tele:0.7,live:14,dmg:0.30+ph*0.06,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
+        hazAdd(e,e.x,e.y,{r:TILE*1.0,tele:0.7,live:14,dmg:0.30+ph*0.06,col:'#c2452a'}); }
     } else {
       e.hidden=false; e.mechInv=0;
       if(M.ph!==3){ M.ph=3; _sig(e,'erupt'); e.hidden=false; e.mechInv=0;
@@ -494,7 +493,7 @@ _F('dn5',{ phases:[0.75,0.50,0.25], anchor:[false,false,false,true],
       if(mechEvery(e,'t',2.2,dt)){ _sig(e,'roar');
         if(typeof eFire==='function') for(let i=0;i<16;i++) eFire(e,(i/16)*6.283+e.ang,215*P.speed); }
       if(mechEvery(e,'t2',2.4,dt) && mechHazCount(e)<9){ const p2=_pxy();
-        hazAdd(e,p2.x,p2.y,{r:TILE*1.2,tele:0.8,live:12,dmg:0.34,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
+        hazAdd(e,p2.x,p2.y,{r:TILE*1.2,tele:0.8,live:12,dmg:0.34,col:'#c2452a'}); }
     }
   },
   trigger(e,ph){ _sig(e,'phase'); },
@@ -626,7 +625,7 @@ _F('dn7',{ phases:[0.72,0.46,0.20], anchor:[false,true,false,true],
       markSet(e,{dur:4.4,dmg:1.45,col:'#ff6a3d',stacks:1+ph});
       if(typeof msg==='function') msg('BRANDED','only its own fire will take it'); }
     if(mechEvery(e,'t2',2.7,dt)){ const p=_pxy();
-      hazAdd(e,p.x,p.y,{r:TILE*1.15,tele:0.9,live:4.5,dmg:0.45,col:'#c2452a',inflict:{id:'burn',dur:3}}); }
+      hazAdd(e,p.x,p.y,{r:TILE*1.15,tele:0.9,live:4.5,dmg:0.45,col:'#c2452a'}); }
   },
   trigger(e,ph){ _sig(e,'brand'); },
   draw(e){ mechDrawCommon(e);
@@ -654,7 +653,7 @@ _F('ow8',{ phases:[0.70,0.45,0.20], anchor:[true,true,true,true],
       if(typeof eFire==='function'){ const n=6+ph*2;
         for(let i=0;i<n;i++) eFire(e,(i/n)*6.283+e.ang,200*P.speed); } }
     if(mechEvery(e,'t2',3.2,dt)){ const p=_pxy();
-      hazAdd(e,p.x,p.y,{r:TILE*1.3,tele:1.1,live:5,dmg:0.5,col:'#ff7a3a',inflict:{id:'burn',dur:3}}); }
+      hazAdd(e,p.x,p.y,{r:TILE*1.3,tele:1.1,live:5,dmg:0.5,col:'#ff7a3a'}); }
   },
   trigger(e,ph){ _sig(e,'corebreak'); },
   draw(e){ mechDrawCommon(e);
@@ -689,7 +688,7 @@ _F('dn8',{ phases:[0.78,0.55,0.32,0.12], anchor:[true,true,true,true,true],
     const p=_pxy(), d=Math.hypot(p.x-e.x,p.y-e.y);
     M.burn=(M.burn||0)+dt;
     if(d>M.ring2 && M.burn>(0.45-ph*0.07)){ M.burn=0; _hurt(mechDmg(e,0.45+ph*0.16));
-      if(typeof playerStatus==='function') playerStatus('burn',2.5,0); }
+      }
     if(mechEvery(e,'t',1.4,dt)){
       if(typeof eFire==='function'){ const n=8+ph*2;
         for(let i=0;i<n;i++) eFire(e,(i/n)*6.283+e.ang,210*P.speed); } }
@@ -716,7 +715,7 @@ _F('ow9',{ phases:[0.50], titles:['','THE TIDE TURNS'],
       const p=_pxy(), d=Math.hypot(p.x-e.x,p.y-e.y);
       M.wet=(M.wet||0)+dt;
       if(d>TILE*3.2 && M.wet>0.6){ M.wet=0; _hurt(mechDmg(e,0.38));
-        if(typeof playerStatus==='function') playerStatus('chill',1.6,0); }
+      }
       if(mechEvery(e,'t',2.4,dt)){ _sig(e,'sweep');
         const a=Math.atan2(p.y-e.y,p.x-e.x);
         if(typeof eFire==='function') for(let i=-1;i<=1;i++) eFire(e,a+i*0.22,190*P.speed); }
@@ -751,7 +750,7 @@ _F('dn9',{ phases:[0.62,0.30], titles:['','THE TIDE TURNS','NOWHERE DRY'],
       const p=_pxy();
       M.wet=(M.wet||0)+dt;
       if(Math.hypot(p.x-M.dx,p.y-M.dy)>TILE*1.9 && M.wet>0.5){ M.wet=0; _hurt(mechDmg(e,0.42));
-        if(typeof playerStatus==='function') playerStatus('chill',1.8,0); }
+      }
       if(mechEvery(e,'t',2.0,dt)){ _sig(e,'sweep');
         const a=Math.atan2(p.y-e.y,p.x-e.x);
         if(typeof eFire==='function') for(let i=-2;i<=2;i++) eFire(e,a+i*0.19,200*P.speed); } }
@@ -831,7 +830,7 @@ _F('ow11',{ phases:[0.58,0.26],
         for(let i=0;i<5+ph*2;i++){ const t=(i/(4+ph*2))-0.5;
           const aa=M.aim+t*M.arc, rr=TILE*(2.0+Math.random()*1.8);
           hazAdd(e,e.x+Math.cos(aa)*rr,e.y+Math.sin(aa)*rr,
-            {r:TILE*0.8,tele:0.4,live:9,dmg:0.32,col:'#8a9a4a',inflict:{id:'bleed',dur:3}}); }
+            {r:TILE*0.8,tele:0.4,live:9,dmg:0.32,col:'#8a9a4a'}); }
       } }
     else if(mechEvery(e,'t',3.4,dt)){ _sig(e,'reap');
       const p=_pxy(); M.aim=Math.atan2(p.y-e.y,p.x-e.x); M.arc=1.5+ph*0.35;
@@ -865,7 +864,7 @@ _F('dn11',{ phases:[0.70,0.42,0.16], anchor:[false,false,true,true],
           if(Math.abs(g)<M.gap/2) continue;
           const rr=TILE*(1.8+Math.random()*2.4);
           hazAdd(e,e.x+Math.cos(aa)*rr,e.y+Math.sin(aa)*rr,
-            {r:TILE*0.75,tele:0.4,live:7,dmg:0.34,col:'#8a9a4a',inflict:{id:'bleed',dur:3}}); }
+            {r:TILE*0.75,tele:0.4,live:7,dmg:0.34,col:'#8a9a4a'}); }
       } }
     else if(mechEvery(e,'t',3.0,dt)){ _sig(e,'reap');
       const p=_pxy(); M.aim=Math.atan2(p.y-e.y,p.x-e.x)+ (Math.random()-0.5)*2.2;
@@ -901,7 +900,7 @@ _F('ow12',{ phases:[0.62,0.30],
           for(let i=-5;i<=5;i++){ if(!i) continue;
             const rr=TILE*0.95*i;
             hazAdd(e, e.x+Math.cos(a)*rr, e.y+Math.sin(a)*rr,
-              {r:TILE*0.62,tele:0.34,live:5,dmg:0.42,col:'#b3a894',inflict:{id:'stun',dur:0.5}}); } }
+              {r:TILE*0.62,tele:0.34,live:5,dmg:0.42,col:'#b3a894'}); } }
         if(typeof addShake==='function') addShake(9);
         M.rows=[];
       } }
@@ -938,7 +937,7 @@ _F('dn12',{ phases:[0.68,0.40,0.15], anchor:[false,false,false,true],
     M.step-=dt;
     if(M.step<=0){
       const s=M.seq[M.si];
-      if(s) hazAdd(e,s.x,s.y,{r:TILE*1.05,tele:0.30,live:4,dmg:0.50,col:'#b3a894',inflict:{id:'stun',dur:0.6}});
+      if(s) hazAdd(e,s.x,s.y,{r:TILE*1.05,tele:0.30,live:4,dmg:0.50,col:'#b3a894'});
       M.si++;
       // the count speeds up as it goes, and the anchored phase runs it at double
       // P.CYCLE, NOT P.TELE. This is "time between events", which is what cycle means; tele is
@@ -1013,7 +1012,11 @@ _F('arena',{ phases:[0.60,0.30], titles:['','CHAMPION RISES','LAST STAND'],
           _sig(e,'roar');
           if(typeof addShake==='function') addShake(16);
           _hurt(mechDmg(e,0.55+ph*0.14));
-          if(typeof playerStatus==='function') playerStatus('stun',0.35+ph*0.08,0);
+          // NO STUN. This is the harshest of the region debuffs the projectile-only rule removes:
+          // failing the parry already costs 55%+ of a mech hit AND fires a ten-bolt ring, and
+          // stunning you on top meant you could not dodge the ring you had just been given. Losing
+          // control is the one thing a player cannot play around, so it does not come from a
+          // position check. The ring is the punishment, and it is dodgeable.
           if(typeof eFire==='function'){ const n=10+ph*4;
             for(let i=0;i<n;i++) eFire(e,(i/n)*6.283+e.ang,225*P.speed); }
           if(typeof msg==='function') msg('YOU GAVE GROUND','meet it next time');
