@@ -1,0 +1,121 @@
+<!doctype html>
+<!-- The Sprite Lab. Standalone on purpose: unlike _lab.html this needs the game's ART but not the
+     game, so it is not generated from index.html and cannot break when the script list changes.
+     Serve it:  python tools/serve.py   then   python tools/spritelab.py --open  -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EmberRealm — Sprite Lab</title>
+<style>
+  :root{ --bg:#16131a; --panel:#1e1a24; --line:#332c3d; --ink:#e8e2f0; --dim:#9a8fab; --hot:#ffb02e; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font:13px/1.45 ui-monospace,Menlo,Consolas,monospace; }
+  header{ padding:10px 14px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; }
+  header b{ color:var(--hot); letter-spacing:.5px; }
+  header span{ color:var(--dim); }
+  .wrap{ display:grid; grid-template-columns:230px 1fr 320px; gap:0; height:calc(100vh - 42px); }
+  .col{ overflow:auto; padding:10px; }
+  .col+.col{ border-left:1px solid var(--line); }
+  h3{ margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); font-weight:600; }
+  .grp{ margin:12px 0 4px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
+  button{ font:inherit; background:#2a2433; color:var(--ink); border:1px solid var(--line);
+          border-radius:5px; padding:4px 8px; cursor:pointer; }
+  button:hover{ border-color:var(--hot); }
+  .src{ display:block; width:100%; text-align:left; margin:2px 0; padding:4px 7px; font-size:12px;
+        background:transparent; border:1px solid transparent; }
+  .src:hover{ background:#241f2c; }
+  .src.on{ background:#2f2740; border-color:var(--hot); color:var(--hot); }
+  .stage{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+  .pane{ background:#100e14; border:1px solid var(--line); border-radius:6px; padding:10px; }
+  .pane h4{ margin:0 0 6px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); font-weight:600; }
+  canvas{ image-rendering:pixelated; display:block; }
+  .bar{ display:flex; gap:10px; align-items:center; margin:10px 0; flex-wrap:wrap; }
+  .bar label{ color:var(--dim); }
+  input[type=range]{ width:130px; }
+  input[type=number],input[type=text]{ background:#120f17; color:var(--ink); border:1px solid var(--line);
+        border-radius:4px; padding:2px 5px; width:82px; font:inherit; }
+  input[type=color]{ width:26px; height:22px; padding:0; border:1px solid var(--line); background:none; }
+  .op{ background:var(--panel); border:1px solid var(--line); border-radius:6px; margin:0 0 8px; }
+  .ophead{ display:flex; align-items:center; gap:5px; padding:5px 8px; border-bottom:1px solid var(--line); }
+  .ophead b{ color:var(--hot); }
+  .spacer{ flex:1; }
+  .mini{ padding:1px 6px; font-size:11px; }
+  .danger:hover{ border-color:#e0556b; color:#e0556b; }
+  .fields{ display:flex; flex-wrap:wrap; gap:7px; padding:8px; }
+  .f{ display:flex; align-items:center; gap:4px; color:var(--dim); font-size:11px; }
+  .preset{ margin:0 4px 4px 0; }
+  textarea{ width:100%; height:230px; background:#100e14; color:#cfe6a8; border:1px solid var(--line);
+        border-radius:6px; padding:8px; font:inherit; resize:vertical; }
+  pre{ background:#100e14; border:1px solid var(--line); border-radius:6px; padding:8px;
+       margin:6px 0; white-space:pre-wrap; color:var(--dim); font-size:11px; max-height:190px; overflow:auto; }
+  .warn{ color:#ffb02e; padding:8px; }
+  .note{ color:var(--dim); font-size:11px; margin:6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <b>SPRITE LAB</b>
+  <span>live editor for tools/spritegen.py — every op here is a port of the op there, so what you see is what it writes</span>
+</header>
+
+<div class="wrap">
+
+  <div class="col">
+    <h3>source</h3>
+    <input type="text" id="filter" placeholder="filter…" style="width:100%;margin-bottom:6px">
+    <div id="sources"></div>
+  </div>
+
+  <div class="col">
+    <div class="bar">
+      <label>zoom</label><input type="range" id="zoom" min="1" max="8" step="1" value="3">
+      <span id="framewrap" style="display:none">
+        <label>frame</label><input type="range" id="frame" min="0" max="0" step="1" value="0">
+        <button id="play">play</button>
+      </span>
+      <span id="dims" style="color:var(--dim)"></span>
+    </div>
+
+    <div class="stage">
+      <div class="pane"><h4>source</h4><canvas id="cvSrc"></canvas></div>
+      <div class="pane"><h4>result</h4><canvas id="cvOut"></canvas></div>
+    </div>
+
+    <h3 style="margin-top:16px">hue bands (--probe)</h3>
+    <pre id="probe"></pre>
+    <p class="note">Two bands means one hue rotation cannot serve both — that is why the shipped
+      elements are <b>ramp</b> (luminance-driven, so it transfers across archetypes) and why
+      <b>hue</b> takes an <b>only</b> band for bespoke work.</p>
+  </div>
+
+  <div class="col">
+    <h3>presets</h3>
+    <div id="presets"></div>
+
+    <h3 style="margin-top:14px">ops</h3>
+    <div class="bar">
+      <select id="addop" style="background:#120f17;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:3px"></select>
+      <button id="add">add</button>
+      <button id="clear">clear</button>
+    </div>
+    <div id="ops"></div>
+
+    <h3 style="margin-top:14px">naming</h3>
+    <div class="bar"><label style="width:52px">to</label><input type="text" id="to" style="flex:1;width:auto"></div>
+    <div class="bar"><label style="width:52px">variant</label><input type="text" id="v" style="flex:1;width:auto" placeholder="frost"></div>
+    <div class="bar"><label style="width:52px">rename</label><input type="text" id="rename" style="flex:1;width:auto" placeholder="{base}_{v}_{n}{ext}"></div>
+    <pre id="outnames"></pre>
+
+    <h3 style="margin-top:14px">recipe <button id="copy" class="mini" style="float:right">copy recipe</button></h3>
+    <textarea id="recipe" spellcheck="false"></textarea>
+    <p class="note">Paste into <b>tools/sprite_recipes.json</b> under <b>"recipes"</b>, then build it:
+      <br><b>python tools/spritegen.py &lt;name&gt; --sheet</b></p>
+  </div>
+
+</div>
+
+<script defer src="_spritelab.js"></script>
+</body>
+</html>

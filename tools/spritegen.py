@@ -69,7 +69,7 @@ import shutil
 import sys
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "assets")
@@ -139,7 +139,7 @@ def dom_hue(px, only=None):
     excluded so a mostly-steel sprite reports the hue of its accents, which is the thing a viewer
     actually reads as its colour."""
     a = px[..., 3]
-    rgb = px[..., :3].astype(np.float32) / 255.0
+    rgb = px[..., :3].astype(np.float64) / 255.0
     h, s, _ = rgb2hsl(rgb)
     m = (a >= 40) & (s >= 0.2) & band_mask(h, only)
     if not m.any():
@@ -168,12 +168,66 @@ def band_mask(h, only):
     return (hh >= lo) & (hh <= hi) if lo <= hi else (hh >= lo) | (hh <= hi)
 
 
+# ---------------------------------------------------------------------------------------------------
+# THE TWO NEIGHBOURHOOD KERNELS, WRITTEN OUT RATHER THAN TAKEN FROM PIL.
+#
+# These used to be ImageFilter.GaussianBlur and ImageFilter.MaxFilter, which were correct and one
+# line each. They are spelled out here because _spritelab.js has to reproduce them EXACTLY in a
+# browser: Pillow's Gaussian is three box passes with its own radius-to-window rule, canvas's
+# `filter: blur()` is a different Gaussian again, and a preview that does not match the file it is
+# previewing is worse than having no preview at all -- you would tune against one image and ship
+# another. Defined here, both sides agree by construction instead of by luck.
+#
+# "Blur radius r" therefore means, precisely: three passes of an edge-clamped moving average with a
+# window of 2r+1, horizontally then vertically each time.
+# ---------------------------------------------------------------------------------------------------
+
+def _box1(a, r, axis):
+    """One edge-clamped moving average of window 2r+1 along `axis`."""
+    if r < 1:
+        return a
+    pad = [(r, r) if i == axis else (0, 0) for i in range(a.ndim)]
+    ap = np.pad(a, pad, mode="edge")
+    cs = np.cumsum(ap, axis=axis)
+    lead = list(cs.shape)
+    lead[axis] = 1
+    cs = np.concatenate([np.zeros(lead, dtype=cs.dtype), cs], axis=axis)
+    n = a.shape[axis]
+    hi = np.take(cs, np.arange(2 * r + 1, 2 * r + 1 + n), axis=axis)
+    lo = np.take(cs, np.arange(0, n), axis=axis)
+    return (hi - lo) / float(2 * r + 1)
+
+
+def box_blur3(a, r):
+    """Three box passes each way -- the blur `glow` means. Mirrored exactly in _spritelab.js."""
+    r = int(r)
+    out = a.astype(np.float64)
+    for _ in range(3):
+        out = _box1(out, r, 1)
+        out = _box1(out, r, 0)
+    return out
+
+
+def max_filter(a, r):
+    """Edge-clamped maximum over a (2r+1)x(2r+1) window -- the dilation `outline` means."""
+    r = int(r)
+    if r < 1:
+        return a
+    ap = np.pad(a, ((r, r), (r, r)), mode="edge")
+    out = np.zeros_like(a)
+    h, w = a.shape
+    for dy in range(2 * r + 1):
+        for dx in range(2 * r + 1):
+            out = np.maximum(out, ap[dy:dy + h, dx:dx + w])
+    return out
+
+
 def _col(v):
     """Accept '#rrggbb', [r,g,b] or [r,g,b,a] -> float triple 0..255."""
     if isinstance(v, str):
         v = v.lstrip("#")
-        return np.array([int(v[0:2], 16), int(v[2:4], 16), int(v[4:6], 16)], dtype=np.float32)
-    return np.array(v[:3], dtype=np.float32)
+        return np.array([int(v[0:2], 16), int(v[2:4], 16), int(v[4:6], 16)], dtype=np.float64)
+    return np.array(v[:3], dtype=np.float64)
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -197,7 +251,7 @@ def op_hue(px, ctx, by=None, to=None, only=None, keep_sat=KEEP_SAT):
     if by is None and to is None:
         return px
     out = px.copy()
-    rgb = out[..., :3].astype(np.float32) / 255.0
+    rgb = out[..., :3].astype(np.float64) / 255.0
     h, s, l = rgb2hsl(rgb)
     m = (out[..., 3] >= 8) & (s >= keep_sat)          # outlines and greys are left exactly alone
     m &= band_mask(h, only)
@@ -218,7 +272,7 @@ def op_hue(px, ctx, by=None, to=None, only=None, keep_sat=KEEP_SAT):
 def op_sat(px, ctx, mul=1.0, add=0.0, only=None):
     """Scale/offset saturation. mul<1 drains a variant toward ash; mul>1 pushes it toward poster."""
     out = px.copy()
-    rgb = out[..., :3].astype(np.float32) / 255.0
+    rgb = out[..., :3].astype(np.float64) / 255.0
     h, s, l = rgb2hsl(rgb)
     m = (out[..., 3] >= 8) & band_mask(h, only)
     if not m.any():
@@ -232,7 +286,7 @@ def op_sat(px, ctx, mul=1.0, add=0.0, only=None):
 def op_light(px, ctx, mul=1.0, add=0.0, only=None):
     """Scale/offset lightness. Use small numbers: this is the op that most easily flattens a sprite."""
     out = px.copy()
-    rgb = out[..., :3].astype(np.float32) / 255.0
+    rgb = out[..., :3].astype(np.float64) / 255.0
     h, s, l = rgb2hsl(rgb)
     m = (out[..., 3] >= 8) & band_mask(h, only)
     if not m.any():
@@ -254,7 +308,7 @@ def op_ramp(px, ctx, shadow=(20, 20, 20), high=(230, 230, 230), span=0.8, mix=1.
     "this golem has been out in the frost" rather than "this golem is now a blue silhouette"."""
     out = px.copy()
     sh, hi = _col(shadow), _col(high)
-    rgb = out[..., :3].astype(np.float32)
+    rgb = out[..., :3].astype(np.float64)
     m = out[..., 3] >= 8
     if not m.any():
         return out
@@ -277,12 +331,12 @@ def op_tint(px, ctx, color="#ffffff", amount=0.3, only=None):
     c = _col(color)
     m = out[..., 3] >= 8
     if only:
-        h, _, _ = rgb2hsl(out[..., :3].astype(np.float32) / 255.0)
+        h, _, _ = rgb2hsl(out[..., :3].astype(np.float64) / 255.0)
         m &= band_mask(h, only)
     if not m.any():
         return out
     k = float(amount)
-    out[..., :3][m] = np.clip(out[..., :3][m].astype(np.float32) * (1.0 - k) + c[None, :] * k + 0.5,
+    out[..., :3][m] = np.clip(out[..., :3][m].astype(np.float64) * (1.0 - k) + c[None, :] * k + 0.5,
                               0, 255).astype(np.uint8)
     return out
 
@@ -290,7 +344,7 @@ def op_tint(px, ctx, color="#ffffff", amount=0.3, only=None):
 def op_alpha(px, ctx, mul=1.0):
     """Scale alpha. This is the whole of the phantom/spectral treatment."""
     out = px.copy()
-    out[..., 3] = np.clip(out[..., 3].astype(np.float32) * float(mul) + 0.5, 0, 255).astype(np.uint8)
+    out[..., 3] = np.clip(out[..., 3].astype(np.float64) * float(mul) + 0.5, 0, 255).astype(np.uint8)
     return out
 
 
@@ -301,9 +355,8 @@ def op_outline(px, ctx, color="#ffd76a", px_width=1, alpha=255):
     renderer already knows, and a frame that grew by two pixels sits two pixels wrong. Use `pad`
     first if the sprite touches its own edge and you need the room."""
     out = px.copy()
-    a = Image.fromarray(out[..., 3], mode="L")
-    grown = a.filter(ImageFilter.MaxFilter(2 * int(px_width) + 1))
-    ring = (np.asarray(grown).astype(np.int16) - out[..., 3].astype(np.int16)) > 40
+    grown = max_filter(out[..., 3], int(px_width))
+    ring = (grown.astype(np.int16) - out[..., 3].astype(np.int16)) > 40
     if not ring.any():
         return out
     c = _col(color)
@@ -323,17 +376,16 @@ def op_glow(px, ctx, color=None, hue=None, radius=4, strength=0.6):
     c = _col(color) if color is not None else (_col("#ffffff"))
     if hue is not None:
         rgbv = hsl2rgb(np.array([float(hue)]), np.array([0.85]), np.array([0.62]))[0]
-        c = np.clip(rgbv * 255.0, 0, 255).astype(np.float32)
-    a = Image.fromarray(px[..., 3], mode="L").filter(ImageFilter.GaussianBlur(float(radius)))
-    halo = np.asarray(a).astype(np.float32) / 255.0 * float(strength)
+        c = np.clip(rgbv * 255.0, 0, 255).astype(np.float64)
+    halo = box_blur3(px[..., 3], radius) / 255.0 * float(strength)
     halo = np.clip(halo, 0.0, 1.0)
 
-    src_a = px[..., 3].astype(np.float32) / 255.0
+    src_a = px[..., 3].astype(np.float64) / 255.0
     out_a = src_a + halo * (1.0 - src_a)                      # sprite over halo, straight alpha
-    out = np.zeros_like(px, dtype=np.float32)
+    out = np.zeros_like(px, dtype=np.float64)
     safe = np.maximum(out_a, 1e-6)
     for i in range(3):
-        out[..., i] = (px[..., i].astype(np.float32) * src_a + c[i] * halo * (1.0 - src_a)) / safe
+        out[..., i] = (px[..., i].astype(np.float64) * src_a + c[i] * halo * (1.0 - src_a)) / safe
     out[..., 3] = out_a * 255.0
     return np.clip(out + 0.5, 0, 255).astype(np.uint8)
 
@@ -378,13 +430,13 @@ def op_layer(px, ctx, src=None, dx=0, dy=0, scale=1.0, under=False, opacity=1.0)
             return px                                          # no matching frame: leave it alone
     if not os.path.exists(p):
         raise SystemExit("layer source not found: %s" % src)
-    lay = np.asarray(Image.open(p).convert("RGBA")).copy()
+    lay = load_rgba(p)
     if float(scale) != 1.0:
         lay = op_scale(lay, ctx, factor=scale)
     if float(opacity) != 1.0:
         lay = op_alpha(lay, ctx, mul=opacity)
 
-    base = px.astype(np.float32) / 255.0
+    base = px.astype(np.float64) / 255.0
     over = np.zeros_like(base)
     H, W = base.shape[0], base.shape[1]
     lh, lw = lay.shape[0], lay.shape[1]
@@ -394,7 +446,7 @@ def op_layer(px, ctx, src=None, dx=0, dy=0, scale=1.0, under=False, opacity=1.0)
     x1, y1 = min(W, ox + lw), min(H, oy + lh)
     if x0 >= x1 or y0 >= y1:
         return px                                              # entirely off-canvas
-    over[y0:y1, x0:x1] = lay[y0 - oy:y1 - oy, x0 - ox:x1 - ox].astype(np.float32) / 255.0
+    over[y0:y1, x0:x1] = lay[y0 - oy:y1 - oy, x0 - ox:x1 - ox].astype(np.float64) / 255.0
 
     top, bot = (base, over) if under else (over, base)
     ta, ba = top[..., 3:4], bot[..., 3:4]
@@ -468,6 +520,21 @@ def apply_ops(px, ops, ctx):
 
 # What the probing loaders in 08c_embersprites.js will actually look for. Used only to warn.
 LOADER_PATTERNS = ("idle_", "walk_", "attack_", "ride_")
+
+
+def load_rgba(path):
+    """Open a PNG as RGBA, with the colour under fully transparent pixels zeroed.
+
+    WHY THE ZEROING. A canvas stores premultiplied alpha, so a browser reading a PNG back gets
+    (0,0,0,0) wherever alpha is 0, while Pillow hands back whatever RGB the file happened to store
+    under those invisible pixels. Nothing renders differently either way -- the game blits nearest-
+    neighbour, so no filter ever bleeds that colour in -- but it made _spritelab.js and this file
+    disagree byte-for-byte on `flip` and `scale`, which move pixels without touching colour and so
+    could not have been the cause. Normalising on load makes both sides start from the same input,
+    which is what lets tools/labparity.py assert IDENTICAL rather than 'close enough'."""
+    px = np.asarray(Image.open(path).convert("RGBA")).copy()
+    px[..., :3][px[..., 3] == 0] = 0
+    return px
 
 
 def frames_of(src_abs):
@@ -597,7 +664,7 @@ def build(name, rec, force=False, dry=False):
     # One dominant hue for the whole set, measured off the first frame. See op_hue for why per-frame
     # measurement is wrong.
     first = os.path.join(src, names[0]) if os.path.isdir(src) else src
-    ref_px = np.asarray(Image.open(first).convert("RGBA"))
+    ref_px = load_rgba(first)
     set_hue = dom_hue(ref_px)
     _band_cache = {}
 
@@ -633,7 +700,7 @@ def build(name, rec, force=False, dry=False):
         if dry:
             written.append(os.path.relpath(d, ROOT).replace("\\", "/"))
             continue
-        px = np.asarray(Image.open(s).convert("RGBA")).copy()
+        px = load_rgba(s)
         px = apply_ops(px, rec["ops"], {"name": fn, "set_hue": set_hue, "set": name,
                                         "band_hue": band_hue})
         os.makedirs(os.path.dirname(d), exist_ok=True)
@@ -726,8 +793,8 @@ def probe(path):
     p = os.path.join(ROOT, path) if not os.path.isabs(path) else path
     if os.path.isdir(p):
         p = os.path.join(p, frames_of(p)[0])
-    px = np.asarray(Image.open(p).convert("RGBA"))
-    rgb = px[..., :3].astype(np.float32) / 255.0
+    px = load_rgba(p)
+    rgb = px[..., :3].astype(np.float64) / 255.0
     h, s, _ = rgb2hsl(rgb)
     m = (px[..., 3] >= 40) & (s >= 0.2)
     n = int(m.sum())

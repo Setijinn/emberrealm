@@ -517,7 +517,22 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     what lets 08c_embersprites.js find the result by probing; rename off
     idle_/walk_/attack_/ride_ and it warns rather than stopping you. Two frames
     colliding on one name is refused outright.
-  - THE 373 GENERATED SPRITES ARE COMMITTED (v613/art-v21): the twelve archetype
+  - THE SPRITE LAB is the live editor for it: `py tools/serve.py`, then
+    `py tools/spritelab.py --open`. Pick any sprite in assets/, stack ops on it,
+    watch the result beside the source, scrub or play an animated set, and copy out
+    the recipe. It exists because ramp.mix is not guessable -- 0.45 barely reads,
+    0.75 flattens the accent trim -- and the loop used to be edit JSON, run, open a
+    sheet, repeat. ?src=<path>&preset=<name> deep-links a look.
+    WHAT YOU SEE IS WHAT THE TOOL WRITES, and that is CHECKED, not asserted:
+    `py tools/labparity.py` runs 16 op chains through the browser and through
+    spritegen and compares the RGBA bytes. It must say 16 of 16 IDENTICAL. That
+    check is why spritegen no longer uses PIL's GaussianBlur or MaxFilter (a browser
+    cannot reproduce either, so `glow` could never have matched) and why both kernels
+    are written out longhand instead. It caught four real divergences, every one of
+    them invisible on screen: float32 vs float64, ((x%n)+n)%n vs a single %, doing
+    *255 inside hsl2rgb rather than after it, and a sliding running-sum blur against
+    numpy's prefix-sum one. If you edit an op, edit BOTH copies and re-run it.
+  - THE 373 GENERATED SPRITES ARE COMMITTED (v614/art-v22): the twelve archetype
     stills and four animated families in frost/venom/shadow/ember, the golem elite,
     the spectral wisp, and the four named hounds. Nothing LOADS them yet -- the mob
     art tables are fixed twelve-entry lists -- so adopting one is a key in

@@ -4,8 +4,8 @@
 // deleted the cache holding 38MB of art, forcing every player to re-download all of it. Art is
 // content-addressed by filename and changes when a file changes, so it needs its own version
 // that moves only when the art does.
-const CODE_CACHE = 'emberrealm-code-v613';   // bump freely; holds html/css/js only
-const ART_CACHE  = 'emberrealm-art-v21';      // bump ONLY when art is added/replaced
+const CODE_CACHE = 'emberrealm-code-v614';   // bump freely; holds html/css/js only
+const ART_CACHE  = 'emberrealm-art-v22';      // bump ONLY when art is added/replaced
 const CACHE = CODE_CACHE;                    // install/precache target
 // The precache list only ever held the shell, so a .js file that failed to download had nothing to
 // fall back to -- the cache only fills as files are successfully fetched, which is exactly the case
