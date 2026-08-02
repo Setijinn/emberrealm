@@ -1319,8 +1319,21 @@ function drawTileG(x,y){
       const rh=hmix(x*5+1,y*9+2); ctx.fillStyle='rgba(0,0,0,.20)';
       ctx.fillRect(tx+4+(rh%13),ty+5+((rh>>4)%13),2,1); ctx.fillRect(tx+19+((rh>>8)%15),ty+21+((rh>>12)%15),1,2);
       ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(tx+10+((rh>>16)%18),ty+9+((rh>>20)%20),1,1); }
-    else if(c==='e'){ if(h2(x*7,y)>0.72){ const gl=0.5+Math.sin(performance.now()/300+x+y)*0.35;
-      ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')'; ctx.fillRect(tx+10,ty+TILE/2,TILE-20,3); } }
+    else if(c==='e'){
+      // TWO FAULTS, BOTH VISIBLE FROM ORBIT. (1) Every crack drew at tx+10, ty+TILE/2 -- the SAME
+      // sub-tile offset on every tile -- so the ~28% that pass the hash snapped into a perfectly
+      // aligned orange lattice at exactly half-tile height, which reads as a grid overlay rather
+      // than as cracked ground. The hash decided WHETHER, never WHERE. Its own siblings two lines
+      // up ('d' and 'r') both jitter; this one never did.
+      // (2) 'e' is a ground-mix outcome, not a band, and WG_MIX gives band 3 -- The Verdant Belt
+      // and Wolfwood, the green provinces -- 12.8% 'e'. So roughly one tile in eight of the green
+      // belt drew a glowing ember crack on grass. Gated on bd>=6 (Stonebrow Rise outward), which is
+      // where scorched ground actually begins.
+      if(bd>=6 && h2(x*7,y)>0.72){
+        const eh=hmix(x*11+7,y*3+29);
+        const ex=tx+4+(eh%14), ey=ty+6+((eh>>>5)%(TILE-14)), ew=8+((eh>>>11)%(TILE-18));
+        const gl=0.5+Math.sin(performance.now()/300+x+y)*0.35;
+        ctx.fillStyle='rgba(255,122,61,'+gl.toFixed(2)+')'; ctx.fillRect(ex,ey,ew,3); } }
     else if(c==='t'){
       const _tr=_bandTree[bd], _o=featOffset(x,y), _bx=tx+TILE/2+_o[0], _by=ty+TILE-6+_o[1];
       propFooting(tx+_o[0],ty+_o[1],x,y,'t');

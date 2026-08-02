@@ -37,6 +37,10 @@
 const CAMP_R         = 6;    // tiles: the camp's own radius
 const CAMP_MIN_GAP   = 46;   // tiles between two camps
 const CAMP_LAIR_GAP  = 44;   // tiles clear of any lair, so a camp never bleeds into a boss fight
+// Clear of a waypoint, but only just: a pillar stands on the province seed, which is where camp
+// candidates are generated, so a lair-sized exclusion here would starve the placement loop. The
+// camp's own radius is 6, so 14 keeps the whole camp off the pillar with room to walk in.
+const CAMP_PILLAR_GAP = 14;
 const CAMP_MOB_GAP   = 3.2;  // tiles between two enemies inside a camp
 const CAMP_PROP_GAP  = 2.2;  // tiles between two props
 const CAMP_PER_ZONE  = 2;    // camps per territory
@@ -238,6 +242,16 @@ function stampCamps(){
   const lairs=[];
   for(const k in (R.lairs||{})){ const L=R.lairs[k];
     if(L&&L.cx!=null) lairs.push({x:L.cx/TILE, y:L.cy/TILE}); }
+  // AND EVERY WAYPOINT PILLAR. The exclusion list held lairs and other camps and the header states
+  // the rule, but R.pillars was never in it -- so a camp could be stamped around the one structure
+  // a player fast-travels ONTO, arriving inside a ring of elites with no approach.
+  // Two traps, both live: R.pillars is stored in PIXELS (02_worldbuild.js:177) while `lairs` above
+  // was deliberately pre-divided by TILE, so this must divide too; and a pillar sits on its
+  // province's seed, which is the very point camp candidates are jittered around -- hence a gap far
+  // smaller than CAMP_LAIR_GAP. At 44 it would reject the best candidates and leave tight provinces
+  // short of their second camp.
+  const pills=[];
+  for(const pl of (R.pillars||[])) if(pl&&pl.x!=null) pills.push({x:pl.x/TILE, y:pl.y/TILE});
 
   for(let z=0; z<T.length; z++){
     const t=T[z]; if(!t||!t.n) continue;
@@ -267,6 +281,7 @@ function stampCamps(){
       if(!_campClear(R,tx,ty,2)) continue;
       let ok=true;
       for(const L of lairs) if(Math.hypot(L.x-tx,L.y-ty)<CAMP_LAIR_GAP){ ok=false; break; }
+      if(ok) for(const P of pills) if(Math.hypot(P.x-tx,P.y-ty)<CAMP_PILLAR_GAP){ ok=false; break; }
       if(ok) for(const c of R.camps) if(Math.hypot(c.tx-tx,c.ty-ty)<CAMP_MIN_GAP){ ok=false; break; }
       if(!ok) continue;
 
