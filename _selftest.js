@@ -448,6 +448,28 @@
 
     // ---------- 9. THE WIRE ----------
     note('== co-op packing ==');
+    // THE CONTACT-DAMAGE FIELD, ROUND-TRIPPED. e.touch is index 17, appended for the same reason bd
+    // was appended at 16: its only reader sat in the host-only arm of the _shadow gate, so a client
+    // took zero damage from every chaser in the game. The unpack must be UNCONDITIONAL -- a missing
+    // or zero element has to land as 0, never undefined, because contactHit multiplies it and
+    // damagePlayer's Math.max(1,NaN) is NaN, which poisons player.hp rather than dealing nothing.
+    if(typeof netBroadcast==='function'){
+      // the exact arithmetic the pack and unpack perform, without needing a live connection
+      const _pack=(v)=>Math.round(v||0);
+      const _unpack=(a17)=>Math.max(0, Math.min(+a17||0, 400));
+      ok('touch survives the round trip', _unpack(_pack(37.4))===37, 'got '+_unpack(_pack(37.4)));
+      ok('a missing element unpacks to 0, not undefined', _unpack(undefined)===0 && !isNaN(_unpack(undefined)));
+      ok('and so does a zero', _unpack(_pack(0))===0);
+      ok('a corrupt snapshot is capped', _unpack(1e9)===400, 'got '+_unpack(1e9));
+      ok('a negative cannot heal into the cap', _unpack(-50)===0, 'got '+_unpack(-50));
+      // and the thing the NaN guard actually protects
+      ok('contactHit refuses a non-numeric touch', (function(){
+        if(typeof contactHit!=='function') return true;
+        const hp0=player.hp, inv0=player.inv; player.inv=0;
+        contactHit({type:'c', r:10, hp:5, touch:undefined}, 0);
+        const okk=(player.hp===hp0) && !isNaN(player.hp);
+        player.hp=hp0; player.inv=inv0; return okk; })(), 'player.hp intact and not NaN');
+    }
     ok('NKIND has room and mat was appended', NKIND[9]==='mat' && NKIND.length<=16, 'len='+NKIND.length);
     ok('NKIND indices 0-8 did not move',
        NKIND.slice(0,9).join(',')==='wpn,arm,helm,ring,pot,coin,scroll,egg,mount');

@@ -96,11 +96,14 @@ function netNearestSim(x,y,anchors){
 function netSelfId(){ return (typeof coop==='undefined'||!coop)?'S':(coop.id||'S'); }
 // CO-OP ENDED -> DROP THE SHADOWS. A `remote` entity is not an entity, it is a rendering of
 // someone else's: netApplyWorld builds it with position, hp and a name and NOTHING the simulation
-// needs -- no beh, no bd, no touch, no home, and for a boss no ang/chargeT. The moment coop.on
+// needs -- no beh, no home (bd and touch DO cross now -- see the pack), and for a boss no ang/chargeT. The moment coop.on
 // goes false, netIsClient() flips and the full local AI loop runs over them, does arithmetic on
 // undefined, fills their positions with NaN and throws. That is the "game crashes when I go
 // offline" bug. They are meaningless without the connection that produced them, so they go.
 function netDropRemote(){
+  // the paid-kill ledger is keyed on nid, and a fresh snapshot stream issues fresh ids -- holding
+  // the set across a role change would refuse a legitimate kill later
+  if(typeof netClearPaidKills==='function') netClearPaidKills();
   if(typeof enemies!=='undefined') for(let i=enemies.length-1;i>=0;i--)
     if(enemies[i]&&enemies[i].remote) enemies.splice(i,1);
   if(typeof eShots!=='undefined') for(let i=eShots.length-1;i>=0;i--)
@@ -201,7 +204,11 @@ function netBroadcast(){
                // 16: the boss's own damage. netHazards priced every client-side hazard off
                // (e.bd||10), so a client took FLAT 10-based mechanic damage at any level while
                // the host took properly scaled damage.
-               Math.round(e.bd||0)]);
+               Math.round(e.bd||0),
+               // 17: MELEE CONTACT DAMAGE. Same reason as 16, one entity type over: e.touch had a
+               // single reader and it lived in the host-only arm of the _shadow gate, so a client
+               // took ZERO damage from every chaser in the game. Appended, never renumbered.
+               Math.round(e.touch||0)]);
   }
   const sh=[];
   for(const s of eShots) sh.push([Math.round(s.x),Math.round(s.y),Math.round(s.vx),Math.round(s.vy),
@@ -301,6 +308,12 @@ function netApplyWorld(m){
     // e.bd feeds every client-side hazard resolve below. Unclamped, one snapshot with bd=1e9
     // killed every client in the room instantly -- and above Lv20 that is permaDeath().
     if(a[16]) e.bd=Math.max(0, Math.min(+a[16]||0, 400));
+    // UNCONDITIONAL, unlike bd above. bd's truthy guard is harmless because netHazards falls back to
+    // (e.bd||10); touch has no such fallback -- contactHit multiplies it -- and an older host that
+    // sends a 17-element row must leave touch at 0, not undefined. `undefined*x` is NaN, and
+    // damagePlayer's Math.max(1,NaN) is NaN, which does not read as "no damage": it permanently
+    // poisons player.hp. Capped at 400 like bd, against a malicious or corrupt snapshot.
+    e.touch=Math.max(0, Math.min(+a[17]||0, 400));
     if(a[11]) e.name=a[11];
     // statuses: rebuilt each snapshot so an expiry on the host clears here too
     e.st={}; if(a[12]) for(const s of a[12]) e.st[s[0]]={t:s[1],val:0};
@@ -390,9 +403,26 @@ function netHostApplyStatus(m){
 // ---- damage: predicted locally, resolved by the host ----
 // The client shows the hit instantly so combat feels responsive, and tells the host what happened.
 // The next snapshot carries the real health, so a disagreement corrects itself within ~80ms.
+// COALESCED PER FRAME. Now that every dealDamage call reports rather than only the auto-attack,
+// four of the seventeen call sites are per-tick per-enemy loops -- a ground zone over ten foes, the
+// eight-node Spirit Ring, ally melee, pet spark. Sending one packet each would put 40-60 'H'
+// messages a second on the wire on top of presence, each BinaryPack-encoded synchronously, and the
+// host would push a floating number per hit. Accumulated by nid and flushed once from the loop, so
+// the traffic follows the number of TARGETS rather than the number of ticks.
+let _hitAcc=null, _hitCrit=null;
 function netReportHit(e,dmg,crit){
   if(!netIsClient() || !e || !e.nid) return;
-  _netSend({t:'H', nid:e.nid, dmg:Math.round(dmg), crit:crit?1:0});
+  const d=Math.round(dmg); if(!(d>0)) return;
+  if(!_hitAcc){ _hitAcc={}; _hitCrit={}; }
+  _hitAcc[e.nid]=(_hitAcc[e.nid]||0)+d;
+  if(crit) _hitCrit[e.nid]=1;
+}
+// Called once per frame from the update loop, after all damage for the frame has landed.
+function netFlushHits(){
+  if(!_hitAcc) return;
+  const acc=_hitAcc, cr=_hitCrit; _hitAcc=null; _hitCrit=null;
+  if(!netIsClient()) return;
+  for(const nid in acc) _netSend({t:'H', nid:+nid, dmg:acc[nid], crit:cr[nid]?1:0});
 }
 // A REPORTED NUMBER IS NOT A NUMBER UNTIL IT IS CHECKED. `{t:'H', nid:5}` with no dmg set
 // e.hp = NaN, which made the enemy immortal for EVERY player, forever, and then broadcast NaN

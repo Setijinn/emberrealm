@@ -199,6 +199,15 @@ function dealDamage(e,amount,src){
       col:src.col||(src.crit?'#ffd23d':'#ffe9b0'),life:src.crit?0.85:0.55});
   if(typeof perkFire==='function'){ const pc={e:e,dmg:dmg,crit:!!src.crit,src:src};
     perkFire('hit',pc); if(src.crit) perkFire('crit',pc); }
+  // EVERY POINT OF PLAYER DAMAGE REACHES THE HOST, not only auto-attacks. netReportHit used to have
+  // exactly one caller, in the shot-collision block -- so on a client every ability, ultimate,
+  // chain, splash, ally, pet, zone and perk proc moved the local health bar and was reverted by the
+  // next snapshot. Worse than "no contribution": the client's own death loop then awarded XP for a
+  // kill the host never saw. This is the funnel the file header already promises, and it is where
+  // applyStatus reports from too (line 30) -- the working precedent.
+  // Placed after every early return, so a nullified hit sends nothing, and it reports the
+  // POST-mitigation number, which is what the host applies verbatim.
+  if(typeof netReportHit==='function') netReportHit(e,dmg,!!src.crit);
   return dmg;
 }
 function los(x1,y1,x2,y2){

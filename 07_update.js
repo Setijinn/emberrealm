@@ -115,6 +115,39 @@ function bossArenaHasPlayer(A){
 function _dunSparkle(x,y,col){ if(typeof emitP!=='function') return;
   for(let q=0;q<8;q++){ const a=Math.random()*6.283;
     emitP(x,y,{vx:Math.cos(a)*80,vy:Math.sin(a)*80-20,life:0.5,col:col||'#bfe6f5',sz:3,glow:true}); } }
+// ONE IMPLEMENTATION OF "A MELEE CREATURE REACHED YOU", called from both arms of the _shadow gate
+// so a co-op client is hurt by the same rule the host applies. Only type 'c' has contact damage at
+// all -- casters and bosses have no such branch and makeEnemy never gives them a `touch` -- so this
+// is deliberately not a general "enemy touched you" helper.
+//
+// e.touch ARRIVES OVER THE WIRE on a client (netBroadcast index 17). If it is ever missing the
+// guard below is what stops damagePlayer(undefined) -> Math.max(1,NaN) -> NaN, which does not read
+// as "no damage": it permanently poisons player.hp and every derived number after it.
+function contactHit(e,dd){
+  if(!e || e.type!=='c') return;
+  if(dd<e.r+player.r+14) e.animAtk=0.45;      // lunge-bite anim when adjacent
+  if(!(dd<e.r+player.r) || player.inv>0) return;
+  const t=+e.touch;
+  if(!(t>0)) return;                          // absent or non-numeric: draw the lunge, deal nothing
+  player._lastHitBy=e;
+  const hit=damagePlayer(t*statusDmgOut(e));
+  if(e.inf && typeof playerStatus==='function') playerStatus(e.inf.id,e.inf.dur,0);
+  player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
+  const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
+  if(_th>0){ const rf=Math.round(hit*_th*4);
+    if(rf>0){
+      // THE REFLECT IS DAMAGE AND MUST BE REPORTED LIKE ANY OTHER. It writes e.hp directly rather
+      // than going through dealDamage, so on a client it would be a second silent damage source --
+      // exactly the class of bug enabling contact on clients would otherwise have created.
+      e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5});
+      if(typeof netReportHit==='function') netReportHit(e,rf,false);
+    } }
+}
+// Which host-owned enemies this machine has already been paid for, by network id. Cleared whenever
+// the role changes or the room does -- a fresh snapshot stream issues fresh ids, and holding the
+// set across a disconnect would silently refuse a legitimate kill later.
+let _paidKills=null;
+function netClearPaidKills(){ _paidKills=null; }
 function _dunPhantoms(x,y,ch,n){ for(let q=0;q<(n||2);q++){ const a=Math.random()*6.283;
   const ss=safeSpot(curRoom,x+Math.cos(a)*90,y+Math.sin(a)*90);
   enemies.push(makeEnemy({t:'c',x:Math.floor(ss.x/TILE),y:Math.floor(ss.y/TILE),ch:ch})); } }
@@ -619,7 +652,18 @@ function update(dt){
   if(_shadow){
     if(typeof netInterp==='function') netInterp(dt);
     if(typeof netHazards==='function') netHazards(dt);   // pools / bloom hit US too
-    for(const e of enemies){ if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt; }
+    for(const e of enemies){ if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt;
+      // A CLIENT TOOK ZERO CONTACT DAMAGE FROM EVERY MELEE CREATURE IN THE GAME. e.touch has one
+      // reader and it sat in the `else` arm below, which never runs on a machine whose host is
+      // elsewhere -- so chasers closed, played their lunge-bite, and dealt nothing. You could only
+      // be hurt by projectiles and telegraphed boss hazards. Same helper as the host's arm, never a
+      // hand-copy: two implementations of the same rule drift, and this one has five side effects
+      // besides the damage (the attacker record three perks read, the creature's infliction, the
+      // i-frame window, the resource charge, the thorns reflect).
+      if(e.type==='c' && e.hp>0){
+        const _dx=player.x-e.x, _dy=player.y-e.y;
+        contactHit(e, Math.hypot(_dx,_dy)||1);
+      } }
   } else
   for(const e of enemies){
     if(e.slowT>0)e.slowT-=dt; if(e.flash>0)e.flash-=dt; if(e.animAtk>0)e.animAtk-=dt;
@@ -631,12 +675,7 @@ function update(dt){
       if(ai.move){ const ax=ai.tx-e.x, ay=ai.ty-e.y, al=Math.hypot(ax,ay)||1;
         moveCircle(e,(ax/al)*e.spd*ai.smul*slowF(e)*dt,(ay/al)*e.spd*ai.smul*slowF(e)*dt); }
       if(dd<e.r+player.r+POSS_GRAB && typeof possessPlayer==='function') possessPlayer(e);
-      if(dd<e.r+player.r+14) e.animAtk=0.45;   // lunge-bite anim when adjacent
-      if(dd<e.r+player.r && player.inv<=0){ player._lastHitBy=e; const hit=damagePlayer(e.touch*statusDmgOut(e));
-        if(e.inf) playerStatus(e.inf.id,e.inf.dur,0);        // what this creature leaves on you
-        player.inv=Math.max(player.inv,0.7); chargeRes('hurt'); boom(player.x,player.y,'#c04a3d',6);
-        const _th=(player.thorns||0)+((player.thornT>0)?(player.thornB||0):0);   // + ult reflect
-        if(_th>0){ const rf=Math.round(hit*_th*4); if(rf>0){ e.hp-=rf; e.flash=0.15; texts.push({x:e.x,y:e.y-e.r,txt:rf,col:'#c9d2da',life:0.5}); } } }
+      contactHit(e,dd);
     }
     if(e.type==='s'){
       const ai=enemyAI(e,dx,dy,dd,dt);
@@ -785,10 +824,9 @@ function update(dt){
       // execute/shatter/curse scaling, lifesteal, damage text and the on-hit perk triggers
       // all live in dealDamage now — shot-only extras (fork/chain/splash/critBolt) stay here.
       const dmg=dealDamage(e,(s.dmg||player.dmg)*(typeof dev!=='undefined'?dev.dmg:1),{crit:s.crit});
-      // On a client the host owns this enemy's health. dealDamage already applied the hit locally
-      // so the flash and the number land on the same frame you fired -- that is the prediction.
-      // Reporting it lets the host resolve the real value, which arrives in the next snapshot.
-      if(typeof netReportHit==='function') netReportHit(e,dmg,s.crit);
+      // (the report to the host now happens inside dealDamage, for EVERY damage source rather than
+      //  only this one -- see the note there. Reporting here as well would send two 'H' packets per
+      //  shot and the host would subtract the hit twice.)
       s.lastHit=e; chargeRes('hit');
       if(s.slow) applyStatus(e,'chill',1,0);
       // the ability that threw this shot brands what it HIT, not what stood near the caster
@@ -831,6 +869,18 @@ function update(dt){
   // enemy deaths
   for(let i=enemies.length-1;i>=0;i--){ if(enemies[i].hp<=0){
     const de=enemies[i];
+    // A CLIENT COULD RE-KILL THE SAME ENEMY FOR XP, REPEATEDLY. On a machine whose host is
+    // elsewhere the enemy is a shadow: this loop splices it out and pays the reward, then the next
+    // snapshot re-materialises it from the host's row at the host's health, and it can be driven to
+    // zero and paid again. Before dealDamage reported every source that was a farm with no ceiling,
+    // because the host's copy never lost health at all.
+    // Keyed on the NETWORK ID, not on `remote`: gating the whole branch on !de.remote would zero a
+    // client's XP, kills, killHeal, killInv and perkFire('kill') for its entire session, and the
+    // bug is repeat payment, not payment. nid also survives a host migration, which `remote` does
+    // not. Locally-owned enemies have no nid and are unaffected.
+    if(de.nid){ if(!_paidKills) _paidKills={};
+      if(_paidKills[de.nid]){ enemies.splice(i,1); continue; }   // already paid for this one
+      _paidKills[de.nid]=1; }
     fxDeath(de.x,de.y,de.col,de.r);
     if(de.corrupt && typeof emitP==='function')                       // corrupted foe -> violet burst
       for(let q=0;q<16;q++){ const a=Math.random()*6.283, sp=60+Math.random()*150;
@@ -957,6 +1007,11 @@ function update(dt){
   for(let i=groundPortals.length-1;i>=0;i--){ const gp=groundPortals[i];
     gp.life-=dt; if(gp.life<=0){ groundPortals.splice(i,1); continue; } }
   // whoever owns this room may have just changed -- hand it over before anything acts on it
+  // ONE 'H' PACKET PER TARGET PER FRAME, not one per tick. dealDamage now reports every source, and
+  // four of its call sites are per-tick per-enemy loops -- accumulating and flushing here keeps the
+  // wire proportional to how many things you hit rather than how many times the loops ran.
+  // Before netSimEdge, so a frame's damage is sent under the role it was dealt in.
+  if(typeof netFlushHits==='function') netFlushHits();
   if(typeof netSimEdge==='function') netSimEdge();
   // spawns: streaming activation + 60s respawns (only once you leave the area)
   respawnT-=dt;
