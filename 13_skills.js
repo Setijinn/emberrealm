@@ -659,7 +659,13 @@ const CLASS_TREE = {
    {id:'ba_c3',name:'Allegro',desc:'+1.3% attack speed per 10 Tempo, per rank',cost:2,max:2,req:['ba_c1'],
     cond:{when:'resScale',per:10,eff:{rof:0.013}}},
    {id:'ba_c4',name:'Sharp Ear',desc:'+6% crit per rank',cost:2,max:2,req:['ba_c2'],eff:{crit:0.06}},
-   {id:'ba_c5',name:'Crescendo',desc:'Keystone: at full Tempo the song breaks — +55% fire rate and +30% damage for 7s',
+   {id:'ba_c5',name:'Crescendo',// THE TEXT PROMISED +30% DAMAGE THE NODE NEVER GRANTED, and the code is the side that is right.
+   // Measured against its only true peer -- Berserker Frenzy, +50% for 6s on the same 100 resource
+   // -- Crescendo at +55% for 7s is already the stronger of the two pure-buff keystones on both
+   // axes, while every other resFull keystone is a burst instead. Honouring the text would have put
+   // it at 1.55 x 1.30 = 2.02x sustained DPS: 34% above Frenzy's peak and 17% longer, an outlier.
+   // (It would also need perkDo taught to express two buffs; it reads a single object today.)
+   desc:'Keystone: at full Tempo the song breaks — +55% fire rate for 7s',
     cost:3,max:1,req:['ba_c3','ba_c4'],
     trig:{on:'resFull',do:{buff:{f:'bRof',m:1.55,dur:7,col:'#c07ad4'},res:{n:-100,perRank:false},text:'CRESCENDO'},emits:'crescendo'}},
   ]},

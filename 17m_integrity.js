@@ -341,6 +341,17 @@ function _checkLevelCap(){
     _iErr('MOUNT_LV ('+MOUNT_LV+') is above LV_CAP — the Stable can never open');
   if(typeof MOUNT_FLY_LV!=='undefined' && MOUNT_FLY_LV>LV_CAP)
     _iWarn('MOUNT_FLY_LV ('+MOUNT_FLY_LV+') is above LV_CAP — flight would be unreachable if built');
+  // ROOM_DEFS, WHICH NEITHER LEVEL GUARD EVER LOOKED AT. It carried sixteen orphaned rooms
+  // declaring 55 through 145 against a cap of 50, and because 02_worldbuild auto-carves doors
+  // between every pair of adjacent standard-sized rooms, anything that ever put the player in one
+  // of them opened a walkable chain to the top of it. The rooms are deleted; this is what stops a
+  // new one arriving unnoticed. Checked here rather than in the selftest alone because the
+  // integrity check runs in the shipped game, not only on the bench.
+  if(typeof ROOM_DEFS!=='undefined' && ROOM_DEFS){
+    for(const k in ROOM_DEFS){ const r=ROOM_DEFS[k];
+      if(r && typeof r.lv==='number' && r.lv>LV_CAP)
+        _iErr('ROOM_DEFS['+k+'] ("'+(r.name||'?')+'") declares lv '+r.lv+', above LV_CAP ('+LV_CAP+')'); }
+  }
   // every dungeon computes its own level off its boss's clump; none may exceed the cap
   if(typeof GBOSS!=='undefined' && typeof genDungeon==='function' && typeof rooms!=='undefined' && rooms['G']){
     for(let ring=0; ring<GBOSS.length; ring++){

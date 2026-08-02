@@ -1388,6 +1388,10 @@ function takeLoot(item){
   else if(item.k==='scroll'){ if(typeof grantScroll==='function') grantScroll(rpg,item.st,1); }
   else if(item.k==='food'){ if(typeof petFoodAdd==='function') petFoodAdd(item.t||0,item.n||1); }
   else if(item.k==='mat'){ if(typeof matAdd==='function') matAdd(item.m,item.n||1); }
+  // A DRAUGHT IS A COUNTER, NOT AN ITEM -- the same rule awardItem has carried all along. Without
+  // this branch a boost granted by the co-op host fell through to ch.inv.push and sat in the
+  // satchel as something that could never be drunk, occupying one of twenty slots.
+  else if(item.k==='boost'){ if(typeof boostGive==='function') boostGive(item.bt,1); }
   else if(item.k==='egg'){ if(typeof giveEgg==='function') giveEgg(item.cond||0,item.cat); }
   else if(item.k==='mount'){ if(typeof mountTake==='function') mountTake(item); }
   else if(ch.inv.length<20) ch.inv.push(item);
@@ -2790,7 +2794,16 @@ function show(id){for(const s of ['loginScr','menuScr','charScr','classScr','dev
  // Hiding the HUD also hides the stall button, but proximity only re-evaluates when the NEAREST
  // NPC CHANGES -- so forgetting who we stood at is what makes the button come back on RESUME.
  // Without this, opening the menu at a stall and resuming loses that stall until you walk away.
- shopNear=false; curShopNear=null;}
+ shopNear=false; curShopNear=null;
+ // GIVE THE NEW SCREEN THE FOCUS. 05c_keyboard exports kbFocusFirst for exactly this and nothing
+ // ever called it, so tabbing into a freshly opened screen started from wherever the focus was left
+ // -- after a click, usually nowhere -- and the first Tab did nothing visible.
+ // Keyboard players only: focusFirst will happily select an <input>, and auto-focusing one on a
+ // phone raises the on-screen keyboard over the panel the player just opened.
+ if(typeof window!=='undefined' && typeof window.kbFocusFirst==='function'
+    && typeof inputMode!=='undefined' && inputMode==='pc'){
+   const _t=$s(id); if(_t) window.kbFocusFirst(_t);
+ }}
 function hideAll(){for(const s of ['loginScr','menuScr','charScr','classScr','devScr','setScr','fallenScr','hcScr','deathScr'])$s(s).style.display='none';}
 function refreshUserList(){
  const box=$s('userList'); box.innerHTML='';

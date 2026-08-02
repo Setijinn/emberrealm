@@ -730,10 +730,12 @@
       // 'DUN' is excluded for a different reason: it is REGENERATED per boss ring, so which dungeon is
       // resident depends on what was generated last, and its hash is not a property of the world.
       const PINNED={
-        '0,0':'a0233d27','1,0':'8bee32e8','2,0':'a9719398','2,-1':'a36415f4','3,0':'d365fc5a',
-        '4,0':'6dac2129','5,0':'19df95c3','6,0':'02a5d6b7','7,0':'e5c2d1f0','8,0':'e55aee8e',
-        '9,0':'b274709d','10,0':'403606c9','11,0':'f1b667a1','12,0':'05d30e05','13,0':'ebc91218',
-        '14,0':'7032b2d1','15,0':'73474397','16,0':'064485bb',
+        // The seventeen legacy grid rooms ('1,0'..'16,0' and '2,-1' Throne of Cinders) were pinned
+        // here too and are gone -- see the note in 00_data.js. They were orphaned: no portalDefs,
+        // nothing in the codebase targeting a grid key, dungeons living in rooms['DUN'], and levels
+        // up to 145 against a cap of 50. Their hashes are deliberately NOT kept as a record: a
+        // pinned hash for a room that does not exist is a fixture that can never fail.
+        '0,0':'a0233d27',
         'ARENA':'e95fa6a9','COSMETICS':'01397713','GUILD':'a4c8533d','VAULT':'4e1d922f',
       };
       const fnv=(s)=>{ let h=0x811c9dc5>>>0;
@@ -747,7 +749,7 @@
         const h=hashRoom(rooms[k]);
         if(h!==PINNED[k]) moved.push(k+' '+PINNED[k]+'->'+h); }
       ok('every lairless room is byte-identical to its pre-packing hash',
-         moved.length===0 && checked===22, checked+' rooms checked'+(moved.length?('  MOVED: '+moved.join(' ')):''));
+         moved.length===0 && checked===5, checked+' rooms checked'+(moved.length?('  MOVED: '+moved.join(' ')):''));
       note('  G hash (moves with a lair anchor, by design): '+hashRoom(rooms['G']));
       // R.grid must be GONE, not shimmed: a subarray shim would keep every `c==='w'` compiling and
       // permanently false, which is the failure mode this conversion was shaped to avoid.
