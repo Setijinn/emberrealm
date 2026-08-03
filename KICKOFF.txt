@@ -517,6 +517,13 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     what lets 08c_embersprites.js find the result by probing; rename off
     idle_/walk_/attack_/ride_ and it warns rather than stopping you. Two frames
     colliding on one name is refused outright.
+  - RUN `py tools/layoutcheck.py` AFTER TOUCHING ANY LAB CSS. 3 pages x 7 viewports,
+    checking no horizontal scroll, nothing overhanging the viewport, every named
+    control actually rendered, and tap targets over 22px. It exists because these
+    layouts broke FOUR times in ways nobody would see from the screen they happened
+    to be looking at, and it caught a fifth immediately: a patch anchored to a
+    comment had deleted the derive presets, op-add, zoom, play and copy wiring, and
+    that had already shipped. Must say 21 of 21.
   - THE SPRITE LAB HAS TWO MODES, switched top-left. DERIVE is the recipe editor
     below. DRAW (_spritedraw.js) is a pixel editor for making a sprite by hand:
     pencil/eraser/fill/line/rect/ellipse/picker, round nib, mirror (h/v/both),
