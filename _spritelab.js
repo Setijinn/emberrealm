@@ -684,7 +684,13 @@ async function boot(){
     $('#drawview').style.display = draw ? '' : 'none';
     $('#m-draw').classList.toggle('on', draw);
     $('#m-derive').classList.toggle('on', !draw);
-    if(draw && window.spritedraw) window.spritedraw.paint();
+    if(draw && window.spritedraw){
+      // the draw view was display:none until this instant, so nothing in it had a size to
+      // measure; size the canvas first, then paint
+      window.spritedraw.sizeCanvas();
+      window.spritedraw.D._fitted = false;
+      window.spritedraw.paint();
+    }
   };
   $('#m-derive').addEventListener('click', () => setMode('derive'));
   $('#m-draw').addEventListener('click', () => setMode('draw'));

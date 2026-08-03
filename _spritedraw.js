@@ -130,6 +130,7 @@ const D = {
   tplRot: 0,                // degrees, about the canvas centre
   tplSnap: true,            // round guide coordinates to whole art pixels
   ramp: [],
+  inpal: [],
   palette: [],
   recent: [],
   undo: [], redo: [],
@@ -732,6 +733,26 @@ let cv, ctx, tmp;
 //     the pan tool                     one-finger pan, for when two fingers are awkward
 // ---------------------------------------------------------------------------------------------------
 
+// SIZE THE CANVAS BY MEASUREMENT, not by subtracting a guessed constant from 100vh. Two goes at
+// "calc(100vh - 104px)" and "- 124px" both left the undo/export row hanging off the bottom, because
+// the chrome above and below it is whatever the font and the wrapping happen to make it. Ask the
+// layout what is left instead. Only in landscape; the other layouts are fine in CSS.
+function sizeCanvas(){
+  const stage = cv.closest('.dstage');
+  if(!stage) return;
+  if(!matchMedia('(orientation: landscape) and (max-height: 560px)').matches){
+    cv.style.height = '';                     // hand it back to the stylesheet
+    return;
+  }
+  // The stage is a flex column and the pane is flex:1, so the pane already holds exactly the space
+  // the bars did not take. Match the canvas to it and the arithmetic stops being ours.
+  const pane = cv.parentElement;
+  const cs = getComputedStyle(pane);
+  const inner = pane.clientHeight
+    - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+  cv.style.height = Math.max(90, Math.floor(inner)) + 'px';
+}
+
 function viewSize(){
   // Backing store in CSS pixels: no devicePixelRatio scaling, because every draw here is
   // nearest-neighbour pixel art and a fractional backing store is how you get blurry edges.
@@ -1008,12 +1029,22 @@ function swatchEl(rgb, onPick){
   }, []);
 }
 
+// EVERY COLOUR ALREADY IN THE SPRITE, one tap away. The picker tool grabs one pixel at a time and
+// that is the wrong shape for the common job -- you are shading, and you want the four tones this
+// sprite is actually built from, together, without hunting for a pixel of each. Read straight off
+// the canvas and sorted by luminance, so what comes back reads as the ramp it is.
+function grabFromCanvas(){
+  D.inpal = paletteFrom({ d: D.px }, 24);
+  renderSwatches();
+}
+
 function renderSwatches(){
   const put = (id, list) => {
     const n = $(id); if(!n) return;
     n.innerHTML = '';
     list.forEach(c => n.appendChild(swatchEl(c, rgb => setColor(rgb.slice()))));
   };
+  put('#dinpal', D.inpal);
   put('#dramp', D.ramp);
   put('#dpal', D.palette);
   put('#drecent', D.recent);
@@ -1112,6 +1143,7 @@ async function loadFrameForEdit(){
   // name the download after the file it came from, so a fix drops straight back over the original
   $('#dname').value = (list[clamp(srcSet.i,0,list.length-1)].file || '').replace(/\.png$/, '');
   D._fitted = false;
+  grabFromCanvas();          // the frame you just opened is exactly the one you want colours from
   paint();
   updateFrameUI();
 }
@@ -1255,6 +1287,7 @@ function boot(){
   });
   $('#dtplsnap').classList.toggle('on', D.tplSnap);
 
+  $('#dgrab').addEventListener('click', grabFromCanvas);
   $('#dundo').addEventListener('click', undo);
   $('#dredo').addEventListener('click', redo);
   $('#dclear').addEventListener('click', () => { snapshot(); D.px.fill(0); paint(); });
@@ -1267,6 +1300,16 @@ function boot(){
     paint();
   });
   $('#donionoff').addEventListener('click', () => { D.onion = null; paint(); });
+
+  // phone tabs. The buttons are always in the DOM and the stylesheet hides the bar above 900px, so
+  // there is one layout to reason about and no resize listener deciding which one you are in.
+  const dtabs = [...document.querySelectorAll('.dtabs button')];
+  const dpanels = [...document.querySelectorAll('.dpanel')];
+  const showDTab = key => {
+    dtabs.forEach(t => t.classList.toggle('on', t.dataset.dtab === key));
+    dpanels.forEach(p => p.classList.toggle('show', p.dataset.dpanel === key));
+  };
+  dtabs.forEach(t => t.addEventListener('click', () => showDTab(t.dataset.dtab)));
 
   cv.addEventListener('pointerdown', down);
   cv.addEventListener('pointermove', move);
@@ -1282,7 +1325,9 @@ function boot(){
     zoomAt(e.deltaY < 0 ? 1.15 : 1/1.15, sx, sy);
     paint();
   }, { passive: false });
-  window.addEventListener('resize', () => paint());
+  const relayout = () => { sizeCanvas(); D._fitted = false; paint(); };
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', relayout);
 
   document.addEventListener('keyup', e => { if(e.code === 'Space') spaceHeld = false; });
   document.addEventListener('keydown', e => {
@@ -1299,11 +1344,12 @@ function boot(){
   setColor(D.color);
   $('#daltsw').style.background = hex(D.alt);
   rebuildRamp();
+  sizeCanvas();
   fitView();
   paint();
 }
 
-window.spritedraw = { D, boot, paint, buildRamp, paletteFrom, hsv2rgb, rgb2hsv, TEMPLATES,
+window.spritedraw = { D, boot, paint, sizeCanvas, buildRamp, paletteFrom, grabFromCanvas, hsv2rgb, rgb2hsv, TEMPLATES,
                       groupFrames, parseFrame, loadSourceSet, loadFrameForEdit,
                       fitView, zoomAt, zoomTo,
                       blank, exportPNG,
