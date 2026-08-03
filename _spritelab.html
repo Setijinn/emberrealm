@@ -58,6 +58,28 @@
   .warn{ color:#ffb02e; padding:8px; }
   .note{ color:var(--dim); font-size:11px; margin:6px 0 0; }
   .tabs{ display:none; }
+  .mode{ padding:3px 12px; font-size:12px; }
+  .mode.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+  #modebar{ display:flex; gap:6px; }
+  .dwrap{ display:grid; grid-template-columns:1fr 230px 300px; gap:0; }
+  .dcol{ padding:12px; border-left:1px solid var(--line); }
+  .dcol:first-child{ border-left:none; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:5px; }
+  .tool{ font-size:12px; padding:5px 9px; }
+  .tool.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+  .swatches{ display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
+  .sw{ width:26px; height:26px; padding:0; border-radius:4px; border:1px solid #0007; }
+  .bigsw{ width:34px; height:26px; border-radius:4px; border:1px solid var(--line); display:inline-block; }
+  .huebar{ width:100%; margin:8px 0 4px;
+           background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); border-radius:4px; }
+  #dcanvas{ image-rendering:-webkit-optimize-contrast; image-rendering:pixelated; display:block; }
+  @media (max-width: 900px){
+    .dwrap{ display:block; }
+    .dcol{ border-left:none; border-top:1px solid var(--line); }
+    .dstage{ position:sticky; top:0; z-index:5; background:var(--bg); }
+    #dcanvas{ max-width:100%; height:auto; }
+    #tagline{ display:none; }
+  }
 
   /* ---- PHONE. The three-column grid is a desktop shape and there is no rescuing it on a 390px
      screen, so narrow gets a different layout rather than a squeezed one: one column, and the three
@@ -130,7 +152,10 @@
 <body>
 <header>
   <b>SPRITE LAB</b>
-  <span>live editor for tools/spritegen.py — every op here is a port of the op there, so what you see is what it writes</span>
+  <span id="modebar">
+    <button id="m-derive" class="mode on">derive</button><button id="m-draw" class="mode">draw</button>
+  </span>
+  <span id="tagline">live editor for tools/spritegen.py — every op here is a port of the op there, so what you see is what it writes</span>
 </header>
 
 <div class="wrap">
@@ -198,6 +223,95 @@
 
 </div>
 
+<div id="drawview" style="display:none">
+  <div class="dwrap">
+
+    <div class="dcol dstage">
+      <div class="bar">
+        <label>zoom</label><input type="range" id="dzoom" min="2" max="32" step="1" value="12">
+        <label>nib</label><input type="range" id="dsize" min="1" max="8" step="1" value="1">
+        <span id="dsizel">1</span>
+        <label>alpha</label><input type="range" id="dalpha" min="0" max="255" step="1" value="255">
+        <span id="dalphal">255</span>
+        <span id="dstats" style="color:var(--dim)"></span>
+      </div>
+      <div class="pane" style="display:inline-block">
+        <canvas id="dcanvas" style="touch-action:none;cursor:crosshair"></canvas>
+      </div>
+      <div class="bar">
+        <button id="dundo" class="mini">undo</button>
+        <button id="dredo" class="mini">redo</button>
+        <button id="dclear" class="mini danger">clear</button>
+        <button id="donion" class="mini">trace source</button>
+        <button id="donionoff" class="mini">no trace</button>
+        <input type="text" id="dname" placeholder="sprite name" style="width:130px">
+        <button id="dexport" class="mini">download png</button>
+      </div>
+      <p class="note">Right-drag erases. <b>b</b> pencil &middot; <b>e</b> eraser &middot; <b>g</b> fill &middot;
+        <b>l</b> line &middot; <b>r</b> rect &middot; <b>o</b> ellipse &middot; <b>i</b> pick &middot;
+        ctrl+z / ctrl+shift+z. Right-click a swatch to set it as the dither partner.</p>
+    </div>
+
+    <div class="dcol">
+      <h3>tool</h3>
+      <div id="dtools" class="btnrow"></div>
+
+      <h3 style="margin-top:12px">grid</h3>
+      <div id="dgrids" class="btnrow"></div>
+      <div class="bar"><label>cell</label>
+        <input type="range" id="dblock" min="2" max="32" step="1" value="8"><span id="dblockl">8</span></div>
+
+      <h3 style="margin-top:12px">canvas</h3>
+      <div id="dsizes" class="btnrow"></div>
+
+      <h3 style="margin-top:12px">symmetry &amp; dither</h3>
+      <div class="bar">
+        <select id="dmirror">
+          <option value="none">no mirror</option><option value="h">mirror LR</option>
+          <option value="v">mirror UD</option><option value="both">mirror both</option>
+        </select>
+        <select id="ddither">
+          <option value="off">solid</option><option value="50">dither 50%</option>
+          <option value="25">dither 25%</option><option value="75">dither 75%</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="dcol">
+      <h3>colour</h3>
+      <canvas id="dsv" width="220" height="130" style="width:100%;border-radius:5px;cursor:crosshair"></canvas>
+      <input type="range" id="dhue" min="0" max="360" step="1" value="35" class="huebar">
+      <div class="bar">
+        <span id="dswatch" class="bigsw"></span>
+        <span id="daltsw" class="bigsw" title="dither partner (right-click a swatch)"></span>
+        <input type="text" id="dhex" style="width:92px">
+      </div>
+      <div id="drgb" class="note"></div>
+
+      <h3 style="margin-top:12px">ramp</h3>
+      <div class="bar"><label>steps</label><input type="range" id="rsteps" min="2" max="12" step="1" value="5">
+        <label>hue</label><input type="range" id="rhue" min="0" max="90" step="1" value="28"></div>
+      <div class="bar"><label>sat</label><input type="range" id="rsat" min="-0.5" max="0.6" step="0.02" value="0.18">
+        <label>spread</label><input type="range" id="rspread" min="0.1" max="0.9" step="0.02" value="0.42"></div>
+      <div id="rlabel" class="note"></div>
+      <div id="dramp" class="swatches"></div>
+      <div class="bar"><button id="rmake" class="mini">rebuild ramp</button>
+        <button id="rpal" class="mini">palette from source</button></div>
+      <p class="note">The ramp hue-shifts as it descends &mdash; shadows cool, highlights warm. That one
+        move is what makes a hand-drawn ramp read as <i>lit</i> rather than dimmed, and it is the same
+        idea as spritegen's <b>ramp</b> op.</p>
+
+      <h3 style="margin-top:12px">palette from art</h3>
+      <div id="dpal" class="swatches"></div>
+
+      <h3 style="margin-top:12px">recent</h3>
+      <div id="drecent" class="swatches"></div>
+    </div>
+
+  </div>
+</div>
+
 <script defer src="_spritelab.js"></script>
+<script defer src="_spritedraw.js"></script>
 </body>
 </html>

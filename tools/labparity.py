@@ -118,7 +118,10 @@ def build_page():
     # yet an edit to _spritelab.js still came back stale once here -- and a parity check that silently
     # tests the PREVIOUS version of the file is worse than no parity check, because it reports PASS.
     stamp = str(int(os.path.getmtime(os.path.join(ROOT, "_spritelab.js"))))
-    body = (HTML % json.dumps(cases)).replace("%%CACHEBUST%%", stamp)
+    # Substitute AFTER the %-formatting, and match the single-% form. The template carries
+    # `%%CACHEBUST%%` because it has to survive `HTML % ...`, which turns it into `%CACHEBUST%` --
+    # so replacing the doubled form here found nothing and every run shipped the literal token.
+    body = (HTML % json.dumps(cases)).replace("%CACHEBUST%", stamp)
     with io.open(PAGE, "w", encoding="utf-8") as f:
         f.write(body)
     return PAGE

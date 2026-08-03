@@ -51,3 +51,4 @@ _stableshot.html
 # every time you open the lab, so the committed copy only lags for the hosted one; spritelab.py
 # says so when it notices a difference.
 _labparity.html
+_drawtest.html

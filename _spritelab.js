@@ -567,6 +567,11 @@ function probeText(im){
 
 let booting = true;
 async function boot(){
+  // Only build the UI on the lab's own page. tools/labparity.py loads this file into a bare page to
+  // drive the ops directly, and boot() used to run there anyway and die on the first missing element
+  // -- an unhandled rejection that made a passing parity run look like a broken one while it was
+  // being read. The ops are exported at module scope and never needed any of this.
+  if(!document.getElementById('sources')) return;
   let idx;
   try {
     idx = await (await fetch('_spritelab_index.json?'+Date.now())).json();
@@ -671,6 +676,20 @@ async function boot(){
     state.name.v = pre; $('#v').value = pre;
     refresh();
   }
+  // DERIVE / DRAW. Both views stay mounted -- the draw canvas holds unsaved pixels and tearing it
+  // down to switch modes would throw them away.
+  const setMode = m => {
+    const draw = m === 'draw';
+    document.querySelector('.wrap').style.display = draw ? 'none' : '';
+    $('#drawview').style.display = draw ? '' : 'none';
+    $('#m-draw').classList.toggle('on', draw);
+    $('#m-derive').classList.toggle('on', !draw);
+    if(draw && window.spritedraw) window.spritedraw.paint();
+  };
+  $('#m-derive').addEventListener('click', () => setMode('derive'));
+  $('#m-draw').addEventListener('click', () => setMode('draw'));
+  if(new URLSearchParams(location.search).get('mode') === 'draw') setMode('draw');
+
   booting = false;
   console.log('[spritelab] ops are ports of tools/spritegen.py -- if you edit one, edit both.');
 }
