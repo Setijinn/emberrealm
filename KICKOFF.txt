@@ -517,6 +517,11 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     what lets 08c_embersprites.js find the result by probing; rename off
     idle_/walk_/attack_/ride_ and it warns rather than stopping you. Two frames
     colliding on one name is refused outright.
+  - RUN `py tools/gridcheck.py` AFTER TOUCHING autoGrid. It runs the SHIPPING
+    detector over one sprite of every distinct size in the project -- 316 of them,
+    from 19x90 to 180x180 -- plus synthetic 2x/3x/4x upscales, and checks the cell
+    divides its axis exactly, is a multiple of the detected pixel size, and that
+    chunky art is FOUND rather than merely tolerated. Must say 319 of 319.
   - RUN `py tools/layoutcheck.py` AFTER TOUCHING ANY LAB CSS. 3 pages x 7 viewports,
     checking no horizontal scroll, nothing overhanging the viewport, every named
     control actually rendered, and tap targets over 22px. It exists because these

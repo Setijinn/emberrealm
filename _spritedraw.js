@@ -122,7 +122,8 @@ const D = {
   alt:   [40, 30, 60],      // the dither partner and the right-drag colour
   alpha: 255,
   grid: 'pixel',
-  block: 8,
+  block: 8,                 // cell width in art px
+  blockY: 8,                // cell height; the axes are chosen independently, see autoGrid
   dither: 'off',            // off | 50 | 25 | 75
   mirror: 'none',           // none | h | v | both
   onion: null,              // an image shown faintly underneath, for tracing
@@ -653,12 +654,12 @@ function drawGrid(g, W, H, z){
     // A CELL OF 1 IS NOT A CELL. autoGrid falls back to 1 when nothing divides both dimensions (a
     // 62x63 sword), and drawing the accent line at every pixel is a solid orange wash over the art
     // rather than a guide. Below 2 there is nothing to subdivide, so draw nothing.
-    const b = D.block;
-    if(b >= 2){
+    const bx = D.block, by = D.blockY || D.block;
+    if(bx >= 2 || by >= 2){
       g.strokeStyle = 'rgba(255,176,46,0.34)';
       g.beginPath();
-      for(let x = b; x < D.w; x += b){ g.moveTo(x*z+0.5, 0); g.lineTo(x*z+0.5, H); }
-      for(let y = b; y < D.h; y += b){ g.moveTo(0, y*z+0.5); g.lineTo(W, y*z+0.5); }
+      if(bx >= 2) for(let x = bx; x < D.w; x += bx){ g.moveTo(x*z+0.5, 0); g.lineTo(x*z+0.5, H); }
+      if(by >= 2) for(let y = by; y < D.h; y += by){ g.moveTo(0, y*z+0.5); g.lineTo(W, y*z+0.5); }
       g.stroke();
     }
   }
@@ -850,10 +851,19 @@ function paint(){
   ctx.translate(ox, oy);
 
   if(D.onion){
+    // ONE TRACED PIXEL IS ONE CANVAS PIXEL. This used to draw the trace stretched to the canvas
+    // (0, 0, W, H), so tracing a 92x92 sprite onto a 32x32 canvas squashed each of its pixels to
+    // 0.35 of a cell -- its edges landed at fractional positions and NOTHING could line up with the
+    // grid. That is the whole of "the cells do not match the pixels on different sprites": the
+    // sprites have different resolutions, and the trace was being resampled to hide it.
+    // Drawn at art-pixel scale and centred, so it aligns by construction; too big for the canvas and
+    // it is clipped, which is honest and visible rather than silently wrong.
     ctx.globalAlpha = 0.28;
     tmp.width = D.onion.w; tmp.height = D.onion.h;
     tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(D.onion.d), D.onion.w, D.onion.h), 0, 0);
-    ctx.drawImage(tmp, 0, 0, W, H);
+    const oxo = Math.round((D.w - D.onion.w) / 2) * z;
+    const oyo = Math.round((D.h - D.onion.h) / 2) * z;
+    ctx.drawImage(tmp, oxo, oyo, D.onion.w * z, D.onion.h * z);
     ctx.globalAlpha = 1;
   }
 
@@ -871,7 +881,9 @@ function paint(){
   ctx.strokeRect(ox + 0.5, oy + 0.5, W - 1, H - 1);        // canvas edge, so you can see the bounds
 
   const st = $('#dstats');
-  if(st) st.textContent = `${D.w}x${D.h}  ${z % 1 ? z.toFixed(1) : z}x  ${GRIDS[D.grid]}`;
+  const mismatch = D.onion && (D.onion.w !== D.w || D.onion.h !== D.h)
+    ? `  trace ${D.onion.w}x${D.onion.h} != canvas` : '';
+  if(st) st.textContent = `${D.w}x${D.h}  ${z % 1 ? z.toFixed(1) : z}x  ${GRIDS[D.grid]}${mismatch}`;
   const zs = $('#dzoom');
   if(zs && +zs.value !== Math.round(z)) zs.value = Math.round(clamp(z, 1, 32));
 }
@@ -1178,17 +1190,24 @@ function pixelScale(im, maxn){
   return best;
 }
 
+// A CELL PER AXIS, not one square cell for both. Requiring a single cell that divides BOTH sides
+// means gcd(w,h), and across this project's 316 sprite sizes that is 1 for 145 of them -- a 19x90
+// banner or a 21x32 icon got no coarse guide at all, because no square divides both. The axes are
+// independent: 21 wide splits into sevens and 32 tall into eights, and both still land exactly on
+// pixel boundaries with no partial cell anywhere. Only a dimension with no useful divisor of its own
+// falls back to 1, and then only on that axis.
+function bestCell(n, scale){
+  const cands = [];
+  for(let c = scale; c <= n; c += scale) if(n % c === 0) cands.push(c);
+  if(!cands.length) return scale;
+  // nearest to 8: the subdivision that reads as a guide rather than as graph paper
+  cands.sort((a, b) => Math.abs(a - 8) - Math.abs(b - 8) || a - b);
+  return cands[0];
+}
 function autoGrid(im){
   const scale = pixelScale(im);
-  const gcd = (a, b) => b ? gcd(b, a % b) : a;
-  const g = gcd(im.w, im.h);
-  // divisors of gcd(w,h) that are whole multiples of the art's pixel size
-  const cands = [];
-  for(let n = scale; n <= g; n += scale) if(g % n === 0) cands.push(n);
-  if(!cands.length) return { scale, cell: scale };
-  // nearest to 8, which is the subdivision that reads as a guide rather than as graph paper
-  cands.sort((a, b) => Math.abs(a - 8) - Math.abs(b - 8) || a - b);
-  return { scale, cell: cands[0] };
+  const cellX = bestCell(im.w, scale), cellY = bestCell(im.h, scale);
+  return { scale, cellX, cellY, cell: cellX };
 }
 
 // idle_s.png -> {act:'idle', dir:'s', n:null}   walk_e_3.png -> {act:'walk', dir:'e', n:3}
@@ -1241,9 +1260,10 @@ function updateFrameUI(){
   const n = list ? list.length : 0;
   $('#dsrcframe').max = Math.max(0, n - 1);
   $('#dsrcframe').value = clamp(srcSet ? srcSet.i : 0, 0, Math.max(0, n - 1));
+  const cellTxt = D.block === (D.blockY || D.block) ? D.block : D.block + 'x' + (D.blockY || D.block);
   const px = D.artScale > 1 ? `  ${D.artScale}x pixels` : '';
   $('#dsrcpos').textContent = n
-    ? `${(srcSet.i|0) + 1}/${n}  ${list[clamp(srcSet.i,0,n-1)].file}${px}  cell ${D.block}`
+    ? `${(srcSet.i|0) + 1}/${n}  ${list[clamp(srcSet.i,0,n-1)].file}${px}  cell ${cellTxt}`
     : '-';
 }
 
@@ -1259,9 +1279,9 @@ async function loadFrameForEdit(){
   // divides its dimensions instead of leaving a part-cell against the edges
   const ag = autoGrid(im);
   D.artScale = ag.scale;
-  D.block = ag.cell;
-  $('#dblock').value = Math.min(32, ag.cell);
-  $('#dblockl').textContent = ag.cell;
+  D.block = ag.cellX; D.blockY = ag.cellY;
+  $('#dblock').value = Math.min(32, ag.cellX);
+  $('#dblockl').textContent = ag.cellX === ag.cellY ? ag.cellX : ag.cellX + 'x' + ag.cellY;
   D.grid = 'pixel';
   [...document.querySelectorAll('#dgrids .tool')].forEach(b => b.classList.toggle('on', b.dataset.grid === 'pixel'));
   // onion: the frame before this one in the same action, which is the only comparison that tells you
@@ -1402,7 +1422,9 @@ function boot(){
   $('#dzoomin').addEventListener('click',  () => { zoomTo(D.zoom * 1.5); paint(); });
   $('#dzoomout').addEventListener('click', () => { zoomTo(D.zoom / 1.5); paint(); });
   $('#dzoomfit').addEventListener('click', () => { fitView(); paint(); });
-  $('#dblock').addEventListener('input', e => { D.block = +e.target.value; $('#dblockl').textContent = D.block; paint(); });
+  $('#dblock').addEventListener('input', e => {
+    D.block = D.blockY = +e.target.value;      // dragging it is an explicit choice: one square cell
+    $('#dblockl').textContent = D.block; paint(); });
   $('#ddither').addEventListener('change', e => { D.dither = e.target.value; });
   $('#dmirror').addEventListener('change', e => { D.mirror = e.target.value; });
 
@@ -1461,6 +1483,22 @@ function boot(){
     if(!st || !st.source){ alert('Pick a source on the derive tab first.'); return; }
     const dir = st.index.dirs.find(d => d.path === st.source);
     D.onion = await L.loadImage(dir ? st.source + '/' + st.frames[0] : st.source);
+    // If there is nothing drawn yet, take the traced sprite's SIZE and GRID: you are about to draw
+    // at its resolution, and every sprite in this project is a different one -- 32, 40x50, 62x63,
+    // 64x72, 92. Keeping a default 32x32 canvas under a 92x92 trace is how the cells stop matching.
+    // With work on the canvas the size is left alone and the mismatch is reported instead.
+    const drawn = D.px.some((v, i) => (i & 3) === 3 && v > 0);
+    if(!drawn && (D.onion.w !== D.w || D.onion.h !== D.h)){
+      blank(D.onion.w, D.onion.h);
+      const ag = autoGrid(D.onion);
+      D.artScale = ag.scale; D.block = ag.cellX; D.blockY = ag.cellY;
+      $('#dblock').value = Math.min(32, ag.cellX);
+      $('#dblockl').textContent = ag.cellX === ag.cellY ? ag.cellX : ag.cellX + 'x' + ag.cellY;
+      D.grid = 'pixel';
+      [...document.querySelectorAll('#dgrids .tool')]
+        .forEach(b => b.classList.toggle('on', b.dataset.grid === 'pixel'));
+      fitView();
+    }
     paint();
   });
   $('#donionoff').addEventListener('click', () => { D.onion = null; paint(); });
