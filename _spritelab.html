@@ -77,7 +77,7 @@
     .dwrap{ display:block; }
     .dcol{ border-left:none; border-top:1px solid var(--line); }
     .dstage{ position:sticky; top:0; z-index:5; background:var(--bg); }
-    #dcanvas{ max-width:100%; height:auto; }
+    #dcanvas{ height:42vh !important; }
     #tagline{ display:none; }
   }
 
@@ -228,15 +228,18 @@
 
     <div class="dcol dstage">
       <div class="bar">
-        <label>zoom</label><input type="range" id="dzoom" min="2" max="32" step="1" value="12">
+        <label>zoom</label><input type="range" id="dzoom" min="1" max="32" step="1" value="12">
+        <button id="dzoomout" class="mini">&minus;</button>
+        <button id="dzoomin" class="mini">+</button>
+        <button id="dzoomfit" class="mini">fit</button>
         <label>nib</label><input type="range" id="dsize" min="1" max="8" step="1" value="1">
         <span id="dsizel">1</span>
         <label>alpha</label><input type="range" id="dalpha" min="0" max="255" step="1" value="255">
         <span id="dalphal">255</span>
         <span id="dstats" style="color:var(--dim)"></span>
       </div>
-      <div class="pane" style="display:inline-block">
-        <canvas id="dcanvas" style="touch-action:none;cursor:crosshair"></canvas>
+      <div class="pane" style="padding:4px">
+        <canvas id="dcanvas" style="touch-action:none;cursor:crosshair;width:100%;height:58vh"></canvas>
       </div>
       <div class="bar">
         <button id="dundo" class="mini">undo</button>
@@ -247,7 +250,10 @@
         <input type="text" id="dname" placeholder="sprite name" style="width:130px">
         <button id="dexport" class="mini">download png</button>
       </div>
-      <p class="note">Right-drag erases. <b>b</b> pencil &middot; <b>e</b> eraser &middot; <b>g</b> fill &middot;
+      <p class="note">Pinch to zoom, two fingers to pan &mdash; the stroke the first finger started
+        is undone when the second lands, so a pinch never marks the sprite. Wheel zooms about the
+        cursor; space-drag or middle-drag pans; <b>+</b> <b>&minus;</b> <b>0</b> zoom in, out, fit.
+        Right-drag erases. <b>b</b> pencil &middot; <b>e</b> eraser &middot; <b>g</b> fill &middot;
         <b>l</b> line &middot; <b>r</b> rect &middot; <b>o</b> ellipse &middot; <b>i</b> pick &middot;
         ctrl+z / ctrl+shift+z. Right-click a swatch to set it as the dither partner.</p>
     </div>
@@ -261,6 +267,25 @@
       <div class="bar"><label>cell</label>
         <input type="range" id="dblock" min="2" max="32" step="1" value="8"><span id="dblockl">8</span></div>
 
+      <h3 style="margin-top:12px">fix a sprite</h3>
+      <div class="bar">
+        <button id="dsrcload" class="mini">load source frame</button>
+        <span id="dsrcname" style="color:var(--dim);font-size:11px"></span>
+      </div>
+      <div class="bar">
+        <select id="dsrcact" style="flex:1"></select>
+      </div>
+      <div class="bar">
+        <button id="dsrcprev" class="mini">&lsaquo;</button>
+        <input type="range" id="dsrcframe" min="0" max="0" step="1" value="0" style="flex:1">
+        <button id="dsrcnext" class="mini">&rsaquo;</button>
+      </div>
+      <div id="dsrcpos" class="note">-</div>
+      <p class="note">Takes the source picked on the derive tab, sizes the canvas to it, turns the
+        pixel grid on and puts the PREVIOUS frame of the same action underneath &mdash; which is the
+        only comparison that tells you whether a walk cycle lines up. The download is named after the
+        file it came from, so a fix drops straight back over the original.</p>
+
       <h3 style="margin-top:12px">guide outline</h3>
       <div class="bar">
         <select id="dtpl" style="flex:1"></select>
@@ -273,7 +298,8 @@
         <input type="range" id="dtplrot" min="-180" max="180" step="5" value="0" style="flex:1">
         <span id="dtplrotl" style="min-width:34px">0&deg;</span>
         <button id="dtplrot90" class="mini">+90</button>
-        <button id="dtplrot0" class="mini">0</button></div>
+        <button id="dtplrot0" class="mini">0</button>
+        <button id="dtplsnap" class="mini">snap</button></div>
       <p class="note">A blueprint, not art: proportions only, drawn behind your pixels and never
         into them. The weapon guides are the seven families the game actually equips.</p>
 
