@@ -796,7 +796,12 @@ function snapZoom(z){
 // would feel stuck.
 function applyZoom(raw, sx, sy){
   const ax = (sx - D.panX) / D.zoom, ay = (sy - D.panY) / D.zoom;
-  D.zoomRaw = clamp(raw, 0.25, 64);
+  // FLOOR AT "the whole sprite is visible". Zooming out past that just strands the art as a speck
+  // in the middle of an empty canvas, which is its own kind of stuck. For art too big to fit at 1:1
+  // the floor IS the fit, so large canvases can still be zoomed out to see all of them.
+  const [vw, vh] = viewSize();
+  const lo = Math.min(1, Math.min(vw / D.w, vh / D.h));
+  D.zoomRaw = clamp(raw, lo, 64);
   D.zoom = snapZoom(D.zoomRaw);
   D.panX = sx - ax * D.zoom;
   D.panY = sy - ay * D.zoom;
@@ -876,6 +881,7 @@ function paint(){
 // ---------------------------------------------------------------------------------------------------
 
 let drawing = false, last = null, shapeFrom = null, before = null, snapped = false;
+let lastTapAt = 0, lastTapPt = null;
 const ptrs = new Map();            // active pointers, for pinch
 let gesture = null, panning = null, spaceHeld = false;
 
@@ -924,6 +930,26 @@ function down(e){
   // it, so nothing was ever added to `ptrs` -- no stroke, and no pinch either.
   try { cv.setPointerCapture(e.pointerId); } catch(err){}
   ptrs.set(e.pointerId, local(e));
+
+  // DOUBLE-TAP THE CANVAS TO FIT. The escape hatch, and it is on the canvas ON PURPOSE: zoom in far
+  // enough and the art covers the whole viewport, so there is nowhere left to put a finger that is
+  // not the drawing surface. Every button still works, but you should not have to go hunting for one
+  // to get un-stuck -- the gesture is available exactly where you already are.
+  // The first tap of the pair drew a dot, so it is undone here: a double-tap must never mark the
+  // sprite, for the same reason a pinch must not.
+  const tapAt = local(e), tapNow = Date.now();
+  if(ptrs.size === 1){
+    if(tapNow - lastTapAt < 320 && lastTapPt &&
+       Math.hypot(tapAt[0] - lastTapPt[0], tapAt[1] - lastTapPt[1]) < 24){
+      cancelStroke();
+      undo();                       // reverse the dot the first tap laid down
+      lastTapAt = 0; lastTapPt = null;
+      fitView();
+      paint();
+      return;
+    }
+    lastTapAt = tapNow; lastTapPt = tapAt;
+  }
 
   if(ptrs.size >= 2){
     cancelStroke();
@@ -1455,6 +1481,11 @@ function boot(){
   cv.addEventListener('pointercancel', up);
   cv.addEventListener('pointerleave', e => { if(!cv.hasPointerCapture ||
     !cv.hasPointerCapture(e.pointerId)) up(e); });
+  // ALSO ON THE WINDOW. A finger lifted outside the canvas never delivers pointerup to it, and the
+  // stale entry left in `ptrs` makes every later pinch measure against a finger that is not there --
+  // which showed up in testing as zoom jumping on its own between gestures.
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
   cv.addEventListener('contextmenu', e => e.preventDefault());
   // passive:false, or the browser scrolls the page instead of letting us zoom
   cv.addEventListener('wheel', e => {

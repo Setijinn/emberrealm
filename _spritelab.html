@@ -5,7 +5,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- user-scalable=no IS THE FIX FOR "I cannot zoom back out on the page". The drawing canvas must
+     carry touch-action:none or every stroke scrolls the page -- but that also means the canvas
+     SWALLOWS pinches. Zoom the page by pinching some other element, and the canvas then covers most
+     of the screen, so every pinch you make to undo it is eaten and the page stays zoomed in with no
+     way back. Pinch has exactly one meaning here (zoom the ART, which has its own controls too), so
+     the page itself never zooms and can never get stuck. -->
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>EmberRealm — Sprite Lab</title>
 <style>
   :root{ --bg:#16131a; --panel:#1e1a24; --line:#332c3d; --ink:#e8e2f0; --dim:#9a8fab; --hot:#ffb02e; }
