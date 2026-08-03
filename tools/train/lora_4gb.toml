@@ -1,0 +1,75 @@
+# kohya sd-scripts config for a LoRA on the EmberRealm corpus, tuned for a 4GB card.
+#
+# WHY THESE NUMBERS AND NOT THE ONES IN EVERY GUIDE. The usual settings assume 512 or 1024px
+# photographs on a 12-24GB card. This is 64-92px pixel art on a GTX 1650 with 4GB, and almost every
+# default is wrong for that:
+#
+#   resolution 320    A 64px sprite upscaled has nothing to resolve past this, and resolution is the
+#                     single biggest driver of VRAM. 512 will OOM on 4GB; 320 fits.
+#   batch 1 + grad
+#   checkpointing     The two things that actually make 4GB viable. Checkpointing trades compute for
+#                     memory -- slower per step, but it is the difference between running and not.
+#   AdamW8bit         Halves optimiser state. On 4GB that is not an optimisation, it is a requirement.
+#   dim 16 / alpha 8  Style and silhouette live in a low-rank space; 128 would fit a photograph's
+#                     detail and mostly memorise 2,900 sprites instead of learning them.
+#   no flip_aug       tools/dataset.py already mirrored losslessly and captioned each copy. Letting
+#                     the trainer flip again would mirror the mirrors and mislabel orientation.
+#   no bucketing      Every image is already exactly 320x320 with the subject centred on flat violet.
+#   xformers          Memory-efficient attention. Without it 4GB does not hold.
+#
+# COUNT THE STEPS BEFORE YOU START, because epochs are a trap here:
+#     steps = images x repeats x epochs
+# and this card does roughly 1.6 s per step at 320px. The first version of this file said 10 repeats
+# and 12 epochs, which against 2,934 images is 352,080 steps -- SIX AND A HALF DAYS on a 1650. A
+# style LoRA wants 2,000-6,000 steps; past that it stops learning the look and starts memorising the
+# sprites, and hands back art you already own.
+#     full corpus   2,934 imgs, folder "1_emberrealm",  2 epochs =  5,868 steps ~ 2.6 h
+#     weapons only     84 imgs, folder "20_emberrealm", 2 epochs =  3,360 steps ~ 1.5 h
+#
+# Point train_data_dir at a folder containing ONE subfolder named "<repeats>_<class>" -- sd-scripts
+# reads the repeat count from that name.
+
+[model_arguments]
+pretrained_model_name_or_path = "runwayml/stable-diffusion-v1-5"
+v2 = false
+
+[dataset_arguments]
+train_data_dir = "../../_dataset_train"
+resolution = "320,320"
+enable_bucket = false
+caption_extension = ".txt"
+shuffle_caption = false          # the trigger word must stay first, where it carries most weight
+keep_tokens = 2                  # "emberrealm, pixel art sprite" are never shuffled away
+
+[training_arguments]
+output_dir = "../../_lora"
+output_name = "emberrealm"
+save_model_as = "safetensors"
+max_train_epochs = 2
+train_batch_size = 1
+gradient_checkpointing = true
+gradient_accumulation_steps = 2   # an effective batch of 2 without the memory of one
+mixed_precision = "fp16"
+save_precision = "fp16"
+cache_latents = true              # encode once, not every epoch: big speedup, less VRAM churn
+xformers = true
+max_data_loader_n_workers = 2
+seed = 7
+save_every_n_epochs = 1           # checkpoints to compare; overtrained pixel art memorises fast
+
+[optimizer_arguments]
+optimizer_type = "AdamW8bit"
+learning_rate = 1e-4
+unet_lr = 1e-4
+text_encoder_lr = 5e-5
+lr_scheduler = "cosine_with_restarts"
+lr_warmup_steps = 100
+
+[network_arguments]
+network_module = "networks.lora"
+network_dim = 16
+network_alpha = 8
+
+[logging_arguments]
+logging_dir = "../../_lora/logs"
+log_prefix = "emberrealm"
