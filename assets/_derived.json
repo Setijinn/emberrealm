@@ -127,6 +127,50 @@
    ],
    "to": "assets/mobs/anim/arch_golem_shadow"
   },
+  "anim_golem_storm": {
+   "files": [
+    "assets/mobs/anim/arch_golem_storm/attack_0.png",
+    "assets/mobs/anim/arch_golem_storm/attack_1.png",
+    "assets/mobs/anim/arch_golem_storm/attack_2.png",
+    "assets/mobs/anim/arch_golem_storm/attack_3.png",
+    "assets/mobs/anim/arch_golem_storm/attack_4.png",
+    "assets/mobs/anim/arch_golem_storm/attack_5.png",
+    "assets/mobs/anim/arch_golem_storm/attack_6.png",
+    "assets/mobs/anim/arch_golem_storm/attack_7.png",
+    "assets/mobs/anim/arch_golem_storm/attack_8.png",
+    "assets/mobs/anim/arch_golem_storm/idle_0.png",
+    "assets/mobs/anim/arch_golem_storm/idle_1.png",
+    "assets/mobs/anim/arch_golem_storm/idle_2.png",
+    "assets/mobs/anim/arch_golem_storm/idle_3.png",
+    "assets/mobs/anim/arch_golem_storm/idle_4.png",
+    "assets/mobs/anim/arch_golem_storm/idle_5.png",
+    "assets/mobs/anim/arch_golem_storm/idle_6.png",
+    "assets/mobs/anim/arch_golem_storm/idle_7.png",
+    "assets/mobs/anim/arch_golem_storm/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_golem",
+   "key": "{\"from\": \"assets/mobs/anim/arch_golem\", \"note\": \"The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"anim_golem_storm\", \"to\": \"assets/mobs/anim/arch_golem_storm\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_golem_storm"
+  },
   "anim_golem_venom": {
    "files": [
     "assets/mobs/anim/arch_golem_venom/attack_0.png",
@@ -290,6 +334,50 @@
     }
    ],
    "to": "assets/mobs/anim/arch_husk_shadow"
+  },
+  "anim_husk_storm": {
+   "files": [
+    "assets/mobs/anim/arch_husk_storm/attack_0.png",
+    "assets/mobs/anim/arch_husk_storm/attack_1.png",
+    "assets/mobs/anim/arch_husk_storm/attack_2.png",
+    "assets/mobs/anim/arch_husk_storm/attack_3.png",
+    "assets/mobs/anim/arch_husk_storm/attack_4.png",
+    "assets/mobs/anim/arch_husk_storm/attack_5.png",
+    "assets/mobs/anim/arch_husk_storm/attack_6.png",
+    "assets/mobs/anim/arch_husk_storm/attack_7.png",
+    "assets/mobs/anim/arch_husk_storm/attack_8.png",
+    "assets/mobs/anim/arch_husk_storm/idle_0.png",
+    "assets/mobs/anim/arch_husk_storm/idle_1.png",
+    "assets/mobs/anim/arch_husk_storm/idle_2.png",
+    "assets/mobs/anim/arch_husk_storm/idle_3.png",
+    "assets/mobs/anim/arch_husk_storm/idle_4.png",
+    "assets/mobs/anim/arch_husk_storm/idle_5.png",
+    "assets/mobs/anim/arch_husk_storm/idle_6.png",
+    "assets/mobs/anim/arch_husk_storm/idle_7.png",
+    "assets/mobs/anim/arch_husk_storm/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_husk",
+   "key": "{\"from\": \"assets/mobs/anim/arch_husk\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"anim_husk_storm\", \"to\": \"assets/mobs/anim/arch_husk_storm\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_husk_storm"
   },
   "anim_husk_venom": {
    "files": [
@@ -455,6 +543,50 @@
    ],
    "to": "assets/mobs/anim/arch_plant_shadow"
   },
+  "anim_plant_storm": {
+   "files": [
+    "assets/mobs/anim/arch_plant_storm/attack_0.png",
+    "assets/mobs/anim/arch_plant_storm/attack_1.png",
+    "assets/mobs/anim/arch_plant_storm/attack_2.png",
+    "assets/mobs/anim/arch_plant_storm/attack_3.png",
+    "assets/mobs/anim/arch_plant_storm/attack_4.png",
+    "assets/mobs/anim/arch_plant_storm/attack_5.png",
+    "assets/mobs/anim/arch_plant_storm/attack_6.png",
+    "assets/mobs/anim/arch_plant_storm/attack_7.png",
+    "assets/mobs/anim/arch_plant_storm/attack_8.png",
+    "assets/mobs/anim/arch_plant_storm/idle_0.png",
+    "assets/mobs/anim/arch_plant_storm/idle_1.png",
+    "assets/mobs/anim/arch_plant_storm/idle_2.png",
+    "assets/mobs/anim/arch_plant_storm/idle_3.png",
+    "assets/mobs/anim/arch_plant_storm/idle_4.png",
+    "assets/mobs/anim/arch_plant_storm/idle_5.png",
+    "assets/mobs/anim/arch_plant_storm/idle_6.png",
+    "assets/mobs/anim/arch_plant_storm/idle_7.png",
+    "assets/mobs/anim/arch_plant_storm/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_plant",
+   "key": "{\"from\": \"assets/mobs/anim/arch_plant\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"anim_plant_storm\", \"to\": \"assets/mobs/anim/arch_plant_storm\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_plant_storm"
+  },
   "anim_plant_venom": {
    "files": [
     "assets/mobs/anim/arch_plant_venom/attack_0.png",
@@ -618,6 +750,50 @@
     }
    ],
    "to": "assets/mobs/anim/arch_wisp_shadow"
+  },
+  "anim_wisp_storm": {
+   "files": [
+    "assets/mobs/anim/arch_wisp_storm/attack_0.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_1.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_2.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_3.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_4.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_5.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_6.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_7.png",
+    "assets/mobs/anim/arch_wisp_storm/attack_8.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_0.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_1.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_2.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_3.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_4.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_5.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_6.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_7.png",
+    "assets/mobs/anim/arch_wisp_storm/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_wisp",
+   "key": "{\"from\": \"assets/mobs/anim/arch_wisp\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"anim_wisp_storm\", \"to\": \"assets/mobs/anim/arch_wisp_storm\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_wisp_storm"
   },
   "anim_wisp_venom": {
    "files": [
@@ -850,6 +1026,33 @@
    ],
    "to": "assets/mobs/arch_acolyte_shadow.png"
   },
+  "still_acolyte_storm": {
+   "files": [
+    "assets/mobs/arch_acolyte_storm.png"
+   ],
+   "from": "assets/mobs/arch_acolyte.png",
+   "key": "{\"from\": \"assets/mobs/arch_acolyte.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_acolyte_storm\", \"to\": \"assets/mobs/arch_acolyte_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_acolyte_storm.png"
+  },
   "still_acolyte_venom": {
    "files": [
     "assets/mobs/arch_acolyte_venom.png"
@@ -945,6 +1148,33 @@
     }
    ],
    "to": "assets/mobs/arch_bird_shadow.png"
+  },
+  "still_bird_storm": {
+   "files": [
+    "assets/mobs/arch_bird_storm.png"
+   ],
+   "from": "assets/mobs/arch_bird.png",
+   "key": "{\"from\": \"assets/mobs/arch_bird.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_bird_storm\", \"to\": \"assets/mobs/arch_bird_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_bird_storm.png"
   },
   "still_bird_venom": {
    "files": [
@@ -1042,6 +1272,33 @@
    ],
    "to": "assets/mobs/arch_boar_shadow.png"
   },
+  "still_boar_storm": {
+   "files": [
+    "assets/mobs/arch_boar_storm.png"
+   ],
+   "from": "assets/mobs/arch_boar.png",
+   "key": "{\"from\": \"assets/mobs/arch_boar.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_boar_storm\", \"to\": \"assets/mobs/arch_boar_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_boar_storm.png"
+  },
   "still_boar_venom": {
    "files": [
     "assets/mobs/arch_boar_venom.png"
@@ -1138,6 +1395,33 @@
    ],
    "to": "assets/mobs/arch_crab_shadow.png"
   },
+  "still_crab_storm": {
+   "files": [
+    "assets/mobs/arch_crab_storm.png"
+   ],
+   "from": "assets/mobs/arch_crab.png",
+   "key": "{\"from\": \"assets/mobs/arch_crab.png\", \"note\": \"Archetype stills, four elements each. One file per variant -- the whole set of twelve archetypes is 48 files and about 200 KB, which is why the stills are all here and the animations are not.\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_crab_storm\", \"to\": \"assets/mobs/arch_crab_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_crab_storm.png"
+  },
   "still_crab_venom": {
    "files": [
     "assets/mobs/arch_crab_venom.png"
@@ -1233,6 +1517,33 @@
     }
    ],
    "to": "assets/mobs/arch_golem_shadow.png"
+  },
+  "still_golem_storm": {
+   "files": [
+    "assets/mobs/arch_golem_storm.png"
+   ],
+   "from": "assets/mobs/arch_golem.png",
+   "key": "{\"from\": \"assets/mobs/arch_golem.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_golem_storm\", \"to\": \"assets/mobs/arch_golem_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_golem_storm.png"
   },
   "still_golem_venom": {
    "files": [
@@ -1351,6 +1662,33 @@
    ],
    "to": "assets/mobs/rimehound.png"
   },
+  "still_hound_stormhound": {
+   "files": [
+    "assets/mobs/stormhound.png"
+   ],
+   "from": "assets/mobs/hound.png",
+   "key": "{\"from\": \"assets/mobs/hound.png\", \"note\": \"THE WORKED EXAMPLE FOR NAMING. The elements are shared across all twelve archetypes, but nothing says this recipe has to accept their names: `as` renames them here and only here, and `to` puts them wherever you like -- so the hound families are cinderhound/rimehound/nighthound/plaguehound rather than hound_ember and friends, while the other eleven archetypes keep using the same element definitions untouched. Recipe names follow the output names, so this builds as still_hound_rimehound.\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_hound_stormhound\", \"to\": \"assets/mobs/stormhound.png\", \"v\": \"stormhound\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/stormhound.png"
+  },
   "still_husk_ember": {
    "files": [
     "assets/mobs/arch_husk_ember.png"
@@ -1425,6 +1763,33 @@
     }
    ],
    "to": "assets/mobs/arch_husk_shadow.png"
+  },
+  "still_husk_storm": {
+   "files": [
+    "assets/mobs/arch_husk_storm.png"
+   ],
+   "from": "assets/mobs/arch_husk.png",
+   "key": "{\"from\": \"assets/mobs/arch_husk.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_husk_storm\", \"to\": \"assets/mobs/arch_husk_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_husk_storm.png"
   },
   "still_husk_venom": {
    "files": [
@@ -1522,6 +1887,33 @@
    ],
    "to": "assets/mobs/arch_plant_shadow.png"
   },
+  "still_plant_storm": {
+   "files": [
+    "assets/mobs/arch_plant_storm.png"
+   ],
+   "from": "assets/mobs/arch_plant.png",
+   "key": "{\"from\": \"assets/mobs/arch_plant.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_plant_storm\", \"to\": \"assets/mobs/arch_plant_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_plant_storm.png"
+  },
   "still_plant_venom": {
    "files": [
     "assets/mobs/arch_plant_venom.png"
@@ -1617,6 +2009,33 @@
     }
    ],
    "to": "assets/mobs/arch_shaman_shadow.png"
+  },
+  "still_shaman_storm": {
+   "files": [
+    "assets/mobs/arch_shaman_storm.png"
+   ],
+   "from": "assets/mobs/arch_shaman.png",
+   "key": "{\"from\": \"assets/mobs/arch_shaman.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_shaman_storm\", \"to\": \"assets/mobs/arch_shaman_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_shaman_storm.png"
   },
   "still_shaman_venom": {
    "files": [
@@ -1714,6 +2133,33 @@
    ],
    "to": "assets/mobs/arch_slinger_shadow.png"
   },
+  "still_slinger_storm": {
+   "files": [
+    "assets/mobs/arch_slinger_storm.png"
+   ],
+   "from": "assets/mobs/arch_slinger.png",
+   "key": "{\"from\": \"assets/mobs/arch_slinger.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_slinger_storm\", \"to\": \"assets/mobs/arch_slinger_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_slinger_storm.png"
+  },
   "still_slinger_venom": {
    "files": [
     "assets/mobs/arch_slinger_venom.png"
@@ -1810,6 +2256,33 @@
    ],
    "to": "assets/mobs/arch_swarm_shadow.png"
   },
+  "still_swarm_storm": {
+   "files": [
+    "assets/mobs/arch_swarm_storm.png"
+   ],
+   "from": "assets/mobs/arch_swarm.png",
+   "key": "{\"from\": \"assets/mobs/arch_swarm.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_swarm_storm\", \"to\": \"assets/mobs/arch_swarm_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_swarm_storm.png"
+  },
   "still_swarm_venom": {
    "files": [
     "assets/mobs/arch_swarm_venom.png"
@@ -1905,6 +2378,33 @@
     }
    ],
    "to": "assets/mobs/arch_wisp_shadow.png"
+  },
+  "still_wisp_storm": {
+   "files": [
+    "assets/mobs/arch_wisp_storm.png"
+   ],
+   "from": "assets/mobs/arch_wisp.png",
+   "key": "{\"from\": \"assets/mobs/arch_wisp.png\", \"note\": \"\", \"ops\": [{\"high\": \"#d8f0ff\", \"mix\": 0.6, \"op\": \"ramp\", \"shadow\": \"#0e1a2e\", \"span\": 0.8}, {\"mul\": 1.05, \"op\": \"sat\"}, {\"hue\": 198, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.34}], \"set\": \"still_wisp_storm\", \"to\": \"assets/mobs/arch_wisp_storm.png\", \"v\": \"storm\"}",
+   "ops": [
+    {
+     "high": "#d8f0ff",
+     "mix": 0.6,
+     "op": "ramp",
+     "shadow": "#0e1a2e",
+     "span": 0.8
+    },
+    {
+     "mul": 1.05,
+     "op": "sat"
+    },
+    {
+     "hue": 198,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_wisp_storm.png"
   },
   "still_wisp_venom": {
    "files": [
