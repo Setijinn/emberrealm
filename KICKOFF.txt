@@ -578,7 +578,12 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     them invisible on screen: float32 vs float64, ((x%n)+n)%n vs a single %, doing
     *255 inside hsl2rgb rather than after it, and a sliding running-sum blur against
     numpy's prefix-sum one. If you edit an op, edit BOTH copies and re-run it.
-  - THE 373 GENERATED SPRITES ARE COMMITTED (v614/art-v22): the twelve archetype
+  - THE 373 GENERATED SPRITES ARE COMMITTED (code v617, ART-V20 UNCHANGED --
+    every one of them is a NEW filename and nothing existing was replaced, so there is
+    no stale copy to evict. Bumping the art version would have deleted the whole art
+    cache and made every player re-download it for nothing, which is the exact incident
+    the note at the top of sw.js exists to remember. Bump ART_CACHE when a file is
+    REPLACED, not when one is added): the twelve archetype
     stills and four animated families in frost/venom/shadow/ember, the golem elite,
     the spectral wisp, and the four named hounds. Nothing LOADS them yet -- the mob
     art tables are fixed twelve-entry lists -- so adopting one is a key in

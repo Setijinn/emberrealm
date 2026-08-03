@@ -5,7 +5,7 @@
 // content-addressed by filename and changes when a file changes, so it needs its own version
 // that moves only when the art does.
 const CODE_CACHE = 'emberrealm-code-v617';   // bump freely; holds html/css/js only
-const ART_CACHE  = 'emberrealm-art-v22';      // bump ONLY when art is added/replaced
+const ART_CACHE  = 'emberrealm-art-v20';      // bump ONLY when art is added/replaced
 const CACHE = CODE_CACHE;                    // install/precache target
 // The precache list only ever held the shell, so a .js file that failed to download had nothing to
 // fall back to -- the cache only fills as files are successfully fetched, which is exactly the case
