@@ -56,6 +56,11 @@
         {"op": "sat", "mul": 0.75},
         {"op": "glow", "hue": 275, "radius": 5, "strength": 0.34}
       ],
+      "storm": [
+        {"op": "ramp", "shadow": "#0e1a2e", "high": "#d8f0ff", "span": 0.80, "mix": 0.60},
+        {"op": "sat", "mul": 1.05},
+        {"op": "glow", "hue": 198, "radius": 4, "strength": 0.34}
+      ],
       "ember": [
         {"op": "ramp", "shadow": "#2c1008", "high": "#ff8a2a", "span": 0.78, "mix": 0.58},
         {"op": "sat", "mul": 1.15},
@@ -82,7 +87,7 @@
       "from": "assets/mobs/hound.png",
       "to": "assets/mobs/{v}.png",
       "variants_from": "elements",
-      "as": {"frost": "rimehound", "venom": "plaguehound", "shadow": "nighthound", "ember": "cinderhound"}
+      "as": {"frost": "rimehound", "venom": "plaguehound", "shadow": "nighthound", "ember": "cinderhound", "storm": "stormhound"}
     },
 
     "anim_golem": {
