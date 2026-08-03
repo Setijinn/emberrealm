@@ -112,6 +112,8 @@ const D = {
   w: 32, h: 32,
   px: null,                 // Uint8ClampedArray, w*h*4
   zoom: 12,
+  panX: 0, panY: 0,
+  _fitted: false,           // the first paint with a real canvas size does the initial fit        // where the art's top-left sits in the viewport, in display px
   tool: 'pencil',
   size: 1,
   color: [255, 176, 46],
@@ -126,6 +128,7 @@ const D = {
   tplAlpha: 0.5,
   tplFlip: false,
   tplRot: 0,                // degrees, about the canvas centre
+  tplSnap: true,            // round guide coordinates to whole art pixels
   ramp: [],
   palette: [],
   recent: [],
@@ -137,6 +140,7 @@ const inside = (x, y) => x >= 0 && y >= 0 && x < D.w && y < D.h;
 
 function blank(w, h){
   D.w = w; D.h = h;
+  D._fitted = false;
   D.px = new Uint8ClampedArray(w * h * 4);
   D.undo = []; D.redo = [];
 }
@@ -272,6 +276,14 @@ function fill(x, y, col){
 //  never touches image data so it cannot end up in an exported PNG.
 // ---------------------------------------------------------------------------------------------------
 
+// GUIDES SNAP TO THE LATTICE. A blueprint whose edge falls halfway across a pixel cannot be traced
+// -- you are left guessing which side of the line the pixel belongs on, every time, and the guess is
+// what makes a hand-drawn sprite look wobbly. With a grid on, every guide coordinate is rounded to a
+// whole art pixel, so the line you are tracing IS a pixel boundary.
+// Set per-draw by drawTemplate, since it needs the art-pixel size in display units.
+let SNAPSTEP = 0;
+const sx = v => SNAPSTEP ? Math.round(v / SNAPSTEP) * SNAPSTEP : v;
+
 // Path helpers. `S` selects the weight; every template takes it and uses both.
 function mkStyle(g, zoom){
   const w = Math.max(1, zoom / 9);
@@ -286,7 +298,7 @@ function mkStyle(g, zoom){
 }
 function gp(g, W, H, pts, close){
   g.beginPath();
-  pts.forEach(([x, y], i) => i ? g.lineTo(x*W, y*H) : g.moveTo(x*W, y*H));
+  pts.forEach(([x, y], i) => i ? g.lineTo(sx(x*W), sx(y*H)) : g.moveTo(sx(x*W), sx(y*H)));
   if(close) g.closePath();
   g.stroke();
 }
@@ -294,13 +306,13 @@ function ge(g, W, H, cx, cy, rx, ry){
   g.beginPath(); g.ellipse(cx*W, cy*H, rx*W, ry*H, 0, 0, 6.2832); g.stroke();
 }
 function gl(g, W, H, x0, y0, x1, y1){
-  g.beginPath(); g.moveTo(x0*W, y0*H); g.lineTo(x1*W, y1*H); g.stroke();
+  g.beginPath(); g.moveTo(sx(x0*W), sx(y0*H)); g.lineTo(sx(x1*W), sx(y1*H)); g.stroke();
 }
 // a smooth closed outline through points -- quadratic midpoints, which is enough for a blueprint and
 // far kinder to read than a polygon pretending to be a curve
 function gcurve(g, W, H, pts, close){
   g.beginPath();
-  const P = pts.map(([x,y]) => [x*W, y*H]);
+  const P = pts.map(([x,y]) => [sx(x*W), sx(y*H)]);
   g.moveTo(P[0][0], P[0][1]);
   for(let i = 1; i < P.length - 1; i++){
     const mx = (P[i][0] + P[i+1][0]) / 2, my = (P[i][1] + P[i+1][1]) / 2;
@@ -592,12 +604,15 @@ function drawTemplate(g, W, H){
   if(D.tplFlip) g.scale(-1, 1);
   g.translate(-W/2, -H/2);
 
+  // one art pixel, in display units -- the step every guide coordinate is rounded to
+  SNAPSTEP = (D.tplSnap && D.grid !== 'none') ? (W / D.w) : 0;
   const S = mkStyle(g, D.zoom);
   const base = D.tplAlpha;
   // Each template picks its own weight per stroke; tplAlpha scales the lot, so `fade` still does what
   // it says without flattening the hard/soft distinction that makes the guide readable.
   const wrapped = kind => { S(kind); g.globalAlpha *= base; };
   t.draw(g, W, H, wrapped);
+  SNAPSTEP = 0;
   g.restore();
 }
 
@@ -696,17 +711,82 @@ function drawGrid(g, W, H, z){
 // ---------------------------------------------------------------------------------------------------
 
 let cv, ctx, tmp;
+
+// ---------------------------------------------------------------------------------------------------
+//  THE VIEWPORT.
+//
+//  The canvas used to be sized to the ART -- 64px at 16x meant a 1024px element, and "zooming" grew
+//  the element and pushed the page around. That is why zooming was awkward and why pinching drew on
+//  the sprite: the canvas had touch-action:none (it must, or a stroke scrolls the page), so the
+//  browser's own pinch was off, and there was nothing else offering one.
+//
+//  Now the canvas is a fixed WINDOW onto the art and zoom/pan are state. Which gives the thing every
+//  editor has and this one did not:
+//     one finger / pen / left button   draw
+//     two fingers                      pinch to zoom, drag to pan -- and the stroke the first finger
+//                                      started is UNDONE the moment the second lands, because on
+//                                      touch the first finger always arrives first and you never
+//                                      meant to draw with it
+//     wheel                            zoom about the cursor
+//     middle-drag, or space-drag       pan
+//     the pan tool                     one-finger pan, for when two fingers are awkward
+// ---------------------------------------------------------------------------------------------------
+
+function viewSize(){
+  // Backing store in CSS pixels: no devicePixelRatio scaling, because every draw here is
+  // nearest-neighbour pixel art and a fractional backing store is how you get blurry edges.
+  const r = cv.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+  return [w, h];
+}
+
+function fitView(){
+  const [vw, vh] = viewSize();
+  const z = Math.max(1, Math.floor(Math.min(vw / D.w, vh / D.h)));
+  D.zoom = Math.min(64, z);
+  D.panX = Math.round((vw - D.w * D.zoom) / 2);
+  D.panY = Math.round((vh - D.h * D.zoom) / 2);
+}
+
+// Zoom keeping the art point under (sx,sy) exactly where it is -- the thing that makes zooming feel
+// like moving a lens rather than being teleported.
+function zoomAt(factor, sx, sy){
+  const ax = (sx - D.panX) / D.zoom, ay = (sy - D.panY) / D.zoom;
+  D.zoom = clamp(D.zoom * factor, 0.5, 64);
+  D.panX = sx - ax * D.zoom;
+  D.panY = sy - ay * D.zoom;
+}
+function zoomTo(z, sx, sy){
+  const [vw, vh] = viewSize();
+  zoomAt(clamp(z, 0.5, 64) / D.zoom, sx === undefined ? vw/2 : sx, sy === undefined ? vh/2 : sy);
+}
+
 function paint(){
+  const [vw, vh] = viewSize();
+  // THE VIEW IS MEASURED, AND AT BOOT THERE IS NOTHING TO MEASURE. _spritedraw boots on
+  // DOMContentLoaded while the draw view is still display:none, so the canvas is 0x0 and fitView()
+  // computes zoom 1 with the art parked off-screen -- which looked exactly like "zoom is broken".
+  // Fit properly the first time the canvas has real dimensions.
+  if(!D._fitted && vw > 2 && vh > 2){ D._fitted = true; fitView(); return paint(); }
   const z = D.zoom, W = D.w * z, H = D.h * z;
-  cv.width = W; cv.height = H;
+  const ox = Math.round(D.panX), oy = Math.round(D.panY);
   ctx.imageSmoothingEnabled = false;
+
+  ctx.fillStyle = '#100e14';
+  ctx.fillRect(0, 0, vw, vh);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ox, oy, W, H); ctx.clip();     // nothing spills outside the art
 
   // checkerboard, so transparent reads as transparent and not as black
   const c = 8;
-  ctx.fillStyle = '#1a1620'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#1a1620'; ctx.fillRect(ox, oy, W, H);
   ctx.fillStyle = '#221d2a';
   for(let y = 0; y < H; y += c) for(let x = 0; x < W; x += c)
-    if(((x/c|0) + (y/c|0)) & 1) ctx.fillRect(x, y, c, c);
+    if(((x/c|0) + (y/c|0)) & 1) ctx.fillRect(ox + x, oy + y, Math.min(c, W-x), Math.min(c, H-y));
+
+  ctx.translate(ox, oy);
 
   if(D.onion){
     ctx.globalAlpha = 0.28;
@@ -723,20 +803,34 @@ function paint(){
   ctx.drawImage(tmp, 0, 0, W, H);
 
   drawGrid(ctx, W, H, z);
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ox + 0.5, oy + 0.5, W - 1, H - 1);        // canvas edge, so you can see the bounds
+
   const st = $('#dstats');
-  if(st) st.textContent = `${D.w}x${D.h}  zoom ${z}x  ${GRIDS[D.grid]}`;
+  if(st) st.textContent = `${D.w}x${D.h}  ${z % 1 ? z.toFixed(1) : z}x  ${GRIDS[D.grid]}`;
+  const zs = $('#dzoom');
+  if(zs && +zs.value !== Math.round(z)) zs.value = Math.round(clamp(z, 1, 32));
 }
 
 // ---------------------------------------------------------------------------------------------------
 //  INPUT. Pointer events only -- one code path for mouse, pen and finger.
 // ---------------------------------------------------------------------------------------------------
 
-let drawing = false, last = null, shapeFrom = null, before = null;
+let drawing = false, last = null, shapeFrom = null, before = null, snapped = false;
+const ptrs = new Map();            // active pointers, for pinch
+let gesture = null, panning = null, spaceHeld = false;
 
-function atEvent(e){
+function local(e){
   const r = cv.getBoundingClientRect();
-  return [Math.floor((e.clientX - r.left) / (r.width / D.w)),
-          Math.floor((e.clientY - r.top)  / (r.height / D.h))];
+  return [(e.clientX - r.left) * (cv.width / r.width),
+          (e.clientY - r.top)  * (cv.height / r.height)];
+}
+function atEvent(e){
+  const [sx, sy] = local(e);
+  return [Math.floor((sx - D.panX) / D.zoom), Math.floor((sy - D.panY) / D.zoom)];
 }
 
 function pickAt(x, y){
@@ -746,25 +840,75 @@ function pickAt(x, y){
   setColor([D.px[i], D.px[i+1], D.px[i+2]]);
 }
 
-function down(e){
-  cv.setPointerCapture(e.pointerId);
+// THE ONE THAT MATTERS. A pinch begins as a single finger, so by the time the second arrives a stroke
+// is already down. Rolling it back off the undo stack is the difference between "zoom" and "zoom, and
+// also a dot in the middle of my sprite".
+function cancelStroke(){
+  if(snapped && D.undo.length){ D.px = D.undo.pop(); }
+  drawing = false; last = null; shapeFrom = null; before = null; snapped = false;
+}
+
+function beginStroke(e){
   const [x, y] = atEvent(e);
   const erase = D.tool === 'eraser' || e.button === 2;
   if(D.tool === 'picker'){ pickAt(x, y); return; }
-  snapshot();
+  snapshot(); snapped = true;
   if(D.tool === 'fill'){ fill(x, y, D.color); paint(); return; }
   if(D.tool === 'line' || D.tool === 'rect' || D.tool === 'ellipse'){
-    shapeFrom = [x, y];
-    before = new Uint8ClampedArray(D.px);
-    drawing = true;
-    return;
+    shapeFrom = [x, y]; before = new Uint8ClampedArray(D.px); drawing = true; return;
   }
   drawing = true; last = [x, y];
   stamp(x, y, erase);
   paint();
 }
 
+function down(e){
+  // Capture is a nicety (it keeps a stroke alive if the finger leaves the canvas) and it THROWS for
+  // a pointer the browser does not consider active. Unguarded it took the rest of this handler with
+  // it, so nothing was ever added to `ptrs` -- no stroke, and no pinch either.
+  try { cv.setPointerCapture(e.pointerId); } catch(err){}
+  ptrs.set(e.pointerId, local(e));
+
+  if(ptrs.size >= 2){
+    cancelStroke();
+    const p = [...ptrs.values()];
+    gesture = {
+      dist: Math.hypot(p[0][0]-p[1][0], p[0][1]-p[1][1]) || 1,
+      mid: [(p[0][0]+p[1][0])/2, (p[0][1]+p[1][1])/2],
+    };
+    return;
+  }
+  // pan rather than draw: the pan tool, the middle button, or space held down
+  if(D.tool === 'pan' || e.button === 1 || spaceHeld){
+    panning = { at: local(e), panX: D.panX, panY: D.panY };
+    return;
+  }
+  beginStroke(e);
+}
+
 function move(e){
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId, local(e));
+
+  if(gesture && ptrs.size >= 2){
+    const p = [...ptrs.values()];
+    const dist = Math.hypot(p[0][0]-p[1][0], p[0][1]-p[1][1]) || 1;
+    const mid  = [(p[0][0]+p[1][0])/2, (p[0][1]+p[1][1])/2];
+    zoomAt(dist / gesture.dist, gesture.mid[0], gesture.mid[1]);
+    D.panX += mid[0] - gesture.mid[0];            // two-finger drag pans at the same time
+    D.panY += mid[1] - gesture.mid[1];
+    gesture.dist = dist; gesture.mid = mid;
+    paint();
+    return;
+  }
+
+  if(panning){
+    const [sx, sy] = local(e);
+    D.panX = panning.panX + (sx - panning.at[0]);
+    D.panY = panning.panY + (sy - panning.at[1]);
+    paint();
+    return;
+  }
+
   if(!drawing) return;
   const [x, y] = atEvent(e);
   if(shapeFrom){
@@ -779,8 +923,13 @@ function move(e){
   paint();
 }
 
-function up(){
-  drawing = false; last = null; shapeFrom = null; before = null;
+function up(e){
+  if(e && e.pointerId !== undefined) ptrs.delete(e.pointerId);
+  if(ptrs.size < 2) gesture = null;
+  if(ptrs.size === 0){
+    panning = null;
+    drawing = false; last = null; shapeFrom = null; before = null; snapped = false;
+  }
 }
 
 function drawShape(x0, y0, x1, y1){
@@ -878,6 +1027,95 @@ function rebuildRamp(){
   renderSwatches();
 }
 
+// ---------------------------------------------------------------------------------------------------
+//  FIXING EXISTING SPRITES.
+//
+//  Drawing from nothing is half the job; the other half is opening a frame that is already in the
+//  game and correcting four pixels of it. That wants three things this did not have:
+//    * the canvas SIZED TO THE SOURCE, because 64x72 art on a 32x32 canvas is not an edit, it is a
+//      different sprite;
+//    * the frames GROUPED BY ACTION AND FACING, because a set is `idle_s`, `walk_e_0..3`,
+//      `attack_n_0..6` all in one directory listing and the thing you want to fix is one of those
+//      runs, not the alphabetical order they happen to sit in;
+//    * the previous frame UNDER the current one, because the whole reason a walk cycle breaks is
+//      that frame 2 does not line up with frame 1.
+// ---------------------------------------------------------------------------------------------------
+
+// idle_s.png -> {act:'idle', dir:'s', n:null}   walk_e_3.png -> {act:'walk', dir:'e', n:3}
+function parseFrame(fn){
+  const m = /^([a-z]+?)(?:_([nsew]{1,2}))?(?:_(\d+))?\.png$/i.exec(fn);
+  if(!m) return { act: fn.replace(/\.png$/,''), dir: '', n: null };
+  return { act: m[1].toLowerCase(), dir: (m[2]||'').toLowerCase(), n: m[3] === undefined ? null : +m[3] };
+}
+function groupFrames(frames){
+  const g = new Map();
+  frames.forEach(f => {
+    const p = parseFrame(f);
+    const key = p.act + (p.dir ? ' ' + p.dir : '');
+    if(!g.has(key)) g.set(key, []);
+    g.get(key).push({ file: f, n: p.n });
+  });
+  // numeric order, not lexical: attack_10 comes after attack_9, which "sort()" gets wrong
+  g.forEach(list => list.sort((a,b) => (a.n === null ? -1 : a.n) - (b.n === null ? -1 : b.n)));
+  return g;
+}
+
+let srcSet = null;                    // { path, dir:bool, groups:Map, key, i }
+
+function srcFramePath(){
+  if(!srcSet) return null;
+  const list = srcSet.groups.get(srcSet.key);
+  if(!list || !list.length) return null;
+  const f = list[clamp(srcSet.i, 0, list.length - 1)].file;
+  return srcSet.dir ? srcSet.path + '/' + f : srcSet.path;
+}
+
+async function loadSourceSet(){
+  const L = window.spritelab, st = L && L.state;
+  if(!st || !st.source){ alert('Pick a source on the derive tab first.'); return false; }
+  const dirEnt = st.index.dirs.find(d => d.path === st.source);
+  const frames = dirEnt ? dirEnt.frames : [st.source.split('/').pop()];
+  srcSet = { path: st.source, dir: !!dirEnt, groups: groupFrames(frames), key: null, i: 0 };
+  srcSet.key = [...srcSet.groups.keys()][0];
+  const sel = $('#dsrcact');
+  sel.innerHTML = '';
+  for(const [k, list] of srcSet.groups) sel.appendChild(el('option', {value:k}, [`${k}  (${list.length})`]));
+  sel.value = srcSet.key;
+  $('#dsrcname').textContent = srcSet.path.replace('assets/','');
+  updateFrameUI();
+  return true;
+}
+
+function updateFrameUI(){
+  const list = srcSet ? srcSet.groups.get(srcSet.key) : null;
+  const n = list ? list.length : 0;
+  $('#dsrcframe').max = Math.max(0, n - 1);
+  $('#dsrcframe').value = clamp(srcSet ? srcSet.i : 0, 0, Math.max(0, n - 1));
+  $('#dsrcpos').textContent = n ? `${(srcSet.i|0) + 1}/${n}  ${list[clamp(srcSet.i,0,n-1)].file}` : '-';
+}
+
+// Load the pinned frame INTO the canvas at its own size, with the pixel grid on and the previous
+// frame of the same run showing through underneath.
+async function loadFrameForEdit(){
+  const path = srcFramePath();
+  if(!path) return;
+  const im = await window.spritelab.loadImage(path);
+  blank(im.w, im.h);
+  D.px.set(im.d);
+  D.grid = 'pixel';
+  [...document.querySelectorAll('#dgrids .tool')].forEach(b => b.classList.toggle('on', b.dataset.grid === 'pixel'));
+  // onion: the frame before this one in the same action, which is the only comparison that tells you
+  // whether a walk cycle actually lines up
+  const list = srcSet.groups.get(srcSet.key);
+  const prev = list[srcSet.i - 1];
+  D.onion = prev ? await window.spritelab.loadImage(srcSet.dir ? srcSet.path + '/' + prev.file : srcSet.path) : null;
+  // name the download after the file it came from, so a fix drops straight back over the original
+  $('#dname').value = (list[clamp(srcSet.i,0,list.length-1)].file || '').replace(/\.png$/, '');
+  D._fitted = false;
+  paint();
+  updateFrameUI();
+}
+
 function exportPNG(){
   const c = document.createElement('canvas');
   c.width = D.w; c.height = D.h;
@@ -899,7 +1137,7 @@ function boot(){
   blank(32, 32);
 
   // tools
-  const tools = ['pencil','eraser','fill','line','rect','ellipse','picker'];
+  const tools = ['pencil','eraser','fill','line','rect','ellipse','picker','pan'];
   const tw = $('#dtools');
   tools.forEach(t => tw.appendChild(el('button', {class:'tool' + (t===D.tool?' on':''), 'data-tool':t,
     onclick:(e) => { D.tool = t; [...tw.children].forEach(b => b.classList.toggle('on', b.dataset.tool===t)); }
@@ -926,7 +1164,7 @@ function boot(){
   $('#dfit').addEventListener('click', () => {
     const t = TEMPLATES[D.tpl]; if(!t) return;
     if(confirm(`Resize to ${t.fit[0]}x${t.fit[1]}? This clears the drawing.`)){
-      blank(t.fit[0], t.fit[1]); paint();
+      blank(t.fit[0], t.fit[1]); fitView(); paint();
     }
   });
   $('#dtplalpha').addEventListener('input', e => { D.tplAlpha = +e.target.value; paint(); });
@@ -945,7 +1183,7 @@ function boot(){
   const sizes = [[16,16],[24,24],[32,32],[48,48],[64,64],[64,72],[92,92],[44,44]];
   const sw = $('#dsizes');
   sizes.forEach(([w,h]) => sw.appendChild(el('button', {class:'tool',
-    onclick:() => { if(confirm(`New ${w}x${h} canvas? This clears the drawing.`)){ blank(w,h); paint(); } }
+    onclick:() => { if(confirm(`New ${w}x${h} canvas? This clears the drawing.`)){ blank(w,h); fitView(); paint(); } }
   }, [`${w}x${h}`])));
 
   // colour field
@@ -969,7 +1207,10 @@ function boot(){
   $('#dhex').addEventListener('change', e => { const c = parseHex(e.target.value); if(c) setColor(c); });
   $('#dalpha').addEventListener('input', e => { D.alpha = +e.target.value; $('#dalphal').textContent = D.alpha; });
   $('#dsize').addEventListener('input', e => { D.size = +e.target.value; $('#dsizel').textContent = D.size; });
-  $('#dzoom').addEventListener('input', e => { D.zoom = +e.target.value; paint(); });
+  $('#dzoom').addEventListener('input', e => { zoomTo(+e.target.value); paint(); });
+  $('#dzoomin').addEventListener('click',  () => { zoomTo(D.zoom * 1.5); paint(); });
+  $('#dzoomout').addEventListener('click', () => { zoomTo(D.zoom / 1.5); paint(); });
+  $('#dzoomfit').addEventListener('click', () => { fitView(); paint(); });
   $('#dblock').addEventListener('input', e => { D.block = +e.target.value; $('#dblockl').textContent = D.block; paint(); });
   $('#ddither').addEventListener('change', e => { D.dither = e.target.value; });
   $('#dmirror').addEventListener('change', e => { D.mirror = e.target.value; });
@@ -989,6 +1230,31 @@ function boot(){
     renderSwatches();
   });
 
+  $('#dsrcload').addEventListener('click', async () => { if(await loadSourceSet()) loadFrameForEdit(); });
+  $('#dsrcact').addEventListener('change', e => {
+    if(!srcSet) return;
+    srcSet.key = e.target.value; srcSet.i = 0; updateFrameUI(); loadFrameForEdit();
+  });
+  $('#dsrcframe').addEventListener('input', e => {
+    if(!srcSet) return;
+    srcSet.i = +e.target.value; updateFrameUI(); loadFrameForEdit();
+  });
+  $('#dsrcprev').addEventListener('click', () => {
+    if(!srcSet) return;
+    srcSet.i = Math.max(0, srcSet.i - 1); updateFrameUI(); loadFrameForEdit();
+  });
+  $('#dsrcnext').addEventListener('click', () => {
+    if(!srcSet) return;
+    const n = srcSet.groups.get(srcSet.key).length;
+    srcSet.i = Math.min(n - 1, srcSet.i + 1); updateFrameUI(); loadFrameForEdit();
+  });
+  $('#dtplsnap').addEventListener('click', () => {
+    D.tplSnap = !D.tplSnap;
+    $('#dtplsnap').classList.toggle('on', D.tplSnap);
+    paint();
+  });
+  $('#dtplsnap').classList.toggle('on', D.tplSnap);
+
   $('#dundo').addEventListener('click', undo);
   $('#dredo').addEventListener('click', redo);
   $('#dclear').addEventListener('click', () => { snapshot(); D.px.fill(0); paint(); });
@@ -1006,22 +1272,40 @@ function boot(){
   cv.addEventListener('pointermove', move);
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerleave', e => { if(!cv.hasPointerCapture ||
+    !cv.hasPointerCapture(e.pointerId)) up(e); });
   cv.addEventListener('contextmenu', e => e.preventDefault());
+  // passive:false, or the browser scrolls the page instead of letting us zoom
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    const [sx, sy] = local(e);
+    zoomAt(e.deltaY < 0 ? 1.15 : 1/1.15, sx, sy);
+    paint();
+  }, { passive: false });
+  window.addEventListener('resize', () => paint());
 
+  document.addEventListener('keyup', e => { if(e.code === 'Space') spaceHeld = false; });
   document.addEventListener('keydown', e => {
     if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if(e.code === 'Space'){ spaceHeld = true; e.preventDefault(); }
+    if(e.key === '+' || e.key === '='){ zoomTo(D.zoom * 1.5); paint(); }
+    if(e.key === '-' || e.key === '_'){ zoomTo(D.zoom / 1.5); paint(); }
+    if(e.key === '0'){ fitView(); paint(); }
     if((e.ctrlKey||e.metaKey) && e.key === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); }
-    const k = {b:'pencil', e:'eraser', g:'fill', l:'line', r:'rect', o:'ellipse', i:'picker'}[e.key];
+    const k = {b:'pencil', e:'eraser', g:'fill', l:'line', r:'rect', o:'ellipse', i:'picker', h:'pan'}[e.key];
     if(k){ D.tool = k; [...$('#dtools').children].forEach(b => b.classList.toggle('on', b.dataset.tool===k)); }
   });
 
   setColor(D.color);
   $('#daltsw').style.background = hex(D.alt);
   rebuildRamp();
+  fitView();
   paint();
 }
 
 window.spritedraw = { D, boot, paint, buildRamp, paletteFrom, hsv2rgb, rgb2hsv, TEMPLATES,
+                      groupFrames, parseFrame, loadSourceSet, loadFrameForEdit,
+                      fitView, zoomAt, zoomTo,
                       blank, exportPNG,
                       // handed to the derive side so ops can be previewed on a drawing
                       current: () => ({ w: D.w, h: D.h, d: new Uint8ClampedArray(D.px) }) };
