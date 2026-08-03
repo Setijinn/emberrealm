@@ -19,9 +19,16 @@ assets/_derived.json, and offering those as sources invites deriving from a deri
 in sequence give a muddy result that is very hard to diagnose later, because the file looks like a
 normal source.
 
-    py tools/serve.py                 # in another shell, or nothing loads
-    py tools/spritelab.py             # write the index, print the URL
-    py tools/spritelab.py --open      # ...and open the browser at it
+    py tools/spritelab.py             # index, start the server if needed, open the browser
+    py tools/spritelab.py --mobile    # ...and print the address to type into a phone
+    py tools/spritelab.py --no-open   # everything except opening the browser
+
+or just double-click spritelab.cmd in the repo root, which finds a working interpreter for you --
+`py` on this machine is the Store alias stub and will not do.
+
+IT STARTS THE SERVER ITSELF. The instruction used to be "run serve.py in another shell, or nothing
+loads", which is a step you forget exactly once: the lab comes up blank with a fetch error and looks
+broken rather than unserved.
 
 Like tools/lab.py this one is NOT headless. It builds the page's data and gets out of the way.
 Interpreter is Python312 by full path; `py` is broken on this machine.
@@ -31,7 +38,10 @@ import io
 import json
 import os
 import re
+import socket
+import subprocess
 import sys
+import time
 import webbrowser
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -91,6 +101,54 @@ def build_index():
     return {"dirs": dirs, "files": files}
 
 
+def port_open(host, port, timeout=0.35):
+    with socket.socket() as s:
+        s.settimeout(timeout)
+        return s.connect_ex((host, port)) == 0
+
+
+def ensure_server(lan):
+    """Start tools/serve.py if nothing is answering, and wait until it does.
+
+    THE OLD INSTRUCTIONS WERE 'run serve.py in another shell, or nothing loads', which is a step that
+    is only ever forgotten once -- the lab comes up as a blank page with a fetch error and looks
+    broken rather than unserved. There is nothing to think about here: if the port answers, use it;
+    if it does not, start one. Detached, so closing this window does not take the server with it."""
+    # WITH --mobile IT IS NOT ENOUGH THAT SOMETHING IS ANSWERING. A server already up from an earlier
+    # run is bound to the loopback only, so the phone URL this would go on to print is unreachable --
+    # and it would print it confidently. Check the address the phone will actually use, and if that
+    # is not answering, start a server that binds it. serve.py stops the previous instance itself.
+    want = lan_ip() if lan else "127.0.0.1"
+    if port_open("127.0.0.1", PORT) and (not lan or port_open(want, PORT)):
+        return "already running"
+    rebind = lan and port_open("127.0.0.1", PORT)
+    cmd = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "serve.py")]
+    if lan:
+        cmd.append("--lan")
+    kw = {}
+    if os.name == "nt":
+        # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP -- no console window, and it outlives this one.
+        kw["creationflags"] = 0x00000008 | 0x00000200
+    else:
+        kw["start_new_session"] = True
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=ROOT, **kw)
+    for _ in range(40):                       # up to ~6s; a cold python start is about half of that
+        if port_open(want, PORT):
+            return "restarted on the network" if rebind else "started"
+        time.sleep(0.15)
+    return "FAILED to start -- run `python tools/serve.py%s` yourself and look at the error" % (
+        " --lan" if lan else "")
+
+
+def lan_ip():
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        except Exception:
+            return "127.0.0.1"
+
+
 def main():
     idx = build_index()
     with io.open(INDEX, "w", encoding="utf-8") as f:
@@ -100,11 +158,26 @@ def main():
     print("wrote %s" % os.path.basename(INDEX))
     print("  %d animated set(s), %d frames" % (len(idx["dirs"]), nfr))
     print("  %d single sprite(s)" % len(idx["files"]))
+
+    mobile = "--mobile" in sys.argv or "--lan" in sys.argv
+    print()
+    print("server: %s" % ensure_server(mobile))
+
     # 127.0.0.1, NOT localhost: serve.py binds the IPv4 loopback only, and a browser that resolves
     # `localhost` to ::1 first gets connection-refused on a server that is running perfectly.
     url = "http://127.0.0.1:%d/%s" % (PORT, PAGE)
     print()
-    print(url)
+    print("  on this machine   %s" % url)
+    if mobile:
+        ip = lan_ip()
+        print("  on your phone     http://%s:%d/%s" % (ip, PORT, PAGE))
+        print()
+        print("  Same wifi, then type that in. --lan means every device on this network can read")
+        print("  this folder for as long as the server runs; close it when you are done.")
+        if ip == "127.0.0.1":
+            print("  (could not work out this machine's network address -- is wifi up?)")
+    else:
+        print("  for your phone    re-run with --mobile")
     print()
     print("  PRESETS   the shipped element chains, so the lab starts where the art is")
     print("  PROBE     the source's hue histogram -- two bands is why the elements are ramps")
@@ -114,7 +187,10 @@ def main():
     print()
     print("  Every op in the lab is a port of the op of the same name in spritegen.py -- what you")
     print("  see IS what the tool writes. Edit one, edit both.")
-    if "--open" in sys.argv:
+    # Opens by default. lab.py needs --open because building the Pattern Lab is also how you rebuild
+    # it for someone else; this one has no such second job, so the common case should be the bare
+    # command. --no-open is there for scripts.
+    if "--no-open" not in sys.argv:
         webbrowser.open(url)
     return 0
 

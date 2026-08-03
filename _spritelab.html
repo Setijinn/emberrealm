@@ -5,7 +5,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>EmberRealm — Sprite Lab</title>
 <style>
   :root{ --bg:#16131a; --panel:#1e1a24; --line:#332c3d; --ink:#e8e2f0; --dim:#9a8fab; --hot:#ffb02e; }
@@ -52,6 +52,70 @@
        margin:6px 0; white-space:pre-wrap; color:var(--dim); font-size:11px; max-height:190px; overflow:auto; }
   .warn{ color:#ffb02e; padding:8px; }
   .note{ color:var(--dim); font-size:11px; margin:6px 0 0; }
+  .tabs{ display:none; }
+
+  /* ---- PHONE. The three-column grid is a desktop shape and there is no rescuing it on a 390px
+     screen, so narrow gets a different layout rather than a squeezed one: one column, and the three
+     panels become tabs. The PREVIEW stays mounted and visible above the tabs, because the entire
+     point of the tool is watching the result change while you drag a slider -- a layout that makes
+     you switch away from the picture to reach the control that changes it is not the tool. */
+  @media (max-width: 900px){
+    header{ padding:8px 10px; gap:4px; flex-wrap:wrap; align-items:center; }
+    header span{ font-size:11px; flex:1 1 100%; min-width:0; }
+    .wrap{ display:block; height:auto; }
+    .col{ border-left:none !important; padding:10px 12px; overflow:visible; }
+    .col+.col{ border-top:1px solid var(--line); }
+
+    /* the preview rides at the top and stays there while you scroll the controls under it */
+    /* flex + order, because the preview is the THIRD child in the DOM and has to be the first
+       thing on screen. Capped and internally scrollable so a sticky panel cannot eat the phone. */
+    .wrap{ display:flex; flex-direction:column; }
+    .col.mid{ order:-2; position:sticky; top:0; z-index:5; background:var(--bg);
+              border-bottom:1px solid var(--line); padding-bottom:6px;
+              max-height:48vh; overflow:auto; }
+    .tabs{ order:-1; }
+    .col.tabbed{ order:0; }
+    .col.mid .note{ display:none; }        /* the explanation is desktop reading, not phone reading */
+    .col.mid pre{ max-height:96px; }
+    .stage{ gap:10px; justify-content:center; }
+    .pane{ padding:6px; }
+
+    /* NOTHING MAY SCROLL SIDEWAYS. Every one of these is a desktop assumption that overflows a
+       412px screen: two 192px preview panes side by side, a 100%-wide slider sharing a flex row,
+       and three tab buttons that will not shrink below their text. min-width:0 is the load-bearing
+       part -- a flex item defaults to min-width:auto and refuses to shrink past its content. */
+    html, body{ max-width:100%; overflow-x:hidden; }
+    .wrap, .col, .bar, .stage, .fields, .op{ min-width:0; max-width:100%; }
+    .stage{ flex-wrap:nowrap; }
+    .pane{ flex:1 1 0; min-width:0; }
+    canvas{ max-width:100%; height:auto; margin:0 auto; }
+    .bar > input[type=range]{ flex:1 1 90px; min-width:0; width:auto; }
+    #framewrap{ display:flex; align-items:center; gap:8px; flex:1 1 100%; min-width:0; }
+    #dims{ flex:1 1 100%; font-size:11px; }
+    .tabs{ display:flex; gap:6px; padding:8px 12px; background:var(--bg);
+           border-bottom:1px solid var(--line); }
+    .tabs button{ flex:1 1 0; min-width:0; padding:9px 4px; font-size:11px;
+                  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tabs button.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+    .col.tabbed{ display:none; }
+    .col.tabbed.show{ display:block; }
+
+    /* the source list is 1,100 entries: cap it and let it scroll inside itself rather than
+       pushing everything else a screen and a half down */
+    #sources{ max-height:46vh; overflow:auto; -webkit-overflow-scrolling:touch; }
+
+    /* touch targets. 12px text and a 4px-tall button is a desktop assumption. */
+    .src{ padding:9px 8px; font-size:13px; }
+    button{ padding:7px 11px; }
+    .mini{ padding:5px 10px; font-size:13px; }
+    input[type=number],input[type=text]{ padding:6px 7px; font-size:16px; }  /* 16px: iOS zooms below it */
+    input[type=color]{ width:34px; height:30px; }
+    input[type=range]{ width:100%; height:26px; }
+    .bar{ gap:8px; }
+    .f{ font-size:12px; }
+    textarea{ height:180px; font-size:12px; }
+    #filter{ font-size:16px; padding:8px; }
+  }
 </style>
 </head>
 <body>
@@ -62,13 +126,19 @@
 
 <div class="wrap">
 
-  <div class="col">
+  <div class="tabs">
+    <button data-tab="src" class="on">source</button>
+    <button data-tab="ops">ops</button>
+    <button data-tab="out">naming &amp; recipe</button>
+  </div>
+
+  <div class="col tabbed show" data-panel="src">
     <h3>source</h3>
     <input type="text" id="filter" placeholder="filter…" style="width:100%;margin-bottom:6px">
     <div id="sources"></div>
   </div>
 
-  <div class="col">
+  <div class="col mid">
     <div class="bar">
       <label>zoom</label><input type="range" id="zoom" min="1" max="8" step="1" value="3">
       <span id="framewrap" style="display:none">
@@ -90,7 +160,7 @@
       <b>hue</b> takes an <b>only</b> band for bespoke work.</p>
   </div>
 
-  <div class="col">
+  <div class="col tabbed" data-panel="ops">
     <h3>presets</h3>
     <div id="presets"></div>
 
@@ -102,7 +172,10 @@
     </div>
     <div id="ops"></div>
 
-    <h3 style="margin-top:14px">naming</h3>
+  </div>
+
+  <div class="col tabbed" data-panel="out">
+    <h3>naming</h3>
     <div class="bar"><label style="width:52px">to</label><input type="text" id="to" style="flex:1;width:auto"></div>
     <div class="bar"><label style="width:52px">variant</label><input type="text" id="v" style="flex:1;width:auto" placeholder="frost"></div>
     <div class="bar"><label style="width:52px">rename</label><input type="text" id="rename" style="flex:1;width:auto" placeholder="{base}_{v}_{n}{ext}"></div>

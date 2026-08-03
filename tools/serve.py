@@ -24,8 +24,29 @@ import socket
 import subprocess
 import sys
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 10500
+_ARGS = [a for a in sys.argv[1:] if not a.startswith("-")]
+PORT = int(_ARGS[0]) if _ARGS else 10500
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# --lan BINDS TO EVERY INTERFACE INSTEAD OF THE LOOPBACK, so a phone on the same wifi can load the
+# game or the Sprite Lab off this machine. It is opt-in and stays opt-in: the default binds
+# 127.0.0.1, which is unreachable from anything but this computer, and that is the right default for
+# a server with no auth that lists a directory. On --lan, ANYTHING on the network can read this
+# folder for as long as it runs, so it is a "while I am testing on my phone" switch, not a setting.
+LAN = "--lan" in sys.argv or "--mobile" in sys.argv
+HOST = "0.0.0.0" if LAN else "127.0.0.1"
+
+
+def lan_ip():
+    """This machine's address on the local network. Found by asking the OS which interface it would
+    use to reach the outside world -- no packet is actually sent, and it beats guessing from a list
+    of adapters that includes virtual ones."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        except Exception:
+            return "127.0.0.1"
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
@@ -81,8 +102,11 @@ def main():
     free_the_port(PORT)
     handler = functools.partial(NoCacheHandler, directory=ROOT)
     http.server.ThreadingHTTPServer.allow_reuse_address = True
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), handler)
+    srv = http.server.ThreadingHTTPServer((HOST, PORT), handler)
     print(f"emberrealm -> http://127.0.0.1:{PORT}/index.html   (no-store; reuse this port)")
+    if LAN:
+        print(f"on the network -> http://{lan_ip()}:{PORT}/index.html")
+        print("  --lan is on: every device on this wifi can read this folder while it runs.")
     print("remember: bump CACHE in sw.js too -- the service worker is a separate cache")
     try:
         srv.serve_forever()

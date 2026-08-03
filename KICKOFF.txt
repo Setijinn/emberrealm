@@ -517,8 +517,22 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     what lets 08c_embersprites.js find the result by probing; rename off
     idle_/walk_/attack_/ride_ and it warns rather than stopping you. Two frames
     colliding on one name is refused outright.
-  - THE SPRITE LAB is the live editor for it: `py tools/serve.py`, then
-    `py tools/spritelab.py --open`. Pick any sprite in assets/, stack ops on it,
+  - THE SPRITE LAB is the live editor for it. DOUBLE-CLICK spritelab.cmd, or run
+    `python tools/spritelab.py`. One command: it writes the index, STARTS THE SERVER
+    ITSELF if nothing is answering on 10500, and opens the browser. The .cmd also
+    finds a working interpreter, which matters here because `py` is the Store alias
+    stub -- it tries candidates and checks each can import PIL and numpy before
+    using it. `--no-open` for scripts.
+    ON A PHONE: `spritelab.cmd --mobile` prints the address to type in, and the
+    layout below 900px is a different one rather than a squeezed one -- one column,
+    the three panels as tabs, and the PREVIEW pinned above them, because a layout
+    that makes you switch away from the picture to reach the slider that changes it
+    is not the tool. --mobile passes --lan to serve.py, which binds 0.0.0.0 instead
+    of the loopback: EVERY DEVICE ON THE WIFI can read this folder while it runs, so
+    it is a "while I am testing on my phone" switch and not a setting. If a
+    loopback-only server is already up, --mobile restarts it rather than printing a
+    phone URL that cannot work.
+    Pick any sprite in assets/, stack ops on it,
     watch the result beside the source, scrub or play an animated set, and copy out
     the recipe. It exists because ramp.mix is not guessable -- 0.45 barely reads,
     0.75 flattens the accent trim -- and the loop used to be edit JSON, run, open a

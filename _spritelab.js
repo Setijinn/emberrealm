@@ -565,6 +565,7 @@ function probeText(im){
   return `${n} coloured px   dominant ${domHue(im.d,null).toFixed(1)}deg\n` + rows.join('\n');
 }
 
+let booting = true;
 async function boot(){
   let idx;
   try {
@@ -581,6 +582,8 @@ async function boot(){
     const b = el('button',{class:'src', onclick:()=>{
       [...sel.querySelectorAll('.src')].forEach(x=>x.classList.remove('on'));
       b.classList.add('on'); pickSource(path);
+      if(!booting && onPhone()) showTab('ops');   // not on the boot-time click: that would
+      // land you on `ops` before you had chosen anything
     }},[label]);
     return b;
   };
@@ -629,6 +632,19 @@ async function boot(){
     $('#copy').textContent='copied'; setTimeout(()=>$('#copy').textContent='copy recipe',900);
   });
 
+  // PHONE TABS. The buttons exist in the DOM always and the stylesheet hides the bar above 900px,
+  // so there is one layout to reason about and no resize listener deciding which one you are in.
+  // Picking a source jumps to `ops`, because on a phone that is unmistakably what you wanted next
+  // and the alternative is hunting for a tab after every choice.
+  const tabs = [...document.querySelectorAll('.tabs button')];
+  const panels = [...document.querySelectorAll('.col.tabbed')];
+  const showTab = key => {
+    tabs.forEach(t => t.classList.toggle('on', t.dataset.tab === key));
+    panels.forEach(p => p.classList.toggle('show', p.dataset.panel === key));
+  };
+  tabs.forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  const onPhone = () => getComputedStyle(document.querySelector('.tabs')).display !== 'none';
+
   // ?src=<path>&preset=<name> -- so a look can be linked to rather than described, and so
   // tools/labparity.py and the screenshot pass can open a specific state without clicking.
   const q = new URLSearchParams(location.search);
@@ -642,6 +658,7 @@ async function boot(){
     state.name.v = pre; $('#v').value = pre;
     refresh();
   }
+  booting = false;
   console.log('[spritelab] ops are ports of tools/spritegen.py -- if you edit one, edit both.');
 }
 
