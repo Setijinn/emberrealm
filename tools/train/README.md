@@ -26,6 +26,23 @@ possible at 320px. Two options:
 The dataset is ~18 MB. Upload it, train on a 16 GB T4 (Colab free) or a 24 GB card (RunPod, roughly
 $0.30/hr), and the whole run is under an hour with none of the dependency archaeology below.
 
+### What it costs your card
+
+Measured off your machine, not estimated from a spec sheet:
+
+- **VRAM is the binding constraint.** 4,096 MiB total, but **566 MiB is already gone** to the
+  desktop — and your i5-10400**F** has no integrated graphics, so the display has to run on the 1650.
+  You have ~3.5 GB. SD 1.5 LoRA at 320px with checkpointing, 8-bit Adam and xformers wants roughly
+  3.2–3.8 GB. It is genuinely borderline; if it OOMs, drop to `resolution = 256` and `network_dim = 8`.
+- **Power and heat are not the problem.** The 1650 is a 75 W card with no headroom to exceed it —
+  that is a light bulb. It idles at 44 °C here and will sit somewhere around 70–80 °C under load,
+  which is unremarkable for a GPU. Sustained load is what GPUs are built for; there is no meaningful
+  wear cost to a few hours.
+- **The real cost is the machine.** For 1.5–2.6 hours the GPU is pinned, and with the display on the
+  same card everything feels sluggish and games are out. Run it when you are not using the PC.
+- **Turing TU117 has no tensor cores**, so `fp16` here saves memory but does not give the speedup it
+  would on almost any newer card. That is most of why a T4 is ~6× faster than your 1650 for this.
+
 ### Local — viable, but read this first
 
 **Your Python is 3.12 and sd-scripts needs 3.10.** Install 3.10 *alongside* rather than replacing it;

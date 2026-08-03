@@ -17,8 +17,17 @@
 #   no bucketing      Every image is already exactly 320x320 with the subject centred on flat violet.
 #   xformers          Memory-efficient attention. Without it 4GB does not hold.
 #
-# Point train_data_dir at a folder containing ONE subfolder named "<repeats>_<class>", e.g.
-# "10_emberrealm" -- sd-scripts reads the repeat count from that name.
+# COUNT THE STEPS BEFORE YOU START, because epochs are a trap here:
+#     steps = images x repeats x epochs
+# and this card does roughly 1.6 s per step at 320px. The first version of this file said 10 repeats
+# and 12 epochs, which against 2,934 images is 352,080 steps -- SIX AND A HALF DAYS on a 1650. A
+# style LoRA wants 2,000-6,000 steps; past that it stops learning the look and starts memorising the
+# sprites, and hands back art you already own.
+#     full corpus   2,934 imgs, folder "1_emberrealm",  2 epochs =  5,868 steps ~ 2.6 h
+#     weapons only     84 imgs, folder "20_emberrealm", 2 epochs =  3,360 steps ~ 1.5 h
+#
+# Point train_data_dir at a folder containing ONE subfolder named "<repeats>_<class>" -- sd-scripts
+# reads the repeat count from that name.
 
 [model_arguments]
 pretrained_model_name_or_path = "runwayml/stable-diffusion-v1-5"
@@ -36,7 +45,7 @@ keep_tokens = 2                  # "emberrealm, pixel art sprite" are never shuf
 output_dir = "../../_lora"
 output_name = "emberrealm"
 save_model_as = "safetensors"
-max_train_epochs = 12
+max_train_epochs = 2
 train_batch_size = 1
 gradient_checkpointing = true
 gradient_accumulation_steps = 2   # an effective batch of 2 without the memory of one
@@ -46,7 +55,7 @@ cache_latents = true              # encode once, not every epoch: big speedup, l
 xformers = true
 max_data_loader_n_workers = 2
 seed = 7
-save_every_n_epochs = 2           # checkpoints to compare; overtrained pixel art memorises fast
+save_every_n_epochs = 1           # checkpoints to compare; overtrained pixel art memorises fast
 
 [optimizer_arguments]
 optimizer_type = "AdamW8bit"
