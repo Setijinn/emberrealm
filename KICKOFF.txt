@@ -523,7 +523,16 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
     finds a working interpreter, which matters here because `py` is the Store alias
     stub -- it tries candidates and checks each can import PIL and numpy before
     using it. `--no-open` for scripts.
-    ON A PHONE: `spritelab.cmd --mobile` prints the address to type in, and the
+    ON A PHONE ON MOBILE DATA: https://setijinn.github.io/emberrealm/_spritelab.html
+    Pages already serves this repo from main over HTTPS, and the lab is a static
+    page, so it needs no tunnel and no wifi -- it just works in Safari. The one
+    thing that makes it work is that _spritelab_index.json IS COMMITTED, against
+    this repo's usual "never commit a generated file" rule: a static host has
+    nothing to run, so an ignored index means the hosted lab has no sources at all.
+    It is rewritten on every local run and spritelab.py says so when the committed
+    copy has fallen behind. The hosted lab shows the art as PUSHED, which is both
+    the point and the limitation.
+    ON THE SAME WIFI: `spritelab.cmd --mobile` prints the address to type in, and the
     layout below 900px is a different one rather than a squeezed one -- one column,
     the three panels as tabs, and the PREVIEW pinned above them, because a layout
     that makes you switch away from the picture to reach the slider that changes it

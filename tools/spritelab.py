@@ -8,11 +8,22 @@ ramp.mix at 0.45 barely reads and at 0.75 flattens the accent trim that carries 
 identity, and the only way to know which you have is to look. That loop used to be edit JSON, run
 the tool, open a contact sheet, repeat.
 
-WHY THE INDEX IS GENERATED AND NOT COMMITTED. The lab is a static page and a static page cannot list
-a directory, so it needs a manifest of what art exists. Committing one would mean committing a list
-that goes stale the moment anyone adds a sprite, and stale in the quiet way -- the lab would simply
-not offer the new art, with no error. Same rule as _lab.html and _selftest.html: generated from the
-real thing on every run, gitignored, cannot drift.
+WHY THE INDEX IS GENERATED AND ALSO COMMITTED. The lab is a static page and a static page cannot
+list a directory, so it needs a manifest of what art exists. Generated, then -- and by the rule the
+rest of this repo follows (_lab.html, _selftest.html) a generated file is never committed, precisely
+so it cannot drift.
+
+This one is the exception, and the reason is the phone. The lab is served to a phone over the public
+Pages site, and a static host has nothing to run: if the index is not in the repo, the hosted lab
+comes up with no sources at all. So it ships. The drift risk is handled by regenerating it on every
+single run -- opening the lab is what rewrites it -- and by saying so out loud below when the file
+on disk no longer matches what is committed, since it is only ever the HOSTED copy that can lag.
+
+ON A PHONE, ON DATA. That is what the Pages site is for; --mobile/--lan is for the local files.
+   local files, same wifi   spritelab.cmd --mobile   -> http://<this machine>:10500/...
+   anywhere, on data        merge to main            -> https://setijinn.github.io/emberrealm/_spritelab.html
+The hosted one shows the art as committed, which is the point of it and also its one limitation:
+art you have generated but not pushed is not there yet.
 
 DERIVED ART IS EXCLUDED from the index. Everything spritegen has already written is listed in
 assets/_derived.json, and offering those as sources invites deriving from a derivation -- two ramps
@@ -149,6 +160,21 @@ def lan_ip():
             return "127.0.0.1"
 
 
+PAGES = "https://setijinn.github.io/emberrealm/" + PAGE
+
+
+def index_is_committed():
+    """True if the index on disk matches the one git has. The hosted lab serves the COMMITTED copy,
+    so this is the only thing that can leave the phone looking at a different set of sources than
+    the desktop -- worth one line of output rather than a puzzled phone."""
+    try:
+        out = subprocess.run(["git", "status", "--porcelain", "--", os.path.basename(INDEX)],
+                             cwd=ROOT, capture_output=True, text=True, timeout=10)
+        return out.returncode == 0 and not out.stdout.strip()
+    except Exception:
+        return True                      # no git, or no answer: say nothing rather than cry wolf
+
+
 def main():
     idx = build_index()
     with io.open(INDEX, "w", encoding="utf-8") as f:
@@ -177,7 +203,11 @@ def main():
         if ip == "127.0.0.1":
             print("  (could not work out this machine's network address -- is wifi up?)")
     else:
-        print("  for your phone    re-run with --mobile")
+        print("  same wifi         re-run with --mobile")
+    print("  on data, anywhere %s" % PAGES)
+    if not index_is_committed():
+        print("                    (the hosted one is behind: commit %s and push)"
+              % os.path.basename(INDEX))
     print()
     print("  PRESETS   the shipped element chains, so the lab starts where the art is")
     print("  PROBE     the source's hue histogram -- two bands is why the elements are ramps")

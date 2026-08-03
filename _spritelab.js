@@ -628,8 +628,21 @@ async function boot(){
   $('#v').addEventListener('input', e=>{ state.name.v=e.target.value; render(); });
   $('#rename').addEventListener('input', e=>{ state.name.rename=e.target.value; render(); });
   $('#copy').addEventListener('click', async ()=>{
-    await navigator.clipboard.writeText($('#recipe').value);
-    $('#copy').textContent='copied'; setTimeout(()=>$('#copy').textContent='copy recipe',900);
+    const ta = $('#recipe');
+    let ok = false;
+    try {
+      // Must be the first await in the handler or Safari has already lost the user gesture.
+      await navigator.clipboard.writeText(ta.value);
+      ok = true;
+    } catch(e){
+      // iOS refuses the async clipboard in plenty of ordinary situations. Selecting the text is
+      // not a consolation prize on a phone -- it is the normal way you copy there, and it always
+      // works. setSelectionRange, because ta.select() alone does nothing on iOS.
+      ta.focus(); ta.setSelectionRange(0, ta.value.length);
+      try { ok = document.execCommand('copy'); } catch(e2){}
+    }
+    $('#copy').textContent = ok ? 'copied' : 'selected — hold to copy';
+    setTimeout(()=>$('#copy').textContent='copy recipe', 1400);
   });
 
   // PHONE TABS. The buttons exist in the DOM always and the stylesheet hides the bar above 900px,
