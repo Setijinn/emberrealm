@@ -113,6 +113,7 @@ const D = {
   px: null,                 // Uint8ClampedArray, w*h*4
   zoom: 12,
   panX: 0, panY: 0,
+  artScale: 1,              // the source's true pixel size: 2 means the art is 2x2 blocks
   _fitted: false,           // the first paint with a real canvas size does the initial fit        // where the art's top-left sits in the viewport, in display px
   tool: 'pencil',
   size: 1,
@@ -606,7 +607,9 @@ function drawTemplate(g, W, H){
   g.translate(-W/2, -H/2);
 
   // one art pixel, in display units -- the step every guide coordinate is rounded to
-  SNAPSTEP = (D.tplSnap && D.grid !== 'none') ? (W / D.w) : 0;
+  // snap to the ART's pixel, which on 2x source is a 2x2 block -- snapping to the file's pixel there
+  // would put guide edges inside a block, which is the thing snapping exists to prevent
+  SNAPSTEP = (D.tplSnap && D.grid !== 'none') ? (W / D.w) * Math.max(1, D.artScale) : 0;
   const S = mkStyle(g, D.zoom);
   const base = D.tplAlpha;
   // Each template picks its own weight per stroke; tplAlpha scales the lot, so `fade` still does what
@@ -646,12 +649,17 @@ function drawGrid(g, W, H, z){
       for(let y = 1; y < D.h; y++){ g.moveTo(0, y*z+0.5); g.lineTo(W, y*z+0.5); }
       g.stroke();
     }
+    // A CELL OF 1 IS NOT A CELL. autoGrid falls back to 1 when nothing divides both dimensions (a
+    // 62x63 sword), and drawing the accent line at every pixel is a solid orange wash over the art
+    // rather than a guide. Below 2 there is nothing to subdivide, so draw nothing.
     const b = D.block;
-    g.strokeStyle = 'rgba(255,176,46,0.34)';
-    g.beginPath();
-    for(let x = b; x < D.w; x += b){ g.moveTo(x*z+0.5, 0); g.lineTo(x*z+0.5, H); }
-    for(let y = b; y < D.h; y += b){ g.moveTo(0, y*z+0.5); g.lineTo(W, y*z+0.5); }
-    g.stroke();
+    if(b >= 2){
+      g.strokeStyle = 'rgba(255,176,46,0.34)';
+      g.beginPath();
+      for(let x = b; x < D.w; x += b){ g.moveTo(x*z+0.5, 0); g.lineTo(x*z+0.5, H); }
+      for(let y = b; y < D.h; y += b){ g.moveTo(0, y*z+0.5); g.lineTo(W, y*z+0.5); }
+      g.stroke();
+    }
   }
 
   if(t === 'iso'){
@@ -1072,6 +1080,62 @@ function rebuildRamp(){
 //      that frame 2 does not line up with frame 1.
 // ---------------------------------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------------------------------
+//  MATCHING THE GRID TO THE ART IT CAME FROM.
+//
+//  Two separate things, both of which a fixed "cell = 8" gets wrong:
+//
+//  1. THE ART'S TRUE PIXEL SIZE. A 128x144 PNG may be a 64x72 sprite drawn at 2x -- every "pixel" is
+//     a 2x2 block. Draw single pixels on that and your edit is at a finer resolution than everything
+//     around it, which reads as noise against the sprite it is meant to be part of. Detected by
+//     asking where the colour actually changes: if every horizontal and vertical change lands on a
+//     multiple of N, the art is built from NxN blocks. (Everything currently in assets/ is honest
+//     1:1 -- checked -- so this earns its keep on imported or upscaled art rather than today's.)
+//
+//  2. A CELL THAT DIVIDES THE SPRITE. Cell 8 on a 62x63 sword leaves a ragged part-cell against both
+//     edges, so the guide lines stop meaning anything near the boundary -- exactly where placement
+//     matters most. Pick a cell that divides both dimensions, nearest to a comfortable 8.
+//
+//  If nothing divides both (gcd 1, e.g. 62x63), say so by falling back to the pixel size rather than
+//  drawing a lattice that does not line up with anything.
+// ---------------------------------------------------------------------------------------------------
+
+function pixelScale(im, maxn){
+  maxn = maxn || 8;
+  const { w, h, d } = im;
+  const colEdge = [], rowEdge = [];
+  const samePx = (i, j) => d[i] === d[j] && d[i+1] === d[j+1] && d[i+2] === d[j+2] && d[i+3] === d[j+3];
+  for(let x = 1; x < w; x++){
+    for(let y = 0; y < h; y++){
+      if(!samePx((y*w+x)*4, (y*w+x-1)*4)){ colEdge.push(x); break; }
+    }
+  }
+  for(let y = 1; y < h; y++){
+    for(let x = 0; x < w; x++){
+      if(!samePx((y*w+x)*4, ((y-1)*w+x)*4)){ rowEdge.push(y); break; }
+    }
+  }
+  let best = 1;
+  for(let n = 2; n <= maxn; n++){
+    if(w % n || h % n) continue;
+    if(colEdge.every(x => x % n === 0) && rowEdge.every(y => y % n === 0)) best = n;
+  }
+  return best;
+}
+
+function autoGrid(im){
+  const scale = pixelScale(im);
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const g = gcd(im.w, im.h);
+  // divisors of gcd(w,h) that are whole multiples of the art's pixel size
+  const cands = [];
+  for(let n = scale; n <= g; n += scale) if(g % n === 0) cands.push(n);
+  if(!cands.length) return { scale, cell: scale };
+  // nearest to 8, which is the subdivision that reads as a guide rather than as graph paper
+  cands.sort((a, b) => Math.abs(a - 8) - Math.abs(b - 8) || a - b);
+  return { scale, cell: cands[0] };
+}
+
 // idle_s.png -> {act:'idle', dir:'s', n:null}   walk_e_3.png -> {act:'walk', dir:'e', n:3}
 function parseFrame(fn){
   const m = /^([a-z]+?)(?:_([nsew]{1,2}))?(?:_(\d+))?\.png$/i.exec(fn);
@@ -1122,7 +1186,10 @@ function updateFrameUI(){
   const n = list ? list.length : 0;
   $('#dsrcframe').max = Math.max(0, n - 1);
   $('#dsrcframe').value = clamp(srcSet ? srcSet.i : 0, 0, Math.max(0, n - 1));
-  $('#dsrcpos').textContent = n ? `${(srcSet.i|0) + 1}/${n}  ${list[clamp(srcSet.i,0,n-1)].file}` : '-';
+  const px = D.artScale > 1 ? `  ${D.artScale}x pixels` : '';
+  $('#dsrcpos').textContent = n
+    ? `${(srcSet.i|0) + 1}/${n}  ${list[clamp(srcSet.i,0,n-1)].file}${px}  cell ${D.block}`
+    : '-';
 }
 
 // Load the pinned frame INTO the canvas at its own size, with the pixel grid on and the previous
@@ -1133,6 +1200,13 @@ async function loadFrameForEdit(){
   const im = await window.spritelab.loadImage(path);
   blank(im.w, im.h);
   D.px.set(im.d);
+  // the grid now describes THIS sprite rather than a default: its own pixel size, and a cell that
+  // divides its dimensions instead of leaving a part-cell against the edges
+  const ag = autoGrid(im);
+  D.artScale = ag.scale;
+  D.block = ag.cell;
+  $('#dblock').value = Math.min(32, ag.cell);
+  $('#dblockl').textContent = ag.cell;
   D.grid = 'pixel';
   [...document.querySelectorAll('#dgrids .tool')].forEach(b => b.classList.toggle('on', b.dataset.grid === 'pixel'));
   // onion: the frame before this one in the same action, which is the only comparison that tells you
@@ -1349,7 +1423,7 @@ function boot(){
   paint();
 }
 
-window.spritedraw = { D, boot, paint, sizeCanvas, buildRamp, paletteFrom, grabFromCanvas, hsv2rgb, rgb2hsv, TEMPLATES,
+window.spritedraw = { D, boot, paint, sizeCanvas, pixelScale, autoGrid, buildRamp, paletteFrom, grabFromCanvas, hsv2rgb, rgb2hsv, TEMPLATES,
                       groupFrames, parseFrame, loadSourceSet, loadFrameForEdit,
                       fitView, zoomAt, zoomTo,
                       blank, exportPNG,
