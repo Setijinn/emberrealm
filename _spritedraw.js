@@ -796,7 +796,12 @@ function snapZoom(z){
 // would feel stuck.
 function applyZoom(raw, sx, sy){
   const ax = (sx - D.panX) / D.zoom, ay = (sy - D.panY) / D.zoom;
-  D.zoomRaw = clamp(raw, 0.25, 64);
+  // FLOOR AT "the whole sprite is visible". Zooming out past that just strands the art as a speck
+  // in the middle of an empty canvas, which is its own kind of stuck. For art too big to fit at 1:1
+  // the floor IS the fit, so large canvases can still be zoomed out to see all of them.
+  const [vw, vh] = viewSize();
+  const lo = Math.min(1, Math.min(vw / D.w, vh / D.h));
+  D.zoomRaw = clamp(raw, lo, 64);
   D.zoom = snapZoom(D.zoomRaw);
   D.panX = sx - ax * D.zoom;
   D.panY = sy - ay * D.zoom;
@@ -1455,6 +1460,11 @@ function boot(){
   cv.addEventListener('pointercancel', up);
   cv.addEventListener('pointerleave', e => { if(!cv.hasPointerCapture ||
     !cv.hasPointerCapture(e.pointerId)) up(e); });
+  // ALSO ON THE WINDOW. A finger lifted outside the canvas never delivers pointerup to it, and the
+  // stale entry left in `ptrs` makes every later pinch measure against a finger that is not there --
+  // which showed up in testing as zoom jumping on its own between gestures.
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
   cv.addEventListener('contextmenu', e => e.preventDefault());
   // passive:false, or the browser scrolls the page instead of letting us zoom
   cv.addEventListener('wheel', e => {
