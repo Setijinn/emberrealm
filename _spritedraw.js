@@ -881,6 +881,7 @@ function paint(){
 // ---------------------------------------------------------------------------------------------------
 
 let drawing = false, last = null, shapeFrom = null, before = null, snapped = false;
+let lastTapAt = 0, lastTapPt = null;
 const ptrs = new Map();            // active pointers, for pinch
 let gesture = null, panning = null, spaceHeld = false;
 
@@ -929,6 +930,26 @@ function down(e){
   // it, so nothing was ever added to `ptrs` -- no stroke, and no pinch either.
   try { cv.setPointerCapture(e.pointerId); } catch(err){}
   ptrs.set(e.pointerId, local(e));
+
+  // DOUBLE-TAP THE CANVAS TO FIT. The escape hatch, and it is on the canvas ON PURPOSE: zoom in far
+  // enough and the art covers the whole viewport, so there is nowhere left to put a finger that is
+  // not the drawing surface. Every button still works, but you should not have to go hunting for one
+  // to get un-stuck -- the gesture is available exactly where you already are.
+  // The first tap of the pair drew a dot, so it is undone here: a double-tap must never mark the
+  // sprite, for the same reason a pinch must not.
+  const tapAt = local(e), tapNow = Date.now();
+  if(ptrs.size === 1){
+    if(tapNow - lastTapAt < 320 && lastTapPt &&
+       Math.hypot(tapAt[0] - lastTapPt[0], tapAt[1] - lastTapPt[1]) < 24){
+      cancelStroke();
+      undo();                       // reverse the dot the first tap laid down
+      lastTapAt = 0; lastTapPt = null;
+      fitView();
+      paint();
+      return;
+    }
+    lastTapAt = tapNow; lastTapPt = tapAt;
+  }
 
   if(ptrs.size >= 2){
     cancelStroke();
