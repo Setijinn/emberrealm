@@ -488,6 +488,107 @@ paints all 12 dev tabs to prove none of them throws.
 tools/shot.py photographs a panel. Use it before saying a panel works.
 tools/terrshot.py photographs overworld ground; tools/audit.py runs a measurement.
 
+tools/spritegen.py MAKES NEW SPRITES OUT OF THE ONES WE ALREADY PAID FOR. Recipes
+in tools/sprite_recipes.json name a source in assets/ and a chain of ops (ramp,
+hue, sat, light, tint, glow, outline, alpha, pad, scale, flip, layer) and it
+writes a new set KEEPING THE SOURCE'S FILENAMES, which is the whole trick -- the
+probing loaders in 08c_embersprites.js can already read the result. The shipped
+recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
+373 files in 3 seconds off art that is already here.
+  - `--probe <path>` FIRST. A sprite's "dominant hue" is a circular mean and on a
+    two-colour sprite it is a colour the sprite does not contain -- arch_golem
+    reports 324 (magenta) from a violet core plus warm stone. That is why the
+    elements are built from `ramp` (luminance-driven, so one definition lands the
+    same on a golem, a husk and a plant -- verified) and not from `hue`. Use
+    `hue` with `only:[lo,hi]` for bespoke per-sprite work.
+  - IT IS ALL DISPOSABLE. Every output is recorded in assets/_derived.json, so
+    `--clean` removes exactly the derived files and nothing else, a re-run with an
+    unchanged recipe is a no-op, and derived art can never be mistaken for
+    hand-generated art. Nothing outside assets/ is ever written.
+  - `--sheet` tiles a family beside its source. Use it: HANDOFF's contact-sheet
+    rule is why five bad SD reagents got caught, and it applies here too.
+  - EVERY NAME IS YOURS. `to` names the set ({v} = the variant), `as` renames the
+    variants of one recipe without touching the shared table the other eleven
+    archetypes read from, and `rename` names the individual frames -- a pattern
+    over {stem} {base} {n} {v} {set} {ext}, or an explicit map for per-file
+    control. `--to` and `--rename` do the same from the command line for a one-off,
+    and `--show-names` prints every source -> output name without writing. Keeping
+    the source's names is only the DEFAULT, and it is the default because it is
+    what lets 08c_embersprites.js find the result by probing; rename off
+    idle_/walk_/attack_/ride_ and it warns rather than stopping you. Two frames
+    colliding on one name is refused outright.
+  - THE SPRITE LAB HAS TWO MODES, switched top-left. DERIVE is the recipe editor
+    below. DRAW (_spritedraw.js) is a pixel editor for making a sprite by hand:
+    pencil/eraser/fill/line/rect/ellipse/picker, round nib, mirror (h/v/both),
+    dither at 25/50/75% against a second colour, undo/redo, trace-a-source onion
+    skin, download PNG. It works with a finger -- pointer events throughout.
+      COLOUR IS RAMPS, NOT SWATCHES. The ramp builder hue-shifts as it descends,
+      highlights forward along the wheel and shadows back, which is the one move
+      that makes hand-drawn pixel art read as LIT rather than dimmed. (Get the sign
+      backwards -- the first cut did -- and an orange base gives yellow shadows and
+      pink highlights.) `palette from source` pulls the busiest 24 colours out of
+      any sprite in assets/ and sorts them by luminance, so you can draw straight
+      into the game's own palette.
+      GUIDE OUTLINES: 15 synthetic blueprints drawn BEHIND the pixels -- character
+      front/side (a 4.5-head canon with eye/chin/shoulder/waist/hip/knee/ankle
+      rules, which is the part you actually need at 92px), quadruped, the seven
+      weapon families the game equips, chest/helm/ring, potion and shield. Two line
+      weights on purpose: HARD is the silhouette to trace, SOFT is construction you
+      only measure against. They ROTATE (-180..180, +90 button) and shrink to fit
+      their own rotated bounding box, so a 40x62 helm turned sideways is not
+      silently clipped. Never touches image data, so it cannot reach an export.
+      THE GRID IS NOT ALWAYS SQUARE: square, block subdivisions, ISOMETRIC 2:1, HEX,
+      and the game's own 44px tile guide. Drawing an isometric thing on a square
+      lattice is how you get art that is subtly wrong in a way nobody can point at.
+  - THE SPRITE LAB is the live editor for it. DOUBLE-CLICK spritelab.cmd, or run
+    `python tools/spritelab.py`. One command: it writes the index, STARTS THE SERVER
+    ITSELF if nothing is answering on 10500, and opens the browser. The .cmd also
+    finds a working interpreter, which matters here because `py` is the Store alias
+    stub -- it tries candidates and checks each can import PIL and numpy before
+    using it. `--no-open` for scripts.
+    ON A PHONE ON MOBILE DATA: https://setijinn.github.io/emberrealm/_spritelab.html
+    Pages already serves this repo from main over HTTPS, and the lab is a static
+    page, so it needs no tunnel and no wifi -- it just works in Safari. The one
+    thing that makes it work is that _spritelab_index.json IS COMMITTED, against
+    this repo's usual "never commit a generated file" rule: a static host has
+    nothing to run, so an ignored index means the hosted lab has no sources at all.
+    It is rewritten on every local run and spritelab.py says so when the committed
+    copy has fallen behind. The hosted lab shows the art as PUSHED, which is both
+    the point and the limitation.
+    ON THE SAME WIFI: `spritelab.cmd --mobile` prints the address to type in, and the
+    layout below 900px is a different one rather than a squeezed one -- one column,
+    the three panels as tabs, and the PREVIEW pinned above them, because a layout
+    that makes you switch away from the picture to reach the slider that changes it
+    is not the tool. --mobile passes --lan to serve.py, which binds 0.0.0.0 instead
+    of the loopback: EVERY DEVICE ON THE WIFI can read this folder while it runs, so
+    it is a "while I am testing on my phone" switch and not a setting. If a
+    loopback-only server is already up, --mobile restarts it rather than printing a
+    phone URL that cannot work.
+    Pick any sprite in assets/, stack ops on it,
+    watch the result beside the source, scrub or play an animated set, and copy out
+    the recipe. It exists because ramp.mix is not guessable -- 0.45 barely reads,
+    0.75 flattens the accent trim -- and the loop used to be edit JSON, run, open a
+    sheet, repeat. ?src=<path>&preset=<name> deep-links a look.
+    WHAT YOU SEE IS WHAT THE TOOL WRITES, and that is CHECKED, not asserted:
+    `py tools/labparity.py` runs 16 op chains through the browser and through
+    spritegen and compares the RGBA bytes. It must say 16 of 16 IDENTICAL. That
+    check is why spritegen no longer uses PIL's GaussianBlur or MaxFilter (a browser
+    cannot reproduce either, so `glow` could never have matched) and why both kernels
+    are written out longhand instead. It caught four real divergences, every one of
+    them invisible on screen: float32 vs float64, ((x%n)+n)%n vs a single %, doing
+    *255 inside hsl2rgb rather than after it, and a sliding running-sum blur against
+    numpy's prefix-sum one. If you edit an op, edit BOTH copies and re-run it.
+  - THE 373 GENERATED SPRITES ARE COMMITTED (code v617, ART-V20 UNCHANGED --
+    every one of them is a NEW filename and nothing existing was replaced, so there is
+    no stale copy to evict. Bumping the art version would have deleted the whole art
+    cache and made every player re-download it for nothing, which is the exact incident
+    the note at the top of sw.js exists to remember. Bump ART_CACHE when a file is
+    REPLACED, not when one is added): the twelve archetype
+    stills and four animated families in frost/venom/shadow/ember, the golem elite,
+    the spectral wisp, and the four named hounds. Nothing LOADS them yet -- the mob
+    art tables are fixed twelve-entry lists -- so adopting one is a key in
+    _mobArchAnim, not a generation.
+
 ---------------------------------------------------------------------------
 WHAT SHIPPED BEFORE THAT (v481 -> v545)
 ---------------------------------------------------------------------------

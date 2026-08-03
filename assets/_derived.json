@@ -1,0 +1,1931 @@
+{
+ "_note": "Written by tools/spritegen.py. Every file listed here is DERIVED from other art in this repo and can be regenerated or deleted; nothing here was drawn. --clean removes exactly these files.",
+ "sets": {
+  "anim_golem_ember": {
+   "files": [
+    "assets/mobs/anim/arch_golem_ember/attack_0.png",
+    "assets/mobs/anim/arch_golem_ember/attack_1.png",
+    "assets/mobs/anim/arch_golem_ember/attack_2.png",
+    "assets/mobs/anim/arch_golem_ember/attack_3.png",
+    "assets/mobs/anim/arch_golem_ember/attack_4.png",
+    "assets/mobs/anim/arch_golem_ember/attack_5.png",
+    "assets/mobs/anim/arch_golem_ember/attack_6.png",
+    "assets/mobs/anim/arch_golem_ember/attack_7.png",
+    "assets/mobs/anim/arch_golem_ember/attack_8.png",
+    "assets/mobs/anim/arch_golem_ember/idle_0.png",
+    "assets/mobs/anim/arch_golem_ember/idle_1.png",
+    "assets/mobs/anim/arch_golem_ember/idle_2.png",
+    "assets/mobs/anim/arch_golem_ember/idle_3.png",
+    "assets/mobs/anim/arch_golem_ember/idle_4.png",
+    "assets/mobs/anim/arch_golem_ember/idle_5.png",
+    "assets/mobs/anim/arch_golem_ember/idle_6.png",
+    "assets/mobs/anim/arch_golem_ember/idle_7.png",
+    "assets/mobs/anim/arch_golem_ember/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_golem",
+   "key": "{\"from\": \"assets/mobs/anim/arch_golem\", \"note\": \"The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"anim_golem_ember\", \"to\": \"assets/mobs/anim/arch_golem_ember\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/anim/arch_golem_ember"
+  },
+  "anim_golem_frost": {
+   "files": [
+    "assets/mobs/anim/arch_golem_frost/attack_0.png",
+    "assets/mobs/anim/arch_golem_frost/attack_1.png",
+    "assets/mobs/anim/arch_golem_frost/attack_2.png",
+    "assets/mobs/anim/arch_golem_frost/attack_3.png",
+    "assets/mobs/anim/arch_golem_frost/attack_4.png",
+    "assets/mobs/anim/arch_golem_frost/attack_5.png",
+    "assets/mobs/anim/arch_golem_frost/attack_6.png",
+    "assets/mobs/anim/arch_golem_frost/attack_7.png",
+    "assets/mobs/anim/arch_golem_frost/attack_8.png",
+    "assets/mobs/anim/arch_golem_frost/idle_0.png",
+    "assets/mobs/anim/arch_golem_frost/idle_1.png",
+    "assets/mobs/anim/arch_golem_frost/idle_2.png",
+    "assets/mobs/anim/arch_golem_frost/idle_3.png",
+    "assets/mobs/anim/arch_golem_frost/idle_4.png",
+    "assets/mobs/anim/arch_golem_frost/idle_5.png",
+    "assets/mobs/anim/arch_golem_frost/idle_6.png",
+    "assets/mobs/anim/arch_golem_frost/idle_7.png",
+    "assets/mobs/anim/arch_golem_frost/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_golem",
+   "key": "{\"from\": \"assets/mobs/anim/arch_golem\", \"note\": \"The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"anim_golem_frost\", \"to\": \"assets/mobs/anim/arch_golem_frost\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_golem_frost"
+  },
+  "anim_golem_shadow": {
+   "files": [
+    "assets/mobs/anim/arch_golem_shadow/attack_0.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_1.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_2.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_3.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_4.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_5.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_6.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_7.png",
+    "assets/mobs/anim/arch_golem_shadow/attack_8.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_0.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_1.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_2.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_3.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_4.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_5.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_6.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_7.png",
+    "assets/mobs/anim/arch_golem_shadow/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_golem",
+   "key": "{\"from\": \"assets/mobs/anim/arch_golem\", \"note\": \"The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"anim_golem_shadow\", \"to\": \"assets/mobs/anim/arch_golem_shadow\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_golem_shadow"
+  },
+  "anim_golem_venom": {
+   "files": [
+    "assets/mobs/anim/arch_golem_venom/attack_0.png",
+    "assets/mobs/anim/arch_golem_venom/attack_1.png",
+    "assets/mobs/anim/arch_golem_venom/attack_2.png",
+    "assets/mobs/anim/arch_golem_venom/attack_3.png",
+    "assets/mobs/anim/arch_golem_venom/attack_4.png",
+    "assets/mobs/anim/arch_golem_venom/attack_5.png",
+    "assets/mobs/anim/arch_golem_venom/attack_6.png",
+    "assets/mobs/anim/arch_golem_venom/attack_7.png",
+    "assets/mobs/anim/arch_golem_venom/attack_8.png",
+    "assets/mobs/anim/arch_golem_venom/idle_0.png",
+    "assets/mobs/anim/arch_golem_venom/idle_1.png",
+    "assets/mobs/anim/arch_golem_venom/idle_2.png",
+    "assets/mobs/anim/arch_golem_venom/idle_3.png",
+    "assets/mobs/anim/arch_golem_venom/idle_4.png",
+    "assets/mobs/anim/arch_golem_venom/idle_5.png",
+    "assets/mobs/anim/arch_golem_venom/idle_6.png",
+    "assets/mobs/anim/arch_golem_venom/idle_7.png",
+    "assets/mobs/anim/arch_golem_venom/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_golem",
+   "key": "{\"from\": \"assets/mobs/anim/arch_golem\", \"note\": \"The animated families: 18 frames (idle x9 + attack x9) per variant, so ONE archetype is 72 files. Four archetypes are animated here rather than twelve, deliberately -- all twelve would be 864 files and ~7 MB of art cache, and that is a decision to take on purpose rather than by running a tool once. Extending it is one entry per archetype, copied from this one.\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"anim_golem_venom\", \"to\": \"assets/mobs/anim/arch_golem_venom\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_golem_venom"
+  },
+  "anim_husk_ember": {
+   "files": [
+    "assets/mobs/anim/arch_husk_ember/attack_0.png",
+    "assets/mobs/anim/arch_husk_ember/attack_1.png",
+    "assets/mobs/anim/arch_husk_ember/attack_2.png",
+    "assets/mobs/anim/arch_husk_ember/attack_3.png",
+    "assets/mobs/anim/arch_husk_ember/attack_4.png",
+    "assets/mobs/anim/arch_husk_ember/attack_5.png",
+    "assets/mobs/anim/arch_husk_ember/attack_6.png",
+    "assets/mobs/anim/arch_husk_ember/attack_7.png",
+    "assets/mobs/anim/arch_husk_ember/attack_8.png",
+    "assets/mobs/anim/arch_husk_ember/idle_0.png",
+    "assets/mobs/anim/arch_husk_ember/idle_1.png",
+    "assets/mobs/anim/arch_husk_ember/idle_2.png",
+    "assets/mobs/anim/arch_husk_ember/idle_3.png",
+    "assets/mobs/anim/arch_husk_ember/idle_4.png",
+    "assets/mobs/anim/arch_husk_ember/idle_5.png",
+    "assets/mobs/anim/arch_husk_ember/idle_6.png",
+    "assets/mobs/anim/arch_husk_ember/idle_7.png",
+    "assets/mobs/anim/arch_husk_ember/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_husk",
+   "key": "{\"from\": \"assets/mobs/anim/arch_husk\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"anim_husk_ember\", \"to\": \"assets/mobs/anim/arch_husk_ember\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/anim/arch_husk_ember"
+  },
+  "anim_husk_frost": {
+   "files": [
+    "assets/mobs/anim/arch_husk_frost/attack_0.png",
+    "assets/mobs/anim/arch_husk_frost/attack_1.png",
+    "assets/mobs/anim/arch_husk_frost/attack_2.png",
+    "assets/mobs/anim/arch_husk_frost/attack_3.png",
+    "assets/mobs/anim/arch_husk_frost/attack_4.png",
+    "assets/mobs/anim/arch_husk_frost/attack_5.png",
+    "assets/mobs/anim/arch_husk_frost/attack_6.png",
+    "assets/mobs/anim/arch_husk_frost/attack_7.png",
+    "assets/mobs/anim/arch_husk_frost/attack_8.png",
+    "assets/mobs/anim/arch_husk_frost/idle_0.png",
+    "assets/mobs/anim/arch_husk_frost/idle_1.png",
+    "assets/mobs/anim/arch_husk_frost/idle_2.png",
+    "assets/mobs/anim/arch_husk_frost/idle_3.png",
+    "assets/mobs/anim/arch_husk_frost/idle_4.png",
+    "assets/mobs/anim/arch_husk_frost/idle_5.png",
+    "assets/mobs/anim/arch_husk_frost/idle_6.png",
+    "assets/mobs/anim/arch_husk_frost/idle_7.png",
+    "assets/mobs/anim/arch_husk_frost/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_husk",
+   "key": "{\"from\": \"assets/mobs/anim/arch_husk\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"anim_husk_frost\", \"to\": \"assets/mobs/anim/arch_husk_frost\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_husk_frost"
+  },
+  "anim_husk_shadow": {
+   "files": [
+    "assets/mobs/anim/arch_husk_shadow/attack_0.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_1.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_2.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_3.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_4.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_5.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_6.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_7.png",
+    "assets/mobs/anim/arch_husk_shadow/attack_8.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_0.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_1.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_2.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_3.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_4.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_5.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_6.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_7.png",
+    "assets/mobs/anim/arch_husk_shadow/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_husk",
+   "key": "{\"from\": \"assets/mobs/anim/arch_husk\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"anim_husk_shadow\", \"to\": \"assets/mobs/anim/arch_husk_shadow\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_husk_shadow"
+  },
+  "anim_husk_venom": {
+   "files": [
+    "assets/mobs/anim/arch_husk_venom/attack_0.png",
+    "assets/mobs/anim/arch_husk_venom/attack_1.png",
+    "assets/mobs/anim/arch_husk_venom/attack_2.png",
+    "assets/mobs/anim/arch_husk_venom/attack_3.png",
+    "assets/mobs/anim/arch_husk_venom/attack_4.png",
+    "assets/mobs/anim/arch_husk_venom/attack_5.png",
+    "assets/mobs/anim/arch_husk_venom/attack_6.png",
+    "assets/mobs/anim/arch_husk_venom/attack_7.png",
+    "assets/mobs/anim/arch_husk_venom/attack_8.png",
+    "assets/mobs/anim/arch_husk_venom/idle_0.png",
+    "assets/mobs/anim/arch_husk_venom/idle_1.png",
+    "assets/mobs/anim/arch_husk_venom/idle_2.png",
+    "assets/mobs/anim/arch_husk_venom/idle_3.png",
+    "assets/mobs/anim/arch_husk_venom/idle_4.png",
+    "assets/mobs/anim/arch_husk_venom/idle_5.png",
+    "assets/mobs/anim/arch_husk_venom/idle_6.png",
+    "assets/mobs/anim/arch_husk_venom/idle_7.png",
+    "assets/mobs/anim/arch_husk_venom/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_husk",
+   "key": "{\"from\": \"assets/mobs/anim/arch_husk\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"anim_husk_venom\", \"to\": \"assets/mobs/anim/arch_husk_venom\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_husk_venom"
+  },
+  "anim_plant_ember": {
+   "files": [
+    "assets/mobs/anim/arch_plant_ember/attack_0.png",
+    "assets/mobs/anim/arch_plant_ember/attack_1.png",
+    "assets/mobs/anim/arch_plant_ember/attack_2.png",
+    "assets/mobs/anim/arch_plant_ember/attack_3.png",
+    "assets/mobs/anim/arch_plant_ember/attack_4.png",
+    "assets/mobs/anim/arch_plant_ember/attack_5.png",
+    "assets/mobs/anim/arch_plant_ember/attack_6.png",
+    "assets/mobs/anim/arch_plant_ember/attack_7.png",
+    "assets/mobs/anim/arch_plant_ember/attack_8.png",
+    "assets/mobs/anim/arch_plant_ember/idle_0.png",
+    "assets/mobs/anim/arch_plant_ember/idle_1.png",
+    "assets/mobs/anim/arch_plant_ember/idle_2.png",
+    "assets/mobs/anim/arch_plant_ember/idle_3.png",
+    "assets/mobs/anim/arch_plant_ember/idle_4.png",
+    "assets/mobs/anim/arch_plant_ember/idle_5.png",
+    "assets/mobs/anim/arch_plant_ember/idle_6.png",
+    "assets/mobs/anim/arch_plant_ember/idle_7.png",
+    "assets/mobs/anim/arch_plant_ember/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_plant",
+   "key": "{\"from\": \"assets/mobs/anim/arch_plant\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"anim_plant_ember\", \"to\": \"assets/mobs/anim/arch_plant_ember\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/anim/arch_plant_ember"
+  },
+  "anim_plant_frost": {
+   "files": [
+    "assets/mobs/anim/arch_plant_frost/attack_0.png",
+    "assets/mobs/anim/arch_plant_frost/attack_1.png",
+    "assets/mobs/anim/arch_plant_frost/attack_2.png",
+    "assets/mobs/anim/arch_plant_frost/attack_3.png",
+    "assets/mobs/anim/arch_plant_frost/attack_4.png",
+    "assets/mobs/anim/arch_plant_frost/attack_5.png",
+    "assets/mobs/anim/arch_plant_frost/attack_6.png",
+    "assets/mobs/anim/arch_plant_frost/attack_7.png",
+    "assets/mobs/anim/arch_plant_frost/attack_8.png",
+    "assets/mobs/anim/arch_plant_frost/idle_0.png",
+    "assets/mobs/anim/arch_plant_frost/idle_1.png",
+    "assets/mobs/anim/arch_plant_frost/idle_2.png",
+    "assets/mobs/anim/arch_plant_frost/idle_3.png",
+    "assets/mobs/anim/arch_plant_frost/idle_4.png",
+    "assets/mobs/anim/arch_plant_frost/idle_5.png",
+    "assets/mobs/anim/arch_plant_frost/idle_6.png",
+    "assets/mobs/anim/arch_plant_frost/idle_7.png",
+    "assets/mobs/anim/arch_plant_frost/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_plant",
+   "key": "{\"from\": \"assets/mobs/anim/arch_plant\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"anim_plant_frost\", \"to\": \"assets/mobs/anim/arch_plant_frost\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_plant_frost"
+  },
+  "anim_plant_shadow": {
+   "files": [
+    "assets/mobs/anim/arch_plant_shadow/attack_0.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_1.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_2.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_3.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_4.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_5.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_6.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_7.png",
+    "assets/mobs/anim/arch_plant_shadow/attack_8.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_0.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_1.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_2.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_3.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_4.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_5.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_6.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_7.png",
+    "assets/mobs/anim/arch_plant_shadow/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_plant",
+   "key": "{\"from\": \"assets/mobs/anim/arch_plant\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"anim_plant_shadow\", \"to\": \"assets/mobs/anim/arch_plant_shadow\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_plant_shadow"
+  },
+  "anim_plant_venom": {
+   "files": [
+    "assets/mobs/anim/arch_plant_venom/attack_0.png",
+    "assets/mobs/anim/arch_plant_venom/attack_1.png",
+    "assets/mobs/anim/arch_plant_venom/attack_2.png",
+    "assets/mobs/anim/arch_plant_venom/attack_3.png",
+    "assets/mobs/anim/arch_plant_venom/attack_4.png",
+    "assets/mobs/anim/arch_plant_venom/attack_5.png",
+    "assets/mobs/anim/arch_plant_venom/attack_6.png",
+    "assets/mobs/anim/arch_plant_venom/attack_7.png",
+    "assets/mobs/anim/arch_plant_venom/attack_8.png",
+    "assets/mobs/anim/arch_plant_venom/idle_0.png",
+    "assets/mobs/anim/arch_plant_venom/idle_1.png",
+    "assets/mobs/anim/arch_plant_venom/idle_2.png",
+    "assets/mobs/anim/arch_plant_venom/idle_3.png",
+    "assets/mobs/anim/arch_plant_venom/idle_4.png",
+    "assets/mobs/anim/arch_plant_venom/idle_5.png",
+    "assets/mobs/anim/arch_plant_venom/idle_6.png",
+    "assets/mobs/anim/arch_plant_venom/idle_7.png",
+    "assets/mobs/anim/arch_plant_venom/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_plant",
+   "key": "{\"from\": \"assets/mobs/anim/arch_plant\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"anim_plant_venom\", \"to\": \"assets/mobs/anim/arch_plant_venom\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_plant_venom"
+  },
+  "anim_wisp_ember": {
+   "files": [
+    "assets/mobs/anim/arch_wisp_ember/attack_0.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_1.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_2.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_3.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_4.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_5.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_6.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_7.png",
+    "assets/mobs/anim/arch_wisp_ember/attack_8.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_0.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_1.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_2.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_3.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_4.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_5.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_6.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_7.png",
+    "assets/mobs/anim/arch_wisp_ember/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_wisp",
+   "key": "{\"from\": \"assets/mobs/anim/arch_wisp\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"anim_wisp_ember\", \"to\": \"assets/mobs/anim/arch_wisp_ember\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/anim/arch_wisp_ember"
+  },
+  "anim_wisp_frost": {
+   "files": [
+    "assets/mobs/anim/arch_wisp_frost/attack_0.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_1.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_2.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_3.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_4.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_5.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_6.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_7.png",
+    "assets/mobs/anim/arch_wisp_frost/attack_8.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_0.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_1.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_2.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_3.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_4.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_5.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_6.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_7.png",
+    "assets/mobs/anim/arch_wisp_frost/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_wisp",
+   "key": "{\"from\": \"assets/mobs/anim/arch_wisp\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"anim_wisp_frost\", \"to\": \"assets/mobs/anim/arch_wisp_frost\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_wisp_frost"
+  },
+  "anim_wisp_shadow": {
+   "files": [
+    "assets/mobs/anim/arch_wisp_shadow/attack_0.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_1.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_2.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_3.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_4.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_5.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_6.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_7.png",
+    "assets/mobs/anim/arch_wisp_shadow/attack_8.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_0.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_1.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_2.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_3.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_4.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_5.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_6.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_7.png",
+    "assets/mobs/anim/arch_wisp_shadow/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_wisp",
+   "key": "{\"from\": \"assets/mobs/anim/arch_wisp\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"anim_wisp_shadow\", \"to\": \"assets/mobs/anim/arch_wisp_shadow\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/anim/arch_wisp_shadow"
+  },
+  "anim_wisp_venom": {
+   "files": [
+    "assets/mobs/anim/arch_wisp_venom/attack_0.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_1.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_2.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_3.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_4.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_5.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_6.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_7.png",
+    "assets/mobs/anim/arch_wisp_venom/attack_8.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_0.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_1.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_2.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_3.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_4.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_5.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_6.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_7.png",
+    "assets/mobs/anim/arch_wisp_venom/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_wisp",
+   "key": "{\"from\": \"assets/mobs/anim/arch_wisp\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"anim_wisp_venom\", \"to\": \"assets/mobs/anim/arch_wisp_venom\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/anim/arch_wisp_venom"
+  },
+  "elite_golem": {
+   "files": [
+    "assets/mobs/anim/arch_golem_elite/attack_0.png",
+    "assets/mobs/anim/arch_golem_elite/attack_1.png",
+    "assets/mobs/anim/arch_golem_elite/attack_2.png",
+    "assets/mobs/anim/arch_golem_elite/attack_3.png",
+    "assets/mobs/anim/arch_golem_elite/attack_4.png",
+    "assets/mobs/anim/arch_golem_elite/attack_5.png",
+    "assets/mobs/anim/arch_golem_elite/attack_6.png",
+    "assets/mobs/anim/arch_golem_elite/attack_7.png",
+    "assets/mobs/anim/arch_golem_elite/attack_8.png",
+    "assets/mobs/anim/arch_golem_elite/idle_0.png",
+    "assets/mobs/anim/arch_golem_elite/idle_1.png",
+    "assets/mobs/anim/arch_golem_elite/idle_2.png",
+    "assets/mobs/anim/arch_golem_elite/idle_3.png",
+    "assets/mobs/anim/arch_golem_elite/idle_4.png",
+    "assets/mobs/anim/arch_golem_elite/idle_5.png",
+    "assets/mobs/anim/arch_golem_elite/idle_6.png",
+    "assets/mobs/anim/arch_golem_elite/idle_7.png",
+    "assets/mobs/anim/arch_golem_elite/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_golem",
+   "key": "{\"from\": \"assets/mobs/anim/arch_golem\", \"note\": \"The ELITE treatment, and the reason `pad` exists: the halo needs room the source frame does not have, so pad FIRST and pad every frame by the same amount or the animation jitters. Colour only -- an elite is the same creature wearing the fact that it is dangerous, and the silhouette has to stay the thing the player already learned to recognise.\", \"ops\": [{\"amount\": 6, \"op\": \"pad\"}, {\"mul\": 1.12, \"op\": \"sat\"}, {\"alpha\": 210, \"color\": \"#ffd76a\", \"op\": \"outline\", \"width\": 1}, {\"color\": \"#ffb02e\", \"op\": \"glow\", \"radius\": 5, \"strength\": 0.5}], \"set\": \"elite_golem\", \"to\": \"assets/mobs/anim/arch_golem_elite\", \"v\": \"\"}",
+   "ops": [
+    {
+     "amount": 6,
+     "op": "pad"
+    },
+    {
+     "mul": 1.12,
+     "op": "sat"
+    },
+    {
+     "alpha": 210,
+     "color": "#ffd76a",
+     "op": "outline",
+     "width": 1
+    },
+    {
+     "color": "#ffb02e",
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.5
+    }
+   ],
+   "to": "assets/mobs/anim/arch_golem_elite"
+  },
+  "golem_corebands": {
+   "files": [
+    "assets/mobs/arch_golem_coldcore.png"
+   ],
+   "from": "assets/mobs/arch_golem.png",
+   "key": "{\"from\": \"assets/mobs/arch_golem.png\", \"note\": \"THE WORKED EXAMPLE FOR `only`. arch_golem probes as three bands: warm stone at 0-60, a violet core at 270-300, red trim at 330-360. This takes the core to cold blue and leaves the stone and the trim exactly where they are -- which is the one thing `ramp` cannot do, because ramp touches every pixel. Bespoke, per-sprite, and it will NOT transfer to another archetype: run `--probe` on that one and read its own bands.\", \"ops\": [{\"only\": [265, 305], \"op\": \"hue\", \"to\": 205}, {\"mul\": 1.2, \"only\": [180, 240], \"op\": \"sat\"}], \"set\": \"golem_corebands\", \"to\": \"assets/mobs/arch_golem_coldcore.png\", \"v\": \"\"}",
+   "ops": [
+    {
+     "only": [
+      265,
+      305
+     ],
+     "op": "hue",
+     "to": 205
+    },
+    {
+     "mul": 1.2,
+     "only": [
+      180,
+      240
+     ],
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_golem_coldcore.png"
+  },
+  "spectral_wisp": {
+   "files": [
+    "assets/mobs/anim/arch_wisp_spectral/attack_0.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_1.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_2.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_3.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_4.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_5.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_6.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_7.png",
+    "assets/mobs/anim/arch_wisp_spectral/attack_8.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_0.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_1.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_2.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_3.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_4.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_5.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_6.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_7.png",
+    "assets/mobs/anim/arch_wisp_spectral/idle_8.png"
+   ],
+   "from": "assets/mobs/anim/arch_wisp",
+   "key": "{\"from\": \"assets/mobs/anim/arch_wisp\", \"note\": \"Phantom/spectral. `alpha` is nearly the whole treatment -- a spectre is a transparency problem, not a colour one, and every attempt to say it with colour alone reads as 'blue wisp'.\", \"ops\": [{\"mul\": 0.5, \"op\": \"sat\"}, {\"mul\": 1.1, \"op\": \"light\"}, {\"mul\": 0.62, \"op\": \"alpha\"}, {\"hue\": 190, \"op\": \"glow\", \"radius\": 6, \"strength\": 0.4}], \"set\": \"spectral_wisp\", \"to\": \"assets/mobs/anim/arch_wisp_spectral\", \"v\": \"\"}",
+   "ops": [
+    {
+     "mul": 0.5,
+     "op": "sat"
+    },
+    {
+     "mul": 1.1,
+     "op": "light"
+    },
+    {
+     "mul": 0.62,
+     "op": "alpha"
+    },
+    {
+     "hue": 190,
+     "op": "glow",
+     "radius": 6,
+     "strength": 0.4
+    }
+   ],
+   "to": "assets/mobs/anim/arch_wisp_spectral"
+  },
+  "still_acolyte_ember": {
+   "files": [
+    "assets/mobs/arch_acolyte_ember.png"
+   ],
+   "from": "assets/mobs/arch_acolyte.png",
+   "key": "{\"from\": \"assets/mobs/arch_acolyte.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_acolyte_ember\", \"to\": \"assets/mobs/arch_acolyte_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_acolyte_ember.png"
+  },
+  "still_acolyte_frost": {
+   "files": [
+    "assets/mobs/arch_acolyte_frost.png"
+   ],
+   "from": "assets/mobs/arch_acolyte.png",
+   "key": "{\"from\": \"assets/mobs/arch_acolyte.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_acolyte_frost\", \"to\": \"assets/mobs/arch_acolyte_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_acolyte_frost.png"
+  },
+  "still_acolyte_shadow": {
+   "files": [
+    "assets/mobs/arch_acolyte_shadow.png"
+   ],
+   "from": "assets/mobs/arch_acolyte.png",
+   "key": "{\"from\": \"assets/mobs/arch_acolyte.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_acolyte_shadow\", \"to\": \"assets/mobs/arch_acolyte_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_acolyte_shadow.png"
+  },
+  "still_acolyte_venom": {
+   "files": [
+    "assets/mobs/arch_acolyte_venom.png"
+   ],
+   "from": "assets/mobs/arch_acolyte.png",
+   "key": "{\"from\": \"assets/mobs/arch_acolyte.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_acolyte_venom\", \"to\": \"assets/mobs/arch_acolyte_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_acolyte_venom.png"
+  },
+  "still_bird_ember": {
+   "files": [
+    "assets/mobs/arch_bird_ember.png"
+   ],
+   "from": "assets/mobs/arch_bird.png",
+   "key": "{\"from\": \"assets/mobs/arch_bird.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_bird_ember\", \"to\": \"assets/mobs/arch_bird_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_bird_ember.png"
+  },
+  "still_bird_frost": {
+   "files": [
+    "assets/mobs/arch_bird_frost.png"
+   ],
+   "from": "assets/mobs/arch_bird.png",
+   "key": "{\"from\": \"assets/mobs/arch_bird.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_bird_frost\", \"to\": \"assets/mobs/arch_bird_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_bird_frost.png"
+  },
+  "still_bird_shadow": {
+   "files": [
+    "assets/mobs/arch_bird_shadow.png"
+   ],
+   "from": "assets/mobs/arch_bird.png",
+   "key": "{\"from\": \"assets/mobs/arch_bird.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_bird_shadow\", \"to\": \"assets/mobs/arch_bird_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_bird_shadow.png"
+  },
+  "still_bird_venom": {
+   "files": [
+    "assets/mobs/arch_bird_venom.png"
+   ],
+   "from": "assets/mobs/arch_bird.png",
+   "key": "{\"from\": \"assets/mobs/arch_bird.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_bird_venom\", \"to\": \"assets/mobs/arch_bird_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_bird_venom.png"
+  },
+  "still_boar_ember": {
+   "files": [
+    "assets/mobs/arch_boar_ember.png"
+   ],
+   "from": "assets/mobs/arch_boar.png",
+   "key": "{\"from\": \"assets/mobs/arch_boar.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_boar_ember\", \"to\": \"assets/mobs/arch_boar_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_boar_ember.png"
+  },
+  "still_boar_frost": {
+   "files": [
+    "assets/mobs/arch_boar_frost.png"
+   ],
+   "from": "assets/mobs/arch_boar.png",
+   "key": "{\"from\": \"assets/mobs/arch_boar.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_boar_frost\", \"to\": \"assets/mobs/arch_boar_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_boar_frost.png"
+  },
+  "still_boar_shadow": {
+   "files": [
+    "assets/mobs/arch_boar_shadow.png"
+   ],
+   "from": "assets/mobs/arch_boar.png",
+   "key": "{\"from\": \"assets/mobs/arch_boar.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_boar_shadow\", \"to\": \"assets/mobs/arch_boar_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_boar_shadow.png"
+  },
+  "still_boar_venom": {
+   "files": [
+    "assets/mobs/arch_boar_venom.png"
+   ],
+   "from": "assets/mobs/arch_boar.png",
+   "key": "{\"from\": \"assets/mobs/arch_boar.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_boar_venom\", \"to\": \"assets/mobs/arch_boar_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_boar_venom.png"
+  },
+  "still_crab_ember": {
+   "files": [
+    "assets/mobs/arch_crab_ember.png"
+   ],
+   "from": "assets/mobs/arch_crab.png",
+   "key": "{\"from\": \"assets/mobs/arch_crab.png\", \"note\": \"Archetype stills, four elements each. One file per variant -- the whole set of twelve archetypes is 48 files and about 200 KB, which is why the stills are all here and the animations are not.\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_crab_ember\", \"to\": \"assets/mobs/arch_crab_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_crab_ember.png"
+  },
+  "still_crab_frost": {
+   "files": [
+    "assets/mobs/arch_crab_frost.png"
+   ],
+   "from": "assets/mobs/arch_crab.png",
+   "key": "{\"from\": \"assets/mobs/arch_crab.png\", \"note\": \"Archetype stills, four elements each. One file per variant -- the whole set of twelve archetypes is 48 files and about 200 KB, which is why the stills are all here and the animations are not.\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_crab_frost\", \"to\": \"assets/mobs/arch_crab_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_crab_frost.png"
+  },
+  "still_crab_shadow": {
+   "files": [
+    "assets/mobs/arch_crab_shadow.png"
+   ],
+   "from": "assets/mobs/arch_crab.png",
+   "key": "{\"from\": \"assets/mobs/arch_crab.png\", \"note\": \"Archetype stills, four elements each. One file per variant -- the whole set of twelve archetypes is 48 files and about 200 KB, which is why the stills are all here and the animations are not.\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_crab_shadow\", \"to\": \"assets/mobs/arch_crab_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_crab_shadow.png"
+  },
+  "still_crab_venom": {
+   "files": [
+    "assets/mobs/arch_crab_venom.png"
+   ],
+   "from": "assets/mobs/arch_crab.png",
+   "key": "{\"from\": \"assets/mobs/arch_crab.png\", \"note\": \"Archetype stills, four elements each. One file per variant -- the whole set of twelve archetypes is 48 files and about 200 KB, which is why the stills are all here and the animations are not.\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_crab_venom\", \"to\": \"assets/mobs/arch_crab_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_crab_venom.png"
+  },
+  "still_golem_ember": {
+   "files": [
+    "assets/mobs/arch_golem_ember.png"
+   ],
+   "from": "assets/mobs/arch_golem.png",
+   "key": "{\"from\": \"assets/mobs/arch_golem.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_golem_ember\", \"to\": \"assets/mobs/arch_golem_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_golem_ember.png"
+  },
+  "still_golem_frost": {
+   "files": [
+    "assets/mobs/arch_golem_frost.png"
+   ],
+   "from": "assets/mobs/arch_golem.png",
+   "key": "{\"from\": \"assets/mobs/arch_golem.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_golem_frost\", \"to\": \"assets/mobs/arch_golem_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_golem_frost.png"
+  },
+  "still_golem_shadow": {
+   "files": [
+    "assets/mobs/arch_golem_shadow.png"
+   ],
+   "from": "assets/mobs/arch_golem.png",
+   "key": "{\"from\": \"assets/mobs/arch_golem.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_golem_shadow\", \"to\": \"assets/mobs/arch_golem_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_golem_shadow.png"
+  },
+  "still_golem_venom": {
+   "files": [
+    "assets/mobs/arch_golem_venom.png"
+   ],
+   "from": "assets/mobs/arch_golem.png",
+   "key": "{\"from\": \"assets/mobs/arch_golem.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_golem_venom\", \"to\": \"assets/mobs/arch_golem_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_golem_venom.png"
+  },
+  "still_hound_cinderhound": {
+   "files": [
+    "assets/mobs/cinderhound.png"
+   ],
+   "from": "assets/mobs/hound.png",
+   "key": "{\"from\": \"assets/mobs/hound.png\", \"note\": \"THE WORKED EXAMPLE FOR NAMING. The elements are shared across all twelve archetypes, but nothing says this recipe has to accept their names: `as` renames them here and only here, and `to` puts them wherever you like -- so the hound families are cinderhound/rimehound/nighthound/plaguehound rather than hound_ember and friends, while the other eleven archetypes keep using the same element definitions untouched. Recipe names follow the output names, so this builds as still_hound_rimehound.\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_hound_cinderhound\", \"to\": \"assets/mobs/cinderhound.png\", \"v\": \"cinderhound\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/cinderhound.png"
+  },
+  "still_hound_nighthound": {
+   "files": [
+    "assets/mobs/nighthound.png"
+   ],
+   "from": "assets/mobs/hound.png",
+   "key": "{\"from\": \"assets/mobs/hound.png\", \"note\": \"THE WORKED EXAMPLE FOR NAMING. The elements are shared across all twelve archetypes, but nothing says this recipe has to accept their names: `as` renames them here and only here, and `to` puts them wherever you like -- so the hound families are cinderhound/rimehound/nighthound/plaguehound rather than hound_ember and friends, while the other eleven archetypes keep using the same element definitions untouched. Recipe names follow the output names, so this builds as still_hound_rimehound.\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_hound_nighthound\", \"to\": \"assets/mobs/nighthound.png\", \"v\": \"nighthound\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/nighthound.png"
+  },
+  "still_hound_plaguehound": {
+   "files": [
+    "assets/mobs/plaguehound.png"
+   ],
+   "from": "assets/mobs/hound.png",
+   "key": "{\"from\": \"assets/mobs/hound.png\", \"note\": \"THE WORKED EXAMPLE FOR NAMING. The elements are shared across all twelve archetypes, but nothing says this recipe has to accept their names: `as` renames them here and only here, and `to` puts them wherever you like -- so the hound families are cinderhound/rimehound/nighthound/plaguehound rather than hound_ember and friends, while the other eleven archetypes keep using the same element definitions untouched. Recipe names follow the output names, so this builds as still_hound_rimehound.\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_hound_plaguehound\", \"to\": \"assets/mobs/plaguehound.png\", \"v\": \"plaguehound\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/plaguehound.png"
+  },
+  "still_hound_rimehound": {
+   "files": [
+    "assets/mobs/rimehound.png"
+   ],
+   "from": "assets/mobs/hound.png",
+   "key": "{\"from\": \"assets/mobs/hound.png\", \"note\": \"THE WORKED EXAMPLE FOR NAMING. The elements are shared across all twelve archetypes, but nothing says this recipe has to accept their names: `as` renames them here and only here, and `to` puts them wherever you like -- so the hound families are cinderhound/rimehound/nighthound/plaguehound rather than hound_ember and friends, while the other eleven archetypes keep using the same element definitions untouched. Recipe names follow the output names, so this builds as still_hound_rimehound.\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_hound_rimehound\", \"to\": \"assets/mobs/rimehound.png\", \"v\": \"rimehound\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/rimehound.png"
+  },
+  "still_husk_ember": {
+   "files": [
+    "assets/mobs/arch_husk_ember.png"
+   ],
+   "from": "assets/mobs/arch_husk.png",
+   "key": "{\"from\": \"assets/mobs/arch_husk.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_husk_ember\", \"to\": \"assets/mobs/arch_husk_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_husk_ember.png"
+  },
+  "still_husk_frost": {
+   "files": [
+    "assets/mobs/arch_husk_frost.png"
+   ],
+   "from": "assets/mobs/arch_husk.png",
+   "key": "{\"from\": \"assets/mobs/arch_husk.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_husk_frost\", \"to\": \"assets/mobs/arch_husk_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_husk_frost.png"
+  },
+  "still_husk_shadow": {
+   "files": [
+    "assets/mobs/arch_husk_shadow.png"
+   ],
+   "from": "assets/mobs/arch_husk.png",
+   "key": "{\"from\": \"assets/mobs/arch_husk.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_husk_shadow\", \"to\": \"assets/mobs/arch_husk_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_husk_shadow.png"
+  },
+  "still_husk_venom": {
+   "files": [
+    "assets/mobs/arch_husk_venom.png"
+   ],
+   "from": "assets/mobs/arch_husk.png",
+   "key": "{\"from\": \"assets/mobs/arch_husk.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_husk_venom\", \"to\": \"assets/mobs/arch_husk_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_husk_venom.png"
+  },
+  "still_plant_ember": {
+   "files": [
+    "assets/mobs/arch_plant_ember.png"
+   ],
+   "from": "assets/mobs/arch_plant.png",
+   "key": "{\"from\": \"assets/mobs/arch_plant.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_plant_ember\", \"to\": \"assets/mobs/arch_plant_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_plant_ember.png"
+  },
+  "still_plant_frost": {
+   "files": [
+    "assets/mobs/arch_plant_frost.png"
+   ],
+   "from": "assets/mobs/arch_plant.png",
+   "key": "{\"from\": \"assets/mobs/arch_plant.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_plant_frost\", \"to\": \"assets/mobs/arch_plant_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_plant_frost.png"
+  },
+  "still_plant_shadow": {
+   "files": [
+    "assets/mobs/arch_plant_shadow.png"
+   ],
+   "from": "assets/mobs/arch_plant.png",
+   "key": "{\"from\": \"assets/mobs/arch_plant.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_plant_shadow\", \"to\": \"assets/mobs/arch_plant_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_plant_shadow.png"
+  },
+  "still_plant_venom": {
+   "files": [
+    "assets/mobs/arch_plant_venom.png"
+   ],
+   "from": "assets/mobs/arch_plant.png",
+   "key": "{\"from\": \"assets/mobs/arch_plant.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_plant_venom\", \"to\": \"assets/mobs/arch_plant_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_plant_venom.png"
+  },
+  "still_shaman_ember": {
+   "files": [
+    "assets/mobs/arch_shaman_ember.png"
+   ],
+   "from": "assets/mobs/arch_shaman.png",
+   "key": "{\"from\": \"assets/mobs/arch_shaman.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_shaman_ember\", \"to\": \"assets/mobs/arch_shaman_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_shaman_ember.png"
+  },
+  "still_shaman_frost": {
+   "files": [
+    "assets/mobs/arch_shaman_frost.png"
+   ],
+   "from": "assets/mobs/arch_shaman.png",
+   "key": "{\"from\": \"assets/mobs/arch_shaman.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_shaman_frost\", \"to\": \"assets/mobs/arch_shaman_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_shaman_frost.png"
+  },
+  "still_shaman_shadow": {
+   "files": [
+    "assets/mobs/arch_shaman_shadow.png"
+   ],
+   "from": "assets/mobs/arch_shaman.png",
+   "key": "{\"from\": \"assets/mobs/arch_shaman.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_shaman_shadow\", \"to\": \"assets/mobs/arch_shaman_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_shaman_shadow.png"
+  },
+  "still_shaman_venom": {
+   "files": [
+    "assets/mobs/arch_shaman_venom.png"
+   ],
+   "from": "assets/mobs/arch_shaman.png",
+   "key": "{\"from\": \"assets/mobs/arch_shaman.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_shaman_venom\", \"to\": \"assets/mobs/arch_shaman_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_shaman_venom.png"
+  },
+  "still_slinger_ember": {
+   "files": [
+    "assets/mobs/arch_slinger_ember.png"
+   ],
+   "from": "assets/mobs/arch_slinger.png",
+   "key": "{\"from\": \"assets/mobs/arch_slinger.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_slinger_ember\", \"to\": \"assets/mobs/arch_slinger_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_slinger_ember.png"
+  },
+  "still_slinger_frost": {
+   "files": [
+    "assets/mobs/arch_slinger_frost.png"
+   ],
+   "from": "assets/mobs/arch_slinger.png",
+   "key": "{\"from\": \"assets/mobs/arch_slinger.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_slinger_frost\", \"to\": \"assets/mobs/arch_slinger_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_slinger_frost.png"
+  },
+  "still_slinger_shadow": {
+   "files": [
+    "assets/mobs/arch_slinger_shadow.png"
+   ],
+   "from": "assets/mobs/arch_slinger.png",
+   "key": "{\"from\": \"assets/mobs/arch_slinger.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_slinger_shadow\", \"to\": \"assets/mobs/arch_slinger_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_slinger_shadow.png"
+  },
+  "still_slinger_venom": {
+   "files": [
+    "assets/mobs/arch_slinger_venom.png"
+   ],
+   "from": "assets/mobs/arch_slinger.png",
+   "key": "{\"from\": \"assets/mobs/arch_slinger.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_slinger_venom\", \"to\": \"assets/mobs/arch_slinger_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_slinger_venom.png"
+  },
+  "still_swarm_ember": {
+   "files": [
+    "assets/mobs/arch_swarm_ember.png"
+   ],
+   "from": "assets/mobs/arch_swarm.png",
+   "key": "{\"from\": \"assets/mobs/arch_swarm.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_swarm_ember\", \"to\": \"assets/mobs/arch_swarm_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_swarm_ember.png"
+  },
+  "still_swarm_frost": {
+   "files": [
+    "assets/mobs/arch_swarm_frost.png"
+   ],
+   "from": "assets/mobs/arch_swarm.png",
+   "key": "{\"from\": \"assets/mobs/arch_swarm.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_swarm_frost\", \"to\": \"assets/mobs/arch_swarm_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_swarm_frost.png"
+  },
+  "still_swarm_shadow": {
+   "files": [
+    "assets/mobs/arch_swarm_shadow.png"
+   ],
+   "from": "assets/mobs/arch_swarm.png",
+   "key": "{\"from\": \"assets/mobs/arch_swarm.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_swarm_shadow\", \"to\": \"assets/mobs/arch_swarm_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_swarm_shadow.png"
+  },
+  "still_swarm_venom": {
+   "files": [
+    "assets/mobs/arch_swarm_venom.png"
+   ],
+   "from": "assets/mobs/arch_swarm.png",
+   "key": "{\"from\": \"assets/mobs/arch_swarm.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_swarm_venom\", \"to\": \"assets/mobs/arch_swarm_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_swarm_venom.png"
+  },
+  "still_wisp_ember": {
+   "files": [
+    "assets/mobs/arch_wisp_ember.png"
+   ],
+   "from": "assets/mobs/arch_wisp.png",
+   "key": "{\"from\": \"assets/mobs/arch_wisp.png\", \"note\": \"\", \"ops\": [{\"high\": \"#ff8a2a\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#2c1008\", \"span\": 0.78}, {\"mul\": 1.15, \"op\": \"sat\"}, {\"hue\": 24, \"op\": \"glow\", \"radius\": 4, \"strength\": 0.28}], \"set\": \"still_wisp_ember\", \"to\": \"assets/mobs/arch_wisp_ember.png\", \"v\": \"ember\"}",
+   "ops": [
+    {
+     "high": "#ff8a2a",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#2c1008",
+     "span": 0.78
+    },
+    {
+     "mul": 1.15,
+     "op": "sat"
+    },
+    {
+     "hue": 24,
+     "op": "glow",
+     "radius": 4,
+     "strength": 0.28
+    }
+   ],
+   "to": "assets/mobs/arch_wisp_ember.png"
+  },
+  "still_wisp_frost": {
+   "files": [
+    "assets/mobs/arch_wisp_frost.png"
+   ],
+   "from": "assets/mobs/arch_wisp.png",
+   "key": "{\"from\": \"assets/mobs/arch_wisp.png\", \"note\": \"\", \"ops\": [{\"high\": \"#bfe6ff\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#16223a\", \"span\": 0.78}, {\"mul\": 0.95, \"op\": \"sat\"}], \"set\": \"still_wisp_frost\", \"to\": \"assets/mobs/arch_wisp_frost.png\", \"v\": \"frost\"}",
+   "ops": [
+    {
+     "high": "#bfe6ff",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#16223a",
+     "span": 0.78
+    },
+    {
+     "mul": 0.95,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_wisp_frost.png"
+  },
+  "still_wisp_shadow": {
+   "files": [
+    "assets/mobs/arch_wisp_shadow.png"
+   ],
+   "from": "assets/mobs/arch_wisp.png",
+   "key": "{\"from\": \"assets/mobs/arch_wisp.png\", \"note\": \"\", \"ops\": [{\"high\": \"#8f7ec2\", \"mix\": 0.68, \"op\": \"ramp\", \"shadow\": \"#140f20\", \"span\": 0.72}, {\"mul\": 0.75, \"op\": \"sat\"}, {\"hue\": 275, \"op\": \"glow\", \"radius\": 5, \"strength\": 0.34}], \"set\": \"still_wisp_shadow\", \"to\": \"assets/mobs/arch_wisp_shadow.png\", \"v\": \"shadow\"}",
+   "ops": [
+    {
+     "high": "#8f7ec2",
+     "mix": 0.68,
+     "op": "ramp",
+     "shadow": "#140f20",
+     "span": 0.72
+    },
+    {
+     "mul": 0.75,
+     "op": "sat"
+    },
+    {
+     "hue": 275,
+     "op": "glow",
+     "radius": 5,
+     "strength": 0.34
+    }
+   ],
+   "to": "assets/mobs/arch_wisp_shadow.png"
+  },
+  "still_wisp_venom": {
+   "files": [
+    "assets/mobs/arch_wisp_venom.png"
+   ],
+   "from": "assets/mobs/arch_wisp.png",
+   "key": "{\"from\": \"assets/mobs/arch_wisp.png\", \"note\": \"\", \"ops\": [{\"high\": \"#b6ee5e\", \"mix\": 0.58, \"op\": \"ramp\", \"shadow\": \"#142a14\", \"span\": 0.76}, {\"mul\": 1.1, \"op\": \"sat\"}], \"set\": \"still_wisp_venom\", \"to\": \"assets/mobs/arch_wisp_venom.png\", \"v\": \"venom\"}",
+   "ops": [
+    {
+     "high": "#b6ee5e",
+     "mix": 0.58,
+     "op": "ramp",
+     "shadow": "#142a14",
+     "span": 0.76
+    },
+    {
+     "mul": 1.1,
+     "op": "sat"
+    }
+   ],
+   "to": "assets/mobs/arch_wisp_venom.png"
+  }
+ }
+}

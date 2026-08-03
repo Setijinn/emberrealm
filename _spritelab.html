@@ -1,0 +1,333 @@
+<!doctype html>
+<!-- The Sprite Lab. Standalone on purpose: unlike _lab.html this needs the game's ART but not the
+     game, so it is not generated from index.html and cannot break when the script list changes.
+     Serve it:  python tools/serve.py   then   python tools/spritelab.py --open  -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EmberRealm — Sprite Lab</title>
+<style>
+  :root{ --bg:#16131a; --panel:#1e1a24; --line:#332c3d; --ink:#e8e2f0; --dim:#9a8fab; --hot:#ffb02e; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;
+        /* Safari inflates text in one orientation only unless told not to, which silently breaks
+           every width calculation below when you rotate the phone. */
+        -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  /* no 300ms double-tap-zoom delay on controls; the sliders are the whole interaction */
+  button, input, select, textarea, .src{ touch-action:manipulation; }
+  header{ padding:10px 14px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; }
+  header b{ color:var(--hot); letter-spacing:.5px; }
+  header span{ color:var(--dim); }
+  .wrap{ display:grid; grid-template-columns:230px 1fr 320px; gap:0; height:calc(100vh - 42px); }
+  .col{ overflow:auto; padding:10px; }
+  .col+.col{ border-left:1px solid var(--line); }
+  h3{ margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); font-weight:600; }
+  .grp{ margin:12px 0 4px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
+  button{ font:inherit; background:#2a2433; color:var(--ink); border:1px solid var(--line);
+          border-radius:5px; padding:4px 8px; cursor:pointer; }
+  button:hover{ border-color:var(--hot); }
+  .src{ display:block; width:100%; text-align:left; margin:2px 0; padding:4px 7px; font-size:12px;
+        background:transparent; border:1px solid transparent; }
+  .src:hover{ background:#241f2c; }
+  .src.on{ background:#2f2740; border-color:var(--hot); color:var(--hot); }
+  .stage{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+  .pane{ background:#100e14; border:1px solid var(--line); border-radius:6px; padding:10px; }
+  .pane h4{ margin:0 0 6px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); font-weight:600; }
+  canvas{ image-rendering:-webkit-optimize-contrast; image-rendering:pixelated; display:block; }
+  .bar{ display:flex; gap:10px; align-items:center; margin:10px 0; flex-wrap:wrap; }
+  .bar label{ color:var(--dim); }
+  input[type=range]{ width:130px; }
+  input[type=number],input[type=text]{ background:#120f17; color:var(--ink); border:1px solid var(--line);
+        border-radius:4px; padding:2px 5px; width:82px; font:inherit; }
+  input[type=color]{ width:26px; height:22px; padding:0; border:1px solid var(--line); background:none; }
+  .op{ background:var(--panel); border:1px solid var(--line); border-radius:6px; margin:0 0 8px; }
+  .ophead{ display:flex; align-items:center; gap:5px; padding:5px 8px; border-bottom:1px solid var(--line); }
+  .ophead b{ color:var(--hot); }
+  .spacer{ flex:1; }
+  .mini{ padding:1px 6px; font-size:11px; }
+  .danger:hover{ border-color:#e0556b; color:#e0556b; }
+  .fields{ display:flex; flex-wrap:wrap; gap:7px; padding:8px; }
+  .f{ display:flex; align-items:center; gap:4px; color:var(--dim); font-size:11px; }
+  .preset{ margin:0 4px 4px 0; }
+  textarea{ width:100%; height:230px; background:#100e14; color:#cfe6a8; border:1px solid var(--line);
+        border-radius:6px; padding:8px; font:inherit; resize:vertical; }
+  pre{ background:#100e14; border:1px solid var(--line); border-radius:6px; padding:8px;
+       margin:6px 0; white-space:pre-wrap; color:var(--dim); font-size:11px; max-height:190px; overflow:auto; }
+  .warn{ color:#ffb02e; padding:8px; }
+  .note{ color:var(--dim); font-size:11px; margin:6px 0 0; }
+  .tabs{ display:none; }
+  .mode{ padding:3px 12px; font-size:12px; }
+  .mode.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+  #modebar{ display:flex; gap:6px; }
+  .dwrap{ display:grid; grid-template-columns:1fr 230px 300px; gap:0; }
+  .dcol{ padding:12px; border-left:1px solid var(--line); }
+  .dcol:first-child{ border-left:none; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:5px; }
+  .tool{ font-size:12px; padding:5px 9px; }
+  .tool.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+  .swatches{ display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
+  .sw{ width:26px; height:26px; padding:0; border-radius:4px; border:1px solid #0007; }
+  .bigsw{ width:34px; height:26px; border-radius:4px; border:1px solid var(--line); display:inline-block; }
+  .huebar{ width:100%; margin:8px 0 4px;
+           background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); border-radius:4px; }
+  #dcanvas{ image-rendering:-webkit-optimize-contrast; image-rendering:pixelated; display:block; }
+  @media (max-width: 900px){
+    .dwrap{ display:block; }
+    .dcol{ border-left:none; border-top:1px solid var(--line); }
+    .dstage{ position:sticky; top:0; z-index:5; background:var(--bg); }
+    #dcanvas{ max-width:100%; height:auto; }
+    #tagline{ display:none; }
+  }
+
+  /* ---- PHONE. The three-column grid is a desktop shape and there is no rescuing it on a 390px
+     screen, so narrow gets a different layout rather than a squeezed one: one column, and the three
+     panels become tabs. The PREVIEW stays mounted and visible above the tabs, because the entire
+     point of the tool is watching the result change while you drag a slider -- a layout that makes
+     you switch away from the picture to reach the control that changes it is not the tool. */
+  @media (max-width: 900px){
+    /* the notch and the home indicator; viewport-fit=cover means we owe them the insets */
+    header{ padding:calc(8px + env(safe-area-inset-top)) 10px 8px; gap:4px; flex-wrap:wrap;
+            align-items:center; }
+    .wrap{ padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+    .col.tabbed{ padding-bottom:calc(12px + env(safe-area-inset-bottom)); }
+    header span{ font-size:11px; flex:1 1 100%; min-width:0; }
+    .wrap{ display:block; height:auto; }
+    .col{ border-left:none !important; padding:10px 12px; overflow:visible; }
+    .col+.col{ border-top:1px solid var(--line); }
+
+    /* the preview rides at the top and stays there while you scroll the controls under it */
+    /* flex + order, because the preview is the THIRD child in the DOM and has to be the first
+       thing on screen. Capped and internally scrollable so a sticky panel cannot eat the phone. */
+    .wrap{ display:flex; flex-direction:column; }
+    .col.mid{ order:-2; position:sticky; top:0; z-index:5; background:var(--bg);
+              border-bottom:1px solid var(--line); padding-bottom:6px;
+              max-height:48vh; overflow:auto; }
+    .tabs{ order:-1; }
+    .col.tabbed{ order:0; }
+    .col.mid .note{ display:none; }        /* the explanation is desktop reading, not phone reading */
+    .col.mid pre{ max-height:96px; }
+    .stage{ gap:10px; justify-content:center; }
+    .pane{ padding:6px; }
+
+    /* NOTHING MAY SCROLL SIDEWAYS. Every one of these is a desktop assumption that overflows a
+       412px screen: two 192px preview panes side by side, a 100%-wide slider sharing a flex row,
+       and three tab buttons that will not shrink below their text. min-width:0 is the load-bearing
+       part -- a flex item defaults to min-width:auto and refuses to shrink past its content. */
+    html, body{ max-width:100%; overflow-x:hidden; }
+    .wrap, .col, .bar, .stage, .fields, .op{ min-width:0; max-width:100%; }
+    .stage{ flex-wrap:nowrap; }
+    .pane{ flex:1 1 0; min-width:0; }
+    canvas{ max-width:100%; height:auto; margin:0 auto; }
+    .bar > input[type=range]{ flex:1 1 90px; min-width:0; width:auto; }
+    #framewrap{ display:flex; align-items:center; gap:8px; flex:1 1 100%; min-width:0; }
+    #dims{ flex:1 1 100%; font-size:11px; }
+    .tabs{ display:flex; gap:6px; padding:8px 12px; background:var(--bg);
+           border-bottom:1px solid var(--line); }
+    .tabs button{ flex:1 1 0; min-width:0; padding:9px 4px; font-size:11px;
+                  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tabs button.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+    .col.tabbed{ display:none; }
+    .col.tabbed.show{ display:block; }
+
+    /* the source list is 1,100 entries: cap it and let it scroll inside itself rather than
+       pushing everything else a screen and a half down */
+    #sources{ max-height:46vh; overflow:auto; -webkit-overflow-scrolling:touch; }
+
+    /* touch targets. 12px text and a 4px-tall button is a desktop assumption. */
+    .src{ padding:9px 8px; font-size:13px; }
+    button{ padding:7px 11px; }
+    .mini{ padding:5px 10px; font-size:13px; }
+    input[type=number],input[type=text]{ padding:6px 7px; font-size:16px; }  /* 16px: iOS zooms below it */
+    input[type=color]{ width:34px; height:30px; }
+    input[type=range]{ width:100%; height:26px; }
+    .bar{ gap:8px; }
+    .f{ font-size:12px; }
+    textarea{ height:180px; font-size:12px; }
+    #filter{ font-size:16px; padding:8px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <b>SPRITE LAB</b>
+  <span id="modebar">
+    <button id="m-derive" class="mode on">derive</button><button id="m-draw" class="mode">draw</button>
+  </span>
+  <span id="tagline">live editor for tools/spritegen.py — every op here is a port of the op there, so what you see is what it writes</span>
+</header>
+
+<div class="wrap">
+
+  <div class="tabs">
+    <button data-tab="src" class="on">source</button>
+    <button data-tab="ops">ops</button>
+    <button data-tab="out">naming &amp; recipe</button>
+  </div>
+
+  <div class="col tabbed show" data-panel="src">
+    <h3>source</h3>
+    <input type="text" id="filter" placeholder="filter…" style="width:100%;margin-bottom:6px">
+    <div id="sources"></div>
+  </div>
+
+  <div class="col mid">
+    <div class="bar">
+      <label>zoom</label><input type="range" id="zoom" min="1" max="8" step="1" value="3">
+      <span id="framewrap" style="display:none">
+        <label>frame</label><input type="range" id="frame" min="0" max="0" step="1" value="0">
+        <button id="play">play</button>
+      </span>
+      <span id="dims" style="color:var(--dim)"></span>
+    </div>
+
+    <div class="stage">
+      <div class="pane"><h4>source</h4><canvas id="cvSrc"></canvas></div>
+      <div class="pane"><h4>result</h4><canvas id="cvOut"></canvas></div>
+    </div>
+
+    <h3 style="margin-top:16px">hue bands (--probe)</h3>
+    <pre id="probe"></pre>
+    <p class="note">Two bands means one hue rotation cannot serve both — that is why the shipped
+      elements are <b>ramp</b> (luminance-driven, so it transfers across archetypes) and why
+      <b>hue</b> takes an <b>only</b> band for bespoke work.</p>
+  </div>
+
+  <div class="col tabbed" data-panel="ops">
+    <h3>presets</h3>
+    <div id="presets"></div>
+
+    <h3 style="margin-top:14px">ops</h3>
+    <div class="bar">
+      <select id="addop" style="background:#120f17;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:3px"></select>
+      <button id="add">add</button>
+      <button id="clear">clear</button>
+    </div>
+    <div id="ops"></div>
+
+  </div>
+
+  <div class="col tabbed" data-panel="out">
+    <h3>naming</h3>
+    <div class="bar"><label style="width:52px">to</label><input type="text" id="to" style="flex:1;width:auto"></div>
+    <div class="bar"><label style="width:52px">variant</label><input type="text" id="v" style="flex:1;width:auto" placeholder="frost"></div>
+    <div class="bar"><label style="width:52px">rename</label><input type="text" id="rename" style="flex:1;width:auto" placeholder="{base}_{v}_{n}{ext}"></div>
+    <pre id="outnames"></pre>
+
+    <h3 style="margin-top:14px">recipe <button id="copy" class="mini" style="float:right">copy recipe</button></h3>
+    <textarea id="recipe" spellcheck="false"></textarea>
+    <p class="note">Paste into <b>tools/sprite_recipes.json</b> under <b>"recipes"</b>, then build it:
+      <br><b>python tools/spritegen.py &lt;name&gt; --sheet</b></p>
+  </div>
+
+</div>
+
+<div id="drawview" style="display:none">
+  <div class="dwrap">
+
+    <div class="dcol dstage">
+      <div class="bar">
+        <label>zoom</label><input type="range" id="dzoom" min="2" max="32" step="1" value="12">
+        <label>nib</label><input type="range" id="dsize" min="1" max="8" step="1" value="1">
+        <span id="dsizel">1</span>
+        <label>alpha</label><input type="range" id="dalpha" min="0" max="255" step="1" value="255">
+        <span id="dalphal">255</span>
+        <span id="dstats" style="color:var(--dim)"></span>
+      </div>
+      <div class="pane" style="display:inline-block">
+        <canvas id="dcanvas" style="touch-action:none;cursor:crosshair"></canvas>
+      </div>
+      <div class="bar">
+        <button id="dundo" class="mini">undo</button>
+        <button id="dredo" class="mini">redo</button>
+        <button id="dclear" class="mini danger">clear</button>
+        <button id="donion" class="mini">trace source</button>
+        <button id="donionoff" class="mini">no trace</button>
+        <input type="text" id="dname" placeholder="sprite name" style="width:130px">
+        <button id="dexport" class="mini">download png</button>
+      </div>
+      <p class="note">Right-drag erases. <b>b</b> pencil &middot; <b>e</b> eraser &middot; <b>g</b> fill &middot;
+        <b>l</b> line &middot; <b>r</b> rect &middot; <b>o</b> ellipse &middot; <b>i</b> pick &middot;
+        ctrl+z / ctrl+shift+z. Right-click a swatch to set it as the dither partner.</p>
+    </div>
+
+    <div class="dcol">
+      <h3>tool</h3>
+      <div id="dtools" class="btnrow"></div>
+
+      <h3 style="margin-top:12px">grid</h3>
+      <div id="dgrids" class="btnrow"></div>
+      <div class="bar"><label>cell</label>
+        <input type="range" id="dblock" min="2" max="32" step="1" value="8"><span id="dblockl">8</span></div>
+
+      <h3 style="margin-top:12px">guide outline</h3>
+      <div class="bar">
+        <select id="dtpl" style="flex:1"></select>
+        <button id="dtplflip" class="mini">flip</button>
+      </div>
+      <div class="bar"><label>fade</label>
+        <input type="range" id="dtplalpha" min="0.1" max="1" step="0.05" value="0.5">
+        <button id="dfit" class="mini" style="display:none">fit</button></div>
+      <div class="bar"><label>turn</label>
+        <input type="range" id="dtplrot" min="-180" max="180" step="5" value="0" style="flex:1">
+        <span id="dtplrotl" style="min-width:34px">0&deg;</span>
+        <button id="dtplrot90" class="mini">+90</button>
+        <button id="dtplrot0" class="mini">0</button></div>
+      <p class="note">A blueprint, not art: proportions only, drawn behind your pixels and never
+        into them. The weapon guides are the seven families the game actually equips.</p>
+
+      <h3 style="margin-top:12px">canvas</h3>
+      <div id="dsizes" class="btnrow"></div>
+
+      <h3 style="margin-top:12px">symmetry &amp; dither</h3>
+      <div class="bar">
+        <select id="dmirror">
+          <option value="none">no mirror</option><option value="h">mirror LR</option>
+          <option value="v">mirror UD</option><option value="both">mirror both</option>
+        </select>
+        <select id="ddither">
+          <option value="off">solid</option><option value="50">dither 50%</option>
+          <option value="25">dither 25%</option><option value="75">dither 75%</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="dcol">
+      <h3>colour</h3>
+      <canvas id="dsv" width="220" height="130" style="width:100%;border-radius:5px;cursor:crosshair"></canvas>
+      <input type="range" id="dhue" min="0" max="360" step="1" value="35" class="huebar">
+      <div class="bar">
+        <span id="dswatch" class="bigsw"></span>
+        <span id="daltsw" class="bigsw" title="dither partner (right-click a swatch)"></span>
+        <input type="text" id="dhex" style="width:92px">
+      </div>
+      <div id="drgb" class="note"></div>
+
+      <h3 style="margin-top:12px">ramp</h3>
+      <div class="bar"><label>steps</label><input type="range" id="rsteps" min="2" max="12" step="1" value="5">
+        <label>hue</label><input type="range" id="rhue" min="0" max="90" step="1" value="28"></div>
+      <div class="bar"><label>sat</label><input type="range" id="rsat" min="-0.5" max="0.6" step="0.02" value="0.18">
+        <label>spread</label><input type="range" id="rspread" min="0.1" max="0.9" step="0.02" value="0.42"></div>
+      <div id="rlabel" class="note"></div>
+      <div id="dramp" class="swatches"></div>
+      <div class="bar"><button id="rmake" class="mini">rebuild ramp</button>
+        <button id="rpal" class="mini">palette from source</button></div>
+      <p class="note">The ramp hue-shifts as it descends &mdash; shadows cool, highlights warm. That one
+        move is what makes a hand-drawn ramp read as <i>lit</i> rather than dimmed, and it is the same
+        idea as spritegen's <b>ramp</b> op.</p>
+
+      <h3 style="margin-top:12px">palette from art</h3>
+      <div id="dpal" class="swatches"></div>
+
+      <h3 style="margin-top:12px">recent</h3>
+      <div id="drecent" class="swatches"></div>
+    </div>
+
+  </div>
+</div>
+
+<script defer src="_spritelab.js"></script>
+<script defer src="_spritedraw.js"></script>
+</body>
+</html>
