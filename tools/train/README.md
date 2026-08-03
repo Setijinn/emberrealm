@@ -23,8 +23,17 @@ possible at 320px. Two options:
 
 ### Cloud — recommended, and it is not close
 
-The dataset is ~18 MB. Upload it, train on a 16 GB T4 (Colab free) or a 24 GB card (RunPod, roughly
-$0.30/hr), and the whole run is under an hour with none of the dependency archaeology below.
+**[▶ Open the notebook in Colab](https://colab.research.google.com/github/Setijinn/emberrealm/blob/main/tools/train/emberrealm_lora.ipynb)**
+
+`emberrealm_lora.ipynb` runs the whole thing on a free T4: clone, build the dataset, train,
+generate, spritify, download. **There is nothing to upload** — the art is in the repo, so the
+notebook clones it and rebuilds the training set itself, which also means it always matches `main`.
+
+Set Runtime → Change runtime type → **T4 GPU** first; cell 1 checks and tells you if you forgot.
+Weapons-only finishes in about 20 minutes, the full corpus in about 30. Free Colab keeps nothing
+after the session ends, so run the last cell to download the LoRA before you close the tab.
+
+RunPod on a 24 GB card is the paid alternative at roughly $0.30/hr — same scripts, no queue.
 
 ### What it costs your card
 
