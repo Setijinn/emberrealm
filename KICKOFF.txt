@@ -529,6 +529,14 @@ recipes turn the twelve mob archetypes into frost/venom/shadow/ember families:
       pink highlights.) `palette from source` pulls the busiest 24 colours out of
       any sprite in assets/ and sorts them by luminance, so you can draw straight
       into the game's own palette.
+      GUIDE OUTLINES: 15 synthetic blueprints drawn BEHIND the pixels -- character
+      front/side (a 4.5-head canon with eye/chin/shoulder/waist/hip/knee/ankle
+      rules, which is the part you actually need at 92px), quadruped, the seven
+      weapon families the game equips, chest/helm/ring, potion and shield. Two line
+      weights on purpose: HARD is the silhouette to trace, SOFT is construction you
+      only measure against. They ROTATE (-180..180, +90 button) and shrink to fit
+      their own rotated bounding box, so a 40x62 helm turned sideways is not
+      silently clipped. Never touches image data, so it cannot reach an export.
       THE GRID IS NOT ALWAYS SQUARE: square, block subdivisions, ISOMETRIC 2:1, HEX,
       and the game's own 44px tile guide. Drawing an isometric thing on a square
       lattice is how you get art that is subtly wrong in a way nobody can point at.

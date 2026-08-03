@@ -122,6 +122,10 @@ const D = {
   dither: 'off',            // off | 50 | 25 | 75
   mirror: 'none',           // none | h | v | both
   onion: null,              // an image shown faintly underneath, for tracing
+  tpl: 'none',              // a synthetic proportion guide, drawn behind the art
+  tplAlpha: 0.5,
+  tplFlip: false,
+  tplRot: 0,                // degrees, about the canvas centre
   ramp: [],
   palette: [],
   recent: [],
@@ -234,6 +238,367 @@ function fill(x, y, col){
     put(cx, cy, ditherPick(cx, cy), D.alpha);
     stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
   }
+}
+
+// ---------------------------------------------------------------------------------------------------
+//  GUIDE OUTLINES -- the blueprint you draw on top of.
+//
+//  Not the onion skin. The onion skin traces a sprite that already exists; these are SYNTHETIC bases:
+//  the proportions of a thing, with no art in them. Pick "sword" and you get a blade axis, a taper,
+//  a ricasso, quillons and a pommel at the right relative lengths, and you draw your sword over it.
+//
+//  TWO LINE WEIGHTS, AND THIS IS THE WHOLE DIFFERENCE BETWEEN A GUIDE AND A MESS. The first version
+//  drew everything in one dashed blue and the result read as noise -- you could not tell the edge you
+//  were meant to trace from the measurement telling you where it goes. So:
+//     HARD  the silhouette. The line your pixels should land on.
+//     SOFT  construction: axes, landmark heights, centre lines, fill levels. Never traced, only
+//           measured against, and dimmer and finer so it stays out of the way.
+//
+//  WHY THE GAME'S OWN TAXONOMY AND NOT GENERIC CLIP ART. The seven weapon families are exactly the
+//  seven in CWEAP (sword, dagger, bow, xbow, staff, wand, gauntlet) and the armour ones are slots
+//  that exist (arm_/helm_ x leather/plate/robe, rings). A guide for a weapon the game cannot equip
+//  would be a nicely drawn dead end.
+//
+//  THE CHARACTER GUIDES ARE A CANON OF PROPORTIONS, not an outline: eye line, chin, shoulder, chest,
+//  waist, hip, wrist, knee, ankle, ground. That is what you actually need when the sprite is 92px
+//  tall and every landmark is two pixels from its neighbour -- an outline of a person tells you
+//  nothing you did not already know, but "the hands end at mid-thigh" does.
+//
+//  EVERY COORDINATE IS NORMALISED 0..1 and multiplied by the canvas at draw time, so one definition
+//  fits a 32px sketch and a 92px hero frame. `fit` is the size that family's real art tends to be,
+//  measured off assets/items and assets/knight rather than guessed -- offered, never imposed.
+//
+//  Drawn BEHIND the pixels, like a light table: your art covers the guide as you lay it down, and it
+//  never touches image data so it cannot end up in an exported PNG.
+// ---------------------------------------------------------------------------------------------------
+
+// Path helpers. `S` selects the weight; every template takes it and uses both.
+function mkStyle(g, zoom){
+  const w = Math.max(1, zoom / 9);
+  return kind => {
+    if(kind === 'hard'){
+      g.strokeStyle = '#8fe3ff'; g.globalAlpha = 1;    g.lineWidth = w * 1.5; g.setLineDash([]);
+    } else {
+      g.strokeStyle = '#6fa8c8'; g.globalAlpha = 0.62; g.lineWidth = w;
+      g.setLineDash([Math.max(2, zoom/3.5), Math.max(2, zoom/3.5)]);
+    }
+  };
+}
+function gp(g, W, H, pts, close){
+  g.beginPath();
+  pts.forEach(([x, y], i) => i ? g.lineTo(x*W, y*H) : g.moveTo(x*W, y*H));
+  if(close) g.closePath();
+  g.stroke();
+}
+function ge(g, W, H, cx, cy, rx, ry){
+  g.beginPath(); g.ellipse(cx*W, cy*H, rx*W, ry*H, 0, 0, 6.2832); g.stroke();
+}
+function gl(g, W, H, x0, y0, x1, y1){
+  g.beginPath(); g.moveTo(x0*W, y0*H); g.lineTo(x1*W, y1*H); g.stroke();
+}
+// a smooth closed outline through points -- quadratic midpoints, which is enough for a blueprint and
+// far kinder to read than a polygon pretending to be a curve
+function gcurve(g, W, H, pts, close){
+  g.beginPath();
+  const P = pts.map(([x,y]) => [x*W, y*H]);
+  g.moveTo(P[0][0], P[0][1]);
+  for(let i = 1; i < P.length - 1; i++){
+    const mx = (P[i][0] + P[i+1][0]) / 2, my = (P[i][1] + P[i+1][1]) / 2;
+    g.quadraticCurveTo(P[i][0], P[i][1], mx, my);
+  }
+  g.quadraticCurveTo(P[P.length-1][0], P[P.length-1][1], P[close?0:P.length-1][0], P[close?0:P.length-1][1]);
+  if(close) g.closePath();
+  g.stroke();
+}
+// the horizontal landmark rules that make a proportion guide worth having
+function rules(g, W, H, S, list){
+  S('soft');
+  list.forEach(y => gl(g, W, H, 0.06, y, 0.94, y));
+}
+
+const TEMPLATES = {
+  none: null,
+
+  // ---- characters ------------------------------------------------------------------------------
+  // A 4.5-head canon at 92px: head 0.20 of the frame, shoulders 2.2 head-widths, hands to mid-thigh.
+  'character front': { fit:[92,92], draw(g,W,H,S){
+    rules(g,W,H,S, [0.155, 0.26, 0.30, 0.385, 0.47, 0.545, 0.72, 0.90]);
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97);
+    S('hard');
+    gcurve(g,W,H, [[0.50,0.055],[0.605,0.10],[0.615,0.20],[0.50,0.265],[0.385,0.20],[0.395,0.10]], true);
+    gp(g,W,H, [[0.455,0.265],[0.455,0.30]]); gp(g,W,H, [[0.545,0.265],[0.545,0.30]]);
+    gcurve(g,W,H, [[0.31,0.315],[0.50,0.295],[0.69,0.315],[0.665,0.47],[0.685,0.55],
+                   [0.50,0.575],[0.315,0.55],[0.335,0.47]], true);
+    gcurve(g,W,H, [[0.31,0.315],[0.245,0.345],[0.225,0.46],[0.245,0.55],[0.255,0.60]]);
+    gcurve(g,W,H, [[0.69,0.315],[0.755,0.345],[0.775,0.46],[0.755,0.55],[0.745,0.60]]);
+    gcurve(g,W,H, [[0.355,0.565],[0.345,0.72],[0.365,0.885],[0.44,0.895]]);
+    gcurve(g,W,H, [[0.645,0.565],[0.655,0.72],[0.635,0.885],[0.56,0.895]]);
+    gp(g,W,H, [[0.33,0.90],[0.47,0.90]]); gp(g,W,H, [[0.53,0.90],[0.67,0.90]]);
+    S('soft');
+    gl(g,W,H, 0.42,0.155, 0.58,0.155);
+    ge(g,W,H, 0.255,0.60, 0.035,0.028); ge(g,W,H, 0.745,0.60, 0.035,0.028);
+  }},
+
+  'character side': { fit:[92,92], draw(g,W,H,S){
+    rules(g,W,H,S, [0.155, 0.26, 0.30, 0.385, 0.47, 0.545, 0.72, 0.90]);
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97);
+    S('hard');
+    gcurve(g,W,H, [[0.505,0.055],[0.61,0.105],[0.60,0.21],[0.50,0.265],[0.415,0.215],[0.415,0.10]], true);
+    gp(g,W,H, [[0.475,0.265],[0.47,0.31]]); gp(g,W,H, [[0.55,0.265],[0.555,0.31]]);
+    gcurve(g,W,H, [[0.44,0.31],[0.585,0.315],[0.60,0.45],[0.575,0.56],[0.44,0.565],[0.425,0.45]], true);
+    gcurve(g,W,H, [[0.50,0.325],[0.455,0.44],[0.475,0.55],[0.49,0.60]]);
+    // legs: a stride, not a compass. The far leg trails and both feet stay under the hips -- splayed
+    // legs were the first version's tell that this was a stick figure and not a proportion guide.
+    gcurve(g,W,H, [[0.475,0.56],[0.435,0.70],[0.445,0.875]]);
+    gcurve(g,W,H, [[0.545,0.56],[0.565,0.70],[0.545,0.875]]);
+    gp(g,W,H, [[0.395,0.90],[0.515,0.90]]); gp(g,W,H, [[0.495,0.90],[0.615,0.90]]);
+    S('soft'); gl(g,W,H, 0.50,0.155, 0.615,0.155);
+  }},
+
+  quadruped: { fit:[64,72], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.06,0.925, 0.94,0.925); gl(g,W,H, 0.10,0.50, 0.90,0.50);
+    S('hard');
+    gcurve(g,W,H, [[0.34,0.40],[0.55,0.365],[0.74,0.40],[0.80,0.52],[0.72,0.655],
+                   [0.50,0.685],[0.32,0.645],[0.265,0.52]], true);                       // barrel
+    // HEAD AND NECK AS SEPARATE PIECES. Two attempts got this wrong in opposite ways: an ellipse
+    // with two thin lines to the body read as a balloon on strings, and one smooth closed curve from
+    // muzzle to shoulder read as a fin. A skull with a flat muzzle, and a neck that is plainly a
+    // wedge between it and the barrel, is legible at 64px in a way neither of those were.
+    gp(g,W,H, [[0.085,0.335],[0.115,0.265],[0.195,0.235],[0.275,0.255],
+               [0.305,0.325],[0.275,0.395],[0.175,0.415],[0.105,0.395]], true);          // skull
+    gp(g,W,H, [[0.275,0.30],[0.395,0.425]]);                                             // neck, top
+    gp(g,W,H, [[0.245,0.405],[0.335,0.515]]);                                            // neck, under
+    S('soft');
+    gl(g,W,H, 0.095,0.355, 0.245,0.345);                                                 // muzzle line
+    gp(g,W,H, [[0.215,0.245],[0.245,0.185],[0.285,0.255]]);                              // ear
+    S('hard');
+    gcurve(g,W,H, [[0.335,0.655],[0.305,0.775],[0.315,0.905]]);
+    gcurve(g,W,H, [[0.435,0.675],[0.415,0.79],[0.425,0.905]]);
+    gcurve(g,W,H, [[0.625,0.675],[0.645,0.79],[0.635,0.905]]);
+    gcurve(g,W,H, [[0.715,0.655],[0.745,0.775],[0.735,0.905]]);
+    gcurve(g,W,H, [[0.795,0.455],[0.885,0.385],[0.945,0.475]]);
+  }},
+
+  // ---- weapons ---------------------------------------------------------------------------------
+  sword: { fit:[64,64], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.02, 0.5,0.98); gl(g,W,H, 0.10,0.60, 0.90,0.60);
+    S('hard');
+    gp(g,W,H, [[0.50,0.035],[0.585,0.135],[0.575,0.545],[0.555,0.585],
+               [0.445,0.585],[0.425,0.545],[0.415,0.135]], true);
+    S('soft'); gl(g,W,H, 0.50,0.075, 0.50,0.545);
+    S('hard');
+    gp(g,W,H, [[0.455,0.585],[0.545,0.585],[0.545,0.625],[0.455,0.625]], true);
+    // A CROSSGUARD IS A BAR, NOT AN OVAL. Drawn as a straight tapered polyline: the smooth curve the
+    // first pass used rounded the quillons into an ellipse that swallowed the grip behind it.
+    gp(g,W,H, [[0.155,0.648],[0.315,0.618],[0.685,0.618],[0.845,0.648],
+               [0.685,0.678],[0.315,0.678]], true);
+    gp(g,W,H, [[0.455,0.678],[0.545,0.678],[0.535,0.865],[0.465,0.865]], true);
+    S('soft'); for(const y of [0.725,0.765,0.805]) gl(g,W,H, 0.468,y, 0.532,y);
+    S('hard'); gcurve(g,W,H, [[0.50,0.865],[0.578,0.905],[0.50,0.958],[0.422,0.905]], true);
+  }},
+
+  dagger: { fit:[64,64], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.02, 0.5,0.98); gl(g,W,H, 0.12,0.505, 0.88,0.505);
+    S('hard');
+    gp(g,W,H, [[0.50,0.055],[0.60,0.19],[0.575,0.455],[0.545,0.495],
+               [0.455,0.495],[0.425,0.455],[0.40,0.19]], true);
+    S('soft'); gl(g,W,H, 0.50,0.10, 0.50,0.455);
+    S('hard');
+    gp(g,W,H, [[0.255,0.535],[0.395,0.508],[0.605,0.508],[0.745,0.535],
+               [0.605,0.562],[0.395,0.562]], true);                                      // guard bar
+    gp(g,W,H, [[0.462,0.562],[0.538,0.562],[0.532,0.845],[0.468,0.845]], true);
+    S('soft'); for(const y of [0.635,0.695,0.755]) gl(g,W,H, 0.470,y, 0.530,y);
+    S('hard'); gcurve(g,W,H, [[0.50,0.845],[0.575,0.885],[0.50,0.935],[0.425,0.885]], true);
+  }},
+
+  bow: { fit:[64,64], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.10,0.50, 0.94,0.50); gl(g,W,H, 0.70,0.05, 0.70,0.95);
+    S('hard');
+    // ONE CLOSED LIMB, so the belly and back meet at the tips. Two open arcs left the bow visibly
+    // unfinished at both ends -- the exact place a bow's silhouette is most recognisable.
+    g.beginPath();
+    g.moveTo(0.745*W, 0.055*H);
+    g.bezierCurveTo(0.60*W,0.145*H, 0.295*W,0.30*H, 0.29*W,0.50*H);
+    g.bezierCurveTo(0.295*W,0.70*H, 0.60*W,0.855*H, 0.745*W,0.945*H);
+    g.lineTo(0.705*W, 0.925*H);
+    g.bezierCurveTo(0.60*W,0.815*H, 0.365*W,0.675*H, 0.36*W,0.50*H);
+    g.bezierCurveTo(0.365*W,0.325*H, 0.60*W,0.185*H, 0.705*W,0.075*H);
+    g.closePath(); g.stroke();
+    gp(g,W,H, [[0.29,0.415],[0.375,0.415],[0.375,0.585],[0.29,0.585]], true);            // riser grip
+    S('soft'); gl(g,W,H, 0.725,0.065, 0.725,0.935);                                      // string
+    gl(g,W,H, 0.375,0.50, 0.725,0.50);                                                   // arrow line
+  }},
+
+  xbow: { fit:[64,64], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97); gl(g,W,H, 0.06,0.28, 0.94,0.28);
+    S('hard');
+    g.beginPath();                                                                       // lath, closed
+    g.moveTo(0.115*W,0.335*H);
+    g.quadraticCurveTo(0.50*W,0.185*H, 0.885*W,0.335*H);
+    g.lineTo(0.865*W,0.278*H);
+    g.quadraticCurveTo(0.50*W,0.142*H, 0.135*W,0.278*H);
+    g.closePath(); g.stroke();
+    S('soft'); gp(g,W,H, [[0.125,0.307],[0.50,0.445],[0.875,0.307]]);
+    S('hard');
+    gp(g,W,H, [[0.445,0.245],[0.555,0.245],[0.555,0.66],[0.60,0.735],[0.545,0.905],
+               [0.415,0.905],[0.445,0.70]], true);
+    S('soft'); gl(g,W,H, 0.50,0.245, 0.50,0.66);
+    S('hard');
+    gp(g,W,H, [[0.455,0.60],[0.545,0.60]]);
+    gcurve(g,W,H, [[0.50,0.66],[0.435,0.71],[0.455,0.78]]);
+    // stirrup: attached to the nose of the stock, not hovering above it
+    gcurve(g,W,H, [[0.455,0.245],[0.44,0.185],[0.50,0.155],[0.56,0.185],[0.545,0.245]]);
+  }},
+
+  staff: { fit:[64,64], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.02, 0.5,0.98); gl(g,W,H, 0.12,0.20, 0.88,0.20);
+    S('hard');
+    gcurve(g,W,H, [[0.50,0.045],[0.655,0.115],[0.50,0.205],[0.345,0.115]], true);
+    gp(g,W,H, [[0.415,0.195],[0.585,0.195],[0.565,0.255],[0.435,0.255]], true);
+    gp(g,W,H, [[0.455,0.255],[0.545,0.255],[0.535,0.935],[0.465,0.935]], true);
+    S('soft'); for(const y of [0.40,0.44,0.48]) gl(g,W,H, 0.465,y, 0.535,y);
+    S('hard'); gp(g,W,H, [[0.45,0.935],[0.55,0.935],[0.535,0.975],[0.465,0.975]], true);
+  }},
+
+  wand: { fit:[64,64], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.02, 0.5,0.98); gl(g,W,H, 0.14,0.29, 0.86,0.29);
+    S('hard');
+    gcurve(g,W,H, [[0.50,0.075],[0.615,0.155],[0.575,0.275],[0.425,0.275],[0.385,0.155]], true);
+    gp(g,W,H, [[0.44,0.275],[0.56,0.275],[0.55,0.325],[0.45,0.325]], true);
+    gp(g,W,H, [[0.465,0.325],[0.535,0.325],[0.565,0.90],[0.435,0.90]], true);
+    S('soft'); for(const y of [0.70,0.76,0.82]) gl(g,W,H, 0.45,y, 0.55,y);
+    S('hard'); gp(g,W,H, [[0.435,0.90],[0.565,0.90],[0.545,0.95],[0.455,0.95]], true);
+  }},
+
+  gauntlet: { fit:[62,62], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.05, 0.5,0.95); gl(g,W,H, 0.10,0.46, 0.90,0.46);
+    S('hard');
+    // ONE SILHOUETTE, fist into cuff. The first pass drew two rounded boxes with a gap between them
+    // and it read as a bread roll on a cup rather than a hand in armour.
+    gcurve(g,W,H, [[0.30,0.255],[0.50,0.225],[0.70,0.255],[0.745,0.375],[0.735,0.50],
+                   [0.775,0.615],[0.79,0.775],[0.735,0.885],[0.50,0.915],
+                   [0.265,0.885],[0.21,0.775],[0.225,0.615],[0.265,0.50],[0.255,0.375]], true);
+    S('soft');
+    for(const x of [0.395,0.50,0.605]) gl(g,W,H, x,0.245, x,0.44);
+    gl(g,W,H, 0.29,0.545, 0.71,0.545);                                                   // wrist line
+    S('hard');
+    for(const x of [0.345,0.45,0.555,0.66])
+      gp(g,W,H, [[x-0.038,0.315],[x+0.038,0.315],[x+0.033,0.375],[x-0.033,0.375]], true);
+    gcurve(g,W,H, [[0.262,0.44],[0.185,0.50],[0.232,0.575]]);                            // thumb
+    gcurve(g,W,H, [[0.225,0.665],[0.50,0.705],[0.775,0.665]]);                           // cuff rim
+  }},
+
+  // ---- armour ----------------------------------------------------------------------------------
+  'chest armour': { fit:[58,52], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97); gl(g,W,H, 0.06,0.30, 0.94,0.30);
+    gl(g,W,H, 0.06,0.635, 0.94,0.635);
+    S('hard');
+    gcurve(g,W,H, [[0.315,0.215],[0.50,0.185],[0.685,0.215],[0.735,0.36],[0.705,0.60],
+                   [0.685,0.80],[0.50,0.845],[0.315,0.80],[0.295,0.60],[0.265,0.36]], true);
+    // pauldrons that sit ON the shoulder line rather than beside the neck like ears
+    gcurve(g,W,H, [[0.315,0.225],[0.185,0.245],[0.115,0.36],[0.175,0.475],[0.295,0.46]], true);
+    gcurve(g,W,H, [[0.685,0.225],[0.815,0.245],[0.885,0.36],[0.825,0.475],[0.705,0.46]], true);
+    gcurve(g,W,H, [[0.395,0.195],[0.50,0.325],[0.605,0.195]]);
+    S('soft');
+    gl(g,W,H, 0.30,0.635, 0.70,0.635);
+    gl(g,W,H, 0.335,0.44, 0.665,0.44);
+    gp(g,W,H, [[0.50,0.325],[0.50,0.80]]);
+  }},
+
+  helm: { fit:[40,62], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97); gl(g,W,H, 0.06,0.46, 0.94,0.46);
+    S('hard');
+    // A SKULL, NOT AN EGG: narrower crown, a jaw that comes forward, cheeks that step in. The first
+    // pass was one ellipse with a cross drawn on it, which is a helmet only if you already know.
+    gcurve(g,W,H, [[0.185,0.46],[0.225,0.155],[0.50,0.06],[0.775,0.155],[0.815,0.46],
+                   [0.80,0.66],[0.70,0.80],[0.50,0.845],[0.30,0.80],[0.20,0.66]], true);
+    gp(g,W,H, [[0.185,0.44],[0.815,0.44],[0.815,0.50],[0.185,0.50]], true);              // brow band
+    S('soft'); gl(g,W,H, 0.50,0.075, 0.50,0.44);                                         // crest
+    S('hard');
+    gp(g,W,H, [[0.29,0.545],[0.435,0.545],[0.435,0.60],[0.29,0.60]], true);              // eye slits
+    gp(g,W,H, [[0.565,0.545],[0.71,0.545],[0.71,0.60],[0.565,0.60]], true);
+    gp(g,W,H, [[0.475,0.50],[0.525,0.50],[0.525,0.72],[0.475,0.72]], true);              // nasal
+    gcurve(g,W,H, [[0.235,0.62],[0.30,0.78],[0.44,0.835]]);                              // cheek L
+    gcurve(g,W,H, [[0.765,0.62],[0.70,0.78],[0.56,0.835]]);                              // cheek R
+    S('soft'); gcurve(g,W,H, [[0.26,0.70],[0.50,0.755],[0.74,0.70]]);                    // breath line
+  }},
+
+  ring: { fit:[40,50], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97); gl(g,W,H, 0.08,0.705, 0.92,0.705);
+    S('hard');
+    ge(g,W,H, 0.50,0.705, 0.295,0.245);                                                  // hoop outer
+    ge(g,W,H, 0.50,0.705, 0.180,0.150);                                                  // hoop inner
+    // A CUT STONE IN A SETTING, drawn with straight facets. Two smooth curves meeting at a point put
+    // a leaf beside the hoop rather than a gem on it -- a gem reads as a gem because of its FLAT
+    // table and its facet lines, and neither of those survives being drawn as a curve.
+    gp(g,W,H, [[0.395,0.465],[0.605,0.465],[0.565,0.545],[0.435,0.545]], true);          // collet
+    gp(g,W,H, [[0.375,0.295],[0.625,0.295],[0.605,0.465],[0.395,0.465]], true);          // crown
+    gp(g,W,H, [[0.415,0.185],[0.585,0.185],[0.625,0.295],[0.375,0.295]], true);          // table
+    S('soft');
+    gp(g,W,H, [[0.415,0.185],[0.375,0.295]]); gp(g,W,H, [[0.585,0.185],[0.625,0.295]]);
+    gp(g,W,H, [[0.50,0.185],[0.50,0.465]]);
+    gp(g,W,H, [[0.455,0.295],[0.455,0.465]]); gp(g,W,H, [[0.545,0.295],[0.545,0.465]]);
+  }},
+
+  potion: { fit:[40,50], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.02, 0.5,0.98); gl(g,W,H, 0.10,0.655, 0.90,0.655);
+    S('hard');
+    gp(g,W,H, [[0.365,0.055],[0.635,0.055],[0.635,0.135],[0.365,0.135]], true);
+    gp(g,W,H, [[0.405,0.135],[0.595,0.135],[0.595,0.315],[0.405,0.315]], true);
+    gp(g,W,H, [[0.375,0.305],[0.625,0.305]]);
+    g.beginPath();
+    g.moveTo(0.405*W,0.315*H);
+    g.bezierCurveTo(0.105*W,0.45*H, 0.115*W,0.925*H, 0.50*W,0.935*H);
+    g.bezierCurveTo(0.885*W,0.925*H, 0.895*W,0.45*H, 0.595*W,0.315*H);
+    g.stroke();
+    S('soft');
+    gcurve(g,W,H, [[0.145,0.655],[0.50,0.685],[0.855,0.655]]);
+    ge(g,W,H, 0.315,0.545, 0.055,0.045);
+  }},
+
+  shield: { fit:[52,58], draw(g,W,H,S){
+    S('soft'); gl(g,W,H, 0.5,0.03, 0.5,0.97); gl(g,W,H, 0.06,0.30, 0.94,0.30);
+    S('hard');
+    g.beginPath();
+    g.moveTo(0.135*W,0.115*H);
+    g.quadraticCurveTo(0.50*W,0.065*H, 0.865*W,0.115*H);
+    g.bezierCurveTo(0.865*W,0.58*H, 0.70*W,0.865*H, 0.50*W,0.955*H);
+    g.bezierCurveTo(0.30*W,0.865*H, 0.135*W,0.58*H, 0.135*W,0.115*H);
+    g.closePath(); g.stroke();
+    gcurve(g,W,H, [[0.155,0.28],[0.50,0.325],[0.845,0.28]]);
+    ge(g,W,H, 0.50,0.50, 0.115,0.10);
+    S('soft');
+    ge(g,W,H, 0.50,0.50, 0.055,0.048);
+    gp(g,W,H, [[0.50,0.075],[0.50,0.955]]);
+    gcurve(g,W,H, [[0.19,0.20],[0.50,0.145],[0.81,0.20]]);
+  }},
+};
+
+function drawTemplate(g, W, H){
+  const t = TEMPLATES[D.tpl];
+  if(!t) return;
+  g.save();
+  g.translate(W/2, H/2);
+
+  // ROTATION SHRINKS TO FIT. A 40x62 helm turned on its side is 62 wide, and on a 40-wide canvas the
+  // ends would simply be gone -- silently, which is the worst way for a guide to be wrong. So the
+  // guide is scaled by however much its own rotated bounding box overruns the canvas, which is 1 at
+  // 0 and 180 degrees and only bites in between. Square canvases at right angles are unaffected.
+  const a = D.tplRot * Math.PI / 180;
+  const ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a));
+  const fit = Math.min(W / (W*ca + H*sa), H / (W*sa + H*ca));
+  g.rotate(a);
+  g.scale(fit, fit);
+  if(D.tplFlip) g.scale(-1, 1);
+  g.translate(-W/2, -H/2);
+
+  const S = mkStyle(g, D.zoom);
+  const base = D.tplAlpha;
+  // Each template picks its own weight per stroke; tplAlpha scales the lot, so `fade` still does what
+  // it says without flattening the hard/soft distinction that makes the guide readable.
+  const wrapped = kind => { S(kind); g.globalAlpha *= base; };
+  t.draw(g, W, H, wrapped);
+  g.restore();
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -350,6 +715,8 @@ function paint(){
     ctx.drawImage(tmp, 0, 0, W, H);
     ctx.globalAlpha = 1;
   }
+
+  drawTemplate(ctx, W, H);          // behind the pixels, like a light table
 
   tmp.width = D.w; tmp.height = D.h;
   tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(D.px), D.w, D.h), 0, 0);
@@ -544,6 +911,36 @@ function boot(){
     onclick:() => { D.grid = g; [...gw.children].forEach(b => b.classList.toggle('on', b.dataset.grid===g)); paint(); }
   }, [GRIDS[g]])));
 
+  // guides
+  const gt = $('#dtpl');
+  Object.keys(TEMPLATES).forEach(k => gt.appendChild(el('option', {value:k}, [k])));
+  gt.addEventListener('change', () => {
+    D.tpl = gt.value;
+    const t = TEMPLATES[D.tpl];
+    // Offer the size that family's real art tends to be. Offered, never imposed -- resizing throws
+    // the drawing away, so it cannot happen as a side effect of picking a guide.
+    $('#dfit').textContent = t ? `fit ${t.fit[0]}x${t.fit[1]}` : 'fit';
+    $('#dfit').style.display = t ? '' : 'none';
+    paint();
+  });
+  $('#dfit').addEventListener('click', () => {
+    const t = TEMPLATES[D.tpl]; if(!t) return;
+    if(confirm(`Resize to ${t.fit[0]}x${t.fit[1]}? This clears the drawing.`)){
+      blank(t.fit[0], t.fit[1]); paint();
+    }
+  });
+  $('#dtplalpha').addEventListener('input', e => { D.tplAlpha = +e.target.value; paint(); });
+  const showRot = () => { $('#dtplrotl').textContent = D.tplRot + '\u00b0'; $('#dtplrot').value = D.tplRot; };
+  $('#dtplrot').addEventListener('input', e => { D.tplRot = +e.target.value; showRot(); paint(); });
+  // Quarter turns are the ones you actually want -- a weapon guide laid flat for an item icon, or a
+  // 45 for a sprite held on the diagonal. Cycling by button beats hunting for exactly 90 on a slider.
+  $('#dtplrot90').addEventListener('click', () => {
+    D.tplRot = ((D.tplRot + 90 + 180) % 360) - 180; showRot(); paint(); });
+  $('#dtplrot0').addEventListener('click', () => { D.tplRot = 0; showRot(); paint(); });
+  showRot();
+  $('#dtplflip').addEventListener('click', () => { D.tplFlip = !D.tplFlip;
+    $('#dtplflip').classList.toggle('on', D.tplFlip); paint(); });
+
   // canvas size
   const sizes = [[16,16],[24,24],[32,32],[48,48],[64,64],[64,72],[92,92],[44,44]];
   const sw = $('#dsizes');
@@ -624,7 +1021,7 @@ function boot(){
   paint();
 }
 
-window.spritedraw = { D, boot, paint, buildRamp, paletteFrom, hsv2rgb, rgb2hsv,
+window.spritedraw = { D, boot, paint, buildRamp, paletteFrom, hsv2rgb, rgb2hsv, TEMPLATES,
                       blank, exportPNG,
                       // handed to the derive side so ops can be previewed on a drawing
                       current: () => ({ w: D.w, h: D.h, d: new Uint8ClampedArray(D.px) }) };

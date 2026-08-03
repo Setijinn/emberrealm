@@ -261,6 +261,22 @@
       <div class="bar"><label>cell</label>
         <input type="range" id="dblock" min="2" max="32" step="1" value="8"><span id="dblockl">8</span></div>
 
+      <h3 style="margin-top:12px">guide outline</h3>
+      <div class="bar">
+        <select id="dtpl" style="flex:1"></select>
+        <button id="dtplflip" class="mini">flip</button>
+      </div>
+      <div class="bar"><label>fade</label>
+        <input type="range" id="dtplalpha" min="0.1" max="1" step="0.05" value="0.5">
+        <button id="dfit" class="mini" style="display:none">fit</button></div>
+      <div class="bar"><label>turn</label>
+        <input type="range" id="dtplrot" min="-180" max="180" step="5" value="0" style="flex:1">
+        <span id="dtplrotl" style="min-width:34px">0&deg;</span>
+        <button id="dtplrot90" class="mini">+90</button>
+        <button id="dtplrot0" class="mini">0</button></div>
+      <p class="note">A blueprint, not art: proportions only, drawn behind your pixels and never
+        into them. The weapon guides are the seven families the game actually equips.</p>
+
       <h3 style="margin-top:12px">canvas</h3>
       <div id="dsizes" class="btnrow"></div>
 
