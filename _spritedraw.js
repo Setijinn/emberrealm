@@ -1039,6 +1039,8 @@ function setColor(rgb, quiet){
   }
   $('#dhex').value = hex(rgb);
   $('#dswatch').style.background = hex(rgb);
+  const bar = $('#dbarsw');
+  if(bar) bar.style.background = hex(rgb);
   $('#drgb').textContent = `rgb ${rgb[0]} ${rgb[1]} ${rgb[2]}   hsv ${Math.round(h)} ${Math.round(s*100)} ${Math.round(v*100)}`;
   if(!D.recent.some(c => c[0]===rgb[0] && c[1]===rgb[1] && c[2]===rgb[2])){
     D.recent.unshift(rgb.slice()); D.recent = D.recent.slice(0, 16);
@@ -1249,6 +1251,36 @@ async function loadFrameForEdit(){
   updateFrameUI();
 }
 
+// ---------------------------------------------------------------------------------------------------
+//  SHADING IN ONE TAP.
+//
+//  Shadows are the commonest thing you do and they were the most awkward: pick the base, open the
+//  ramp, read off a darker swatch, go back. So darker/lighter step the CURRENT colour by exactly one
+//  ramp step -- the same maths buildRamp uses across its whole range, divided by the number of steps.
+//
+//  It hue-shifts, which is the entire point. Dropping value alone gives you the same colour with the
+//  lights off; a shadow that reads as a shadow rotates toward the cool end as it darkens and toward
+//  the warm end as it lights, which is what the ramp sliders already describe. So these buttons obey
+//  those sliders: widen `spread` and each tap is a bigger jump, raise `hue` and each tap turns
+//  further. One control, one meaning, wherever you use it.
+//
+//  Works from ANY colour, not just one already on the ramp -- including one grabbed off the sprite,
+//  which is the usual way you get here.
+// ---------------------------------------------------------------------------------------------------
+function shadeStep(dir){
+  const steps  = Math.max(2, +($('#rsteps').value || 5));
+  const hueSh  = +($('#rhue').value    || 28);
+  const satC   = +($('#rsat').value    || 0.18);
+  const spread = +($('#rspread').value || 0.42);
+  const d = (2 / (steps - 1)) * dir;              // one step of buildRamp's -1..1 sweep
+
+  const [h, sat, v] = rgb2hsv(D.color[0], D.color[1], D.color[2]);
+  const nv = clamp(v + spread * d, 0.04, 1);
+  const ns = clamp(sat - satC * d, 0, 1);
+  const nh = h + hueSh * d;
+  setColor(hsv2rgb(nh, ns, nv));
+}
+
 function exportPNG(){
   const c = document.createElement('canvas');
   c.width = D.w; c.height = D.h;
@@ -1389,6 +1421,11 @@ function boot(){
   $('#dtplsnap').classList.toggle('on', D.tplSnap);
 
   $('#dgrab').addEventListener('click', grabFromCanvas);
+  // two pairs on purpose: one in the always-visible bar, one beside the picker where you land after
+  // choosing a colour. Separate nodes wired to the same function -- never moved DOM, which would take
+  // them off whichever layout is not currently showing.
+  ['dshadedn','dshadedn2'].forEach(id => { const n=$('#'+id); if(n) n.addEventListener('click', () => shadeStep(-1)); });
+  ['dshadeup','dshadeup2'].forEach(id => { const n=$('#'+id); if(n) n.addEventListener('click', () => shadeStep(+1)); });
   $('#dundo').addEventListener('click', undo);
   $('#dredo').addEventListener('click', redo);
   $('#dclear').addEventListener('click', () => { snapshot(); D.px.fill(0); paint(); });
@@ -1437,6 +1474,8 @@ function boot(){
     if(e.key === '+' || e.key === '='){ zoomTo(D.zoom * 1.5); paint(); }
     if(e.key === '-' || e.key === '_'){ zoomTo(D.zoom / 1.5); paint(); }
     if(e.key === '0'){ fitView(); paint(); }
+    if(e.key === '[') shadeStep(-1);
+    if(e.key === ']') shadeStep(+1);
     if((e.ctrlKey||e.metaKey) && e.key === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); }
     const k = {b:'pencil', e:'eraser', g:'fill', l:'line', r:'rect', o:'ellipse', i:'picker', h:'pan'}[e.key];
     if(k){ D.tool = k; [...$('#dtools').children].forEach(b => b.classList.toggle('on', b.dataset.tool===k)); }
@@ -1450,7 +1489,7 @@ function boot(){
   paint();
 }
 
-window.spritedraw = { D, boot, paint, sizeCanvas, pixelScale, autoGrid, buildRamp, paletteFrom, grabFromCanvas, hsv2rgb, rgb2hsv, TEMPLATES,
+window.spritedraw = { D, boot, paint, sizeCanvas, pixelScale, autoGrid, shadeStep, buildRamp, paletteFrom, grabFromCanvas, hsv2rgb, rgb2hsv, TEMPLATES,
                       groupFrames, parseFrame, loadSourceSet, loadFrameForEdit,
                       fitView, zoomAt, zoomTo,
                       blank, exportPNG,
