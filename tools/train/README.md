@@ -69,12 +69,25 @@ pip install xformers==0.0.23.post1 bitsandbytes-windows
 It reads the repeat count out of the directory name, so the images have to sit one level down:
 
 ```bat
-mkdir _dataset_train\10_emberrealm
-xcopy /s _dataset\*.* _dataset_train\10_emberrealm\
+mkdir _dataset_train\1_emberrealm
+xcopy /s _dataset\*.* _dataset_train\1_emberrealm\
 ```
 
-`10_` means each image is seen ten times per epoch. With ~2,900 images that is a lot — **start with
-weapons only**:
+That `1_` is the repeat count, and it matters far more than it looks:
+
+**steps = images x repeats x epochs**, and this card does roughly **1.6 s per step** at 320px.
+
+| run | folder | epochs | steps | on your 1650 | on a free Colab T4 |
+|---|---|---|---|---|---|
+| full corpus (2,934) | `1_emberrealm` | 2 | 5,868 | **~2.6 h** | ~30 min |
+| weapons only (84) | `20_emberrealm` | 2 | 3,360 | **~1.5 h** | ~20 min |
+| *10 repeats x 12 epochs* | *--* | *--* | *352,080* | *6.5 days* | *27 h* |
+
+That last row is what this file said before I multiplied it out. A style LoRA wants **2,000-6,000
+steps**; past that it stops learning the look and starts memorising, and hands back sprites you
+already own.
+
+**Start with weapons only:**
 
 ```bat
 py tools\dataset.py --only weapons
