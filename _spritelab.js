@@ -648,6 +648,49 @@ async function boot(){
     }
   });
 
+  const addSel = $('#addop');
+  Object.keys(OPS).forEach(k=>addSel.appendChild(el('option',{value:k},[k])));
+  $('#add').addEventListener('click', ()=>{
+    const op = addSel.value, spec={op};
+    (SCHEMA[op]||[]).forEach(([k,kind,def])=>{ if(def!=null && kind!=='band') spec[k]=def; });
+    state.ops.push(spec); refresh();
+  });
+  Object.keys(PRESETS).forEach(k=>{
+    $('#presets').appendChild(el('button',{class:'preset', onclick:()=>{
+      state.ops = JSON.parse(JSON.stringify(PRESETS[k]));
+      if(!state.name.v){ state.name.v=k; $('#v').value=k; }
+      refresh();
+    }},[k]));
+  });
+  $('#clear').addEventListener('click', ()=>{ state.ops=[]; refresh(); });
+  $('#zoom').addEventListener('input', e=>{ state.zoom=+e.target.value; render(); });
+  $('#frame').addEventListener('input', e=>{ state.frame=+e.target.value; render(); });
+  $('#play').addEventListener('click', ()=>{
+    state.playing=!state.playing;
+    $('#play').textContent = state.playing?'stop':'play';
+    if(state.playing) tick();
+  });
+  $('#to').addEventListener('input', e=>{ state.name.to=e.target.value; render(); });
+  $('#v').addEventListener('input', e=>{ state.name.v=e.target.value; render(); });
+  $('#rename').addEventListener('input', e=>{ state.name.rename=e.target.value; render(); });
+  $('#copy').addEventListener('click', async ()=>{
+    const ta = $('#recipe');
+    let ok = false;
+    try {
+      // Must be the first await in the handler or Safari has already lost the user gesture.
+      await navigator.clipboard.writeText(ta.value);
+      ok = true;
+    } catch(e){
+      // iOS refuses the async clipboard in plenty of ordinary situations. Selecting the text is
+      // not a consolation prize on a phone -- it is the normal way you copy there, and it always
+      // works. setSelectionRange, because ta.select() alone does nothing on iOS.
+      ta.focus(); ta.setSelectionRange(0, ta.value.length);
+      try { ok = document.execCommand('copy'); } catch(e2){}
+    }
+    $('#copy').textContent = ok ? 'copied' : 'selected — hold to copy';
+    setTimeout(()=>$('#copy').textContent='copy recipe', 1400);
+  });
+
   // PHONE TABS. The buttons exist in the DOM always and the stylesheet hides the bar above 900px,
   // so there is one layout to reason about and no resize listener deciding which one you are in.
   // Picking a source jumps to `ops`, because on a phone that is unmistakably what you wanted next
