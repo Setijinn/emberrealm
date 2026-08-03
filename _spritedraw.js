@@ -850,10 +850,19 @@ function paint(){
   ctx.translate(ox, oy);
 
   if(D.onion){
+    // ONE TRACED PIXEL IS ONE CANVAS PIXEL. This used to draw the trace stretched to the canvas
+    // (0, 0, W, H), so tracing a 92x92 sprite onto a 32x32 canvas squashed each of its pixels to
+    // 0.35 of a cell -- its edges landed at fractional positions and NOTHING could line up with the
+    // grid. That is the whole of "the cells do not match the pixels on different sprites": the
+    // sprites have different resolutions, and the trace was being resampled to hide it.
+    // Drawn at art-pixel scale and centred, so it aligns by construction; too big for the canvas and
+    // it is clipped, which is honest and visible rather than silently wrong.
     ctx.globalAlpha = 0.28;
     tmp.width = D.onion.w; tmp.height = D.onion.h;
     tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(D.onion.d), D.onion.w, D.onion.h), 0, 0);
-    ctx.drawImage(tmp, 0, 0, W, H);
+    const oxo = Math.round((D.w - D.onion.w) / 2) * z;
+    const oyo = Math.round((D.h - D.onion.h) / 2) * z;
+    ctx.drawImage(tmp, oxo, oyo, D.onion.w * z, D.onion.h * z);
     ctx.globalAlpha = 1;
   }
 
@@ -871,7 +880,9 @@ function paint(){
   ctx.strokeRect(ox + 0.5, oy + 0.5, W - 1, H - 1);        // canvas edge, so you can see the bounds
 
   const st = $('#dstats');
-  if(st) st.textContent = `${D.w}x${D.h}  ${z % 1 ? z.toFixed(1) : z}x  ${GRIDS[D.grid]}`;
+  const mismatch = D.onion && (D.onion.w !== D.w || D.onion.h !== D.h)
+    ? `  trace ${D.onion.w}x${D.onion.h} != canvas` : '';
+  if(st) st.textContent = `${D.w}x${D.h}  ${z % 1 ? z.toFixed(1) : z}x  ${GRIDS[D.grid]}${mismatch}`;
   const zs = $('#dzoom');
   if(zs && +zs.value !== Math.round(z)) zs.value = Math.round(clamp(z, 1, 32));
 }
@@ -1461,6 +1472,21 @@ function boot(){
     if(!st || !st.source){ alert('Pick a source on the derive tab first.'); return; }
     const dir = st.index.dirs.find(d => d.path === st.source);
     D.onion = await L.loadImage(dir ? st.source + '/' + st.frames[0] : st.source);
+    // If there is nothing drawn yet, take the traced sprite's SIZE and GRID: you are about to draw
+    // at its resolution, and every sprite in this project is a different one -- 32, 40x50, 62x63,
+    // 64x72, 92. Keeping a default 32x32 canvas under a 92x92 trace is how the cells stop matching.
+    // With work on the canvas the size is left alone and the mismatch is reported instead.
+    const drawn = D.px.some((v, i) => (i & 3) === 3 && v > 0);
+    if(!drawn && (D.onion.w !== D.w || D.onion.h !== D.h)){
+      blank(D.onion.w, D.onion.h);
+      const ag = autoGrid(D.onion);
+      D.artScale = ag.scale; D.block = ag.cell;
+      $('#dblock').value = Math.min(32, ag.cell); $('#dblockl').textContent = ag.cell;
+      D.grid = 'pixel';
+      [...document.querySelectorAll('#dgrids .tool')]
+        .forEach(b => b.classList.toggle('on', b.dataset.grid === 'pixel'));
+      fitView();
+    }
     paint();
   });
   $('#donionoff').addEventListener('click', () => { D.onion = null; paint(); });
