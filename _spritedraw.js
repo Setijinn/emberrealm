@@ -113,6 +113,7 @@ const D = {
   px: null,                 // Uint8ClampedArray, w*h*4
   zoom: 12,
   panX: 0, panY: 0,
+  zoomRaw: 12,              // continuous, for smooth pinching; D.zoom is this snapped
   artScale: 1,              // the source's true pixel size: 2 means the art is 2x2 blocks
   _fitted: false,           // the first paint with a real canvas size does the initial fit        // where the art's top-left sits in the viewport, in display px
   tool: 'pencil',
@@ -773,22 +774,42 @@ function viewSize(){
 function fitView(){
   const [vw, vh] = viewSize();
   const z = Math.max(1, Math.floor(Math.min(vw / D.w, vh / D.h)));
-  D.zoom = Math.min(64, z);
+  D.zoom = D.zoomRaw = Math.min(64, z);
   D.panX = Math.round((vw - D.w * D.zoom) / 2);
   D.panY = Math.round((vh - D.h * D.zoom) / 2);
+}
+
+// ZOOM IS AN INTEGER AT OR ABOVE 1:1, AND THIS IS WHY THE GRID DRIFTED.
+// At a fractional scale the canvas cannot give every art pixel the same width: measured at zoom 11.3
+// on a striped test image, on-screen pixels came out 10, 11 AND 12 device pixels wide, while the grid
+// stepped a uniform 11.3 -- so the lines slid off the pixel edges further along each row. At integer
+// zoom every pixel is exactly z wide and the grid lands on the boundaries by construction.
+// Below 1:1 the pixel lattice is not drawn anyway (it would be denser than the pixels), so fractions
+// are allowed there.
+function snapZoom(z){
+  z = clamp(z, 0.25, 64);
+  return z >= 1 ? Math.round(z) : z;
+}
+
+// The RAW zoom stays continuous so a pinch accumulates smoothly; only what we render is snapped.
+// Snapping the value itself would make small gesture deltas round away to nothing and the pinch
+// would feel stuck.
+function applyZoom(raw, sx, sy){
+  const ax = (sx - D.panX) / D.zoom, ay = (sy - D.panY) / D.zoom;
+  D.zoomRaw = clamp(raw, 0.25, 64);
+  D.zoom = snapZoom(D.zoomRaw);
+  D.panX = sx - ax * D.zoom;
+  D.panY = sy - ay * D.zoom;
 }
 
 // Zoom keeping the art point under (sx,sy) exactly where it is -- the thing that makes zooming feel
 // like moving a lens rather than being teleported.
 function zoomAt(factor, sx, sy){
-  const ax = (sx - D.panX) / D.zoom, ay = (sy - D.panY) / D.zoom;
-  D.zoom = clamp(D.zoom * factor, 0.5, 64);
-  D.panX = sx - ax * D.zoom;
-  D.panY = sy - ay * D.zoom;
+  applyZoom((D.zoomRaw || D.zoom) * factor, sx, sy);
 }
 function zoomTo(z, sx, sy){
   const [vw, vh] = viewSize();
-  zoomAt(clamp(z, 0.5, 64) / D.zoom, sx === undefined ? vw/2 : sx, sy === undefined ? vh/2 : sy);
+  applyZoom(z, sx === undefined ? vw/2 : sx, sy === undefined ? vh/2 : sy);
 }
 
 function paint(){
@@ -808,12 +829,18 @@ function paint(){
   ctx.save();
   ctx.beginPath(); ctx.rect(ox, oy, W, H); ctx.clip();     // nothing spills outside the art
 
-  // checkerboard, so transparent reads as transparent and not as black
-  const c = 8;
+  // Checkerboard, so transparent reads as transparent and not as black -- MEASURED IN ART PIXELS,
+  // not in screen pixels. At a fixed 8 screen px it was finer than the art at any zoom above 8x and
+  // aligned with nothing, so over a transparent area it read as a grid that did not match the
+  // sprite. Whole art pixels per square means every square edge IS a pixel edge; the count per
+  // square grows as you zoom out so the squares stay a sensible size on screen.
+  const cellArt = Math.max(1, Math.round(8 / Math.max(1, z)));
+  const c = cellArt * z;
   ctx.fillStyle = '#1a1620'; ctx.fillRect(ox, oy, W, H);
   ctx.fillStyle = '#221d2a';
-  for(let y = 0; y < H; y += c) for(let x = 0; x < W; x += c)
-    if(((x/c|0) + (y/c|0)) & 1) ctx.fillRect(ox + x, oy + y, Math.min(c, W-x), Math.min(c, H-y));
+  for(let gy = 0; gy * c < H; gy++) for(let gx = 0; gx * c < W; gx++)
+    if((gx + gy) & 1)
+      ctx.fillRect(ox + gx*c, oy + gy*c, Math.min(c, W - gx*c), Math.min(c, H - gy*c));
 
   ctx.translate(ox, oy);
 
