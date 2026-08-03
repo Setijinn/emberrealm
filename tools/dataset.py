@@ -51,7 +51,33 @@ FRAME_CAP = 3              # poses per animated set, so a walk cycle does not dr
 TRIGGER = "emberrealm"     # the token that will mean "this project's style"
 
 
-def caption(path, cat):
+def orientation(px):
+    """Say which way the thing lies, so ORIENTATION IS A TOKEN YOU CAN ASK FOR rather than a habit
+    the model inherits.
+
+    Every axial weapon in this corpus happens to be drawn on the same diagonal. Train on that without
+    naming it and "sword" silently means "diagonal sword" forever -- the model has no way to know the
+    angle was a convention rather than part of what a sword is. Named, it becomes a dial: ask for an
+    upright sword and the model has upright things (crossbows, staves, potions) to generalise from.
+
+    Only for elongated shapes; a ring has no orientation worth stating."""
+    a = px[..., 3] > 40
+    ys, xs = np.nonzero(a)
+    if len(xs) < 24:
+        return None
+    x = xs - xs.mean(); y = ys - ys.mean()
+    w, v = np.linalg.eigh(np.cov(np.stack([x, y])))
+    if np.sqrt(max(w) / max(min(w), 1e-9)) < 2.0:
+        return None                      # too round to have a direction
+    ang = np.degrees(np.arctan2(*v[:, np.argmax(w)][::-1])) % 180
+    if ang < 22.5 or ang >= 157.5:
+        return "horizontal"
+    if 67.5 <= ang < 112.5:
+        return "upright"
+    return "diagonal"
+
+
+def caption(path, cat, orient=None):
     """A caption the model can be prompted back with. Order matters: trigger, medium, category,
     subject, then attributes -- the earliest tokens carry the most weight."""
     name = os.path.basename(path)[:-4]
@@ -63,6 +89,8 @@ def caption(path, cat):
     subj = subj.replace("_", " ").strip()
     if subj and subj not in bits:
         bits.append(subj)
+    if orient:
+        bits.append(orient)
     bits.append("flat violet background")
     return ", ".join(bits)
 
@@ -133,13 +161,21 @@ def main():
             continue
         if (px[..., 3] > 40).sum() < 24:
             continue
-        im = prep(px)
-        stem = "%05d_%s" % (n, os.path.basename(path)[:-4])
-        im.save(os.path.join(OUT, stem + ".png"))
-        with io.open(os.path.join(OUT, stem + ".txt"), "w", encoding="utf-8") as f:
-            f.write(caption(path, cat))
-        counts[cat] = counts.get(cat, 0) + 1
-        n += 1
+        orient = orientation(px)
+        variants = [(px, orient)]
+        # A MIRROR IS LOSSLESS, and it is the one augmentation pixel art survives -- rotating would
+        # resample and teach the model to blur. It also halves the diagonal bias: the corpus leans
+        # one way, the mirror leans the other.
+        if orient and "--noflip" not in sys.argv:
+            variants.append((px[:, ::-1].copy(), orient))
+        for vi, (vpx, vor) in enumerate(variants):
+            im = prep(vpx)
+            stem = "%05d_%s%s" % (n, os.path.basename(path)[:-4], "_m" if vi else "")
+            im.save(os.path.join(OUT, stem + ".png"))
+            with io.open(os.path.join(OUT, stem + ".txt"), "w", encoding="utf-8") as f:
+                f.write(caption(path, cat, vor))
+            counts[cat] = counts.get(cat, 0) + 1
+            n += 1
 
     print("wrote %d images + captions to %s at %dx%d" % (n, os.path.relpath(OUT, ROOT), SIZE, SIZE))
     print()
