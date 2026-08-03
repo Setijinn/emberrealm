@@ -592,12 +592,24 @@ async function boot(){
     }},[label]);
     return b;
   };
+  // A dot marks art spritegen wrote rather than art someone drew. They are listed now -- the draw
+  // side opens a frame to FIX it, and a derived frame needs fixing exactly as often as any other --
+  // but you should never be unsure which kind you have picked.
+  const derivedFiles = new Set(idx.derivedFiles || []);
   const g1 = el('div',{class:'grp'},[`animated sets (${idx.dirs.length})`]);
   sel.appendChild(g1);
-  idx.dirs.forEach(d=>sel.appendChild(mk(d.path.replace('assets/','')+`  (${d.frames.length})`, d.path)));
+  idx.dirs.forEach(d=>{
+    const b = mk(d.path.replace('assets/','')+`  (${d.frames.length})`, d.path);
+    if(d.derived) b.classList.add('derived');
+    sel.appendChild(b);
+  });
   const g2 = el('div',{class:'grp'},[`single sprites (${idx.files.length})`]);
   sel.appendChild(g2);
-  idx.files.forEach(f=>sel.appendChild(mk(f.replace('assets/',''), f)));
+  idx.files.forEach(f=>{
+    const b = mk(f.replace('assets/',''), f);
+    if(derivedFiles.has(f)) b.classList.add('derived');
+    sel.appendChild(b);
+  });
 
   // There are thousands of single sprites -- a scrolling column of them is not a picker without this.
   $('#filter').addEventListener('input', e=>{

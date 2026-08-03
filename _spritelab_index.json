@@ -38,7 +38,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_bishop",
@@ -80,7 +81,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_bloodlord",
@@ -122,7 +124,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_bonelord",
@@ -164,7 +167,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_cinderguard",
@@ -206,7 +210,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_crusader",
@@ -248,7 +253,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_cryomancer",
@@ -286,7 +292,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_deathblade",
@@ -328,7 +335,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_doomcaller",
@@ -366,7 +374,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_dragonlord",
@@ -406,7 +415,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_dreadlord",
@@ -448,7 +458,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_earthwarden",
@@ -490,7 +501,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_emberlord",
@@ -532,7 +544,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_executioner_a",
@@ -574,7 +587,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_falconer",
@@ -614,7 +628,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_frostwarden",
@@ -656,7 +671,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_galewalker",
@@ -698,7 +714,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_grandmaster",
@@ -740,7 +757,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_guardian",
@@ -782,7 +800,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_highpriest",
@@ -824,7 +843,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_icebreaker",
@@ -866,7 +886,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_infernomancer",
@@ -908,7 +929,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_inquisitor",
@@ -948,7 +970,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_juggernaut",
@@ -990,7 +1013,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_lich",
@@ -1030,7 +1054,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_loremaster",
@@ -1070,7 +1095,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_maestro",
@@ -1112,7 +1138,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_nightblade",
@@ -1154,7 +1181,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_nightshade",
@@ -1196,7 +1224,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_packlord",
@@ -1238,7 +1267,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_pathwarden",
@@ -1276,7 +1306,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_phantom_a",
@@ -1318,7 +1349,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_plaguebringer",
@@ -1360,7 +1392,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_ravager",
@@ -1402,7 +1435,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_reaper",
@@ -1444,7 +1478,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_sentinel",
@@ -1486,7 +1521,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_sharpshooter",
@@ -1526,7 +1562,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_skald",
@@ -1568,7 +1605,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_skylord",
@@ -1610,7 +1648,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_soulflayer",
@@ -1652,7 +1691,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_spiritcaller",
@@ -1692,7 +1732,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_stormlord",
@@ -1734,7 +1775,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_tempest_r",
@@ -1776,7 +1818,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_templar",
@@ -1818,7 +1861,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_thunderer",
@@ -1858,7 +1902,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_tidesage",
@@ -1896,7 +1941,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_warden_c",
@@ -1938,7 +1984,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_warlord",
@@ -1980,7 +2027,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_windranger",
@@ -2022,7 +2070,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_windwalker",
@@ -2064,7 +2113,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/asc_wyrmknight",
@@ -2104,7 +2154,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/assassin",
@@ -2144,7 +2195,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/bard",
@@ -2186,7 +2238,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/berserker",
@@ -2226,7 +2279,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/cleric",
@@ -2268,7 +2322,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/dragoon",
@@ -2310,7 +2365,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/frost",
@@ -2350,7 +2406,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/hunter",
@@ -2392,7 +2449,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/knight",
@@ -2434,7 +2492,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/ally_skel",
@@ -2448,7 +2507,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/ally_wisp",
@@ -2462,7 +2522,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/ally_wolf",
@@ -2476,7 +2537,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_acolyte",
@@ -2499,7 +2561,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_bird",
@@ -2522,7 +2585,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_boar",
@@ -2545,7 +2609,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_crab",
@@ -2568,7 +2633,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_golem",
@@ -2591,7 +2657,152 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_elite",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
   },
   {
    "path": "assets/mobs/anim/arch_husk",
@@ -2614,7 +2825,128 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
   },
   {
    "path": "assets/mobs/anim/arch_plant",
@@ -2637,7 +2969,128 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
   },
   {
    "path": "assets/mobs/anim/arch_shaman",
@@ -2660,7 +3113,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_slinger",
@@ -2683,7 +3137,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_swarm",
@@ -2706,7 +3161,8 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/arch_wisp",
@@ -2729,7 +3185,152 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_spectral",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true
   },
   {
    "path": "assets/mobs/anim/boss_0",
@@ -2748,7 +3349,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_1",
@@ -2767,7 +3369,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_10",
@@ -2786,7 +3389,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_11",
@@ -2805,7 +3409,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_12",
@@ -2824,7 +3429,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_2",
@@ -2843,7 +3449,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_3",
@@ -2862,7 +3469,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_4",
@@ -2881,7 +3489,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_5",
@@ -2900,7 +3509,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_6",
@@ -2919,7 +3529,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_7",
@@ -2938,7 +3549,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_8",
@@ -2957,7 +3569,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/boss_9",
@@ -2976,7 +3589,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/cultist",
@@ -2995,7 +3609,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mobs/anim/hound",
@@ -3014,7 +3629,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/monk",
@@ -3056,7 +3672,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_boar",
@@ -3141,7 +3758,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_boar/ridden",
@@ -3226,7 +3844,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_cat",
@@ -3311,7 +3930,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_cat/ridden",
@@ -3396,7 +4016,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_destrier",
@@ -3481,7 +4102,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_destrier/ridden",
@@ -3566,7 +4188,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_dragon",
@@ -3651,7 +4274,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_dragon/ridden",
@@ -3808,7 +4432,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_drake",
@@ -3893,7 +4518,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_drake/ridden",
@@ -3978,7 +4604,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_elk",
@@ -4063,7 +4690,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_griffon",
@@ -4148,7 +4776,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_griffon/ridden",
@@ -4305,7 +4934,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_horse",
@@ -4390,7 +5020,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_horse/ridden",
@@ -4475,7 +5106,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_infernal",
@@ -4560,7 +5192,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_infernal/ridden",
@@ -4717,7 +5350,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_lizard",
@@ -4802,7 +5436,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_moth",
@@ -4887,7 +5522,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_moth/ridden",
@@ -5044,7 +5680,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_mule",
@@ -5129,7 +5766,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_mule/ridden",
@@ -5214,7 +5852,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_pegasus",
@@ -5299,7 +5938,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_pegasus/ridden",
@@ -5456,7 +6096,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_ram",
@@ -5541,7 +6182,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_ram/ridden",
@@ -5626,7 +6268,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_roc",
@@ -5711,7 +6354,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_skywyrm",
@@ -5796,7 +6440,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_skywyrm/ridden",
@@ -5953,7 +6598,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_stag",
@@ -6038,7 +6684,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_stag/ridden",
@@ -6123,7 +6770,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_wolf",
@@ -6208,7 +6856,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_wolf/ridden",
@@ -6293,7 +6942,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_wyvern",
@@ -6378,7 +7028,8 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/mounts/arch_wyvern/ridden",
@@ -6535,7 +7186,8 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/necro",
@@ -6577,7 +7229,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/paladin",
@@ -6619,7 +7272,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_0",
@@ -6631,7 +7285,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_1",
@@ -6643,7 +7298,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_10",
@@ -6655,7 +7311,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_11",
@@ -6667,7 +7324,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_2",
@@ -6679,7 +7337,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_3",
@@ -6691,7 +7350,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_4",
@@ -6703,7 +7363,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_5",
@@ -6715,7 +7376,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_6",
@@ -6727,7 +7389,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_7",
@@ -6739,7 +7402,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_8",
@@ -6751,7 +7415,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/common_9",
@@ -6763,7 +7428,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/epic_0",
@@ -6775,7 +7441,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/epic_1",
@@ -6787,7 +7454,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/epic_2",
@@ -6799,7 +7467,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/epic_3",
@@ -6811,7 +7480,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/legendary_0",
@@ -6823,7 +7493,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/legendary_1",
@@ -6835,7 +7506,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/rare_0",
@@ -6847,7 +7519,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/rare_1",
@@ -6859,7 +7532,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/rare_2",
@@ -6871,7 +7545,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/rare_3",
@@ -6883,7 +7558,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/rare_4",
@@ -6895,7 +7571,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/rare_5",
@@ -6907,7 +7584,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_0",
@@ -6919,7 +7597,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_1",
@@ -6931,7 +7610,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_2",
@@ -6943,7 +7623,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_3",
@@ -6955,7 +7636,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_4",
@@ -6967,7 +7649,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_5",
@@ -6979,7 +7662,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_6",
@@ -6991,7 +7675,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pets/anim/uncommon_7",
@@ -7003,7 +7688,8 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/pyro",
@@ -7045,7 +7731,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/ranger",
@@ -7085,7 +7772,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/riders/arch_horse/knight",
@@ -7098,7 +7786,8 @@
     "ride_se.png",
     "ride_sw.png",
     "ride_w.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/riders/arch_wolf/knight",
@@ -7111,7 +7800,8 @@
     "ride_se.png",
     "ride_sw.png",
     "ride_w.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/riders/knight",
@@ -7124,7 +7814,8 @@
     "ride_se.png",
     "ride_sw.png",
     "ride_w.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/rogue",
@@ -7166,7 +7857,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/shaman",
@@ -7206,7 +7898,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/storm",
@@ -7248,7 +7941,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   },
   {
    "path": "assets/warlock",
@@ -7290,7 +7984,8 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false
   }
  ],
  "files": [
@@ -8037,16 +8732,72 @@
   "assets/mobs/ally_wisp.png",
   "assets/mobs/ally_wolf.png",
   "assets/mobs/arch_acolyte.png",
+  "assets/mobs/arch_acolyte_ember.png",
+  "assets/mobs/arch_acolyte_frost.png",
+  "assets/mobs/arch_acolyte_shadow.png",
+  "assets/mobs/arch_acolyte_storm.png",
+  "assets/mobs/arch_acolyte_venom.png",
   "assets/mobs/arch_bird.png",
+  "assets/mobs/arch_bird_ember.png",
+  "assets/mobs/arch_bird_frost.png",
+  "assets/mobs/arch_bird_shadow.png",
+  "assets/mobs/arch_bird_storm.png",
+  "assets/mobs/arch_bird_venom.png",
   "assets/mobs/arch_boar.png",
+  "assets/mobs/arch_boar_ember.png",
+  "assets/mobs/arch_boar_frost.png",
+  "assets/mobs/arch_boar_shadow.png",
+  "assets/mobs/arch_boar_storm.png",
+  "assets/mobs/arch_boar_venom.png",
   "assets/mobs/arch_crab.png",
+  "assets/mobs/arch_crab_ember.png",
+  "assets/mobs/arch_crab_frost.png",
+  "assets/mobs/arch_crab_shadow.png",
+  "assets/mobs/arch_crab_storm.png",
+  "assets/mobs/arch_crab_venom.png",
   "assets/mobs/arch_golem.png",
+  "assets/mobs/arch_golem_coldcore.png",
+  "assets/mobs/arch_golem_ember.png",
+  "assets/mobs/arch_golem_frost.png",
+  "assets/mobs/arch_golem_shadow.png",
+  "assets/mobs/arch_golem_storm.png",
+  "assets/mobs/arch_golem_venom.png",
   "assets/mobs/arch_husk.png",
+  "assets/mobs/arch_husk_ember.png",
+  "assets/mobs/arch_husk_frost.png",
+  "assets/mobs/arch_husk_shadow.png",
+  "assets/mobs/arch_husk_storm.png",
+  "assets/mobs/arch_husk_venom.png",
   "assets/mobs/arch_plant.png",
+  "assets/mobs/arch_plant_ember.png",
+  "assets/mobs/arch_plant_frost.png",
+  "assets/mobs/arch_plant_shadow.png",
+  "assets/mobs/arch_plant_storm.png",
+  "assets/mobs/arch_plant_venom.png",
   "assets/mobs/arch_shaman.png",
+  "assets/mobs/arch_shaman_ember.png",
+  "assets/mobs/arch_shaman_frost.png",
+  "assets/mobs/arch_shaman_shadow.png",
+  "assets/mobs/arch_shaman_storm.png",
+  "assets/mobs/arch_shaman_venom.png",
   "assets/mobs/arch_slinger.png",
+  "assets/mobs/arch_slinger_ember.png",
+  "assets/mobs/arch_slinger_frost.png",
+  "assets/mobs/arch_slinger_shadow.png",
+  "assets/mobs/arch_slinger_storm.png",
+  "assets/mobs/arch_slinger_venom.png",
   "assets/mobs/arch_swarm.png",
+  "assets/mobs/arch_swarm_ember.png",
+  "assets/mobs/arch_swarm_frost.png",
+  "assets/mobs/arch_swarm_shadow.png",
+  "assets/mobs/arch_swarm_storm.png",
+  "assets/mobs/arch_swarm_venom.png",
   "assets/mobs/arch_wisp.png",
+  "assets/mobs/arch_wisp_ember.png",
+  "assets/mobs/arch_wisp_frost.png",
+  "assets/mobs/arch_wisp_shadow.png",
+  "assets/mobs/arch_wisp_storm.png",
+  "assets/mobs/arch_wisp_venom.png",
   "assets/mobs/awak_0.png",
   "assets/mobs/awak_1.png",
   "assets/mobs/awak_10.png",
@@ -8073,8 +8824,13 @@
   "assets/mobs/boss_7.png",
   "assets/mobs/boss_8.png",
   "assets/mobs/boss_9.png",
+  "assets/mobs/cinderhound.png",
   "assets/mobs/cultist.png",
   "assets/mobs/hound.png",
+  "assets/mobs/nighthound.png",
+  "assets/mobs/plaguehound.png",
+  "assets/mobs/rimehound.png",
+  "assets/mobs/stormhound.png",
   "assets/mounts/arch_boar.png",
   "assets/mounts/arch_cat.png",
   "assets/mounts/arch_destrier.png",
@@ -8292,5 +9048,68 @@
   "assets/ui/orb.png",
   "assets/ui/quote_frame.png",
   "assets/ui/skill_node.png"
+ ],
+ "derivedFiles": [
+  "assets/mobs/arch_acolyte_ember.png",
+  "assets/mobs/arch_acolyte_frost.png",
+  "assets/mobs/arch_acolyte_shadow.png",
+  "assets/mobs/arch_acolyte_storm.png",
+  "assets/mobs/arch_acolyte_venom.png",
+  "assets/mobs/arch_bird_ember.png",
+  "assets/mobs/arch_bird_frost.png",
+  "assets/mobs/arch_bird_shadow.png",
+  "assets/mobs/arch_bird_storm.png",
+  "assets/mobs/arch_bird_venom.png",
+  "assets/mobs/arch_boar_ember.png",
+  "assets/mobs/arch_boar_frost.png",
+  "assets/mobs/arch_boar_shadow.png",
+  "assets/mobs/arch_boar_storm.png",
+  "assets/mobs/arch_boar_venom.png",
+  "assets/mobs/arch_crab_ember.png",
+  "assets/mobs/arch_crab_frost.png",
+  "assets/mobs/arch_crab_shadow.png",
+  "assets/mobs/arch_crab_storm.png",
+  "assets/mobs/arch_crab_venom.png",
+  "assets/mobs/arch_golem_coldcore.png",
+  "assets/mobs/arch_golem_ember.png",
+  "assets/mobs/arch_golem_frost.png",
+  "assets/mobs/arch_golem_shadow.png",
+  "assets/mobs/arch_golem_storm.png",
+  "assets/mobs/arch_golem_venom.png",
+  "assets/mobs/arch_husk_ember.png",
+  "assets/mobs/arch_husk_frost.png",
+  "assets/mobs/arch_husk_shadow.png",
+  "assets/mobs/arch_husk_storm.png",
+  "assets/mobs/arch_husk_venom.png",
+  "assets/mobs/arch_plant_ember.png",
+  "assets/mobs/arch_plant_frost.png",
+  "assets/mobs/arch_plant_shadow.png",
+  "assets/mobs/arch_plant_storm.png",
+  "assets/mobs/arch_plant_venom.png",
+  "assets/mobs/arch_shaman_ember.png",
+  "assets/mobs/arch_shaman_frost.png",
+  "assets/mobs/arch_shaman_shadow.png",
+  "assets/mobs/arch_shaman_storm.png",
+  "assets/mobs/arch_shaman_venom.png",
+  "assets/mobs/arch_slinger_ember.png",
+  "assets/mobs/arch_slinger_frost.png",
+  "assets/mobs/arch_slinger_shadow.png",
+  "assets/mobs/arch_slinger_storm.png",
+  "assets/mobs/arch_slinger_venom.png",
+  "assets/mobs/arch_swarm_ember.png",
+  "assets/mobs/arch_swarm_frost.png",
+  "assets/mobs/arch_swarm_shadow.png",
+  "assets/mobs/arch_swarm_storm.png",
+  "assets/mobs/arch_swarm_venom.png",
+  "assets/mobs/arch_wisp_ember.png",
+  "assets/mobs/arch_wisp_frost.png",
+  "assets/mobs/arch_wisp_shadow.png",
+  "assets/mobs/arch_wisp_storm.png",
+  "assets/mobs/arch_wisp_venom.png",
+  "assets/mobs/cinderhound.png",
+  "assets/mobs/nighthound.png",
+  "assets/mobs/plaguehound.png",
+  "assets/mobs/rimehound.png",
+  "assets/mobs/stormhound.png"
  ]
 }

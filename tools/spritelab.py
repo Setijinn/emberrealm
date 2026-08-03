@@ -25,10 +25,13 @@ ON A PHONE, ON DATA. That is what the Pages site is for; --mobile/--lan is for t
 The hosted one shows the art as committed, which is the point of it and also its one limitation:
 art you have generated but not pushed is not there yet.
 
-DERIVED ART IS EXCLUDED from the index. Everything spritegen has already written is listed in
-assets/_derived.json, and offering those as sources invites deriving from a derivation -- two ramps
-in sequence give a muddy result that is very hard to diagnose later, because the file looks like a
-normal source.
+DERIVED ART IS INCLUDED, AND FLAGGED. It used to be excluded, on the reasoning that offering it as a
+source invites deriving from a derivation -- two ramps in sequence give a muddy result that is hard
+to diagnose later, because the file looks like a normal source. That reasoning only ever covered the
+DERIVE side. The draw side opens a frame to FIX it, and a derived frame is exactly as likely to need
+fixing as any other; excluding them meant 457 of the project's sprites simply could not be opened.
+So they are listed, marked `derived` so the picker can show which they are and you never mistake one
+for an original.
 
     py tools/spritelab.py             # index, start the server if needed, open the browser
     py tools/spritelab.py --mobile    # ...and print the address to type into a phone
@@ -89,27 +92,28 @@ def derived_paths():
 
 def build_index():
     dfiles, ddirs = derived_paths()
-    dirs, files = [], []
+    dirs, files, derived = [], [], []
     for cur, subs, names in os.walk(ASSETS):
         subs[:] = [s for s in subs if s not in SKIP_DIRS]
         rel = os.path.relpath(cur, ROOT).replace("\\", "/")
-        if rel in ddirs:
-            continue
         pngs = sorted(n for n in names if n.lower().endswith(".png"))
-        pngs = [n for n in pngs if "%s/%s" % (rel, n) not in dfiles]
         if not pngs:
             continue
         framey = sum(1 for n in pngs if FRAME_RE.match(n))
         if len(pngs) > 1 and framey >= SET_SHARE * len(pngs):
-            dirs.append({"path": rel, "frames": pngs})
+            dirs.append({"path": rel, "frames": pngs, "derived": rel in ddirs})
         else:
-            files += ["%s/%s" % (rel, n) for n in pngs]
+            for n in pngs:
+                full = "%s/%s" % (rel, n)
+                files.append(full)
+                if full in dfiles:
+                    derived.append(full)
     # Loose single sprites live in the big flat folders (assets/mobs, assets/items, ...) and there are
     # hundreds; a directory that is a real animation set is the more useful thing to show first, and
     # both lists are sorted so the picker is stable between runs.
     dirs.sort(key=lambda d: d["path"])
     files.sort()
-    return {"dirs": dirs, "files": files}
+    return {"dirs": dirs, "files": files, "derivedFiles": sorted(derived)}
 
 
 def port_open(host, port, timeout=0.35):
@@ -184,6 +188,8 @@ def main():
     print("wrote %s" % os.path.basename(INDEX))
     print("  %d animated set(s), %d frames" % (len(idx["dirs"]), nfr))
     print("  %d single sprite(s)" % len(idx["files"]))
+    nd = sum(len(d["frames"]) for d in idx["dirs"] if d.get("derived")) + len(idx["derivedFiles"])
+    print("  %d of those are derived (marked in the picker)" % nd)
 
     mobile = "--mobile" in sys.argv or "--lan" in sys.argv
     print()
