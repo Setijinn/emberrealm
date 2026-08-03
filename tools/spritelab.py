@@ -25,10 +25,13 @@ ON A PHONE, ON DATA. That is what the Pages site is for; --mobile/--lan is for t
 The hosted one shows the art as committed, which is the point of it and also its one limitation:
 art you have generated but not pushed is not there yet.
 
-DERIVED ART IS EXCLUDED from the index. Everything spritegen has already written is listed in
-assets/_derived.json, and offering those as sources invites deriving from a derivation -- two ramps
-in sequence give a muddy result that is very hard to diagnose later, because the file looks like a
-normal source.
+DERIVED ART IS INCLUDED, AND FLAGGED. It used to be excluded, on the reasoning that offering it as a
+source invites deriving from a derivation -- two ramps in sequence give a muddy result that is hard
+to diagnose later, because the file looks like a normal source. That reasoning only ever covered the
+DERIVE side. The draw side opens a frame to FIX it, and a derived frame is exactly as likely to need
+fixing as any other; excluding them meant 457 of the project's sprites simply could not be opened.
+So they are listed, marked `derived` so the picker can show which they are and you never mistake one
+for an original.
 
     py tools/spritelab.py             # index, start the server if needed, open the browser
     py tools/spritelab.py --mobile    # ...and print the address to type into a phone
@@ -73,6 +76,99 @@ FRAME_RE = re.compile(r"^(idle|walk|attack|ride)(_[nsew]{1,2})?(_\d+)?\.png$", r
 SET_SHARE = 0.6            # this much of a folder must look like frames before it is called a set
 
 
+# ---------------------------------------------------------------------------------------------------
+#  CATEGORIES.
+#
+#  The picker was one flat alphabetical list of 1,248 entries, which is a directory listing rather
+#  than a way to find a sprite: `assets/asc_bishop` sits between `assets/asc_bibliophile` and
+#  `assets/asc_bloodlord` whether you wanted an ascendant class or a floor tile.
+#
+#  These are the game's OWN divisions, not generic buckets -- the seventeen playable classes come
+#  from CWEAP, the fifty-two ascendants are the asc_ folders, and the item sub-kinds are the filename
+#  prefixes the forge and the loot tables already use (wpn_, arm_, helm_, ring_, relic_r_, mat_).
+#  A category that does not match how the game thinks about its own art would be one more thing to
+#  translate in your head.
+# ---------------------------------------------------------------------------------------------------
+
+CLASSES = {"assassin","bard","berserker","cleric","dragoon","frost","hunter","knight","monk",
+           "necro","paladin","pyro","ranger","rogue","shaman","storm","warlock"}
+
+# item filename prefix -> sub-kind. Longest prefix wins, so relic_r_ beats nothing and mat_sd_ is
+# still a material.
+ITEM_KINDS = [
+    ("wpn_",     "weapons"),
+    ("arm_",     "armour"),
+    ("helm_",    "helms"),
+    ("ring_",    "rings"),
+    ("relic_r_", "relics"),
+    ("mat_",     "materials"),
+    ("boost_",   "boosts"),
+    ("coin",     "currency"),
+    ("food",     "food"),
+    ("potion",   "potions"),
+    ("item_",    "misc"),
+    ("forge_",   "forge ui"),
+]
+
+# The order they appear in. Things you draw most sit at the top; scenery and chrome at the bottom.
+CAT_ORDER = [
+    "Player classes", "Ascendant classes", "Monsters", "Monsters (animated)", "Bosses",
+    "Mounts", "Mounts (ridden)", "Riders", "Pets", "Critters",
+    "Items · weapons", "Items · armour", "Items · helms", "Items · rings", "Items · relics",
+    "Items · materials", "Items · potions", "Items · boosts", "Items · currency", "Items · food",
+    "Items · misc", "Items · forge ui",
+    "Ability icons", "Projectiles", "Effects", "Status",
+    "Terrain tiles", "Environment", "Town", "UI", "Other",
+]
+
+
+def categorise(path, fname=""):
+    """path is the folder (assets/...), fname the file when the entry is a single sprite."""
+    p = path[len("assets/"):] if path.startswith("assets/") else path
+    top = p.split("/")[0]
+
+    if top.startswith("asc_"):
+        return "Ascendant classes"
+    if top in CLASSES:
+        return "Player classes"
+    if top == "mobs":
+        if "/anim/" in p or p.endswith("/anim"):
+            return "Bosses" if "boss" in p or "awak" in p else "Monsters (animated)"
+        if fname.startswith(("boss_", "awak_")):
+            return "Bosses"
+        return "Monsters"
+    if top == "mounts":
+        return "Mounts (ridden)" if p.endswith("/ridden") or "/ridden/" in p else "Mounts"
+    if top == "riders":
+        return "Riders"
+    if top == "pets":
+        return "Pets"
+    if top == "critters":
+        return "Critters"
+    if top == "items":
+        for pre, kind in ITEM_KINDS:
+            if fname.startswith(pre):
+                return "Items · " + kind
+        return "Items · misc"
+    if top == "abilities":
+        return "Ability icons"
+    if top == "proj":
+        return "Projectiles"
+    if top == "fx":
+        return "Effects"
+    if top == "status":
+        return "Status"
+    if top == "tiles":
+        return "Terrain tiles"
+    if top == "env":
+        return "Environment"
+    if top == "hearth":
+        return "Town"
+    if top in ("ui", "target"):
+        return "UI"
+    return "Other"
+
+
 def derived_paths():
     p = os.path.join(ASSETS, "_derived.json")
     if not os.path.exists(p):
@@ -89,27 +185,30 @@ def derived_paths():
 
 def build_index():
     dfiles, ddirs = derived_paths()
-    dirs, files = [], []
+    dirs, files, derived = [], [], []
     for cur, subs, names in os.walk(ASSETS):
         subs[:] = [s for s in subs if s not in SKIP_DIRS]
         rel = os.path.relpath(cur, ROOT).replace("\\", "/")
-        if rel in ddirs:
-            continue
         pngs = sorted(n for n in names if n.lower().endswith(".png"))
-        pngs = [n for n in pngs if "%s/%s" % (rel, n) not in dfiles]
         if not pngs:
             continue
         framey = sum(1 for n in pngs if FRAME_RE.match(n))
         if len(pngs) > 1 and framey >= SET_SHARE * len(pngs):
-            dirs.append({"path": rel, "frames": pngs})
+            dirs.append({"path": rel, "frames": pngs, "derived": rel in ddirs,
+                         "cat": categorise(rel, pngs[0])})
         else:
-            files += ["%s/%s" % (rel, n) for n in pngs]
+            for n in pngs:
+                full = "%s/%s" % (rel, n)
+                files.append({"p": full, "cat": categorise(rel, n)})
+                if full in dfiles:
+                    derived.append(full)
     # Loose single sprites live in the big flat folders (assets/mobs, assets/items, ...) and there are
     # hundreds; a directory that is a real animation set is the more useful thing to show first, and
     # both lists are sorted so the picker is stable between runs.
     dirs.sort(key=lambda d: d["path"])
-    files.sort()
-    return {"dirs": dirs, "files": files}
+    files.sort(key=lambda f: f["p"])
+    return {"dirs": dirs, "files": files, "derivedFiles": sorted(derived),
+            "catOrder": CAT_ORDER}
 
 
 def port_open(host, port, timeout=0.35):
@@ -184,6 +283,8 @@ def main():
     print("wrote %s" % os.path.basename(INDEX))
     print("  %d animated set(s), %d frames" % (len(idx["dirs"]), nfr))
     print("  %d single sprite(s)" % len(idx["files"]))
+    nd = sum(len(d["frames"]) for d in idx["dirs"] if d.get("derived")) + len(idx["derivedFiles"])
+    print("  %d of those are derived (marked in the picker)" % nd)
 
     mobile = "--mobile" in sys.argv or "--lan" in sys.argv
     print()

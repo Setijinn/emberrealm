@@ -38,7 +38,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_bishop",
@@ -80,7 +82,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_bloodlord",
@@ -122,7 +126,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_bonelord",
@@ -164,7 +170,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_cinderguard",
@@ -206,7 +214,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_crusader",
@@ -248,7 +258,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_cryomancer",
@@ -286,7 +298,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_deathblade",
@@ -328,7 +342,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_doomcaller",
@@ -366,7 +382,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_dragonlord",
@@ -406,7 +424,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_dreadlord",
@@ -448,7 +468,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_earthwarden",
@@ -490,7 +512,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_emberlord",
@@ -532,7 +556,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_executioner_a",
@@ -574,7 +600,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_falconer",
@@ -614,7 +642,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_frostwarden",
@@ -656,7 +686,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_galewalker",
@@ -698,7 +730,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_grandmaster",
@@ -740,7 +774,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_guardian",
@@ -782,7 +818,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_highpriest",
@@ -824,7 +862,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_icebreaker",
@@ -866,7 +906,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_infernomancer",
@@ -908,7 +950,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_inquisitor",
@@ -948,7 +992,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_juggernaut",
@@ -990,7 +1036,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_lich",
@@ -1030,7 +1078,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_loremaster",
@@ -1070,7 +1120,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_maestro",
@@ -1112,7 +1164,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_nightblade",
@@ -1154,7 +1208,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_nightshade",
@@ -1196,7 +1252,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_packlord",
@@ -1238,7 +1296,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_pathwarden",
@@ -1276,7 +1336,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_phantom_a",
@@ -1318,7 +1380,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_plaguebringer",
@@ -1360,7 +1424,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_ravager",
@@ -1402,7 +1468,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_reaper",
@@ -1444,7 +1512,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_sentinel",
@@ -1486,7 +1556,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_sharpshooter",
@@ -1526,7 +1598,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_skald",
@@ -1568,7 +1642,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_skylord",
@@ -1610,7 +1686,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_soulflayer",
@@ -1652,7 +1730,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_spiritcaller",
@@ -1692,7 +1772,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_stormlord",
@@ -1734,7 +1816,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_tempest_r",
@@ -1776,7 +1860,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_templar",
@@ -1818,7 +1904,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_thunderer",
@@ -1858,7 +1946,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_tidesage",
@@ -1896,7 +1986,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_warden_c",
@@ -1938,7 +2030,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_warlord",
@@ -1980,7 +2074,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_windranger",
@@ -2022,7 +2118,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_windwalker",
@@ -2064,7 +2162,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/asc_wyrmknight",
@@ -2104,7 +2204,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Ascendant classes"
   },
   {
    "path": "assets/assassin",
@@ -2144,7 +2246,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/bard",
@@ -2186,7 +2290,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/berserker",
@@ -2226,7 +2332,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/cleric",
@@ -2268,7 +2376,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/dragoon",
@@ -2310,7 +2420,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/frost",
@@ -2350,7 +2462,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/hunter",
@@ -2392,7 +2506,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/knight",
@@ -2434,7 +2550,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/mobs/anim/ally_skel",
@@ -2448,7 +2566,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/ally_wisp",
@@ -2462,7 +2582,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/ally_wolf",
@@ -2476,7 +2598,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_acolyte",
@@ -2499,7 +2623,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_bird",
@@ -2522,7 +2648,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_boar",
@@ -2545,7 +2673,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_crab",
@@ -2568,7 +2698,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_golem",
@@ -2591,7 +2723,159 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_elite",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_golem_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_husk",
@@ -2614,7 +2898,134 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_husk_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_plant",
@@ -2637,7 +3048,134 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_plant_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_shaman",
@@ -2660,7 +3198,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_slinger",
@@ -2683,7 +3223,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_swarm",
@@ -2706,7 +3248,9 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/arch_wisp",
@@ -2729,7 +3273,159 @@
     "idle_6.png",
     "idle_7.png",
     "idle_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_ember",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_frost",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_shadow",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_spectral",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_storm",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
+  },
+  {
+   "path": "assets/mobs/anim/arch_wisp_venom",
+   "frames": [
+    "attack_0.png",
+    "attack_1.png",
+    "attack_2.png",
+    "attack_3.png",
+    "attack_4.png",
+    "attack_5.png",
+    "attack_6.png",
+    "attack_7.png",
+    "attack_8.png",
+    "idle_0.png",
+    "idle_1.png",
+    "idle_2.png",
+    "idle_3.png",
+    "idle_4.png",
+    "idle_5.png",
+    "idle_6.png",
+    "idle_7.png",
+    "idle_8.png"
+   ],
+   "derived": true,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/boss_0",
@@ -2748,7 +3444,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_1",
@@ -2767,7 +3465,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_10",
@@ -2786,7 +3486,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_11",
@@ -2805,7 +3507,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_12",
@@ -2824,7 +3528,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_2",
@@ -2843,7 +3549,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_3",
@@ -2862,7 +3570,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_4",
@@ -2881,7 +3591,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_5",
@@ -2900,7 +3612,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_6",
@@ -2919,7 +3633,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_7",
@@ -2938,7 +3654,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_8",
@@ -2957,7 +3675,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/boss_9",
@@ -2976,7 +3696,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Bosses"
   },
   {
    "path": "assets/mobs/anim/cultist",
@@ -2995,7 +3717,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/mobs/anim/hound",
@@ -3014,7 +3738,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Monsters (animated)"
   },
   {
    "path": "assets/monk",
@@ -3056,7 +3782,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/mounts/arch_boar",
@@ -3141,7 +3869,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_boar/ridden",
@@ -3226,7 +3956,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_cat",
@@ -3311,7 +4043,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_cat/ridden",
@@ -3396,7 +4130,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_destrier",
@@ -3481,7 +4217,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_destrier/ridden",
@@ -3566,7 +4304,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_dragon",
@@ -3651,7 +4391,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_dragon/ridden",
@@ -3808,7 +4550,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_drake",
@@ -3893,7 +4637,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_drake/ridden",
@@ -3978,7 +4724,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_elk",
@@ -4063,7 +4811,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_griffon",
@@ -4148,7 +4898,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_griffon/ridden",
@@ -4305,7 +5057,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_horse",
@@ -4390,7 +5144,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_horse/ridden",
@@ -4475,7 +5231,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_infernal",
@@ -4560,7 +5318,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_infernal/ridden",
@@ -4717,7 +5477,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_lizard",
@@ -4802,7 +5564,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_moth",
@@ -4887,7 +5651,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_moth/ridden",
@@ -5044,7 +5810,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_mule",
@@ -5129,7 +5897,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_mule/ridden",
@@ -5214,7 +5984,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_pegasus",
@@ -5299,7 +6071,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_pegasus/ridden",
@@ -5456,7 +6230,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_ram",
@@ -5541,7 +6317,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_ram/ridden",
@@ -5626,7 +6404,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_roc",
@@ -5711,7 +6491,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_skywyrm",
@@ -5796,7 +6578,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_skywyrm/ridden",
@@ -5953,7 +6737,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_stag",
@@ -6038,7 +6824,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_stag/ridden",
@@ -6123,7 +6911,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_wolf",
@@ -6208,7 +6998,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_wolf/ridden",
@@ -6293,7 +7085,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/mounts/arch_wyvern",
@@ -6378,7 +7172,9 @@
     "idle_w_6.png",
     "idle_w_7.png",
     "idle_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts"
   },
   {
    "path": "assets/mounts/arch_wyvern/ridden",
@@ -6535,7 +7331,9 @@
     "walk_w_6.png",
     "walk_w_7.png",
     "walk_w_8.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Mounts (ridden)"
   },
   {
    "path": "assets/necro",
@@ -6577,7 +7375,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/paladin",
@@ -6619,7 +7419,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/pets/anim/common_0",
@@ -6631,7 +7433,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_1",
@@ -6643,7 +7447,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_10",
@@ -6655,7 +7461,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_11",
@@ -6667,7 +7475,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_2",
@@ -6679,7 +7489,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_3",
@@ -6691,7 +7503,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_4",
@@ -6703,7 +7517,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_5",
@@ -6715,7 +7531,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_6",
@@ -6727,7 +7545,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_7",
@@ -6739,7 +7559,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_8",
@@ -6751,7 +7573,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/common_9",
@@ -6763,7 +7587,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/epic_0",
@@ -6775,7 +7601,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/epic_1",
@@ -6787,7 +7615,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/epic_2",
@@ -6799,7 +7629,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/epic_3",
@@ -6811,7 +7643,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/legendary_0",
@@ -6823,7 +7657,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/legendary_1",
@@ -6835,7 +7671,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/rare_0",
@@ -6847,7 +7685,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/rare_1",
@@ -6859,7 +7699,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/rare_2",
@@ -6871,7 +7713,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/rare_3",
@@ -6883,7 +7727,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/rare_4",
@@ -6895,7 +7741,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/rare_5",
@@ -6907,7 +7755,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_0",
@@ -6919,7 +7769,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_1",
@@ -6931,7 +7783,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_2",
@@ -6943,7 +7797,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_3",
@@ -6955,7 +7811,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_4",
@@ -6967,7 +7825,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_5",
@@ -6979,7 +7839,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_6",
@@ -6991,7 +7853,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pets/anim/uncommon_7",
@@ -7003,7 +7867,9 @@
     "idle_4.png",
     "idle_5.png",
     "idle_6.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Pets"
   },
   {
    "path": "assets/pyro",
@@ -7045,7 +7911,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/ranger",
@@ -7085,7 +7953,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/riders/arch_horse/knight",
@@ -7098,7 +7968,9 @@
     "ride_se.png",
     "ride_sw.png",
     "ride_w.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Riders"
   },
   {
    "path": "assets/riders/arch_wolf/knight",
@@ -7111,7 +7983,9 @@
     "ride_se.png",
     "ride_sw.png",
     "ride_w.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Riders"
   },
   {
    "path": "assets/riders/knight",
@@ -7124,7 +7998,9 @@
     "ride_se.png",
     "ride_sw.png",
     "ride_w.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Riders"
   },
   {
    "path": "assets/rogue",
@@ -7166,7 +8042,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/shaman",
@@ -7206,7 +8084,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/storm",
@@ -7248,7 +8128,9 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   },
   {
    "path": "assets/warlock",
@@ -7290,1007 +8172,4343 @@
     "walk_s_1.png",
     "walk_s_2.png",
     "walk_s_3.png"
-   ]
+   ],
+   "derived": false,
+   "cat": "Player classes"
   }
  ],
  "files": [
-  "assets/abilities/assassin_ambush.png",
-  "assets/abilities/assassin_blink.png",
-  "assets/abilities/assassin_cloak.png",
-  "assets/abilities/assassin_exec.png",
-  "assets/abilities/assassin_fan.png",
-  "assets/abilities/assassin_fanknives.png",
-  "assets/abilities/assassin_garrote.png",
-  "assets/abilities/assassin_mark.png",
-  "assets/abilities/assassin_massacre.png",
-  "assets/abilities/assassin_swift.png",
-  "assets/abilities/assassin_toxin.png",
-  "assets/abilities/assassin_veil.png",
-  "assets/abilities/bard_ballad.png",
-  "assets/abilities/bard_cresc.png",
-  "assets/abilities/bard_discord.png",
-  "assets/abilities/bard_encore.png",
-  "assets/abilities/bard_forte.png",
-  "assets/abilities/bard_inspire.png",
-  "assets/abilities/bard_lullaby.png",
-  "assets/abilities/bard_march.png",
-  "assets/abilities/bard_note.png",
-  "assets/abilities/bard_quickstep.png",
-  "assets/abilities/bard_rest.png",
-  "assets/abilities/bard_soundwave.png",
-  "assets/abilities/berserker_bloodbath.png",
-  "assets/abilities/berserker_bloodfan.png",
-  "assets/abilities/berserker_earthshatter.png",
-  "assets/abilities/berserker_frenzy.png",
-  "assets/abilities/berserker_laststand.png",
-  "assets/abilities/berserker_leap.png",
-  "assets/abilities/berserker_quake.png",
-  "assets/abilities/berserker_rage.png",
-  "assets/abilities/berserker_rampage.png",
-  "assets/abilities/berserker_reckless.png",
-  "assets/abilities/berserker_warpath.png",
-  "assets/abilities/berserker_whirl.png",
-  "assets/abilities/cleric_barrier.png",
-  "assets/abilities/cleric_chastise.png",
-  "assets/abilities/cleric_ground.png",
-  "assets/abilities/cleric_guardian.png",
-  "assets/abilities/cleric_holynova.png",
-  "assets/abilities/cleric_mend.png",
-  "assets/abilities/cleric_purge.png",
-  "assets/abilities/cleric_radiance.png",
-  "assets/abilities/cleric_renew.png",
-  "assets/abilities/cleric_sanct.png",
-  "assets/abilities/cleric_smite.png",
-  "assets/abilities/cleric_ward.png",
-  "assets/abilities/dragoon_breath.png",
-  "assets/abilities/dragoon_cry.png",
-  "assets/abilities/dragoon_earthstrike.png",
-  "assets/abilities/dragoon_impact.png",
-  "assets/abilities/dragoon_leap.png",
-  "assets/abilities/dragoon_overdrive.png",
-  "assets/abilities/dragoon_scale.png",
-  "assets/abilities/dragoon_sky.png",
-  "assets/abilities/dragoon_spearstorm.png",
-  "assets/abilities/dragoon_sweep.png",
-  "assets/abilities/dragoon_thrust.png",
-  "assets/abilities/dragoon_windleap.png",
-  "assets/abilities/frost_armor.png",
-  "assets/abilities/frost_blizzard.png",
-  "assets/abilities/frost_block.png",
-  "assets/abilities/frost_bolt.png",
-  "assets/abilities/frost_coldsnap.png",
-  "assets/abilities/frost_freeze.png",
-  "assets/abilities/frost_lance.png",
-  "assets/abilities/frost_nova.png",
-  "assets/abilities/frost_rime.png",
-  "assets/abilities/frost_shield.png",
-  "assets/abilities/frost_spike.png",
-  "assets/abilities/frost_wall.png",
-  "assets/abilities/hunter_beasttrap.png",
-  "assets/abilities/hunter_bolas.png",
-  "assets/abilities/hunter_eagleeye.png",
-  "assets/abilities/hunter_falcon.png",
-  "assets/abilities/hunter_multi.png",
-  "assets/abilities/hunter_pack.png",
-  "assets/abilities/hunter_rapid.png",
-  "assets/abilities/hunter_roll.png",
-  "assets/abilities/hunter_shot.png",
-  "assets/abilities/hunter_sprint.png",
-  "assets/abilities/hunter_trap.png",
-  "assets/abilities/hunter_volley.png",
-  "assets/abilities/knight_bash.png",
-  "assets/abilities/knight_bulwark.png",
-  "assets/abilities/knight_charge.png",
-  "assets/abilities/knight_cleave.png",
-  "assets/abilities/knight_fortify.png",
-  "assets/abilities/knight_jugg.png",
-  "assets/abilities/knight_rally.png",
-  "assets/abilities/knight_slam.png",
-  "assets/abilities/knight_throw.png",
-  "assets/abilities/knight_warcry.png",
-  "assets/abilities/knight_whirl.png",
-  "assets/abilities/knight_wind.png",
-  "assets/abilities/monk_calm.png",
-  "assets/abilities/monk_cyclone.png",
-  "assets/abilities/monk_dash.png",
-  "assets/abilities/monk_flurry.png",
-  "assets/abilities/monk_fury.png",
-  "assets/abilities/monk_ironpalm.png",
-  "assets/abilities/monk_kiblast.png",
-  "assets/abilities/monk_meditate2.png",
-  "assets/abilities/monk_palm.png",
-  "assets/abilities/monk_peace.png",
-  "assets/abilities/monk_rising.png",
-  "assets/abilities/monk_zephyr.png",
-  "assets/abilities/necro_blast.png",
-  "assets/abilities/necro_bolt.png",
-  "assets/abilities/necro_bonearmor.png",
-  "assets/abilities/necro_coil.png",
-  "assets/abilities/necro_corpseexp.png",
-  "assets/abilities/necro_decay.png",
-  "assets/abilities/necro_nova.png",
-  "assets/abilities/necro_prison.png",
-  "assets/abilities/necro_raise.png",
-  "assets/abilities/necro_ritual.png",
-  "assets/abilities/necro_siphon.png",
-  "assets/abilities/necro_wraith.png",
-  "assets/abilities/paladin_aura.png",
-  "assets/abilities/paladin_avenger.png",
-  "assets/abilities/paladin_blessing.png",
-  "assets/abilities/paladin_conse.png",
-  "assets/abilities/paladin_crusade.png",
-  "assets/abilities/paladin_hammer.png",
-  "assets/abilities/paladin_heal.png",
-  "assets/abilities/paladin_sanct.png",
-  "assets/abilities/paladin_shield.png",
-  "assets/abilities/paladin_smite.png",
-  "assets/abilities/paladin_storm.png",
-  "assets/abilities/paladin_zeal.png",
-  "assets/abilities/pyro_combust.png",
-  "assets/abilities/pyro_dash.png",
-  "assets/abilities/pyro_deto.png",
-  "assets/abilities/pyro_fireball.png",
-  "assets/abilities/pyro_flames.png",
-  "assets/abilities/pyro_flash.png",
-  "assets/abilities/pyro_ignite.png",
-  "assets/abilities/pyro_immol.png",
-  "assets/abilities/pyro_lavaburst.png",
-  "assets/abilities/pyro_meteor.png",
-  "assets/abilities/pyro_shield.png",
-  "assets/abilities/pyro_wall.png",
-  "assets/abilities/ranger_aim.png",
-  "assets/abilities/ranger_explo.png",
-  "assets/abilities/ranger_hail.png",
-  "assets/abilities/ranger_multi.png",
-  "assets/abilities/ranger_pierce.png",
-  "assets/abilities/ranger_rain.png",
-  "assets/abilities/ranger_roll.png",
-  "assets/abilities/ranger_snare.png",
-  "assets/abilities/ranger_sprint.png",
-  "assets/abilities/ranger_swift.png",
-  "assets/abilities/ranger_venom.png",
-  "assets/abilities/ranger_volley.png",
-  "assets/abilities/rogue_adren.png",
-  "assets/abilities/rogue_backstab.png",
-  "assets/abilities/rogue_caltrops.png",
-  "assets/abilities/rogue_clone.png",
-  "assets/abilities/rogue_evade.png",
-  "assets/abilities/rogue_fan.png",
-  "assets/abilities/rogue_flurry.png",
-  "assets/abilities/rogue_mark.png",
-  "assets/abilities/rogue_poison.png",
-  "assets/abilities/rogue_smoke.png",
-  "assets/abilities/rogue_step.png",
-  "assets/abilities/rogue_venomfan.png",
-  "assets/abilities/shaman_ancestors.png",
-  "assets/abilities/shaman_bolt.png",
-  "assets/abilities/shaman_chain.png",
-  "assets/abilities/shaman_earthshield.png",
-  "assets/abilities/shaman_frostshock.png",
-  "assets/abilities/shaman_lavaburst.png",
-  "assets/abilities/shaman_mend.png",
-  "assets/abilities/shaman_mendmax.png",
-  "assets/abilities/shaman_nova.png",
-  "assets/abilities/shaman_ring.png",
-  "assets/abilities/shaman_stormcloud.png",
-  "assets/abilities/shaman_windfury.png",
-  "assets/abilities/storm_ball.png",
-  "assets/abilities/storm_blink.png",
-  "assets/abilities/storm_bolt.png",
-  "assets/abilities/storm_chain.png",
-  "assets/abilities/storm_field.png",
-  "assets/abilities/storm_fork.png",
-  "assets/abilities/storm_nova.png",
-  "assets/abilities/storm_overcharge.png",
-  "assets/abilities/storm_rush.png",
-  "assets/abilities/storm_strike.png",
-  "assets/abilities/storm_surge.png",
-  "assets/abilities/storm_thunderstorm.png",
-  "assets/abilities/warlock_bolt.png",
-  "assets/abilities/warlock_burst.png",
-  "assets/abilities/warlock_cage.png",
-  "assets/abilities/warlock_corruption.png",
-  "assets/abilities/warlock_curse.png",
-  "assets/abilities/warlock_demon.png",
-  "assets/abilities/warlock_fury.png",
-  "assets/abilities/warlock_hex.png",
-  "assets/abilities/warlock_imps.png",
-  "assets/abilities/warlock_rift.png",
-  "assets/abilities/warlock_siphon.png",
-  "assets/abilities/warlock_tap.png",
-  "assets/critters/chicken_east.png",
-  "assets/critters/chicken_north.png",
-  "assets/critters/chicken_south.png",
-  "assets/critters/chicken_walk_east_0.png",
-  "assets/critters/chicken_walk_east_1.png",
-  "assets/critters/chicken_walk_east_2.png",
-  "assets/critters/chicken_walk_east_3.png",
-  "assets/critters/chicken_walk_north_0.png",
-  "assets/critters/chicken_walk_north_1.png",
-  "assets/critters/chicken_walk_north_2.png",
-  "assets/critters/chicken_walk_north_3.png",
-  "assets/critters/chicken_walk_south_0.png",
-  "assets/critters/chicken_walk_south_1.png",
-  "assets/critters/chicken_walk_south_2.png",
-  "assets/critters/chicken_walk_south_3.png",
-  "assets/critters/chicken_walk_west_0.png",
-  "assets/critters/chicken_walk_west_1.png",
-  "assets/critters/chicken_walk_west_2.png",
-  "assets/critters/chicken_walk_west_3.png",
-  "assets/critters/chicken_west.png",
-  "assets/critters/sheep_east.png",
-  "assets/critters/sheep_north.png",
-  "assets/critters/sheep_south.png",
-  "assets/critters/sheep_walk_east_0.png",
-  "assets/critters/sheep_walk_east_1.png",
-  "assets/critters/sheep_walk_east_2.png",
-  "assets/critters/sheep_walk_east_3.png",
-  "assets/critters/sheep_walk_north_0.png",
-  "assets/critters/sheep_walk_north_1.png",
-  "assets/critters/sheep_walk_north_2.png",
-  "assets/critters/sheep_walk_north_3.png",
-  "assets/critters/sheep_walk_south_0.png",
-  "assets/critters/sheep_walk_south_1.png",
-  "assets/critters/sheep_walk_south_2.png",
-  "assets/critters/sheep_walk_south_3.png",
-  "assets/critters/sheep_walk_west_0.png",
-  "assets/critters/sheep_walk_west_1.png",
-  "assets/critters/sheep_walk_west_2.png",
-  "assets/critters/sheep_walk_west_3.png",
-  "assets/critters/sheep_west.png",
-  "assets/env/boulder_grass.png",
-  "assets/env/boulder_grey.png",
-  "assets/env/boulder_scorched.png",
-  "assets/env/boulder_volcanic.png",
-  "assets/env/bridge_statue.png",
-  "assets/env/bridge_tower.png",
-  "assets/env/corrupt_0.png",
-  "assets/env/corrupt_1.png",
-  "assets/env/ddec_0.png",
-  "assets/env/ddec_1.png",
-  "assets/env/ddec_2.png",
-  "assets/env/ddec_3.png",
-  "assets/env/ddec_4.png",
-  "assets/env/ddec_5.png",
-  "assets/env/decal_0_0.png",
-  "assets/env/decal_0_1.png",
-  "assets/env/decal_0_2.png",
-  "assets/env/decal_0_3.png",
-  "assets/env/decal_0_4.png",
-  "assets/env/decal_0_5.png",
-  "assets/env/decal_3_0.png",
-  "assets/env/decal_3_1.png",
-  "assets/env/decal_3_2.png",
-  "assets/env/decal_3_3.png",
-  "assets/env/decal_3_4.png",
-  "assets/env/decal_3_5.png",
-  "assets/env/decal_5_0.png",
-  "assets/env/decal_5_1.png",
-  "assets/env/decal_5_2.png",
-  "assets/env/decal_5_3.png",
-  "assets/env/decal_5_4.png",
-  "assets/env/decal_5_5.png",
-  "assets/env/lair_0.png",
-  "assets/env/lair_1.png",
-  "assets/env/lair_10.png",
-  "assets/env/lair_11.png",
-  "assets/env/lair_12.png",
-  "assets/env/lair_2.png",
-  "assets/env/lair_3.png",
-  "assets/env/lair_4.png",
-  "assets/env/lair_5.png",
-  "assets/env/lair_6.png",
-  "assets/env/lair_7.png",
-  "assets/env/lair_8.png",
-  "assets/env/lair_9.png",
-  "assets/env/ldec_0_0.png",
-  "assets/env/ldec_0_1.png",
-  "assets/env/ldec_0_2.png",
-  "assets/env/ldec_0_3.png",
-  "assets/env/ldec_1_0.png",
-  "assets/env/ldec_1_1.png",
-  "assets/env/ldec_1_2.png",
-  "assets/env/ldec_1_3.png",
-  "assets/env/ldec_2_0.png",
-  "assets/env/ldec_2_1.png",
-  "assets/env/ldec_2_2.png",
-  "assets/env/ldec_2_3.png",
-  "assets/env/ldec_3_0.png",
-  "assets/env/ldec_3_1.png",
-  "assets/env/ldec_3_2.png",
-  "assets/env/ldec_3_3.png",
-  "assets/env/ldec_4_0.png",
-  "assets/env/ldec_4_1.png",
-  "assets/env/ldec_4_2.png",
-  "assets/env/ldec_4_3.png",
-  "assets/env/ldec_5_0.png",
-  "assets/env/ldec_5_1.png",
-  "assets/env/ldec_5_2.png",
-  "assets/env/ldec_5_3.png",
-  "assets/env/ldec_6_0.png",
-  "assets/env/ldec_6_1.png",
-  "assets/env/ldec_6_2.png",
-  "assets/env/ldec_6_3.png",
-  "assets/env/ldec_7_0.png",
-  "assets/env/ldec_7_1.png",
-  "assets/env/ldec_7_2.png",
-  "assets/env/ldec_7_3.png",
-  "assets/env/ldec_8_0.png",
-  "assets/env/ldec_8_1.png",
-  "assets/env/ldec_8_2.png",
-  "assets/env/ldec_8_3.png",
-  "assets/env/pillar_0.png",
-  "assets/env/pillar_1.png",
-  "assets/env/pillar_2.png",
-  "assets/env/portal_infect.png",
-  "assets/env/tree_bare.png",
-  "assets/env/tree_dead.png",
-  "assets/env/tree_grass.png",
-  "assets/env/tree_pine.png",
-  "assets/env/tree_scrub.png",
-  "assets/env/tree_willow.png",
-  "assets/env/warden.png",
-  "assets/env/waypoint.png",
-  "assets/fx/heal.png",
-  "assets/fx/rune.png",
-  "assets/fx/slash.png",
-  "assets/hearth/brazier.png",
-  "assets/hearth/chest.png",
-  "assets/hearth/floor.png",
-  "assets/hearth/floor_broken.png",
-  "assets/hearth/floor_walk.png",
-  "assets/hearth/floor_walk2.png",
-  "assets/hearth/fountain.png",
-  "assets/hearth/lamp.png",
-  "assets/hearth/planter.png",
-  "assets/hearth/portal.png",
-  "assets/hearth/portal_arena.png",
-  "assets/hearth/portal_cos.png",
-  "assets/hearth/portal_guild.png",
-  "assets/hearth/portal_home.png",
-  "assets/hearth/portal_pets.png",
-  "assets/hearth/portal_realm.png",
-  "assets/hearth/portal_vault.png",
-  "assets/hearth/signboard.png",
-  "assets/hearth/stall_bram.png",
-  "assets/hearth/stall_maren.png",
-  "assets/hearth/stall_odo.png",
-  "assets/hearth/stall_sella.png",
-  "assets/hearth/vault_boxes.png",
-  "assets/hearth/vault_candelabra.png",
-  "assets/hearth/vault_coffer.png",
-  "assets/hearth/vault_coins.png",
-  "assets/hearth/vault_crates.png",
-  "assets/hearth/vault_door.png",
-  "assets/hearth/vault_lectern.png",
-  "assets/hearth/vault_rack0.png",
-  "assets/hearth/vault_rack1.png",
-  "assets/hearth/vault_sacks.png",
-  "assets/hearth/vault_statue.png",
-  "assets/hearth/wall.png",
-  "assets/items/arm_leather_0.png",
-  "assets/items/arm_leather_1.png",
-  "assets/items/arm_leather_10.png",
-  "assets/items/arm_leather_11.png",
-  "assets/items/arm_leather_2.png",
-  "assets/items/arm_leather_3.png",
-  "assets/items/arm_leather_4.png",
-  "assets/items/arm_leather_5.png",
-  "assets/items/arm_leather_6.png",
-  "assets/items/arm_leather_7.png",
-  "assets/items/arm_leather_8.png",
-  "assets/items/arm_leather_9.png",
-  "assets/items/arm_plate_0.png",
-  "assets/items/arm_plate_1.png",
-  "assets/items/arm_plate_10.png",
-  "assets/items/arm_plate_11.png",
-  "assets/items/arm_plate_2.png",
-  "assets/items/arm_plate_3.png",
-  "assets/items/arm_plate_4.png",
-  "assets/items/arm_plate_5.png",
-  "assets/items/arm_plate_6.png",
-  "assets/items/arm_plate_7.png",
-  "assets/items/arm_plate_8.png",
-  "assets/items/arm_plate_9.png",
-  "assets/items/arm_robe_0.png",
-  "assets/items/arm_robe_1.png",
-  "assets/items/arm_robe_10.png",
-  "assets/items/arm_robe_11.png",
-  "assets/items/arm_robe_2.png",
-  "assets/items/arm_robe_3.png",
-  "assets/items/arm_robe_4.png",
-  "assets/items/arm_robe_5.png",
-  "assets/items/arm_robe_6.png",
-  "assets/items/arm_robe_7.png",
-  "assets/items/arm_robe_8.png",
-  "assets/items/arm_robe_9.png",
-  "assets/items/boost_fort.png",
-  "assets/items/boost_loot.png",
-  "assets/items/boost_xp.png",
-  "assets/items/coin_0.png",
-  "assets/items/coin_1.png",
-  "assets/items/coin_2.png",
-  "assets/items/food_0.png",
-  "assets/items/food_1.png",
-  "assets/items/food_2.png",
-  "assets/items/food_3.png",
-  "assets/items/food_4.png",
-  "assets/items/forge_ui.png",
-  "assets/items/helm_leather_0.png",
-  "assets/items/helm_leather_1.png",
-  "assets/items/helm_leather_10.png",
-  "assets/items/helm_leather_11.png",
-  "assets/items/helm_leather_2.png",
-  "assets/items/helm_leather_3.png",
-  "assets/items/helm_leather_4.png",
-  "assets/items/helm_leather_5.png",
-  "assets/items/helm_leather_6.png",
-  "assets/items/helm_leather_7.png",
-  "assets/items/helm_leather_8.png",
-  "assets/items/helm_leather_9.png",
-  "assets/items/helm_plate_0.png",
-  "assets/items/helm_plate_1.png",
-  "assets/items/helm_plate_10.png",
-  "assets/items/helm_plate_11.png",
-  "assets/items/helm_plate_2.png",
-  "assets/items/helm_plate_3.png",
-  "assets/items/helm_plate_4.png",
-  "assets/items/helm_plate_5.png",
-  "assets/items/helm_plate_6.png",
-  "assets/items/helm_plate_7.png",
-  "assets/items/helm_plate_8.png",
-  "assets/items/helm_plate_9.png",
-  "assets/items/helm_robe_0.png",
-  "assets/items/helm_robe_1.png",
-  "assets/items/helm_robe_10.png",
-  "assets/items/helm_robe_11.png",
-  "assets/items/helm_robe_2.png",
-  "assets/items/helm_robe_3.png",
-  "assets/items/helm_robe_4.png",
-  "assets/items/helm_robe_5.png",
-  "assets/items/helm_robe_6.png",
-  "assets/items/helm_robe_7.png",
-  "assets/items/helm_robe_8.png",
-  "assets/items/helm_robe_9.png",
-  "assets/items/item_scroll.png",
-  "assets/items/mat_anchorroot.png",
-  "assets/items/mat_bogiron.png",
-  "assets/items/mat_cinder.png",
-  "assets/items/mat_clinker.png",
-  "assets/items/mat_drakeash.png",
-  "assets/items/mat_drakeflux.png",
-  "assets/items/mat_emberalloy.png",
-  "assets/items/mat_firstcinder.png",
-  "assets/items/mat_flux.png",
-  "assets/items/mat_forgeheart.png",
-  "assets/items/mat_gatestone.png",
-  "assets/items/mat_glass.png",
-  "assets/items/mat_gravebind.png",
-  "assets/items/mat_pinion.png",
-  "assets/items/mat_quench.png",
-  "assets/items/mat_rememberash.png",
-  "assets/items/mat_riftbloom.png",
-  "assets/items/mat_riftcore.png",
-  "assets/items/mat_riftheart.png",
-  "assets/items/mat_salt.png",
-  "assets/items/mat_sap.png",
-  "assets/items/mat_sd_bead.png",
-  "assets/items/mat_sd_billet.png",
-  "assets/items/mat_sd_blank.png",
-  "assets/items/mat_sd_bolt.png",
-  "assets/items/mat_sd_bough.png",
-  "assets/items/mat_sd_circlet.png",
-  "assets/items/mat_sd_hide.png",
-  "assets/items/mat_sd_knuckle.png",
-  "assets/items/mat_sd_sliver.png",
-  "assets/items/mat_sd_spring.png",
-  "assets/items/mat_sd_stave.png",
-  "assets/items/mat_sd_tang.png",
-  "assets/items/mat_seed.png",
-  "assets/items/mat_stormsteel.png",
-  "assets/items/mat_titanheart.png",
-  "assets/items/mat_truecore.png",
-  "assets/items/mat_veilshard.png",
-  "assets/items/mat_wallrot.png",
-  "assets/items/potion.png",
-  "assets/items/relic_r_antlerhood.png",
-  "assets/items/relic_r_ashveil.png",
-  "assets/items/relic_r_barnacle.png",
-  "assets/items/relic_r_barrows.png",
-  "assets/items/relic_r_beacon.png",
-  "assets/items/relic_r_blightbrow.png",
-  "assets/items/relic_r_censer.png",
-  "assets/items/relic_r_chapel.png",
-  "assets/items/relic_r_crypt.png",
-  "assets/items/relic_r_drownedcrown.png",
-  "assets/items/relic_r_emberreliq.png",
-  "assets/items/relic_r_featherloop.png",
-  "assets/items/relic_r_firstclaimed.png",
-  "assets/items/relic_r_fixedstar.png",
-  "assets/items/relic_r_fogbound.png",
-  "assets/items/relic_r_furnacemask.png",
-  "assets/items/relic_r_galecut.png",
-  "assets/items/relic_r_gatewarden.png",
-  "assets/items/relic_r_greenribs.png",
-  "assets/items/relic_r_griefhelm.png",
-  "assets/items/relic_r_heartwood.png",
-  "assets/items/relic_r_keep.png",
-  "assets/items/relic_r_keepplate.png",
-  "assets/items/relic_r_keystone.png",
-  "assets/items/relic_r_kingsblood.png",
-  "assets/items/relic_r_lamp.png",
-  "assets/items/relic_r_marrowsignet.png",
-  "assets/items/relic_r_mistglass.png",
-  "assets/items/relic_r_mitre.png",
-  "assets/items/relic_r_moltencore.png",
-  "assets/items/relic_r_oozeband.png",
-  "assets/items/relic_r_pearl.png",
-  "assets/items/relic_r_pyrebrand.png",
-  "assets/items/relic_r_riftcrown.png",
-  "assets/items/relic_r_roost.png",
-  "assets/items/relic_r_rootrot.png",
-  "assets/items/relic_r_saltworks.png",
-  "assets/items/relic_r_sanctum.png",
-  "assets/items/relic_r_sapcrown.png",
-  "assets/items/relic_r_sealsignet.png",
-  "assets/items/relic_r_seedring.png",
-  "assets/items/relic_r_slagplate.png",
-  "assets/items/relic_r_throneshard.png",
-  "assets/items/relic_r_updraft.png",
-  "assets/items/relic_r_vault.png",
-  "assets/items/relic_r_veilpiercer.png",
-  "assets/items/relic_r_warren.png",
-  "assets/items/relic_r_watchcowl.png",
-  "assets/items/ring_def_0.png",
-  "assets/items/ring_def_1.png",
-  "assets/items/ring_def_10.png",
-  "assets/items/ring_def_11.png",
-  "assets/items/ring_def_2.png",
-  "assets/items/ring_def_3.png",
-  "assets/items/ring_def_4.png",
-  "assets/items/ring_def_5.png",
-  "assets/items/ring_def_6.png",
-  "assets/items/ring_def_7.png",
-  "assets/items/ring_def_8.png",
-  "assets/items/ring_def_9.png",
-  "assets/items/ring_dex_0.png",
-  "assets/items/ring_dex_1.png",
-  "assets/items/ring_dex_10.png",
-  "assets/items/ring_dex_11.png",
-  "assets/items/ring_dex_2.png",
-  "assets/items/ring_dex_3.png",
-  "assets/items/ring_dex_4.png",
-  "assets/items/ring_dex_5.png",
-  "assets/items/ring_dex_6.png",
-  "assets/items/ring_dex_7.png",
-  "assets/items/ring_dex_8.png",
-  "assets/items/ring_dex_9.png",
-  "assets/items/ring_dmg_0.png",
-  "assets/items/ring_dmg_1.png",
-  "assets/items/ring_dmg_10.png",
-  "assets/items/ring_dmg_11.png",
-  "assets/items/ring_dmg_2.png",
-  "assets/items/ring_dmg_3.png",
-  "assets/items/ring_dmg_4.png",
-  "assets/items/ring_dmg_5.png",
-  "assets/items/ring_dmg_6.png",
-  "assets/items/ring_dmg_7.png",
-  "assets/items/ring_dmg_8.png",
-  "assets/items/ring_dmg_9.png",
-  "assets/items/ring_hp_0.png",
-  "assets/items/ring_hp_1.png",
-  "assets/items/ring_hp_10.png",
-  "assets/items/ring_hp_11.png",
-  "assets/items/ring_hp_2.png",
-  "assets/items/ring_hp_3.png",
-  "assets/items/ring_hp_4.png",
-  "assets/items/ring_hp_5.png",
-  "assets/items/ring_hp_6.png",
-  "assets/items/ring_hp_7.png",
-  "assets/items/ring_hp_8.png",
-  "assets/items/ring_hp_9.png",
-  "assets/items/ring_luck_0.png",
-  "assets/items/ring_luck_1.png",
-  "assets/items/ring_luck_10.png",
-  "assets/items/ring_luck_11.png",
-  "assets/items/ring_luck_2.png",
-  "assets/items/ring_luck_3.png",
-  "assets/items/ring_luck_4.png",
-  "assets/items/ring_luck_5.png",
-  "assets/items/ring_luck_6.png",
-  "assets/items/ring_luck_7.png",
-  "assets/items/ring_luck_8.png",
-  "assets/items/ring_luck_9.png",
-  "assets/items/ring_mp_0.png",
-  "assets/items/ring_mp_1.png",
-  "assets/items/ring_mp_10.png",
-  "assets/items/ring_mp_11.png",
-  "assets/items/ring_mp_2.png",
-  "assets/items/ring_mp_3.png",
-  "assets/items/ring_mp_4.png",
-  "assets/items/ring_mp_5.png",
-  "assets/items/ring_mp_6.png",
-  "assets/items/ring_mp_7.png",
-  "assets/items/ring_mp_8.png",
-  "assets/items/ring_mp_9.png",
-  "assets/items/ring_spd_0.png",
-  "assets/items/ring_spd_1.png",
-  "assets/items/ring_spd_10.png",
-  "assets/items/ring_spd_11.png",
-  "assets/items/ring_spd_2.png",
-  "assets/items/ring_spd_3.png",
-  "assets/items/ring_spd_4.png",
-  "assets/items/ring_spd_5.png",
-  "assets/items/ring_spd_6.png",
-  "assets/items/ring_spd_7.png",
-  "assets/items/ring_spd_8.png",
-  "assets/items/ring_spd_9.png",
-  "assets/items/ring_vit_0.png",
-  "assets/items/ring_vit_1.png",
-  "assets/items/ring_vit_10.png",
-  "assets/items/ring_vit_11.png",
-  "assets/items/ring_vit_2.png",
-  "assets/items/ring_vit_3.png",
-  "assets/items/ring_vit_4.png",
-  "assets/items/ring_vit_5.png",
-  "assets/items/ring_vit_6.png",
-  "assets/items/ring_vit_7.png",
-  "assets/items/ring_vit_8.png",
-  "assets/items/ring_vit_9.png",
-  "assets/items/ring_wis_0.png",
-  "assets/items/ring_wis_1.png",
-  "assets/items/ring_wis_10.png",
-  "assets/items/ring_wis_11.png",
-  "assets/items/ring_wis_2.png",
-  "assets/items/ring_wis_3.png",
-  "assets/items/ring_wis_4.png",
-  "assets/items/ring_wis_5.png",
-  "assets/items/ring_wis_6.png",
-  "assets/items/ring_wis_7.png",
-  "assets/items/ring_wis_8.png",
-  "assets/items/ring_wis_9.png",
-  "assets/items/wpn_bow_0.png",
-  "assets/items/wpn_bow_1.png",
-  "assets/items/wpn_bow_10.png",
-  "assets/items/wpn_bow_11.png",
-  "assets/items/wpn_bow_2.png",
-  "assets/items/wpn_bow_3.png",
-  "assets/items/wpn_bow_4.png",
-  "assets/items/wpn_bow_5.png",
-  "assets/items/wpn_bow_6.png",
-  "assets/items/wpn_bow_7.png",
-  "assets/items/wpn_bow_8.png",
-  "assets/items/wpn_bow_9.png",
-  "assets/items/wpn_dagger_0.png",
-  "assets/items/wpn_dagger_1.png",
-  "assets/items/wpn_dagger_10.png",
-  "assets/items/wpn_dagger_11.png",
-  "assets/items/wpn_dagger_2.png",
-  "assets/items/wpn_dagger_3.png",
-  "assets/items/wpn_dagger_4.png",
-  "assets/items/wpn_dagger_5.png",
-  "assets/items/wpn_dagger_6.png",
-  "assets/items/wpn_dagger_7.png",
-  "assets/items/wpn_dagger_8.png",
-  "assets/items/wpn_dagger_9.png",
-  "assets/items/wpn_gauntlet_0.png",
-  "assets/items/wpn_gauntlet_1.png",
-  "assets/items/wpn_gauntlet_10.png",
-  "assets/items/wpn_gauntlet_11.png",
-  "assets/items/wpn_gauntlet_2.png",
-  "assets/items/wpn_gauntlet_3.png",
-  "assets/items/wpn_gauntlet_4.png",
-  "assets/items/wpn_gauntlet_5.png",
-  "assets/items/wpn_gauntlet_6.png",
-  "assets/items/wpn_gauntlet_7.png",
-  "assets/items/wpn_gauntlet_8.png",
-  "assets/items/wpn_gauntlet_9.png",
-  "assets/items/wpn_staff_0.png",
-  "assets/items/wpn_staff_1.png",
-  "assets/items/wpn_staff_10.png",
-  "assets/items/wpn_staff_11.png",
-  "assets/items/wpn_staff_2.png",
-  "assets/items/wpn_staff_3.png",
-  "assets/items/wpn_staff_4.png",
-  "assets/items/wpn_staff_5.png",
-  "assets/items/wpn_staff_6.png",
-  "assets/items/wpn_staff_7.png",
-  "assets/items/wpn_staff_8.png",
-  "assets/items/wpn_staff_9.png",
-  "assets/items/wpn_sword_0.png",
-  "assets/items/wpn_sword_1.png",
-  "assets/items/wpn_sword_10.png",
-  "assets/items/wpn_sword_11.png",
-  "assets/items/wpn_sword_2.png",
-  "assets/items/wpn_sword_3.png",
-  "assets/items/wpn_sword_4.png",
-  "assets/items/wpn_sword_5.png",
-  "assets/items/wpn_sword_6.png",
-  "assets/items/wpn_sword_7.png",
-  "assets/items/wpn_sword_8.png",
-  "assets/items/wpn_sword_9.png",
-  "assets/items/wpn_wand_0.png",
-  "assets/items/wpn_wand_1.png",
-  "assets/items/wpn_wand_10.png",
-  "assets/items/wpn_wand_11.png",
-  "assets/items/wpn_wand_2.png",
-  "assets/items/wpn_wand_3.png",
-  "assets/items/wpn_wand_4.png",
-  "assets/items/wpn_wand_5.png",
-  "assets/items/wpn_wand_6.png",
-  "assets/items/wpn_wand_7.png",
-  "assets/items/wpn_wand_8.png",
-  "assets/items/wpn_wand_9.png",
-  "assets/items/wpn_xbow_0.png",
-  "assets/items/wpn_xbow_1.png",
-  "assets/items/wpn_xbow_10.png",
-  "assets/items/wpn_xbow_11.png",
-  "assets/items/wpn_xbow_2.png",
-  "assets/items/wpn_xbow_3.png",
-  "assets/items/wpn_xbow_4.png",
-  "assets/items/wpn_xbow_5.png",
-  "assets/items/wpn_xbow_6.png",
-  "assets/items/wpn_xbow_7.png",
-  "assets/items/wpn_xbow_8.png",
-  "assets/items/wpn_xbow_9.png",
-  "assets/mobs/ally_skel.png",
-  "assets/mobs/ally_wisp.png",
-  "assets/mobs/ally_wolf.png",
-  "assets/mobs/arch_acolyte.png",
-  "assets/mobs/arch_bird.png",
-  "assets/mobs/arch_boar.png",
-  "assets/mobs/arch_crab.png",
-  "assets/mobs/arch_golem.png",
-  "assets/mobs/arch_husk.png",
-  "assets/mobs/arch_plant.png",
-  "assets/mobs/arch_shaman.png",
-  "assets/mobs/arch_slinger.png",
-  "assets/mobs/arch_swarm.png",
-  "assets/mobs/arch_wisp.png",
-  "assets/mobs/awak_0.png",
-  "assets/mobs/awak_1.png",
-  "assets/mobs/awak_10.png",
-  "assets/mobs/awak_11.png",
-  "assets/mobs/awak_12.png",
-  "assets/mobs/awak_2.png",
-  "assets/mobs/awak_3.png",
-  "assets/mobs/awak_4.png",
-  "assets/mobs/awak_5.png",
-  "assets/mobs/awak_6.png",
-  "assets/mobs/awak_7.png",
-  "assets/mobs/awak_8.png",
-  "assets/mobs/awak_9.png",
-  "assets/mobs/boss_0.png",
-  "assets/mobs/boss_1.png",
-  "assets/mobs/boss_10.png",
-  "assets/mobs/boss_11.png",
-  "assets/mobs/boss_12.png",
-  "assets/mobs/boss_2.png",
-  "assets/mobs/boss_3.png",
-  "assets/mobs/boss_4.png",
-  "assets/mobs/boss_5.png",
-  "assets/mobs/boss_6.png",
-  "assets/mobs/boss_7.png",
-  "assets/mobs/boss_8.png",
-  "assets/mobs/boss_9.png",
-  "assets/mobs/cultist.png",
-  "assets/mobs/hound.png",
-  "assets/mounts/arch_boar.png",
-  "assets/mounts/arch_cat.png",
-  "assets/mounts/arch_destrier.png",
-  "assets/mounts/arch_dragon.png",
-  "assets/mounts/arch_drake.png",
-  "assets/mounts/arch_elk.png",
-  "assets/mounts/arch_griffon.png",
-  "assets/mounts/arch_horse.png",
-  "assets/mounts/arch_infernal.png",
-  "assets/mounts/arch_lizard.png",
-  "assets/mounts/arch_moth.png",
-  "assets/mounts/arch_mule.png",
-  "assets/mounts/arch_pegasus.png",
-  "assets/mounts/arch_ram.png",
-  "assets/mounts/arch_roc.png",
-  "assets/mounts/arch_skywyrm.png",
-  "assets/mounts/arch_stag.png",
-  "assets/mounts/arch_wolf.png",
-  "assets/mounts/arch_wyvern.png",
-  "assets/pets/common_0.png",
-  "assets/pets/common_1.png",
-  "assets/pets/common_10.png",
-  "assets/pets/common_11.png",
-  "assets/pets/common_2.png",
-  "assets/pets/common_3.png",
-  "assets/pets/common_4.png",
-  "assets/pets/common_5.png",
-  "assets/pets/common_6.png",
-  "assets/pets/common_7.png",
-  "assets/pets/common_8.png",
-  "assets/pets/common_9.png",
-  "assets/pets/egg_beast.png",
-  "assets/pets/egg_ember.png",
-  "assets/pets/egg_frost.png",
-  "assets/pets/egg_spirit.png",
-  "assets/pets/egg_stone.png",
-  "assets/pets/egg_storm.png",
-  "assets/pets/egg_tide.png",
-  "assets/pets/egg_verdant.png",
-  "assets/pets/egg_void.png",
-  "assets/pets/epic_0.png",
-  "assets/pets/epic_1.png",
-  "assets/pets/epic_2.png",
-  "assets/pets/epic_3.png",
-  "assets/pets/fusion_ui.png",
-  "assets/pets/incubator_ui.png",
-  "assets/pets/legendary_0.png",
-  "assets/pets/legendary_1.png",
-  "assets/pets/pond_0.png",
-  "assets/pets/pond_1.png",
-  "assets/pets/pond_2.png",
-  "assets/pets/pond_3.png",
-  "assets/pets/pond_duck.png",
-  "assets/pets/pond_koi.png",
-  "assets/pets/pond_lily.png",
-  "assets/pets/pond_lily2.png",
-  "assets/pets/pond_reeds.png",
-  "assets/pets/rare_0.png",
-  "assets/pets/rare_1.png",
-  "assets/pets/rare_2.png",
-  "assets/pets/rare_3.png",
-  "assets/pets/rare_4.png",
-  "assets/pets/rare_5.png",
-  "assets/pets/room_altar.png",
-  "assets/pets/room_apple.png",
-  "assets/pets/room_barn.png",
-  "assets/pets/room_bridge.png",
-  "assets/pets/room_floor.png",
-  "assets/pets/room_floor2.png",
-  "assets/pets/room_hay.png",
-  "assets/pets/room_hedge.png",
-  "assets/pets/room_incubator.png",
-  "assets/pets/room_picket.png",
-  "assets/pets/room_pond.png",
-  "assets/pets/room_rock.png",
-  "assets/pets/room_rocks.png",
-  "assets/pets/room_shelter.png",
-  "assets/pets/room_trough.png",
-  "assets/pets/uncommon_0.png",
-  "assets/pets/uncommon_1.png",
-  "assets/pets/uncommon_2.png",
-  "assets/pets/uncommon_3.png",
-  "assets/pets/uncommon_4.png",
-  "assets/pets/uncommon_5.png",
-  "assets/pets/uncommon_6.png",
-  "assets/pets/uncommon_7.png",
-  "assets/proj/arrow.png",
-  "assets/proj/axe.png",
-  "assets/proj/bone.png",
-  "assets/proj/chakram.png",
-  "assets/proj/crystal.png",
-  "assets/proj/dagger.png",
-  "assets/proj/ember.png",
-  "assets/proj/feather.png",
-  "assets/proj/fireball.png",
-  "assets/proj/holy_star.png",
-  "assets/proj/ice_shard.png",
-  "assets/proj/leaf.png",
-  "assets/proj/lightning.png",
-  "assets/proj/magic_orb.png",
-  "assets/proj/meteor.png",
-  "assets/proj/note.png",
-  "assets/proj/rune.png",
-  "assets/proj/shuriken.png",
-  "assets/proj/skull.png",
-  "assets/proj/spear.png",
-  "assets/proj/thorn.png",
-  "assets/proj/void_orb.png",
-  "assets/proj/wind_slash.png",
-  "assets/proj/wisp.png",
-  "assets/status/bleed.png",
-  "assets/status/burn.png",
-  "assets/status/chill.png",
-  "assets/status/curse.png",
-  "assets/status/freeze.png",
-  "assets/status/poison.png",
-  "assets/status/shock.png",
-  "assets/status/stun.png",
-  "assets/status/weak.png",
-  "assets/target/boss.png",
-  "assets/target/hp.png",
-  "assets/target/low.png",
-  "assets/target/near.png",
-  "assets/tiles/bridge_deck.png",
-  "assets/tiles/dunpath.png",
-  "assets/tiles/dunset_0.png",
-  "assets/tiles/dunset_1.png",
-  "assets/tiles/dunset_10.png",
-  "assets/tiles/dunset_11.png",
-  "assets/tiles/dunset_2.png",
-  "assets/tiles/dunset_3.png",
-  "assets/tiles/dunset_4.png",
-  "assets/tiles/dunset_5.png",
-  "assets/tiles/dunset_6.png",
-  "assets/tiles/dunset_7.png",
-  "assets/tiles/dunset_8.png",
-  "assets/tiles/dunset_9.png",
-  "assets/tiles/floor_0.png",
-  "assets/tiles/floor_1.png",
-  "assets/tiles/floor_2.png",
-  "assets/tiles/floor_3.png",
-  "assets/tiles/floor_4.png",
-  "assets/tiles/floor_5.png",
-  "assets/tiles/floor_6.png",
-  "assets/tiles/floor_7.png",
-  "assets/tiles/floor_8.png",
-  "assets/tiles/lairset_0.png",
-  "assets/tiles/lairset_1.png",
-  "assets/tiles/lairset_2.png",
-  "assets/tiles/lairset_3.png",
-  "assets/tiles/lairset_4.png",
-  "assets/tiles/lairset_5.png",
-  "assets/tiles/lairset_6.png",
-  "assets/tiles/lairset_7.png",
-  "assets/tiles/lairset_8.png",
-  "assets/tiles/set_0.png",
-  "assets/tiles/set_1.png",
-  "assets/tiles/set_2.png",
-  "assets/tiles/set_3.png",
-  "assets/tiles/set_4.png",
-  "assets/tiles/set_5.png",
-  "assets/tiles/set_6.png",
-  "assets/tiles/set_7.png",
-  "assets/tiles/set_8.png",
-  "assets/tiles/set_9.png",
-  "assets/tiles/setv_0.png",
-  "assets/tiles/setv_1.png",
-  "assets/tiles/setv_2.png",
-  "assets/tiles/setv_3.png",
-  "assets/tiles/setv_4.png",
-  "assets/tiles/setv_5.png",
-  "assets/tiles/setv_6.png",
-  "assets/tiles/setv_7.png",
-  "assets/tiles/setv_8.png",
-  "assets/tiles/setv_9.png",
-  "assets/tiles/shore_sand.png",
-  "assets/tiles/terr_0.png",
-  "assets/tiles/terr_1.png",
-  "assets/tiles/terr_2.png",
-  "assets/tiles/terr_3.png",
-  "assets/tiles/terr_4.png",
-  "assets/tiles/terr_5.png",
-  "assets/tiles/terr_6.png",
-  "assets/tiles/terr_7.png",
-  "assets/tiles/terr_8.png",
-  "assets/tiles/terr_9.png",
-  "assets/tiles/wall_0.png",
-  "assets/tiles/wall_1.png",
-  "assets/tiles/wall_2.png",
-  "assets/tiles/wall_3.png",
-  "assets/tiles/wall_4.png",
-  "assets/tiles/wall_5.png",
-  "assets/tiles/wall_6.png",
-  "assets/tiles/wall_7.png",
-  "assets/tiles/wall_8.png",
-  "assets/tiles/water.png",
-  "assets/tiles/water_1.png",
-  "assets/tiles/water_2.png",
-  "assets/tiles/water_3.png",
-  "assets/ui/btn_interact.png",
-  "assets/ui/creature_sack.png",
-  "assets/ui/elite_crown.png",
-  "assets/ui/equip_panel.png",
-  "assets/ui/equip_panel_wide2.png",
-  "assets/ui/equip_slot.png",
-  "assets/ui/event_chest.png",
-  "assets/ui/hpbar.png",
-  "assets/ui/loot_chest.png",
-  "assets/ui/loot_sack.png",
-  "assets/ui/loot_sack_relic.png",
-  "assets/ui/loot_sack_t11.png",
-  "assets/ui/loot_sack_t9.png",
-  "assets/ui/mini_minus.png",
-  "assets/ui/mini_plus.png",
-  "assets/ui/orb.png",
-  "assets/ui/quote_frame.png",
-  "assets/ui/skill_node.png"
+  {
+   "p": "assets/abilities/assassin_ambush.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_blink.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_cloak.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_exec.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_fan.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_fanknives.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_garrote.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_mark.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_massacre.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_swift.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_toxin.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/assassin_veil.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_ballad.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_cresc.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_discord.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_encore.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_forte.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_inspire.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_lullaby.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_march.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_note.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_quickstep.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_rest.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/bard_soundwave.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_bloodbath.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_bloodfan.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_earthshatter.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_frenzy.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_laststand.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_leap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_quake.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_rage.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_rampage.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_reckless.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_warpath.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/berserker_whirl.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_barrier.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_chastise.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_ground.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_guardian.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_holynova.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_mend.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_purge.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_radiance.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_renew.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_sanct.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_smite.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/cleric_ward.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_breath.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_cry.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_earthstrike.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_impact.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_leap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_overdrive.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_scale.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_sky.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_spearstorm.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_sweep.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_thrust.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/dragoon_windleap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_armor.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_blizzard.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_block.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_bolt.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_coldsnap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_freeze.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_lance.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_nova.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_rime.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_shield.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_spike.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/frost_wall.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_beasttrap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_bolas.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_eagleeye.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_falcon.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_multi.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_pack.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_rapid.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_roll.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_shot.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_sprint.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_trap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/hunter_volley.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_bash.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_bulwark.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_charge.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_cleave.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_fortify.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_jugg.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_rally.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_slam.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_throw.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_warcry.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_whirl.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/knight_wind.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_calm.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_cyclone.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_dash.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_flurry.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_fury.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_ironpalm.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_kiblast.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_meditate2.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_palm.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_peace.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_rising.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/monk_zephyr.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_blast.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_bolt.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_bonearmor.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_coil.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_corpseexp.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_decay.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_nova.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_prison.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_raise.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_ritual.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_siphon.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/necro_wraith.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_aura.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_avenger.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_blessing.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_conse.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_crusade.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_hammer.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_heal.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_sanct.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_shield.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_smite.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_storm.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/paladin_zeal.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_combust.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_dash.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_deto.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_fireball.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_flames.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_flash.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_ignite.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_immol.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_lavaburst.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_meteor.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_shield.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/pyro_wall.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_aim.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_explo.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_hail.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_multi.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_pierce.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_rain.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_roll.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_snare.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_sprint.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_swift.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_venom.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/ranger_volley.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_adren.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_backstab.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_caltrops.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_clone.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_evade.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_fan.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_flurry.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_mark.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_poison.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_smoke.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_step.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/rogue_venomfan.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_ancestors.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_bolt.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_chain.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_earthshield.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_frostshock.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_lavaburst.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_mend.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_mendmax.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_nova.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_ring.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_stormcloud.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/shaman_windfury.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_ball.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_blink.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_bolt.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_chain.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_field.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_fork.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_nova.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_overcharge.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_rush.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_strike.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_surge.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/storm_thunderstorm.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_bolt.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_burst.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_cage.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_corruption.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_curse.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_demon.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_fury.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_hex.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_imps.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_rift.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_siphon.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/abilities/warlock_tap.png",
+   "cat": "Ability icons"
+  },
+  {
+   "p": "assets/critters/chicken_east.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_north.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_south.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_east_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_east_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_east_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_east_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_north_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_north_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_north_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_north_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_south_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_south_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_south_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_south_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_west_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_west_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_west_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_walk_west_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/chicken_west.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_east.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_north.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_south.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_east_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_east_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_east_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_east_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_north_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_north_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_north_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_north_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_south_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_south_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_south_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_south_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_west_0.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_west_1.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_west_2.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_walk_west_3.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/critters/sheep_west.png",
+   "cat": "Critters"
+  },
+  {
+   "p": "assets/env/boulder_grass.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/boulder_grey.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/boulder_scorched.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/boulder_volcanic.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/bridge_statue.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/bridge_tower.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/corrupt_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/corrupt_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ddec_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ddec_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ddec_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ddec_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ddec_4.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ddec_5.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_0_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_0_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_0_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_0_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_0_4.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_0_5.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_3_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_3_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_3_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_3_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_3_4.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_3_5.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_5_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_5_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_5_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_5_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_5_4.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/decal_5_5.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_10.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_11.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_12.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_4.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_5.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_6.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_7.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_8.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/lair_9.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_0_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_0_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_0_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_0_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_1_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_1_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_1_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_1_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_2_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_2_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_2_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_2_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_3_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_3_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_3_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_3_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_4_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_4_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_4_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_4_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_5_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_5_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_5_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_5_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_6_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_6_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_6_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_6_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_7_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_7_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_7_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_7_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_8_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_8_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_8_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/ldec_8_3.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/pillar_0.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/pillar_1.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/pillar_2.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/portal_infect.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/tree_bare.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/tree_dead.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/tree_grass.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/tree_pine.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/tree_scrub.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/tree_willow.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/warden.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/env/waypoint.png",
+   "cat": "Environment"
+  },
+  {
+   "p": "assets/fx/heal.png",
+   "cat": "Effects"
+  },
+  {
+   "p": "assets/fx/rune.png",
+   "cat": "Effects"
+  },
+  {
+   "p": "assets/fx/slash.png",
+   "cat": "Effects"
+  },
+  {
+   "p": "assets/hearth/brazier.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/chest.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/floor.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/floor_broken.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/floor_walk.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/floor_walk2.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/fountain.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/lamp.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/planter.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_arena.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_cos.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_guild.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_home.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_pets.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_realm.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/portal_vault.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/signboard.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/stall_bram.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/stall_maren.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/stall_odo.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/stall_sella.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_boxes.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_candelabra.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_coffer.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_coins.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_crates.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_door.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_lectern.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_rack0.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_rack1.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_sacks.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/vault_statue.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/hearth/wall.png",
+   "cat": "Town"
+  },
+  {
+   "p": "assets/items/arm_leather_0.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_1.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_10.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_11.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_2.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_3.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_4.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_5.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_6.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_7.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_8.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_leather_9.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_0.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_1.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_10.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_11.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_2.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_3.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_4.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_5.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_6.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_7.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_8.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_plate_9.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_0.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_1.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_10.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_11.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_2.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_3.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_4.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_5.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_6.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_7.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_8.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/arm_robe_9.png",
+   "cat": "Items \u00b7 armour"
+  },
+  {
+   "p": "assets/items/boost_fort.png",
+   "cat": "Items \u00b7 boosts"
+  },
+  {
+   "p": "assets/items/boost_loot.png",
+   "cat": "Items \u00b7 boosts"
+  },
+  {
+   "p": "assets/items/boost_xp.png",
+   "cat": "Items \u00b7 boosts"
+  },
+  {
+   "p": "assets/items/coin_0.png",
+   "cat": "Items \u00b7 currency"
+  },
+  {
+   "p": "assets/items/coin_1.png",
+   "cat": "Items \u00b7 currency"
+  },
+  {
+   "p": "assets/items/coin_2.png",
+   "cat": "Items \u00b7 currency"
+  },
+  {
+   "p": "assets/items/food_0.png",
+   "cat": "Items \u00b7 food"
+  },
+  {
+   "p": "assets/items/food_1.png",
+   "cat": "Items \u00b7 food"
+  },
+  {
+   "p": "assets/items/food_2.png",
+   "cat": "Items \u00b7 food"
+  },
+  {
+   "p": "assets/items/food_3.png",
+   "cat": "Items \u00b7 food"
+  },
+  {
+   "p": "assets/items/food_4.png",
+   "cat": "Items \u00b7 food"
+  },
+  {
+   "p": "assets/items/forge_ui.png",
+   "cat": "Items \u00b7 forge ui"
+  },
+  {
+   "p": "assets/items/helm_leather_0.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_1.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_10.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_11.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_2.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_3.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_4.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_5.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_6.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_7.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_8.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_leather_9.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_0.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_1.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_10.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_11.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_2.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_3.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_4.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_5.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_6.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_7.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_8.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_plate_9.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_0.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_1.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_10.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_11.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_2.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_3.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_4.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_5.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_6.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_7.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_8.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/helm_robe_9.png",
+   "cat": "Items \u00b7 helms"
+  },
+  {
+   "p": "assets/items/item_scroll.png",
+   "cat": "Items \u00b7 misc"
+  },
+  {
+   "p": "assets/items/mat_anchorroot.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_bogiron.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_cinder.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_clinker.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_drakeash.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_drakeflux.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_emberalloy.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_firstcinder.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_flux.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_forgeheart.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_gatestone.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_glass.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_gravebind.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_pinion.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_quench.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_rememberash.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_riftbloom.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_riftcore.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_riftheart.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_salt.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sap.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_bead.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_billet.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_blank.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_bolt.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_bough.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_circlet.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_hide.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_knuckle.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_sliver.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_spring.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_stave.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_sd_tang.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_seed.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_stormsteel.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_titanheart.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_truecore.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_veilshard.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/mat_wallrot.png",
+   "cat": "Items \u00b7 materials"
+  },
+  {
+   "p": "assets/items/potion.png",
+   "cat": "Items \u00b7 potions"
+  },
+  {
+   "p": "assets/items/relic_r_antlerhood.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_ashveil.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_barnacle.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_barrows.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_beacon.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_blightbrow.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_censer.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_chapel.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_crypt.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_drownedcrown.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_emberreliq.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_featherloop.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_firstclaimed.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_fixedstar.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_fogbound.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_furnacemask.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_galecut.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_gatewarden.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_greenribs.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_griefhelm.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_heartwood.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_keep.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_keepplate.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_keystone.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_kingsblood.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_lamp.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_marrowsignet.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_mistglass.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_mitre.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_moltencore.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_oozeband.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_pearl.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_pyrebrand.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_riftcrown.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_roost.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_rootrot.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_saltworks.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_sanctum.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_sapcrown.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_sealsignet.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_seedring.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_slagplate.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_throneshard.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_updraft.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_vault.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_veilpiercer.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_warren.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/relic_r_watchcowl.png",
+   "cat": "Items \u00b7 relics"
+  },
+  {
+   "p": "assets/items/ring_def_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_def_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dex_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_dmg_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_hp_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_luck_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_mp_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_spd_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_vit_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_0.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_1.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_10.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_11.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_2.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_3.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_4.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_5.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_6.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_7.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_8.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/ring_wis_9.png",
+   "cat": "Items \u00b7 rings"
+  },
+  {
+   "p": "assets/items/wpn_bow_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_bow_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_dagger_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_gauntlet_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_staff_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_sword_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_wand_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_0.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_1.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_10.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_11.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_2.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_3.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_4.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_5.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_6.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_7.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_8.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/items/wpn_xbow_9.png",
+   "cat": "Items \u00b7 weapons"
+  },
+  {
+   "p": "assets/mobs/ally_skel.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/ally_wisp.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/ally_wolf.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_acolyte.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_acolyte_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_acolyte_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_acolyte_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_acolyte_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_acolyte_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_bird.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_bird_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_bird_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_bird_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_bird_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_bird_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_boar.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_boar_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_boar_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_boar_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_boar_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_boar_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_crab.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_crab_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_crab_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_crab_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_crab_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_crab_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem_coldcore.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_golem_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_husk.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_husk_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_husk_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_husk_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_husk_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_husk_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_plant.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_plant_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_plant_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_plant_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_plant_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_plant_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_shaman.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_shaman_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_shaman_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_shaman_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_shaman_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_shaman_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_slinger.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_slinger_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_slinger_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_slinger_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_slinger_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_slinger_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_swarm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_swarm_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_swarm_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_swarm_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_swarm_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_swarm_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_wisp.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_wisp_ember.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_wisp_frost.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_wisp_shadow.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_wisp_storm.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/arch_wisp_venom.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/awak_0.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_1.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_10.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_11.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_12.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_2.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_3.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_4.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_5.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_6.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_7.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_8.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/awak_9.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_0.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_1.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_10.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_11.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_12.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_2.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_3.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_4.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_5.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_6.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_7.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_8.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/boss_9.png",
+   "cat": "Bosses"
+  },
+  {
+   "p": "assets/mobs/cinderhound.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/cultist.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/hound.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/nighthound.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/plaguehound.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/rimehound.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mobs/stormhound.png",
+   "cat": "Monsters"
+  },
+  {
+   "p": "assets/mounts/arch_boar.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_cat.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_destrier.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_dragon.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_drake.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_elk.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_griffon.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_horse.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_infernal.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_lizard.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_moth.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_mule.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_pegasus.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_ram.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_roc.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_skywyrm.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_stag.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_wolf.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/mounts/arch_wyvern.png",
+   "cat": "Mounts"
+  },
+  {
+   "p": "assets/pets/common_0.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_1.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_10.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_11.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_3.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_4.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_5.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_6.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_7.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_8.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/common_9.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_beast.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_ember.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_frost.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_spirit.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_stone.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_storm.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_tide.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_verdant.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/egg_void.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/epic_0.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/epic_1.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/epic_2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/epic_3.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/fusion_ui.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/incubator_ui.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/legendary_0.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/legendary_1.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_0.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_1.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_3.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_duck.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_koi.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_lily.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_lily2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/pond_reeds.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/rare_0.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/rare_1.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/rare_2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/rare_3.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/rare_4.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/rare_5.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_altar.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_apple.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_barn.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_bridge.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_floor.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_floor2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_hay.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_hedge.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_incubator.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_picket.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_pond.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_rock.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_rocks.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_shelter.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/room_trough.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_0.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_1.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_2.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_3.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_4.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_5.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_6.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/pets/uncommon_7.png",
+   "cat": "Pets"
+  },
+  {
+   "p": "assets/proj/arrow.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/axe.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/bone.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/chakram.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/crystal.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/dagger.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/ember.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/feather.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/fireball.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/holy_star.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/ice_shard.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/leaf.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/lightning.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/magic_orb.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/meteor.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/note.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/rune.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/shuriken.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/skull.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/spear.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/thorn.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/void_orb.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/wind_slash.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/proj/wisp.png",
+   "cat": "Projectiles"
+  },
+  {
+   "p": "assets/status/bleed.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/burn.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/chill.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/curse.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/freeze.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/poison.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/shock.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/stun.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/status/weak.png",
+   "cat": "Status"
+  },
+  {
+   "p": "assets/target/boss.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/target/hp.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/target/low.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/target/near.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/tiles/bridge_deck.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunpath.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_10.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_11.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/dunset_9.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/floor_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/lairset_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/set_9.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/setv_9.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/shore_sand.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/terr_9.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_0.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_4.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_5.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_6.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_7.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/wall_8.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/water.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/water_1.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/water_2.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/tiles/water_3.png",
+   "cat": "Terrain tiles"
+  },
+  {
+   "p": "assets/ui/btn_interact.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/creature_sack.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/elite_crown.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/equip_panel.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/equip_panel_wide2.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/equip_slot.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/event_chest.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/hpbar.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/loot_chest.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/loot_sack.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/loot_sack_relic.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/loot_sack_t11.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/loot_sack_t9.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/mini_minus.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/mini_plus.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/orb.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/quote_frame.png",
+   "cat": "UI"
+  },
+  {
+   "p": "assets/ui/skill_node.png",
+   "cat": "UI"
+  }
+ ],
+ "derivedFiles": [
+  "assets/mobs/arch_acolyte_ember.png",
+  "assets/mobs/arch_acolyte_frost.png",
+  "assets/mobs/arch_acolyte_shadow.png",
+  "assets/mobs/arch_acolyte_storm.png",
+  "assets/mobs/arch_acolyte_venom.png",
+  "assets/mobs/arch_bird_ember.png",
+  "assets/mobs/arch_bird_frost.png",
+  "assets/mobs/arch_bird_shadow.png",
+  "assets/mobs/arch_bird_storm.png",
+  "assets/mobs/arch_bird_venom.png",
+  "assets/mobs/arch_boar_ember.png",
+  "assets/mobs/arch_boar_frost.png",
+  "assets/mobs/arch_boar_shadow.png",
+  "assets/mobs/arch_boar_storm.png",
+  "assets/mobs/arch_boar_venom.png",
+  "assets/mobs/arch_crab_ember.png",
+  "assets/mobs/arch_crab_frost.png",
+  "assets/mobs/arch_crab_shadow.png",
+  "assets/mobs/arch_crab_storm.png",
+  "assets/mobs/arch_crab_venom.png",
+  "assets/mobs/arch_golem_coldcore.png",
+  "assets/mobs/arch_golem_ember.png",
+  "assets/mobs/arch_golem_frost.png",
+  "assets/mobs/arch_golem_shadow.png",
+  "assets/mobs/arch_golem_storm.png",
+  "assets/mobs/arch_golem_venom.png",
+  "assets/mobs/arch_husk_ember.png",
+  "assets/mobs/arch_husk_frost.png",
+  "assets/mobs/arch_husk_shadow.png",
+  "assets/mobs/arch_husk_storm.png",
+  "assets/mobs/arch_husk_venom.png",
+  "assets/mobs/arch_plant_ember.png",
+  "assets/mobs/arch_plant_frost.png",
+  "assets/mobs/arch_plant_shadow.png",
+  "assets/mobs/arch_plant_storm.png",
+  "assets/mobs/arch_plant_venom.png",
+  "assets/mobs/arch_shaman_ember.png",
+  "assets/mobs/arch_shaman_frost.png",
+  "assets/mobs/arch_shaman_shadow.png",
+  "assets/mobs/arch_shaman_storm.png",
+  "assets/mobs/arch_shaman_venom.png",
+  "assets/mobs/arch_slinger_ember.png",
+  "assets/mobs/arch_slinger_frost.png",
+  "assets/mobs/arch_slinger_shadow.png",
+  "assets/mobs/arch_slinger_storm.png",
+  "assets/mobs/arch_slinger_venom.png",
+  "assets/mobs/arch_swarm_ember.png",
+  "assets/mobs/arch_swarm_frost.png",
+  "assets/mobs/arch_swarm_shadow.png",
+  "assets/mobs/arch_swarm_storm.png",
+  "assets/mobs/arch_swarm_venom.png",
+  "assets/mobs/arch_wisp_ember.png",
+  "assets/mobs/arch_wisp_frost.png",
+  "assets/mobs/arch_wisp_shadow.png",
+  "assets/mobs/arch_wisp_storm.png",
+  "assets/mobs/arch_wisp_venom.png",
+  "assets/mobs/cinderhound.png",
+  "assets/mobs/nighthound.png",
+  "assets/mobs/plaguehound.png",
+  "assets/mobs/rimehound.png",
+  "assets/mobs/stormhound.png"
+ ],
+ "catOrder": [
+  "Player classes",
+  "Ascendant classes",
+  "Monsters",
+  "Monsters (animated)",
+  "Bosses",
+  "Mounts",
+  "Mounts (ridden)",
+  "Riders",
+  "Pets",
+  "Critters",
+  "Items \u00b7 weapons",
+  "Items \u00b7 armour",
+  "Items \u00b7 helms",
+  "Items \u00b7 rings",
+  "Items \u00b7 relics",
+  "Items \u00b7 materials",
+  "Items \u00b7 potions",
+  "Items \u00b7 boosts",
+  "Items \u00b7 currency",
+  "Items \u00b7 food",
+  "Items \u00b7 misc",
+  "Items \u00b7 forge ui",
+  "Ability icons",
+  "Projectiles",
+  "Effects",
+  "Status",
+  "Terrain tiles",
+  "Environment",
+  "Town",
+  "UI",
+  "Other"
  ]
 }

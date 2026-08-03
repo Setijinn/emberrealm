@@ -1,0 +1,145 @@
+<!doctype html>
+<!-- Every sprite this project owns, in the folders it actually lives in. Standalone like the Sprite
+     Lab: it needs the art but not the game. Index from tools/gallery.py. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EmberRealm — every sprite</title>
+<style>
+  :root{ --bg:#16131a; --panel:#1e1a24; --line:#332c3d; --ink:#e8e2f0; --dim:#9a8fab; --hot:#ffb02e; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink);
+        font:13px/1.45 ui-monospace,Menlo,Consolas,monospace; -webkit-text-size-adjust:100%; }
+  header{ position:sticky; top:0; z-index:10; background:var(--bg);
+          border-bottom:1px solid var(--line); padding:8px 12px calc(8px + env(safe-area-inset-top)); }
+  .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  b{ color:var(--hot); letter-spacing:.5px; }
+  .dim{ color:var(--dim); }
+  input[type=text]{ background:#120f17; color:var(--ink); border:1px solid var(--line);
+        border-radius:5px; padding:6px 9px; font:inherit; font-size:16px; flex:1 1 160px; min-width:0; }
+  button{ font:inherit; font-size:12px; background:#2a2433; color:var(--ink);
+          border:1px solid var(--line); border-radius:5px; padding:5px 9px; cursor:pointer;
+          touch-action:manipulation; }
+  button.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
+  main{ padding:10px 12px calc(24px + env(safe-area-inset-bottom)); }
+  h2{ font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim);
+      font-weight:600; margin:18px 0 6px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  h2 span{ color:#6b6178; text-transform:none; letter-spacing:0; }
+  .grid{ display:flex; flex-wrap:wrap; gap:6px; }
+  figure{ margin:0; background:#100e14; border:1px solid var(--line); border-radius:5px;
+          padding:4px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+  figure img{ image-rendering:-webkit-optimize-contrast; image-rendering:pixelated;
+              display:block; object-fit:contain; }
+  figcaption{ color:#6b6178; font-size:9px; max-width:100%; overflow:hidden;
+              text-overflow:ellipsis; white-space:nowrap; }
+  .hide{ display:none !important; }
+  .note{ color:var(--dim); font-size:11px; margin:6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <b>EMBERREALM SPRITES</b>
+    <span id="count" class="dim"></span>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <input type="text" id="q" placeholder="filter — mount, tile, boss, frost…">
+    <button data-z="32">S</button>
+    <button data-z="64" class="on">M</button>
+    <button data-z="96">L</button>
+    <button id="caps" class="on">names</button>
+  </div>
+</header>
+<main id="out"><p class="note">loading…</p></main>
+
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  let idx;
+  try {
+    idx = await (await fetch('_sprites_index.json?' + Date.now())).json();
+  } catch (e) {
+    out.innerHTML = '<p class="note">No _sprites_index.json. Run: python tools/gallery.py</p>';
+    return;
+  }
+
+  let size = 64;
+  const frag = document.createDocumentFragment();
+  const groups = [];
+
+  for (const g of idx.groups) {
+    const h = document.createElement('h2');
+    const mb = (g.bytes / 1048576).toFixed(2);
+    h.innerHTML = g.path.replace('assets/', '') + ' <span>· ' + g.files.length + ' · ' + mb + ' MB</span>';
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    for (const f of g.files) {
+      const fig = document.createElement('figure');
+      const img = document.createElement('img');
+      // loading=lazy is load-bearing here, not a nicety: ~9,700 sprites is far more than any phone
+      // will decode at once, and without it the page allocates every one on first paint.
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = g.path + '/' + f;
+      img.alt = f;
+      const cap = document.createElement('figcaption');
+      cap.textContent = f.replace(/\.png$/, '');
+      fig.appendChild(img); fig.appendChild(cap);
+      fig.dataset.name = (g.path + '/' + f).toLowerCase();
+      grid.appendChild(fig);
+    }
+    frag.appendChild(h); frag.appendChild(grid);
+    groups.push({ head: h, grid: grid });
+  }
+  out.innerHTML = '';
+  out.appendChild(frag);
+
+  const applySize = () => {
+    document.querySelectorAll('figure img').forEach(i => {
+      i.style.width = size + 'px'; i.style.height = size + 'px';
+    });
+    document.querySelectorAll('figure').forEach(f => { f.style.width = (size + 10) + 'px'; });
+  };
+  applySize();
+
+  const total = idx.total;
+  const setCount = n => {
+    document.getElementById('count').textContent =
+      (n === total ? total + ' sprites' : n + ' of ' + total) + ' · ' + idx.groups.length + ' folders';
+  };
+  setCount(total);
+
+  document.querySelectorAll('button[data-z]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('button[data-z]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); size = +b.dataset.z; applySize();
+  }));
+  document.getElementById('caps').addEventListener('click', e => {
+    const on = e.target.classList.toggle('on');
+    document.querySelectorAll('figcaption').forEach(c => c.classList.toggle('hide', !on));
+  });
+
+  let t;
+  document.getElementById('q').addEventListener('input', e => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const q = e.target.value.trim().toLowerCase();
+      let shown = 0;
+      for (const g of groups) {
+        let any = 0;
+        for (const fig of g.grid.children) {
+          const hit = !q || fig.dataset.name.includes(q);
+          fig.classList.toggle('hide', !hit);
+          if (hit) any++;
+        }
+        shown += any;
+        g.head.classList.toggle('hide', !any);
+        g.grid.classList.toggle('hide', !any);
+      }
+      setCount(shown);
+    }, 120);
+  });
+})();
+</script>
+</body>
+</html>
