@@ -27,10 +27,21 @@
   header{ padding:10px 14px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; }
   header b{ color:var(--hot); letter-spacing:.5px; }
   header span{ color:var(--dim); }
-  .wrap{ display:grid; grid-template-columns:230px 1fr 320px; gap:0; height:calc(100vh - 42px); }
+  /* FOUR columns, not three. Splitting naming+recipe into its own tab panel for the phone gave the
+     derive view a fourth child, and a three-column grid wrapped it onto a second row underneath the
+     source list -- where it sat unnoticed because the screenshots after that change were all of draw
+     mode or of a phone. */
+  .wrap{ display:grid; grid-template-columns:230px 1fr 250px 300px; gap:0; height:calc(100vh - 42px); }
   .col{ overflow:auto; padding:10px; }
   .col+.col{ border-left:1px solid var(--line); }
   h3{ margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); font-weight:600; }
+  .cathead{ display:block; width:100%; text-align:left; margin:3px 0 0; padding:6px 8px;
+            font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim);
+            background:#1b1722; border:1px solid var(--line); border-radius:5px; }
+  .cathead:hover{ color:var(--ink); }
+  .cathead.on{ color:var(--hot); border-color:var(--hot); }
+  .catbody{ display:none; padding:2px 0 4px 6px; }
+  .catbody.open{ display:block; }
   .grp{ margin:12px 0 4px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); }
   button{ font:inherit; background:#2a2433; color:var(--ink); border:1px solid var(--line);
           border-radius:5px; padding:4px 8px; cursor:pointer; }

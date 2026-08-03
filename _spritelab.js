@@ -592,74 +592,60 @@ async function boot(){
     }},[label]);
     return b;
   };
-  // A dot marks art spritegen wrote rather than art someone drew. They are listed now -- the draw
-  // side opens a frame to FIX it, and a derived frame needs fixing exactly as often as any other --
-  // but you should never be unsure which kind you have picked.
+  // GROUPED BY CATEGORY, COLLAPSED. 1,248 entries in one alphabetical column is a directory
+  // listing, not a way to find a sprite. The groups are the game's own divisions and they start
+  // closed with a count, so the picker opens as a page of headings you can read rather than a wall.
+  // A dot marks art spritegen wrote rather than art someone drew -- listed, but never mistakable.
   const derivedFiles = new Set(idx.derivedFiles || []);
-  const g1 = el('div',{class:'grp'},[`animated sets (${idx.dirs.length})`]);
-  sel.appendChild(g1);
-  idx.dirs.forEach(d=>{
-    const b = mk(d.path.replace('assets/','')+`  (${d.frames.length})`, d.path);
+  const byCat = new Map();
+  const push = (cat, node) => {
+    if(!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(node);
+  };
+  idx.dirs.forEach(d => {
+    const b = mk(d.path.replace('assets/','') + `  (${d.frames.length})`, d.path);
     if(d.derived) b.classList.add('derived');
-    sel.appendChild(b);
+    push(d.cat || 'Other', b);
   });
-  const g2 = el('div',{class:'grp'},[`single sprites (${idx.files.length})`]);
-  sel.appendChild(g2);
-  idx.files.forEach(f=>{
-    const b = mk(f.replace('assets/',''), f);
-    if(derivedFiles.has(f)) b.classList.add('derived');
-    sel.appendChild(b);
-  });
-
-  // There are thousands of single sprites -- a scrolling column of them is not a picker without this.
-  $('#filter').addEventListener('input', e=>{
-    const q = e.target.value.toLowerCase();
-    [...sel.querySelectorAll('.src')].forEach(b=>{
-      b.style.display = !q || b.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
+  idx.files.forEach(f => {
+    const path = typeof f === 'string' ? f : f.p;
+    const b = mk(path.replace('assets/',''), path);
+    if(derivedFiles.has(path)) b.classList.add('derived');
+    push((typeof f === 'string' ? 'Other' : f.cat) || 'Other', b);
   });
 
-  const addSel = $('#addop');
-  Object.keys(OPS).forEach(k=>addSel.appendChild(el('option',{value:k},[k])));
-  $('#add').addEventListener('click', ()=>{
-    const op = addSel.value, spec={op};
-    (SCHEMA[op]||[]).forEach(([k,kind,def])=>{ if(def!=null && kind!=='band') spec[k]=def; });
-    state.ops.push(spec); refresh();
-  });
-  Object.keys(PRESETS).forEach(k=>{
-    $('#presets').appendChild(el('button',{class:'preset', onclick:()=>{
-      state.ops = JSON.parse(JSON.stringify(PRESETS[k]));
-      if(!state.name.v){ state.name.v=k; $('#v').value=k; }
-      refresh();
-    }},[k]));
-  });
-  $('#clear').addEventListener('click', ()=>{ state.ops=[]; refresh(); });
-  $('#zoom').addEventListener('input', e=>{ state.zoom=+e.target.value; render(); });
-  $('#frame').addEventListener('input', e=>{ state.frame=+e.target.value; render(); });
-  $('#play').addEventListener('click', ()=>{
-    state.playing=!state.playing;
-    $('#play').textContent = state.playing?'stop':'play';
-    if(state.playing) tick();
-  });
-  $('#to').addEventListener('input', e=>{ state.name.to=e.target.value; render(); });
-  $('#v').addEventListener('input', e=>{ state.name.v=e.target.value; render(); });
-  $('#rename').addEventListener('input', e=>{ state.name.rename=e.target.value; render(); });
-  $('#copy').addEventListener('click', async ()=>{
-    const ta = $('#recipe');
-    let ok = false;
-    try {
-      // Must be the first await in the handler or Safari has already lost the user gesture.
-      await navigator.clipboard.writeText(ta.value);
-      ok = true;
-    } catch(e){
-      // iOS refuses the async clipboard in plenty of ordinary situations. Selecting the text is
-      // not a consolation prize on a phone -- it is the normal way you copy there, and it always
-      // works. setSelectionRange, because ta.select() alone does nothing on iOS.
-      ta.focus(); ta.setSelectionRange(0, ta.value.length);
-      try { ok = document.execCommand('copy'); } catch(e2){}
+  const order = idx.catOrder || [...byCat.keys()];
+  const sections = [];
+  for(const cat of order){
+    const items = byCat.get(cat);
+    if(!items || !items.length) continue;
+    const body = el('div', {class:'catbody'}, items);
+    const head = el('button', {class:'cathead', onclick:() => {
+      const open = body.classList.toggle('open');
+      head.classList.toggle('on', open);
+    }}, [cat + '  (' + items.length + ')']);
+    sel.appendChild(head);
+    sel.appendChild(body);
+    sections.push({ cat, head, body, items });
+  }
+
+  // Filtering opens the groups that match and hides the ones that do not, so a search reads as a
+  // short list rather than as the same wall with gaps in it.
+  $('#filter').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    for(const sec of sections){
+      let any = 0;
+      for(const b of sec.items){
+        const hit = !q || b.textContent.toLowerCase().includes(q);
+        b.style.display = hit ? '' : 'none';
+        if(hit) any++;
+      }
+      sec.head.style.display = any ? '' : 'none';
+      sec.head.textContent = sec.cat + '  (' + (q ? any + '/' + sec.items.length : sec.items.length) + ')';
+      sec.body.classList.toggle('open', !!q && !!any);
+      sec.head.classList.toggle('on', !!q && !!any);
+      if(!any) sec.body.classList.remove('open');
     }
-    $('#copy').textContent = ok ? 'copied' : 'selected — hold to copy';
-    setTimeout(()=>$('#copy').textContent='copy recipe', 1400);
   });
 
   // PHONE TABS. The buttons exist in the DOM always and the stylesheet hides the bar above 900px,
@@ -681,7 +667,12 @@ async function boot(){
   const want = q.get('src');
   const btns = [...sel.querySelectorAll('.src')];
   const hit = want && btns.find(b => b.textContent.trim().startsWith(want.replace('assets/','')));
-  (hit || btns[0]).click();
+  const chosen = hit || btns[0];
+  if(chosen){
+    const sec = sections.find(s2 => s2.items.includes(chosen));
+    if(sec){ sec.body.classList.add('open'); sec.head.classList.add('on'); }
+    chosen.click();
+  }
   const pre = q.get('preset');
   if(pre && PRESETS[pre]){
     state.ops = JSON.parse(JSON.stringify(PRESETS[pre]));

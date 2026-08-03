@@ -30,6 +30,10 @@ OUT = os.path.join(ROOT, "_sprites_index.json")
 SKIP = {"font", "orig"}
 
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from spritelab import categorise, CAT_ORDER      # one categoriser, used by both pages
+
+
 def build():
     groups = []
     total = 0
@@ -40,10 +44,12 @@ def build():
             continue
         rel = os.path.relpath(cur, ROOT).replace("\\", "/")
         bytes_ = sum(os.path.getsize(os.path.join(cur, n)) for n in pngs)
-        groups.append({"path": rel, "files": pngs, "bytes": bytes_})
+        groups.append({"path": rel, "files": pngs, "bytes": bytes_,
+                       "cat": categorise(rel, pngs[0])})
         total += len(pngs)
-    groups.sort(key=lambda g: g["path"])
-    return {"groups": groups, "total": total}
+    groups.sort(key=lambda g: (CAT_ORDER.index(g["cat"]) if g["cat"] in CAT_ORDER else 99,
+                               g["path"]))
+    return {"groups": groups, "total": total, "catOrder": CAT_ORDER}
 
 
 def main():
