@@ -67,6 +67,7 @@
   .tool.on{ border-color:var(--hot); color:var(--hot); background:#2f2740; }
   .swatches{ display:flex; flex-wrap:wrap; gap:4px; margin:6px 0; }
   .sw{ width:26px; height:26px; padding:0; border-radius:4px; border:1px solid #0007; }
+  .shadegrp{ display:inline-flex; align-items:center; gap:5px; }
   .bigsw{ width:34px; height:26px; border-radius:4px; border:1px solid var(--line); display:inline-block; }
   .huebar{ width:100%; margin:8px 0 4px;
            background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); border-radius:4px; }
@@ -176,10 +177,31 @@
     .hide-sm{ display:none !important; }
     h3{ margin:0 0 5px; font-size:10px; }
     .bar{ margin:6px 0; gap:6px; }
-    .tool{ padding:7px 9px; font-size:12px; }
-    .sw{ width:30px; height:30px; }
-    #dsv{ height:104px; }
     .pane{ padding:3px; }
+
+    /* ---- DENSITY. Everything down a notch so more of the panel fits without scrolling.
+       ONE THING DOES NOT SHRINK: text inputs and selects stay at 16px, because iOS zooms the whole
+       page in when you focus a field smaller than that, and fighting your way back out of that zoom
+       costs far more than the few pixels saved. */
+    body{ font-size:12px; }
+    h3{ font-size:9px; letter-spacing:.8px; margin:0 0 4px; }
+    .bar{ margin:4px 0; gap:5px; }
+    .bar label{ font-size:11px; }
+    .btnrow{ gap:4px; }
+    button{ padding:5px 8px; font-size:11px; }
+    .tool{ padding:5px 7px; font-size:11px; }
+    .mini{ padding:4px 7px; font-size:11px; }
+    .sw{ width:24px; height:24px; border-radius:3px; }
+    .swatches{ gap:3px; margin:4px 0; }
+    .bigsw{ width:26px; height:21px; }
+    .note{ font-size:10px; margin:3px 0 0; }
+    pre{ font-size:10px; padding:6px; }
+    input[type=range]{ height:20px; }
+    input[type=color]{ width:28px; height:24px; }
+    select, input[type=text], input[type=number]{ font-size:16px; padding:3px 5px; }
+    textarea{ font-size:11px; }
+    #dsv{ height:88px; }
+    #dstats{ font-size:10px; }
   }
 
   /* after the portrait block on purpose: a landscape phone matches both and this must win */
@@ -215,11 +237,35 @@
     .dcol{ order:2; flex:0 0 180px; border-left:none;
            padding:6px 8px calc(6px + env(safe-area-inset-bottom)); }
     .dcol.dwide{ flex-basis:180px; }
-    h3{ margin:0 0 4px; }
-    .bar{ margin:5px 0; }
-    .tool{ padding:6px 8px; font-size:11px; }
-    .sw{ width:26px; height:26px; }
-    #dsv{ height:78px; }
+    .dcol{ flex-basis:164px; }
+    .dcol.dwide{ flex-basis:164px; }
+    .dtabs{ flex-basis:30px; }
+    .dtabs button{ padding:8px 3px; font-size:10px; }
+
+    /* ---- DENSITY. Everything down a notch so more of the panel fits without scrolling.
+       ONE THING DOES NOT SHRINK: text inputs and selects stay at 16px, because iOS zooms the whole
+       page in when you focus a field smaller than that, and fighting your way back out of that zoom
+       costs far more than the few pixels saved. */
+    body{ font-size:12px; }
+    h3{ font-size:9px; letter-spacing:.8px; margin:0 0 4px; }
+    .bar{ margin:4px 0; gap:5px; }
+    .bar label{ font-size:11px; }
+    .btnrow{ gap:4px; }
+    button{ padding:5px 8px; font-size:11px; }
+    .tool{ padding:5px 7px; font-size:11px; }
+    .mini{ padding:4px 7px; font-size:11px; }
+    .sw{ width:24px; height:24px; border-radius:3px; }
+    .swatches{ gap:3px; margin:4px 0; }
+    .bigsw{ width:26px; height:21px; }
+    .note{ font-size:10px; margin:3px 0 0; }
+    pre{ font-size:10px; padding:6px; }
+    input[type=range]{ height:20px; }
+    input[type=color]{ width:28px; height:24px; }
+    select, input[type=text], input[type=number]{ font-size:16px; padding:3px 5px; }
+    textarea{ font-size:11px; }
+    #dsv{ height:88px; }
+    #dstats{ font-size:10px; }
+    #dsv{ height:72px; }
   }
 </style>
 </head>
@@ -306,6 +352,11 @@
         <button id="dzoomout" class="mini">&minus;</button>
         <button id="dzoomin" class="mini">+</button>
         <button id="dzoomfit" class="mini">fit</button>
+        <span class="shadegrp">
+          <span id="dbarsw" class="bigsw" title="current colour"></span>
+          <button id="dshadedn" class="mini" title="darker (])">shade &minus;</button>
+          <button id="dshadeup" class="mini" title="lighter ([)">shade +</button>
+        </span>
         <span id="dstats" style="color:var(--dim)"></span>
       </div>
       <div class="pane"><canvas id="dcanvas"></canvas></div>
@@ -374,6 +425,11 @@
         <span id="dswatch" class="bigsw"></span>
         <span id="daltsw" class="bigsw" title="dither partner (right-click a swatch)"></span>
         <input type="text" id="dhex" style="width:92px">
+      </div>
+      <div class="bar">
+        <button id="dshadedn2" class="mini">shade &minus;</button>
+        <button id="dshadeup2" class="mini">shade +</button>
+        <span class="note">one ramp step, hue-shifted</span>
       </div>
       <div id="drgb" class="note"></div>
 
